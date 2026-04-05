@@ -56,8 +56,8 @@ function buildStudentImportPreview(rows, classesMap, existingUsernamesSet) {
     const rowNo = idx + 2;
     const reasons = [];
 
-    const username = String(pickRowValue(row, ['username', 'user', 'nis', 'nisn'])).trim();
-    const full_name = String(pickRowValue(row, ['full_name', 'nama', 'name', 'nama_lengkap'])).trim();
+    const username = String(pickRowValue(row, ['username', 'user', 'nis', 'nisn', 'Username'])).trim();
+    const full_name = String(pickRowValue(row, ['full_name', 'nama', 'name', 'nama_lengkap', 'Nama Lengkap', 'Nama', 'full name'])).trim();
     const classRaw = pickRowValue(row, ['class', 'kelas', 'class_code', 'kelas_kode', 'class_name', 'kelas_nama']);
     const classText = String(classRaw || '').trim();
     const passwordRaw = pickRowValue(row, ['password', 'pwd', 'pass']);
@@ -127,8 +127,8 @@ function buildTeacherImportPreview(rows, existingUsernamesSet) {
     const rowNo = idx + 2;
     const reasons = [];
 
-    const username = String(pickRowValue(row, ['username', 'user', 'nip', 'nuptk', 'email'])).trim();
-    const full_name = String(pickRowValue(row, ['full_name', 'nama', 'name', 'nama_lengkap'])).trim();
+    const username = String(pickRowValue(row, ['username', 'user', 'nip', 'nuptk', 'email', 'Username'])).trim();
+    const full_name = String(pickRowValue(row, ['full_name', 'nama', 'name', 'nama_lengkap', 'Nama Lengkap', 'Nama', 'full name'])).trim();
     const passwordRaw = pickRowValue(row, ['password', 'pwd', 'pass']);
     const password = String(passwordRaw || '').trim();
 
@@ -1493,16 +1493,15 @@ router.get('/users/download', async (req, res) => {
       return res.redirect('/admin/users');
     }
     
-    // Format data for Excel - tambah kolom password (kosong untuk keamanan, tapi ada di template)
+    // Format data for Excel - header sesuai dengan template import
     const data = users.map(u => ({
-      'ID': u.id,
-      'Username': u.username,
-      'Nama Lengkap': u.full_name,
-      'Password': '',  // Kosong untuk keamanan - isi saat import ulang
+      'username': u.username,
+      'full_name': u.full_name,
+      'password': '',  // Kosong - isi jika ingin ganti password saat import ulang
+      'class': u.class_name || '',
+      'nomor_peserta': u.nomor_peserta || '',
       'Role': u.role,
-      'Kelas': u.class_name || '-',
-      'Status': u.is_active ? 'Aktif' : 'Nonaktif',
-      'Dibuat': new Date(u.created_at).toLocaleString('id-ID')
+      'Status': u.is_active ? 'Aktif' : 'Nonaktif'
     }));
     
     // Create workbook
@@ -1511,14 +1510,13 @@ router.get('/users/download', async (req, res) => {
     
     // Set column widths
     ws['!cols'] = [
-      { wch: 8 },  // ID
-      { wch: 20 }, // Username
-      { wch: 30 }, // Nama Lengkap
-      { wch: 20 }, // Password
+      { wch: 30 }, // username
+      { wch: 30 }, // full_name
+      { wch: 20 }, // password
+      { wch: 15 }, // class
+      { wch: 15 }, // nomor_peserta
       { wch: 12 }, // Role
-      { wch: 20 }, // Kelas
-      { wch: 12 }, // Status
-      { wch: 20 }  // Dibuat
+      { wch: 10 }  // Status
     ];
     
     XLSX.utils.book_append_sheet(wb, ws, 'Pengguna');
@@ -1543,7 +1541,7 @@ router.get('/users/print-cards', async (req, res) => {
   try {
     const { ids, role, class_id } = req.query;
     
-    let query = 'SELECT u.id, u.username, u.full_name, u.role, u.nomor_peserta, u.profile_photo, c.name AS class_name FROM users u LEFT JOIN classes c ON c.id = u.class_id WHERE 1=1';
+    let query = 'SELECT u.id, u.username, u.full_name, u.role, u.nomor_peserta, u.profile_photo, u.plain_password, c.name AS class_name FROM users u LEFT JOIN classes c ON c.id = u.class_id WHERE 1=1';
     const params = {};
     
     // Filter by specific IDs
@@ -1692,6 +1690,7 @@ router.post('/users/:id/edit', async (req, res) => {
     const setPassword = new_password && String(new_password).trim().length > 0 ? 1 : 0;
     const password_hash = setPassword ? await bcrypt.hash(String(new_password).trim(), 10) : null;
     const noPeserta = String(nomor_peserta || '').trim() || null;
+    const plainPwd = setPassword ? String(new_password).trim() : null;
 
     await pool.query(
       `UPDATE users
@@ -1701,6 +1700,7 @@ router.post('/users/:id/edit', async (req, res) => {
            class_id=:class_id,
            is_active=:is_active,
            nomor_peserta=:nomor_peserta,
+           plain_password=CASE WHEN :setPassword=1 THEN :plain_password ELSE plain_password END,
            password_hash=CASE WHEN :setPassword=1 THEN :password_hash ELSE password_hash END
        WHERE id=:id;`,
       {
@@ -1711,6 +1711,7 @@ router.post('/users/:id/edit', async (req, res) => {
         class_id: class_id ? Number(class_id) : null,
         is_active: String(is_active) === '1',
         nomor_peserta: noPeserta,
+        plain_password: plainPwd,
         setPassword,
         password_hash
       }
@@ -1848,17 +1849,19 @@ router.post('/users/import/commit', async (req, res) => {
     for (const it of items) {
       const pwd = String(it.password || '').trim();
       const setPassword = pwd ? 1 : 0;
-      const password_hash = await bcrypt.hash(pwd || it.username, 10); // default = username
+      const plainPwd = pwd || it.username; // password asli untuk kartu
+      const password_hash = await bcrypt.hash(plainPwd, 10);
 
       await conn.query(
-        `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active, nomor_peserta)
-         VALUES (:username,:full_name,'STUDENT',:class_id,:password_hash,true,:nomor_peserta)
+        `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active, nomor_peserta, plain_password)
+         VALUES (:username,:full_name,'STUDENT',:class_id,:password_hash,true,:nomor_peserta,:plain_password)
          ON CONFLICT (username) DO UPDATE SET
            full_name=EXCLUDED.full_name,
            role='STUDENT',
            class_id=EXCLUDED.class_id,
            is_active=true,
            nomor_peserta=COALESCE(EXCLUDED.nomor_peserta, users.nomor_peserta),
+           plain_password=CASE WHEN :setPassword=1 THEN EXCLUDED.plain_password ELSE users.plain_password END,
            password_hash=CASE WHEN :setPassword=1 THEN EXCLUDED.password_hash ELSE users.password_hash END;
         `,
         {
@@ -1867,6 +1870,7 @@ router.post('/users/import/commit', async (req, res) => {
           class_id: it.class_id || null,
           password_hash,
           nomor_peserta: it.nomor_peserta || null,
+          plain_password: plainPwd,
           setPassword
         }
       );
@@ -1896,9 +1900,9 @@ router.post('/users', async (req, res) => {
     const password_hash = await bcrypt.hash(password || username, 10);
     const noPeserta = String(nomor_peserta || '').trim() || null;
     await pool.query(
-      `INSERT INTO users (username, full_name, role, class_id, password_hash, nomor_peserta)
-       VALUES (:username,:full_name,:role,:class_id,:password_hash,:nomor_peserta);`,
-      { username, full_name, role, class_id: class_id || null, password_hash, nomor_peserta: noPeserta }
+      `INSERT INTO users (username, full_name, role, class_id, password_hash, nomor_peserta, plain_password)
+       VALUES (:username,:full_name,:role,:class_id,:password_hash,:nomor_peserta,:plain_password);`,
+      { username, full_name, role, class_id: class_id || null, password_hash, nomor_peserta: noPeserta, plain_password: String(password || username).trim() }
     );
     req.flash('success', 'Pengguna ditambahkan.');
   } catch (e) {
@@ -1911,7 +1915,7 @@ router.post('/users', async (req, res) => {
 router.post('/users/:id/reset', async (req, res) => {
   try {
     const password_hash = await bcrypt.hash(req.body.new_password || '123456', 10);
-    await pool.query(`UPDATE users SET password_hash=:ph WHERE id=:id;`, { ph: password_hash, id: req.params.id });
+    await pool.query(`UPDATE users SET password_hash=:ph, plain_password=:plain WHERE id=:id;`, { ph: password_hash, id: req.params.id });
     req.flash('success', 'Password direset.');
   } catch (e) {
     console.error(e);
@@ -1945,86 +1949,136 @@ router.delete('/users/:id', async (req, res) => {
 // Bulk delete users
 router.post('/users/bulk-delete', async (req, res) => {
   let user_ids = req.body.user_ids;
-  
-  // Parse JSON string if needed
+
   if (typeof user_ids === 'string') {
-    try {
-      user_ids = JSON.parse(user_ids);
-    } catch (e) {
+    try { user_ids = JSON.parse(user_ids); } catch (e) {
       req.flash('error', 'Format data tidak valid.');
       return res.redirect('/admin/users');
     }
   }
-  
+
   if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
-    req.flash('error', 'Tidak ada pengguna yang dipilih untuk dihapus.');
+    req.flash('error', 'Tidak ada pengguna yang dipilih.');
     return res.redirect('/admin/users');
   }
 
-  // Convert to integers and filter valid IDs
   const validIds = user_ids.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0);
-  
-  if (validIds.length === 0) {
-    req.flash('error', 'Tidak ada ID pengguna yang valid.');
+  if (!validIds.length) {
+    req.flash('error', 'ID tidak valid.');
     return res.redirect('/admin/users');
   }
 
+  const ph = validIds.map((_, i) => `$${i+1}`).join(',');
   const conn = await pool.getConnection();
-  let deleted = 0;
-  
+
   try {
     await conn.beginTransaction();
-    
-    // Delete related data first to avoid foreign key constraints
-    const placeholders = validIds.map(() => '?').join(',');
-    
-    console.log(`Deleting related data for user IDs: ${validIds.join(', ')}`);
-    
-    // List of tables to check and delete from (in order)
-    const tablesToDelete = [
-      { table: 'student_answers', column: 'user_id' },
-      { table: 'exam_results', column: 'user_id' },
-      { table: 'attempts', column: 'user_id' },
-      { table: 'assignment_submissions', column: 'user_id' },
-      { table: 'material_reads', column: 'student_id' },
-      { table: 'notification_reads', column: 'user_id' },
-      { table: 'live_class_participants', column: 'user_id' },
-      { table: 'profile_photos', column: 'user_id' }
-    ];
-    
-    // Delete from each table if it exists
-    for (const { table, column } of tablesToDelete) {
-      try {
-        // Cek tabel ada dengan cara PostgreSQL
-        const [tables] = await conn.query(
-          `SELECT 1 FROM information_schema.tables WHERE table_name=$1 AND table_schema='public' LIMIT 1`,
-          [table]
-        );
-        if (tables.length > 0) {
-          const [result] = await conn.query(`DELETE FROM ${table} WHERE ${column} IN (${placeholders});`, validIds);
-          console.log(`✅ Deleted ${result.affectedRows || 0} records from ${table}`);
-        } else {
-          console.log(`⚠️  Table ${table} not found, skipping...`);
-        }
-      } catch (e) {
-        console.log(`⚠️  Error deleting from ${table}: ${e.message}`);
-      }
-    }
-    
-    // Finally delete users
-    const [result] = await conn.query(`DELETE FROM users WHERE id IN (${placeholders});`, validIds);
-    deleted = result.affectedRows || 0;
-    
+
+    // Hapus data terkait - pakai nama kolom yang benar sesuai schema
+    // attempts & attempt_answers sudah CASCADE dari FK
+    // Hapus manual yang tidak CASCADE
+    await conn.query(`DELETE FROM material_reads WHERE student_id IN (${ph})`, validIds);
+    await conn.query(`DELETE FROM notification_reads WHERE user_id IN (${ph})`, validIds);
+    await conn.query(`DELETE FROM assignment_submissions WHERE student_id IN (${ph})`, validIds);
+    await conn.query(`DELETE FROM live_class_participants WHERE student_id IN (${ph})`, validIds);
+    await conn.query(`DELETE FROM device_tokens WHERE user_id IN (${ph})`, validIds);
+
+    // Hapus attempt_answers dulu (FK ke attempts)
+    await conn.query(`
+      DELETE FROM attempt_answers WHERE attempt_id IN (
+        SELECT id FROM attempts WHERE student_id IN (${ph})
+      )`, validIds);
+    await conn.query(`
+      DELETE FROM attempt_violations WHERE attempt_id IN (
+        SELECT id FROM attempts WHERE student_id IN (${ph})
+      )`, validIds);
+    await conn.query(`DELETE FROM attempts WHERE student_id IN (${ph})`, validIds);
+
+    // Hapus submission_backups
+    await conn.query(`DELETE FROM submission_backups WHERE student_id IN (${ph})`, validIds);
+
+    // Hapus users
+    const [result] = await conn.query(`DELETE FROM users WHERE id IN (${ph})`, validIds);
+    const deleted = result.affectedRows || 0;
+
     await conn.commit();
-    req.flash('success', `Berhasil menghapus ${deleted} pengguna dan semua data terkait.`);
+    req.flash('success', `Berhasil menghapus ${deleted} pengguna.`);
   } catch (e) {
     await conn.rollback();
-    console.error('Bulk delete error:', e);
-    req.flash('error', `Gagal menghapus pengguna. Error: ${e.message}`);
+    console.error('Bulk delete error:', e.message);
+    req.flash('error', `Gagal menghapus: ${e.message}`);
   } finally {
     conn.release();
   }
-  
+
+  res.redirect('/admin/users');
+});
+
+// ===== RESET PASSWORD MASSAL =====
+router.post('/users/bulk-reset-password', async (req, res) => {
+  const { password_type, custom_password, role_filter, class_filter, user_ids } = req.body;
+
+  try {
+    // Tentukan password baru
+    let newPassword = '';
+    if (password_type === 'custom') {
+      newPassword = String(custom_password || '').trim();
+      if (!newPassword || newPassword.length < 4) {
+        req.flash('error', 'Password minimal 4 karakter.');
+        return res.redirect('/admin/users');
+      }
+    } else if (password_type === 'username') {
+      newPassword = null; // akan diset per user
+    } else {
+      req.flash('error', 'Tipe password tidak valid.');
+      return res.redirect('/admin/users');
+    }
+
+    // Ambil daftar user yang akan direset
+    let query = `SELECT id, username FROM users WHERE is_active=true`;
+    const params = {};
+
+    if (user_ids) {
+      // Reset user terpilih saja
+      const ids = (Array.isArray(user_ids) ? user_ids : [user_ids])
+        .map(id => parseInt(id)).filter(id => !isNaN(id));
+      if (!ids.length) { req.flash('error', 'Tidak ada user dipilih.'); return res.redirect('/admin/users'); }
+      const ph = ids.map((_, i) => `$${i+1}`).join(',');
+      const [users] = await pool.query(`SELECT id, username FROM users WHERE id IN (${ph})`, ids);
+      
+      let updated = 0;
+      for (const u of users) {
+        const pwd = password_type === 'username' ? u.username : newPassword;
+        const hash = await bcrypt.hash(pwd, 10);
+        await pool.query(`UPDATE users SET password_hash=:h, plain_password=:p WHERE id=:id`,
+          { h: hash, p: pwd, id: u.id });
+        updated++;
+      }
+      req.flash('success', `Password ${updated} pengguna berhasil direset.`);
+      return res.redirect('/admin/users');
+    }
+
+    // Reset berdasarkan filter role/kelas
+    if (role_filter) { query += ` AND role=:role`; params.role = role_filter; }
+    if (class_filter) { query += ` AND class_id=:class_id`; params.class_id = class_filter; }
+
+    const [users] = await pool.query(query, params);
+    if (!users.length) { req.flash('error', 'Tidak ada pengguna yang sesuai filter.'); return res.redirect('/admin/users'); }
+
+    let updated = 0;
+    for (const u of users) {
+      const pwd = password_type === 'username' ? u.username : newPassword;
+      const hash = await bcrypt.hash(pwd, 10);
+      await pool.query(`UPDATE users SET password_hash=:h, plain_password=:p WHERE id=:id`,
+        { h: hash, p: pwd, id: u.id });
+      updated++;
+    }
+
+    req.flash('success', `Password ${updated} pengguna berhasil direset ke "${password_type === 'username' ? 'username masing-masing' : newPassword}".`);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal reset password massal: ' + e.message);
+  }
   res.redirect('/admin/users');
 });
 

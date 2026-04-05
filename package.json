@@ -5,6 +5,7 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "nodemon src/server.js",
+    "dev:clean": "powershell -Command \"Get-Process node -EA SilentlyContinue | Stop-Process -Force; npm run dev\"",
     "start": "node src/server.js",
     "db:setup": "node src/db/setup.js",
     "pm2:start": "pm2 start ecosystem.config.js",

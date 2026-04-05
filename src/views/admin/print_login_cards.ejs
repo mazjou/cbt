@@ -82,69 +82,53 @@
     .k-body{
       flex:1;
       display:flex;
-      padding:2mm;
-      gap:2mm;
+      flex-direction:column;
+      padding:2mm 3mm;
       overflow:hidden;
     }
 
-    /* Kolom KIRI: Foto + QR di bawah */
-    .k-foto{
-      width:20mm;flex-shrink:0;
-      display:flex;flex-direction:column;
-      align-items:center;gap:1.5mm;
+    /* Baris atas: data full width */
+    .k-info{
+      width:100%;
+    }
+    .dt{width:100%;border-collapse:collapse;}
+    .dt td{font-size:7pt;padding:1mm 0;vertical-align:top;color:#111827;line-height:1.3;}
+    .dt .lb{width:22mm;color:#111827;white-space:nowrap;font-size:7pt;}
+    .dt .sp{width:5mm;text-align:left;padding-left:1mm;}
+    .dt .vl{font-weight:normal;font-size:7pt;}
+    .dt .mono{font-family:'Courier New',monospace;font-size:7pt;}
+
+    /* Baris bawah: foto kiri | TTD tengah | QR kanan */
+    .k-bottom{
+      display:flex;
+      align-items:flex-end;
+      gap:3mm;
+      margin-top:2mm;
+      flex:1;
     }
     .foto-box{
-      width:18mm;height:20mm;
-      border:1px solid #9ca3af;
+      width:20mm;height:24mm;
+      border:1px solid #374151;
       display:flex;align-items:center;justify-content:center;
       background:#f9fafb;overflow:hidden;flex-shrink:0;
     }
     .foto-box img{width:100%;height:100%;object-fit:cover;}
     .foto-ph{font-size:5.5pt;color:#9ca3af;text-align:center;line-height:1.4;}
+
+    .ttd{
+      flex:1;
+      font-size:6.5pt;color:#111827;line-height:1.6;
+    }
+    .ttd .garis{border-bottom:1px solid #111827;width:28mm;margin:5mm 0 1mm;}
+    .ttd .tnama{font-weight:bold;font-size:7pt;}
+    .ttd .tnip{font-size:6pt;}
+
     .qr-wrap{
       width:18mm;height:18mm;
-      border:1px solid #e5e7eb;
       display:flex;align-items:center;justify-content:center;
-      background:white;flex-shrink:0;
+      flex-shrink:0;
     }
-    .qr-label{font-size:5pt;color:#9ca3af;text-align:center;}
-
-    /* Kolom TENGAH: Data */
-    .k-data{
-      flex:1;
-      display:flex;flex-direction:column;
-      justify-content:space-between;
-      overflow:hidden;
-      min-width:0;
-    }
-    .dt{width:100%;border-collapse:collapse;}
-    .dt td{font-size:6.5pt;padding:.8mm 0;vertical-align:middle;color:#111827;line-height:1.2;}
-    .dt .lb{width:15mm;color:#4b5563;white-space:nowrap;font-size:6pt;}
-    .dt .sp{width:3mm;text-align:center;}
-    .dt .vl{font-weight:600;}
-    .dt .mono{
-      font-family:'Courier New',monospace;
-      background:#f3f4f6;padding:1px 4px;
-      border-radius:3px;font-size:7pt;letter-spacing:.3px;
-    }
-    .badge{
-      display:inline-block;font-size:5.5pt;font-weight:bold;
-      padding:1px 5px;border-radius:8px;text-transform:uppercase;
-    }
-    .bs{background:#dcfce7;color:#166534;border:1px solid #86efac;}
-    .bt{background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;}
-
-    /* TTD di bawah data */
-    .ttd{
-      border-top:1px dashed #d1d5db;
-      padding-top:1mm;
-      font-size:5.5pt;color:#374151;line-height:1.5;
-    }
-    .ttd .garis{border-bottom:1px solid #374151;width:22mm;margin:3mm 0 .5mm;}
-    .ttd .tnama{font-weight:bold;font-size:6pt;}
-    .ttd .tnip{font-size:5pt;color:#6b7280;}
-
-    /* Kolom KANAN tidak dipakai lagi - QR sudah di kiri bawah foto */
+    .qr-label{font-size:4.5pt;color:#6b7280;text-align:center;margin-top:0.5mm;}
 
     /* Footer */
     .k-foot{
@@ -225,51 +209,52 @@
       <div class="k-panitia">Panitia</div>
     </div>
 
-    <!-- Body: Foto | Data | QR -->
+    <!-- Body: Data atas full width, foto+TTD+QR bawah -->
     <div class="k-body">
 
-      <!-- KIRI: Foto + QR di bawah -->
-      <div class="k-foto">
-        <div class="foto-box">
-          <%if(u.profile_photo){%>
-            <img src="<%=u.profile_photo%>" alt="Foto">
-          <%}else{%>
-            <div class="foto-ph">📷<br>Foto<br>Peserta</div>
-          <%}%>
-        </div>
-        <div class="qr-wrap" id="qr-<%=j%>"></div>
-        <div class="qr-label">Scan login</div>
-      </div>
-
-      <!-- KANAN: Data + TTD -->
-      <div class="k-data">
+      <!-- ATAS: Data full width -->
+      <div class="k-info">
         <table class="dt">
           <%if(noPeserta){%>
           <tr><td class="lb">No Peserta</td><td class="sp">:</td><td class="vl"><%=noPeserta%></td></tr>
           <%}%>
-          <tr><td class="lb">Nama</td><td class="sp">:</td><td class="vl" style="max-width:38mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><%=u.full_name%></td></tr>
+          <tr><td class="lb">Nama</td><td class="sp">:</td><td class="vl"><%=u.full_name%></td></tr>
           <%if(u.class_name){%>
           <tr><td class="lb">Kelas</td><td class="sp">:</td><td class="vl"><%=u.class_name%></td></tr>
           <%}%>
           <tr><td class="lb">Username</td><td class="sp">:</td><td class="vl mono"><%=u.username%></td></tr>
-          <tr><td class="lb">Password</td><td class="sp">:</td><td class="vl mono"><%=u.username%></td></tr>
-          <tr><td class="lb">URL Login</td><td class="sp">:</td><td class="vl" style="font-size:5.5pt;word-break:break-all;"><%=appUrl%></td></tr>
-          <tr>
-            <td class="lb">Status</td><td class="sp">:</td>
-            <td><span class="badge <%=isSiswa?'bs':'bt'%>"><%=isSiswa?'Siswa':'Guru'%></span></td>
-          </tr>
+          <tr><td class="lb">Password</td><td class="sp">:</td><td class="vl mono"><%=u.plain_password || u.username%></td></tr>
         </table>
+      </div>
 
+      <!-- BAWAH: Foto kiri | TTD tengah | QR kanan -->
+      <div class="k-bottom">
+        <!-- Foto -->
+        <div>
+          <div class="foto-box">
+            <%if(u.profile_photo){%>
+              <img src="<%=u.profile_photo%>" alt="Foto">
+            <%}else{%>
+              <div class="foto-ph">📷<br>Foto<br>Peserta</div>
+            <%}%>
+          </div>
+        </div>
+
+        <!-- TTD -->
         <div class="ttd">
           <div><%=schoolInfo.address%>, <%=tglCetak%></div>
-          <div style="font-weight:bold;">Kepala Sekolah,</div>
+          <div>Kepala Sekolah,</div>
           <div class="garis"></div>
           <div class="tnama"><%=process.env.PRINCIPAL_NAME||'Kepala Sekolah'%></div>
           <div class="tnip">NIP. <%=process.env.PRINCIPAL_NIP||'-'%></div>
         </div>
-      </div>
 
-      <!-- (QR sudah di kolom kiri bawah foto) -->
+        <!-- QR kanan bawah -->
+        <div style="text-align:center;">
+          <div class="qr-wrap" id="qr-<%=j%>"></div>
+          <div class="qr-label">Scan login</div>
+        </div>
+      </div>
 
     </div>
 

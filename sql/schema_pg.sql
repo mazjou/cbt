@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   profile_photo VARCHAR(255) NULL,
+  plain_password VARCHAR(100) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NULL,
   CONSTRAINT fk_users_class FOREIGN KEY (class_id) REFERENCES classes(id)

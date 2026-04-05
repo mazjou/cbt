@@ -61,15 +61,15 @@ async function main() {
   const principalPass = await bcrypt.hash('kepsek123', 10);
 
   await conn.query(`
-    INSERT INTO users (username, full_name, role, password_hash)
-    VALUES ('admin','Administrator','ADMIN',$1)
-    ON CONFLICT (username) DO UPDATE SET full_name=EXCLUDED.full_name, role=EXCLUDED.role, password_hash=EXCLUDED.password_hash;
+    INSERT INTO users (username, full_name, role, password_hash, plain_password)
+    VALUES ('admin','Administrator','ADMIN',$1,'admin123')
+    ON CONFLICT (username) DO UPDATE SET full_name=EXCLUDED.full_name, role=EXCLUDED.role, password_hash=EXCLUDED.password_hash, plain_password=EXCLUDED.plain_password;
   `, [adminPass]);
 
   await conn.query(`
-    INSERT INTO users (username, full_name, role, password_hash)
-    VALUES ('guru','Guru SMK','TEACHER',$1)
-    ON CONFLICT (username) DO UPDATE SET full_name=EXCLUDED.full_name, role=EXCLUDED.role, password_hash=EXCLUDED.password_hash;
+    INSERT INTO users (username, full_name, role, password_hash, plain_password)
+    VALUES ('guru','Guru SMK','TEACHER',$1,'guru123')
+    ON CONFLICT (username) DO UPDATE SET full_name=EXCLUDED.full_name, role=EXCLUDED.role, password_hash=EXCLUDED.password_hash, plain_password=EXCLUDED.plain_password;
   `, [teacherPass]);
 
   await conn.query(`
