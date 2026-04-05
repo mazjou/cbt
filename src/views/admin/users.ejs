@@ -87,10 +87,10 @@
       
       <select name="role" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
         <option value="">Semua Role</option>
-        <option value="STUDENT" <%= filters.role === 'STUDENT' ? 'selected' : '' %>>STUDENT</option>
-        <option value="TEACHER" <%= filters.role === 'TEACHER' ? 'selected' : '' %>>TEACHER</option>
-        <option value="PRINCIPAL" <%= filters.role === 'PRINCIPAL' ? 'selected' : '' %>>PRINCIPAL</option>
-        <option value="ADMIN" <%= filters.role === 'ADMIN' ? 'selected' : '' %>>ADMIN</option>
+        <option value="STUDENT" <%= filters.role === 'STUDENT' ? 'selected' : '' %>>Siswa</option>
+        <option value="TEACHER" <%= filters.role === 'TEACHER' ? 'selected' : '' %>>Guru</option>
+        <option value="PRINCIPAL" <%= filters.role === 'PRINCIPAL' ? 'selected' : '' %>>Kepala Sekolah</option>
+        <option value="ADMIN" <%= filters.role === 'ADMIN' ? 'selected' : '' %>>Admin</option>
       </select>
       
       <select name="class" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
@@ -152,7 +152,7 @@
               </td>
               <td class="py-2 font-mono user-username text-teal-900"><%= u.username %></td>
               <td class="py-2 user-fullname text-teal-900"><%= u.full_name %></td>
-              <td class="py-2 user-role"><span class="px-2 py-1 rounded-lg border border-teal-300 bg-white text-teal-800 font-medium"><%= u.role %></span></td>
+              <td class="py-2 user-role"><span class="px-2 py-1 rounded-lg border border-teal-300 bg-white text-teal-800 font-medium"><%= ({TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',PRINCIPAL:'Kepala Sekolah'})[u.role]||u.role %></span></td>
               <td class="py-2 text-teal-700 user-class"><%= u.class_name || '-' %></td>
               <td class="py-2 user-active text-teal-800"><%= u.is_active ? 'Aktif' : 'Nonaktif' %></td>
               <td class="py-2">

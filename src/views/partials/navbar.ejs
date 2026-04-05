@@ -73,7 +73,7 @@
                 <% } %>
                 <div class="text-left">
                   <div class="text-sm font-medium text-slate-900"><%= user.full_name %></div>
-                  <div class="text-xs text-slate-500"><%= user.role %><% if (user.class_name) { %> • <%= user.class_name %><% } %></div>
+                  <div class="text-xs text-slate-500"><%= ({TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',PRINCIPAL:'Kepala Sekolah'})[user.role] || user.role %><% if (user.class_name) { %> • <%= user.class_name %><% } %></div>
                 </div>
                 <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -95,7 +95,7 @@
                     <% } %>
                     <div class="flex-1 min-w-0">
                       <div class="text-sm font-semibold text-slate-900 truncate"><%= user.full_name %></div>
-                      <div class="text-xs text-slate-600"><%= user.role %></div>
+                      <div class="text-xs text-slate-600"><%= ({TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',PRINCIPAL:'Kepala Sekolah'})[user.role] || user.role %></div>
                     </div>
                   </div>
                 </div>
@@ -153,7 +153,7 @@
                   <div class="flex-1 min-w-0">
                     <div class="text-sm font-semibold text-slate-900 truncate"><%= user.full_name %></div>
                     <div class="text-xs text-slate-600">
-                      <%= user.role %>
+                      <%= ({TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',PRINCIPAL:'Kepala Sekolah'})[user.role] || user.role %>
                       <% if (user.role === 'STUDENT' && user.class_name) { %>
                         <span class="text-indigo-600"> - <%= user.class_name %></span>
                       <% } %>
@@ -203,7 +203,7 @@
           <img src="/public/images/logo.png" alt="Logo" class="h-10 w-10 object-contain">
           <div class="text-white">
             <div class="font-semibold text-sm"><%= user.full_name %></div>
-            <div class="text-xs opacity-90"><%= user.role %><% if (user.class_name) { %> • <%= user.class_name %><% } %></div>
+            <div class="text-xs opacity-90"><%= ({TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',PRINCIPAL:'Kepala Sekolah'})[user.role] || user.role %><% if (user.class_name) { %> • <%= user.class_name %><% } %></div>
           </div>
         </div>
         <button id="sidebarClose" class="p-2 rounded-lg hover:bg-white/20 transition-all">
