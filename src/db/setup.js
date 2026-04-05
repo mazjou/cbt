@@ -36,6 +36,14 @@ async function main() {
   await conn.query(schemaSql);
   console.log('✓ Schema berhasil dijalankan');
 
+  // Tambahkan indexes untuk performa
+  const indexSqlPath = path.join(__dirname, '..', '..', 'sql', 'add_indexes.sql');
+  if (fs.existsSync(indexSqlPath)) {
+    const indexSql = fs.readFileSync(indexSqlPath, 'utf8');
+    await conn.query(indexSql);
+    console.log('✓ Indexes berhasil dibuat');
+  }
+
   // Seed data default
   await conn.query(`
     INSERT INTO classes (code, name) VALUES ('X-RPL-1','X RPL 1')

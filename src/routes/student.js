@@ -523,11 +523,14 @@ router.get('/attempts/:id/result', async (req, res) => {
   let review = [];
   if (attempt.show_review_to_student) {
     const [reviewData] = await pool.query(
-      `SELECT q.id AS question_id, q.question_text, q.question_image, q.points, aa.is_correct, aa.option_id,
-              (SELECT CONCAT(o.option_label,'. ', o.option_text) FROM options o WHERE o.id=aa.option_id) AS chosen_text,
-              (SELECT CONCAT(o2.option_label,'. ', o2.option_text) FROM options o2 WHERE o2.question_id=q.id AND o2.is_correct=1 LIMIT 1) AS correct_text
+      `SELECT q.id AS question_id, q.question_text, q.question_image, q.points,
+              aa.is_correct, aa.option_id,
+              o1.option_label || '. ' || o1.option_text AS chosen_text,
+              o2.option_label || '. ' || o2.option_text AS correct_text
        FROM attempt_answers aa
        JOIN questions q ON q.id=aa.question_id
+       LEFT JOIN options o1 ON o1.id=aa.option_id
+       LEFT JOIN options o2 ON o2.question_id=q.id AND o2.is_correct=true
        WHERE aa.attempt_id=:aid
        ORDER BY aa.id ASC;`,
       { aid: attemptId }

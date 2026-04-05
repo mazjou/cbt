@@ -178,6 +178,9 @@ app.get('/healthz', async (req, res) => {
   }
 });
 
+const compression = require('compression');
+
+app.use(compression({ level: 6, threshold: 1024 })); // Gzip semua response > 1KB
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan(IS_PROD ? 'combined' : 'dev'));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
@@ -190,23 +193,38 @@ app.use('/public/uploads', express.static(UPLOAD_ROOT, {
   lastModified: true
 }));
 
-// ── Rate limiting sederhana untuk endpoint ujian ──────────────────────────
-const answerRateMap = new Map(); // userId → { count, resetAt }
+// ── Rate limiting untuk endpoint ujian ──────────────────────────────────────
+// Pakai Redis jika tersedia, fallback ke memory
+const answerRateMap = new Map();
 app.use('/student/attempts', (req, res, next) => {
   if (req.method !== 'POST') return next();
   const userId = req.session?.user?.id;
   if (!userId) return next();
+
+  // Gunakan Redis jika tersedia (scalable untuk PM2 cluster)
+  if (redisClient && isRedisConnected) {
+    const key = `rate:answer:${userId}`;
+    redisClient.multi()
+      .incr(key)
+      .expire(key, 10)
+      .exec()
+      .then(([count]) => {
+        if (count > 30) return res.status(429).json({ ok: false, message: 'Terlalu banyak request.' });
+        next();
+      })
+      .catch(() => next()); // Jika Redis error, lanjutkan saja
+    return;
+  }
+
+  // Fallback: memory rate limiting
   const now = Date.now();
   const entry = answerRateMap.get(userId) || { count: 0, resetAt: now + 10000 };
   if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + 10000; }
   entry.count++;
   answerRateMap.set(userId, entry);
-  if (entry.count > 30) { // max 30 request per 10 detik per user
-    return res.status(429).json({ ok: false, message: 'Terlalu banyak request. Tunggu sebentar.' });
-  }
+  if (entry.count > 30) return res.status(429).json({ ok: false, message: 'Terlalu banyak request.' });
   next();
 });
-// Bersihkan map setiap 5 menit
 setInterval(() => {
   const now = Date.now();
   for (const [k, v] of answerRateMap) {

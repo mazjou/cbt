@@ -588,70 +588,49 @@ router.get('/exams', async (req, res) => {
   const user = req.session.user;
   const [exams] = await pool.query(
     `SELECT e.*, s.name AS subject_name,
-            (SELECT COUNT(*) FROM questions q WHERE q.exam_id=e.id) AS question_count,
-            (SELECT GROUP_CONCAT(c.name SEPARATOR ', ') 
-             FROM exam_classes ec 
-             JOIN classes c ON c.id=ec.class_id 
-             WHERE ec.exam_id=e.id) AS class_names
+            COUNT(DISTINCT q.id) AS question_count,
+            STRING_AGG(DISTINCT c.name, ', ' ORDER BY c.name) AS class_names,
+            COUNT(DISTINCT ec2.class_id) AS exam_class_count
      FROM exams e
      JOIN subjects s ON s.id=e.subject_id
+     LEFT JOIN questions q ON q.exam_id=e.id
+     LEFT JOIN exam_classes ec ON ec.exam_id=e.id
+     LEFT JOIN classes c ON c.id=ec.class_id
+     LEFT JOIN exam_classes ec2 ON ec2.exam_id=e.id
      WHERE e.teacher_id=:tid
+     GROUP BY e.id, s.name
      ORDER BY e.id DESC;`,
     { tid: user.id }
   );
 
-  // Calculate participation percentage for each exam
-  for (let exam of exams) {
-    // Check if exam uses exam_classes system
-    const [examClassesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM exam_classes WHERE exam_id = ?`,
-      [exam.id]
-    );
+  if (!exams.length) return res.render('teacher/exams', { title: 'Kelola Ujian', exams: [] });
 
-    let totalStudentsQuery;
-    let queryParams = [exam.id];
+  // Ambil semua statistik partisipasi dalam 2 query saja (bukan N query)
+  const examIds = exams.map(e => e.id);
+  const placeholders = examIds.map((_, i) => `$${i+1}`).join(',');
 
-    if (examClassesCount[0].count > 0) {
-      // Exam uses exam_classes system (new)
-      totalStudentsQuery = `
-        SELECT COUNT(DISTINCT u.id) as total 
-        FROM users u
-        INNER JOIN exam_classes ec ON ec.class_id = u.class_id
-        WHERE u.role = 'STUDENT' 
-        AND u.is_active = true 
-        AND ec.exam_id = ?
-      `;
-    } else if (exam.class_id) {
-      // Exam uses old class_id system
-      totalStudentsQuery = `
-        SELECT COUNT(*) as total 
-        FROM users 
-        WHERE role = 'STUDENT' 
-        AND is_active = true 
-        AND class_id = ?
-      `;
-      queryParams = [exam.class_id];
-    } else {
-      // Exam for all classes
-      totalStudentsQuery = `
-        SELECT COUNT(*) as total 
-        FROM users 
-        WHERE role = 'STUDENT' 
-        AND is_active = true
-      `;
-      queryParams = [];
-    }
+  const [completedRows] = await pool.query(
+    `SELECT exam_id, COUNT(DISTINCT student_id) AS completed
+     FROM attempts WHERE exam_id IN (${placeholders}) GROUP BY exam_id`,
+    examIds
+  );
+  const completedMap = Object.fromEntries(completedRows.map(r => [r.exam_id, Number(r.completed)]));
 
-    const [[totalStudentsResult]] = await pool.query(totalStudentsQuery, queryParams);
-    const [[completedResult]] = await pool.query(
-      `SELECT COUNT(DISTINCT student_id) as completed FROM attempts WHERE exam_id = ?`,
-      [exam.id]
-    );
+  const [totalRows] = await pool.query(
+    `SELECT ec.exam_id, COUNT(DISTINCT u.id) AS total
+     FROM exam_classes ec
+     JOIN users u ON u.class_id=ec.class_id AND u.role='STUDENT' AND u.is_active=true
+     WHERE ec.exam_id IN (${placeholders})
+     GROUP BY ec.exam_id`,
+    examIds
+  );
+  const totalMap = Object.fromEntries(totalRows.map(r => [r.exam_id, Number(r.total)]));
 
-    exam.total_students = totalStudentsResult.total || 0;
-    exam.completed_count = completedResult.completed || 0;
-    exam.participation_percentage = exam.total_students > 0 ? 
-      Math.round((exam.completed_count / exam.total_students) * 100) : 0;
+  for (const exam of exams) {
+    exam.completed_count = completedMap[exam.id] || 0;
+    exam.total_students = totalMap[exam.id] || 0;
+    exam.participation_percentage = exam.total_students > 0
+      ? Math.round((exam.completed_count / exam.total_students) * 100) : 0;
   }
 
   res.render('teacher/exams', { title: 'Kelola Ujian', exams });

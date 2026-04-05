@@ -3832,6 +3832,49 @@ router.get('/monitoring/data', async (req, res) => {
   }
 });
 
+// ── Restart Services ─────────────────────────────────────────────────────────
+router.post('/monitoring/restart', async (req, res) => {
+  const { service } = req.body;
+  const { exec } = require('child_process');
+  const IS_WIN = process.platform === 'win32';
+
+  const commands = {
+    app: IS_WIN
+      ? null  // Di Windows tidak bisa restart PM2 dari dalam app
+      : 'pm2 reload all',
+    postgresql: IS_WIN
+      ? 'net stop postgresql-x64-17 && net start postgresql-x64-17'
+      : 'systemctl restart postgresql',
+    redis: IS_WIN
+      ? null
+      : 'systemctl restart redis-server',
+  };
+
+  if (!commands[service]) {
+    return res.json({ ok: false, message: `Service "${service}" tidak didukung atau tidak tersedia di platform ini.` });
+  }
+
+  const cmd = commands[service];
+
+  // Untuk restart app, lakukan setelah response dikirim
+  if (service === 'app') {
+    res.json({ ok: true, message: 'Aplikasi akan di-reload dalam 2 detik...' });
+    setTimeout(() => {
+      exec(cmd, (err) => {
+        if (err) console.error('Restart app error:', err.message);
+      });
+    }, 2000);
+    return;
+  }
+
+  exec(cmd, { timeout: 15000 }, (err, stdout, stderr) => {
+    if (err) {
+      return res.json({ ok: false, message: `Gagal restart ${service}: ${err.message}` });
+    }
+    res.json({ ok: true, message: `${service} berhasil di-restart.` });
+  });
+});
+
 function formatUptime(sec) {
   sec = Math.floor(sec);
   const d = Math.floor(sec / 86400);
