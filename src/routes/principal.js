@@ -64,7 +64,10 @@ router.get('/', async (req, res) => {
               (SELECT COUNT(*) FROM materials m WHERE m.teacher_id=u.id) AS materials_count
        FROM users u
        WHERE u.role='TEACHER' AND u.is_active=true
-       ORDER BY (exams_count + materials_count) DESC, u.full_name ASC;`
+       ORDER BY (
+         (SELECT COUNT(*) FROM exams e WHERE e.teacher_id=u.id) +
+         (SELECT COUNT(*) FROM materials m WHERE m.teacher_id=u.id)
+       ) DESC, u.full_name ASC;`
     );
 
     return res.render('principal/index', {
@@ -348,7 +351,7 @@ router.get('/reports', async (req, res) => {
       WHERE u.role = 'TEACHER' AND u.is_active = true
       GROUP BY u.id, u.full_name
       HAVING (COUNT(DISTINCT e.id) * 3 + COUNT(DISTINCT m.id) * 2 + COUNT(DISTINCT a.id) * 2) > 0
-      ORDER BY activity_score DESC, u.full_name ASC
+      ORDER BY (COUNT(DISTINCT e.id) * 3 + COUNT(DISTINCT m.id) * 2 + COUNT(DISTINCT a.id) * 2) DESC, u.full_name ASC
       LIMIT 10
     `, [startDate, endDate, startDate, endDate, startDate, endDate]);
 
@@ -368,7 +371,7 @@ router.get('/reports', async (req, res) => {
       WHERE u.role = 'STUDENT' AND u.is_active = true
       GROUP BY u.id, u.full_name, c.name
       HAVING (COUNT(DISTINCT at.id) * 3 + COUNT(DISTINCT asub.id) * 2 + COUNT(DISTINCT mr.id)) > 0
-      ORDER BY activity_score DESC, u.full_name ASC
+      ORDER BY (COUNT(DISTINCT at.id) * 3 + COUNT(DISTINCT asub.id) * 2 + COUNT(DISTINCT mr.id)) DESC, u.full_name ASC
       LIMIT 10
     `, [startDate, endDate, startDate, endDate, startDate, endDate]);
 
