@@ -2146,7 +2146,8 @@ router.get('/exams', async (req, res) => {
   }
 
   if (classFilter) {
-    whereConditions.push('e.class_id = :classId');
+    // Cek di exam_classes (sistem baru) ATAU class_id (sistem lama)
+    whereConditions.push('(EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id AND ec.class_id=:classId) OR e.class_id=:classId)');
     queryParams.classId = classFilter;
   }
 
@@ -2171,11 +2172,21 @@ router.get('/exams', async (req, res) => {
       e.duration_minutes, e.is_published, e.created_at, e.class_id,
       s.name AS subject_name, s.code AS subject_code,
       u.full_name AS teacher_name,
-      c.name AS class_name,
+      -- Ambil nama kelas dari exam_classes (sistem baru) atau class_id (sistem lama)
+      COALESCE(
+        (SELECT STRING_AGG(c2.name, ', ' ORDER BY c2.name)
+         FROM exam_classes ec2
+         JOIN classes c2 ON c2.id = ec2.class_id
+         WHERE ec2.exam_id = e.id),
+        c.name
+      ) AS class_name,
       (SELECT COUNT(*) FROM questions WHERE exam_id = e.id) AS question_count,
       (SELECT COUNT(*) FROM attempts WHERE exam_id = e.id) AS attempt_count,
       (SELECT COUNT(DISTINCT student_id) FROM attempts WHERE exam_id = e.id) AS participant_count,
-      (SELECT COUNT(*) FROM users WHERE role='STUDENT' AND (e.class_id IS NULL OR class_id = e.class_id)) AS total_students
+      (SELECT COUNT(DISTINCT u2.id) FROM users u2
+       INNER JOIN exam_classes ec3 ON ec3.class_id = u2.class_id AND ec3.exam_id = e.id
+       WHERE u2.role='STUDENT' AND u2.is_active=true
+      ) AS total_students
      FROM exams e
      LEFT JOIN subjects s ON s.id = e.subject_id
      LEFT JOIN users u ON u.id = e.teacher_id
