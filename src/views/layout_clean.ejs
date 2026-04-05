@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="id" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#4F46E5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title><%= title ? title + ' • ' : '' %>LMS SMKN 1 Kras</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/public/manifest.json" />
+    <link rel="icon" type="image/png" href="/public/images/logo.png" />
+    <link rel="apple-touch-icon" href="/public/images/logo.png" />
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            boxShadow: { soft: '0 10px 30px rgba(0,0,0,0.08)' }
+          }
+        }
+      };
+    </script>
+    
+    <!-- Capacitor Core (only loads in native app) -->
+    <script type="module">
+      if (window.Capacitor) {
+        import('https://cdn.jsdelivr.net/npm/@capacitor/core@latest/dist/index.js').then(module => {
+          window.Capacitor = module.Capacitor;
+        });
+      }
+    </script>
+  </head>
+  <body class="h-full bg-slate-100 text-slate-900">
+    <div class="min-h-full">
+      <%- include('partials/navbar') %>
+      
+      <main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+        <%- include('partials/flash') %>
+        <%- body %>
+      </main>
+      <footer class="border-t border-slate-200">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 text-sm text-slate-500 flex items-center justify-between">
+          <div>LMS SMKN 1 Kras</div>
+          <div class="opacity-80">Node.js • MySQL • Tailwind</div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/public/service-worker.js')
+            .then(reg => console.log('Service Worker registered:', reg.scope))
+            .catch(err => console.error('Service Worker registration failed:', err));
+        });
+      }
+    </script>
+
+    <!-- Capacitor Native Plugins -->
+    <script src="/public/capacitor.js"></script>
+
+    <!-- Notification Script (Only for Students) -->
+    <% if (typeof user !== 'undefined' && user && user.role) { 
+      const userRole = user.role.toLowerCase();
+      if (userRole === 'student') { %>
+    
+    <!-- Modal Notification System (Peringatan dari Guru/Admin) -->
+    <script>
+      (function() {
+        console.log('[Notification] Script loaded for student');
+        console.log('[Notification] User role:', '<%= user.role %>');
+        console.log('[Notification] User ID:', '<%= user.id %>');
+        
+        let shownNotifications = new Set();
+        const storageKey = 'closedNotifications';
+        
+        // Load closed notifications from localStorage
+        try {
+          const closed = localStorage.getItem(storageKey);
+          if (closed) {
+            shownNotifications = new Set(JSON.parse(closed));
+            console.log('[Notification] Loaded closed notifications:', shownNotifications.size);
+          }
+        } catch (e) {
+          console.error('[Notification] Error loading closed notifications:', e);
+        }
+
+        async function checkModalNotifications() {
+          console.log('[Notification] Checking for new notifications...');
+          try {
+            const response = await fetch('/notifications/active');
+            const data = await response.json();
+            
+            console.log('[Notification] Response:', data);
+            
+            if (data.success && data.notifications && data.notifications.length > 0) {
+              console.log('[Notification] Found', data.notifications.length, 'active notifications');
+              
+              data.notifications.forEach(notification => {
+                const notifId = notification.id.toString();
+                
+                if (!shownNotifications.has(notifId)) {
+                  console.log('[Notification] Showing notification:', notifId);
+                  showModalNotification(notification);
+                } else {
+                  console.log('[Notification] Skipping already closed notification:', notifId);
+                }
+              });
+            } else {
+              console.log('[Notification] No active notifications found');
+            }
+          } catch (error) {
+            console.error('[Notification] Error checking notifications:', error);
+          }
+        }
+
+        function showModalNotification(notification) {
+          const modal = document.createElement('div');
+          modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm';
+          modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl max-w-md mx-4 overflow-hidden border-2 border-red-200">
+              <div class="bg-gradient-to-r from-red-500 to-red-600 px-6 py-4">
+                <div class="flex items-center gap-3">
+                  <div class="bg-white bg-opacity-20 rounded-full p-2">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-bold text-white">Peringatan Penting</h3>
+                    <p class="text-red-100 text-sm">Dari: ${notification.sender_name || 'Admin'}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="p-6">
+                <div class="mb-4">
+                  <h4 class="font-bold text-gray-900 mb-2">${notification.title}</h4>
+                  <div class="text-gray-700 leading-relaxed">${notification.message}</div>
+                </div>
+                
+                <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                  <span>📅 ${new Date(notification.created_at).toLocaleDateString('id-ID')}</span>
+                  <span>⏰ ${new Date(notification.created_at).toLocaleTimeString('id-ID', {hour: '2-digit', minute: '2-digit'})}</span>
+                </div>
+                
+                <button onclick="closeNotification('${notification.id}')" 
+                        class="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-bold py-3 px-4 rounded-xl transition-all transform hover:scale-105 shadow-lg">
+                  ✓ Saya Mengerti
+                </button>
+              </div>
+            </div>
+          `;
+          
+          document.body.appendChild(modal);
+          
+          // Add to shown notifications
+          shownNotifications.add(notification.id.toString());
+          
+          // Save to localStorage
+          try {
+            localStorage.setItem(storageKey, JSON.stringify([...shownNotifications]));
+          } catch (e) {
+            console.error('[Notification] Error saving closed notifications:', e);
+          }
+        }
+
+        window.closeNotification = function(notificationId) {
+          const modal = document.querySelector('.fixed.inset-0.z-50');
+          if (modal) {
+            modal.remove();
+          }
+          
+          // Mark as read on server
+          fetch(`/notifications/${notificationId}/read`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }).catch(err => {
+            console.error('[Notification] Error marking as read:', err);
+          });
+        };
+
+        // Check for notifications when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+          setTimeout(checkModalNotifications, 1000);
+        });
+
+        // Check periodically (every 5 minutes)
+        setInterval(checkModalNotifications, 5 * 60 * 1000);
+      })();
+    </script>
+    <% } } %>
+  </body>
+</html>

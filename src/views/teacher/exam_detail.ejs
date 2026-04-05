@@ -1,0 +1,766 @@
+<!-- Header Section -->
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div class="flex-1">
+    <div class="flex items-center gap-3 mb-2">
+      <a href="/teacher/exams" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">
+        ← Kembali
+      </a>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full <%= exam.is_published ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600' %> text-xs font-semibold">
+        <%= exam.is_published ? '✓ Published' : '○ Draft' %>
+      </div>
+    </div>
+    <h1 class="text-3xl font-bold text-indigo-900"><%= exam.title %></h1>
+    <div class="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-600">
+      <span class="inline-flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-indigo-400"></span>
+        <%= exam.subject_name %>
+      </span>
+      <% if (exam.class_name) { %>
+        <span class="inline-flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <%= exam.class_name %>
+        </span>
+      <% } else { %>
+        <span class="inline-flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+          Semua Kelas
+        </span>
+      <% } %>
+    </div>
+    <% if (exam.description) { %>
+      <p class="mt-3 text-slate-600"><%= exam.description %></p>
+    <% } %>
+  </div>
+</div>
+
+<!-- Info Cards -->
+<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+  <div class="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 p-4">
+    <div class="text-xs text-blue-600 font-medium mb-1">Durasi</div>
+    <div class="text-2xl font-bold text-blue-900"><%= exam.duration_minutes %> <span class="text-sm font-normal">menit</span></div>
+  </div>
+  
+  <div class="rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 p-4">
+    <div class="text-xs text-purple-600 font-medium mb-1">Passing Score</div>
+    <div class="text-2xl font-bold text-purple-900"><%= exam.pass_score %></div>
+  </div>
+  
+  <div class="rounded-xl bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200 p-4">
+    <div class="text-xs text-amber-600 font-medium mb-1">Maks Attempt</div>
+    <div class="text-2xl font-bold text-amber-900"><%= exam.max_attempts %>x</div>
+  </div>
+  
+  <div class="rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200 p-4">
+    <div class="text-xs text-emerald-600 font-medium mb-1">Shuffle Soal</div>
+    <div class="text-2xl font-bold text-emerald-900"><%= exam.shuffle_questions ? '✓' : '✗' %></div>
+  </div>
+  
+  <div class="rounded-xl bg-gradient-to-br from-rose-50 to-rose-100 border border-rose-200 p-4">
+    <div class="text-xs text-rose-600 font-medium mb-1">Shuffle Opsi</div>
+    <div class="text-2xl font-bold text-rose-900"><%= exam.shuffle_options ? '✓' : '✗' %></div>
+  </div>
+</div>
+
+<!-- Participant Statistics Cards -->
+<div class="grid md:grid-cols-2 gap-4 mb-6">
+  <!-- Sudah Mengerjakan Card -->
+  <div onclick="showCompletedStudents()" class="cursor-pointer rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center shadow-md">
+        <span class="text-2xl">✓</span>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-green-900">Sudah Mengerjakan</h3>
+        <p class="text-xs text-green-700">Klik untuk lihat daftar siswa</p>
+      </div>
+    </div>
+    <div class="flex items-end justify-between mb-3">
+      <div class="text-4xl font-bold text-green-900"><%= exam.completed_count %></div>
+      <div class="text-right">
+        <div class="text-3xl font-bold text-green-700"><%= exam.completed_percentage %>%</div>
+        <div class="text-xs text-green-600">dari <%= exam.total_students %> siswa</div>
+      </div>
+    </div>
+    <div class="w-full bg-green-200 rounded-full h-3 overflow-hidden shadow-inner">
+      <div class="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full transition-all duration-500 shadow-md" style="width: <%= exam.completed_percentage %>%"></div>
+    </div>
+  </div>
+
+  <!-- Belum Mengerjakan Card -->
+  <div onclick="showNotCompletedStudents()" class="cursor-pointer rounded-2xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 p-6 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center shadow-md">
+        <span class="text-2xl">⏳</span>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-orange-900">Belum Mengerjakan</h3>
+        <p class="text-xs text-orange-700">Klik untuk lihat daftar siswa</p>
+      </div>
+    </div>
+    <div class="flex items-end justify-between mb-3">
+      <div class="text-4xl font-bold text-orange-900"><%= exam.not_completed_count %></div>
+      <div class="text-right">
+        <div class="text-3xl font-bold text-orange-700"><%= exam.not_completed_percentage %>%</div>
+        <div class="text-xs text-orange-600">dari <%= exam.total_students %> siswa</div>
+      </div>
+    </div>
+    <div class="w-full bg-orange-200 rounded-full h-3 overflow-hidden shadow-inner">
+      <div class="bg-gradient-to-r from-orange-500 to-amber-600 h-3 rounded-full transition-all duration-500 shadow-md" style="width: <%= exam.not_completed_percentage %>%"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Action Cards -->
+<div class="grid md:grid-cols-2 gap-4 mb-6">
+  <!-- Keamanan Card -->
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5 shadow-soft">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl">🔒</span>
+      <h2 class="text-lg font-semibold text-purple-900">Keamanan</h2>
+    </div>
+    <div class="flex items-center justify-between p-3 bg-white rounded-xl mb-3">
+      <div class="text-sm text-purple-700 font-medium">Kode Akses</div>
+      <div class="font-mono text-purple-900 font-bold text-lg"><%= exam.access_code ? exam.access_code : '-' %></div>
+    </div>
+    <form action="/teacher/exams/<%= exam.id %>/regenerate-code" method="POST">
+      <button class="w-full px-4 py-2.5 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-800 font-medium text-sm transition-all">
+        🔄 Generate Kode Baru
+      </button>
+    </form>
+  </div>
+
+  <!-- Quick Actions Card -->
+  <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5 shadow-soft">
+    <div class="flex items-center gap-2 mb-3">
+      <span class="text-2xl">⚡</span>
+      <h2 class="text-lg font-semibold text-indigo-900">Aksi Cepat</h2>
+    </div>
+    <div class="grid grid-cols-2 gap-2">
+      <button type="button" onclick="openBankSoalModal()" class="px-3 py-2.5 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 text-indigo-800 font-medium text-sm transition-all text-center">
+        📚 Bank Soal
+      </button>
+      <a href="/teacher/exams/<%= exam.id %>/import" class="px-3 py-2.5 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200 text-teal-800 font-medium text-sm transition-all text-center">
+        📥 Import Soal
+      </a>
+      <a href="/teacher/grades?exam_id=<%= exam.id %>" class="px-3 py-2.5 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 text-amber-800 font-medium text-sm transition-all text-center">
+        📊 Daftar Nilai
+      </a>
+      <a href="/teacher/exams/<%= exam.id %>/export" class="px-3 py-2.5 rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 text-green-800 font-medium text-sm transition-all text-center">
+        📥 Export Soal
+      </a>
+      <a href="/teacher/exams/<%= exam.id %>/edit" class="px-3 py-2.5 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-800 font-medium text-sm transition-all text-center">
+        ✏️ Edit Ujian
+      </a>
+      <form action="/teacher/exams/<%= exam.id %>/reset-results" method="POST" onsubmit="return confirm('Reset akan menghapus SEMUA hasil ujian (nilai & jawaban) untuk ujian ini. Lanjutkan?')" class="contents col-span-2">
+        <button class="px-3 py-2.5 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-rose-100 hover:from-rose-100 hover:to-rose-200 text-rose-800 font-medium text-sm transition-all">
+          🗑️ Reset Hasil
+        </button>
+      </form>
+    </div>
+    <form action="/teacher/exams/<%= exam.id %>/toggle-publish" method="POST" class="mt-2">
+      <button class="w-full px-4 py-2.5 rounded-xl <%= exam.is_published ? 'border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 text-orange-800' : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white' %> font-semibold text-sm transition-all">
+        <%= exam.is_published ? '📴 Unpublish' : '📢 Publish' %>
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="mt-8 grid lg:grid-cols-2 gap-6">
+  <!-- Daftar Soal dengan Preview -->
+  <div class="lg:col-span-2">
+    <div class="rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100 p-5 shadow-soft mb-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">📝</span>
+          <h2 class="text-xl font-semibold text-cyan-900">Daftar Soal</h2>
+        </div>
+        <div class="px-4 py-2 rounded-full bg-cyan-600 text-white text-sm font-semibold"><%= questions.length %> soal</div>
+      </div>
+    </div>
+
+    <% if (!questions.length) { %>
+      <div class="text-center py-12 rounded-2xl border-2 border-dashed border-cyan-300 bg-cyan-50">
+        <div class="text-6xl mb-3">📝</div>
+        <div class="font-semibold text-cyan-900 text-lg">Belum ada soal</div>
+        <div class="text-sm text-cyan-700 mt-1">Tambahkan soal dari form di bawah</div>
+      </div>
+    <% } else { %>
+      <div class="space-y-6">
+        <% questions.forEach((q, idx) => { 
+          const colors = [
+            { border: 'border-blue-200', bg: 'from-blue-50 to-cyan-50', text: 'text-blue-900', badge: 'bg-blue-100 text-blue-700', btnBorder: 'border-blue-300', btnBg: 'from-blue-50 to-blue-100', btnHover: 'hover:from-blue-100 hover:to-blue-200', btnText: 'text-blue-800' },
+            { border: 'border-purple-200', bg: 'from-purple-50 to-pink-50', text: 'text-purple-900', badge: 'bg-purple-100 text-purple-700', btnBorder: 'border-purple-300', btnBg: 'from-purple-50 to-purple-100', btnHover: 'hover:from-purple-100 hover:to-purple-200', btnText: 'text-purple-800' },
+            { border: 'border-rose-200', bg: 'from-rose-50 to-pink-50', text: 'text-rose-900', badge: 'bg-rose-100 text-rose-700', btnBorder: 'border-rose-300', btnBg: 'from-rose-50 to-rose-100', btnHover: 'hover:from-rose-100 hover:to-rose-200', btnText: 'text-rose-800' },
+            { border: 'border-emerald-200', bg: 'from-emerald-50 to-teal-50', text: 'text-emerald-900', badge: 'bg-emerald-100 text-emerald-700', btnBorder: 'border-emerald-300', btnBg: 'from-emerald-50 to-emerald-100', btnHover: 'hover:from-emerald-100 hover:to-emerald-200', btnText: 'text-emerald-800' },
+            { border: 'border-amber-200', bg: 'from-amber-50 to-orange-50', text: 'text-amber-900', badge: 'bg-amber-100 text-amber-700', btnBorder: 'border-amber-300', btnBg: 'from-amber-50 to-amber-100', btnHover: 'hover:from-amber-100 hover:to-amber-200', btnText: 'text-amber-800' },
+            { border: 'border-indigo-200', bg: 'from-indigo-50 to-purple-50', text: 'text-indigo-900', badge: 'bg-indigo-100 text-indigo-700', btnBorder: 'border-indigo-300', btnBg: 'from-indigo-50 to-indigo-100', btnHover: 'hover:from-indigo-100 hover:to-indigo-200', btnText: 'text-indigo-800' }
+          ];
+          const color = colors[idx % colors.length];
+        %>
+          <div class="rounded-2xl border-2 <%= color.border %> bg-gradient-to-br <%= color.bg %> p-6 shadow-lg">
+            <!-- Header Soal -->
+            <div class="flex items-start justify-between gap-4 mb-4">
+              <div class="flex items-center gap-3">
+                <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-white shadow-md">
+                  <span class="text-xl font-bold <%= color.text %>"><%= idx + 1 %></span>
+                </div>
+                <div>
+                  <div class="text-xs font-semibold <%= color.text %> opacity-75">Soal <%= idx + 1 %> dari <%= questions.length %></div>
+                  <div class="inline-flex items-center gap-1 px-3 py-1 rounded-full <%= color.badge %> text-xs font-bold mt-1">
+                    ⭐ <%= q.points %> poin
+                  </div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <a href="/teacher/questions/<%= q.id %>/edit" class="px-3 py-2 rounded-xl border <%= color.btnBorder %> bg-gradient-to-br <%= color.btnBg %> <%= color.btnHover %> <%= color.btnText %> font-medium text-xs transition-all">
+                  ✏️ Edit
+                </a>
+                <form action="/teacher/questions/<%= q.id %>?_method=DELETE" method="POST" onsubmit="return confirm('Hapus soal ini?')" class="inline">
+                  <button class="px-3 py-2 rounded-xl border border-rose-300 bg-gradient-to-br from-rose-50 to-rose-100 hover:from-rose-100 hover:to-rose-200 text-rose-800 font-medium text-xs transition-all">
+                    🗑️
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Pertanyaan -->
+            <div class="bg-white rounded-xl p-5 shadow-md mb-4">
+              <div class="text-slate-900 leading-relaxed prose prose-sm max-w-none"><%- q.question_text %></div>
+              <% if (q.question_image) { %>
+                <div class="mt-4">
+                  <img src="<%= q.question_image %>" alt="Gambar soal" class="max-w-full rounded-xl border-2 <%= color.border %> shadow-md" />
+                </div>
+              <% } %>
+              <% if (q.question_pdf) { %>
+                <div class="mt-4">
+                  <div class="text-xs font-semibold <%= color.text %> mb-2">📄 PDF Soal:</div>
+                  <iframe src="<%= q.question_pdf %>" class="w-full h-96 rounded-xl border-2 <%= color.border %> shadow-md" frameborder="0"></iframe>
+                </div>
+              <% } %>
+            </div>
+
+            <!-- Opsi Jawaban -->
+            <div class="space-y-3">
+              <div class="text-sm font-bold <%= color.text %> mb-2">Opsi Jawaban:</div>
+              <% if (q.options && q.options.length > 0) { %>
+                <% q.options.forEach((opt) => { %>
+                  <div class="block rounded-xl border-2 <%= opt.is_correct ? color.border + ' bg-white shadow-md' : 'border-slate-200 bg-white/80' %> px-5 py-4">
+                    <div class="flex gap-4">
+                      <div class="flex-shrink-0">
+                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg <%= color.badge %> font-bold text-sm <%= opt.is_correct ? 'ring-2 ring-emerald-400' : '' %>">
+                          <%= opt.option_label %> <%= opt.is_correct ? '✓' : '' %>
+                        </div>
+                      </div>
+                      <div class="flex-1 text-slate-700 prose prose-sm max-w-none">
+                        <%- opt.option_text %>
+                      </div>
+                    </div>
+                  </div>
+                <% }) %>
+              <% } else { %>
+                <div class="text-center py-4 text-slate-500 text-sm">
+                  Belum ada opsi jawaban
+                </div>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Form Tambah Soal -->
+
+  <!-- KaTeX + Summernote offline -->
+  <link rel="stylesheet" href="/public/lib/katex/katex.min.css">
+  <link rel="stylesheet" href="/public/lib/summernote/summernote-lite.min.css">
+  <style>
+    @font-face {
+      font-family: 'summernote';
+      src: url('/public/lib/summernote/font/summernote.woff2') format('woff2'),
+           url('/public/lib/summernote/font/summernote.woff') format('woff'),
+           url('/public/lib/summernote/font/summernote.ttf') format('truetype');
+    }
+    .note-editor.note-frame { border-radius: 12px !important; border: 2px solid #c7d2fe !important; }
+    .note-editor.note-frame.focus { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important; }
+    .note-toolbar { background: #f0f4ff !important; border-bottom: 1px solid #c7d2fe !important; border-radius: 10px 10px 0 0 !important; padding: 6px !important; }
+    .note-editable { font-size: 15px !important; }
+    .math-formula { display: inline-block; vertical-align: middle; padding: 0 2px; cursor: pointer; }
+    .math-formula:hover { background: #ede9fe; border-radius: 4px; }
+    .math-icon { font-style: normal; font-weight: bold; font-family: serif; font-size: 15px; }
+    .math-shortcut:hover { background: #e0e7ff !important; border-color: #6366f1 !important; }
+  </style>
+
+  <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5">
+    <h2 class="text-xl font-semibold text-indigo-900">Tambah Soal (PG)</h2>
+    <form action="/teacher/exams/<%= exam.id %>/questions" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3" id="questionForm">
+
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Pertanyaan *</label>
+        <textarea id="sn_question" name="question_text" class="mt-1"></textarea>
+      </div>
+
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Gambar Soal (opsional)</label>
+        <input type="file" name="image" accept="image/*" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200" />
+        <div class="mt-1 text-xs text-indigo-600">Max 5MB</div>
+      </div>
+
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">PDF Soal (opsional)</label>
+        <input type="file" name="pdf" accept="application/pdf" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
+        <div class="mt-1 text-xs text-indigo-600">Max 10MB</div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm text-indigo-700 font-medium">Poin</label>
+          <input type="number" name="points" value="1" min="1" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="text-sm text-indigo-700 font-medium">Jawaban Benar</label>
+          <select name="correct" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <% ['A','B','C','D','E'].forEach(opt => { %>
+        <div>
+          <label class="text-sm text-indigo-700 font-medium">Opsi <%= opt %> *</label>
+          <textarea id="sn_option_<%= opt.toLowerCase() %>" name="<%= opt.toLowerCase() %>" class="mt-1 sn-option"></textarea>
+        </div>
+        <% }) %>
+      </div>
+
+      <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-3 transition-all">Simpan Soal</button>
+    </form>
+  </div>
+</div>
+
+<script src="/public/lib/jquery/jquery.min.js"></script>
+<script>var $sn = jQuery.noConflict(true); window.$ = window.jQuery = $sn;</script>
+<script src="/public/lib/katex/katex.min.js"></script>
+<script src="/public/lib/summernote/summernote-lite.min.js"></script>
+<script src="/public/lib/summernote/summernote-math.js"></script>
+
+<script>
+$sn(document).ready(function () {
+  var $ = $sn;
+
+  var toolbarFull = [
+    ['style', ['bold', 'italic', 'underline', 'strikethrough', 'clear']],
+    ['font', ['superscript', 'subscript']],
+    ['color', ['color']],
+    ['para', ['ul', 'ol']],
+    ['insert', ['picture', 'math']],
+    ['view', ['fullscreen', 'codeview']]
+  ];
+
+  var toolbarOption = [
+    ['style', ['bold', 'italic', 'underline', 'clear']],
+    ['font', ['superscript', 'subscript']],
+    ['color', ['color']],
+    ['insert', ['picture', 'math']]
+  ];
+
+  var imgUpload = {
+    onImageUpload: function (files) {
+      var ed = this;
+      Array.from(files).forEach(function (file) {
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var img = $('<img>').attr('src', e.target.result).css({ maxWidth: '100%', borderRadius: '8px', margin: '4px 0' });
+          $(ed).summernote('insertNode', img[0]);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  $('#sn_question').summernote({
+    height: 160,
+    placeholder: 'Ketik pertanyaan... Klik ∑ untuk rumus matematika',
+    toolbar: toolbarFull,
+    callbacks: imgUpload,
+    plugins: ['math']
+  });
+
+  $('.sn-option').summernote({
+    height: 90,
+    placeholder: 'Ketik opsi jawaban... Klik ∑ untuk rumus',
+    toolbar: toolbarOption,
+    callbacks: imgUpload,
+    plugins: ['math']
+  });
+
+  $('#questionForm').on('submit', function (e) {
+    var fields = [
+      { id: 'sn_question', name: 'Pertanyaan' },
+      { id: 'sn_option_a', name: 'Opsi A' },
+      { id: 'sn_option_b', name: 'Opsi B' },
+      { id: 'sn_option_c', name: 'Opsi C' },
+      { id: 'sn_option_d', name: 'Opsi D' },
+      { id: 'sn_option_e', name: 'Opsi E' }
+    ];
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i];
+      var html = $('#' + f.id).summernote('code');
+      var text = $('<div>').html(html).text().trim();
+      if (!text && html.indexOf('<img') === -1) {
+        e.preventDefault();
+        alert(f.name + ' tidak boleh kosong!');
+        $('#' + f.id).summernote('focus');
+        return false;
+      }
+    }
+  });
+});
+</script>
+
+
+<!-- Modal Bank Soal -->
+<div id="bankSoalModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between p-6 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+      <div>
+        <h2 class="text-2xl font-bold text-indigo-900">📚 Pilih Soal dari Bank</h2>
+        <p class="text-sm text-slate-600 mt-1">Pilih soal yang ingin ditambahkan ke ujian ini</p>
+      </div>
+      <button onclick="closeBankSoalModal()" class="p-2 rounded-xl hover:bg-slate-100 transition-all">
+        <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+    
+    <!-- Filter -->
+    <div class="p-4 border-b border-slate-200 bg-slate-50">
+      <div class="grid md:grid-cols-4 gap-3">
+        <div>
+          <label class="text-xs text-slate-600 font-medium">Mata Pelajaran</label>
+          <select id="filterSubject" onchange="loadBankSoal()" class="mt-1 w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="">Semua</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="text-xs text-slate-600 font-medium">Kesulitan</label>
+          <select id="filterDifficulty" onchange="loadBankSoal()" class="mt-1 w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="">Semua</option>
+            <option value="EASY">Mudah</option>
+            <option value="MEDIUM">Sedang</option>
+            <option value="HARD">Sulit</option>
+          </select>
+        </div>
+        
+        <div>
+          <label class="text-xs text-slate-600 font-medium">Cari</label>
+          <input type="text" id="filterSearch" onkeyup="loadBankSoal()" placeholder="Cari soal..." class="mt-1 w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        
+        <div class="flex items-end">
+          <button onclick="loadBankSoal()" class="w-full rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 text-sm">
+            🔍 Filter
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Modal Body -->
+    <div id="bankSoalList" class="flex-1 overflow-y-auto p-6">
+      <div class="text-center py-12">
+        <div class="text-4xl mb-3">⏳</div>
+        <div class="text-slate-600">Memuat bank soal...</div>
+      </div>
+    </div>
+    
+    <!-- Modal Footer -->
+    <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-between items-center">
+      <div class="text-sm text-slate-600">
+        <span id="selectedCount">0</span> soal dipilih
+      </div>
+      <div class="flex gap-2">
+        <button onclick="closeBankSoalModal()" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 font-medium text-sm transition-all">
+          Batal
+        </button>
+        <button onclick="addSelectedQuestions()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold text-sm transition-all">
+          ➕ Tambahkan Soal
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let selectedQuestions = new Set();
+
+function openBankSoalModal() {
+  document.getElementById('bankSoalModal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+  loadBankSoal();
+  loadSubjects();
+}
+
+function closeBankSoalModal() {
+  document.getElementById('bankSoalModal').classList.add('hidden');
+  document.body.style.overflow = 'auto';
+  selectedQuestions.clear();
+  updateSelectedCount();
+}
+
+async function loadSubjects() {
+  try {
+    const response = await fetch('/api/subjects');
+    const subjects = await response.json();
+    const select = document.getElementById('filterSubject');
+    subjects.forEach(s => {
+      const option = document.createElement('option');
+      option.value = s.id;
+      option.textContent = s.name;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error loading subjects:', error);
+  }
+}
+
+async function loadBankSoal() {
+  const subjectId = document.getElementById('filterSubject').value;
+  const difficulty = document.getElementById('filterDifficulty').value;
+  const search = document.getElementById('filterSearch').value;
+  
+  const params = new URLSearchParams();
+  if (subjectId) params.append('subject_id', subjectId);
+  if (difficulty) params.append('difficulty', difficulty);
+  if (search) params.append('search', search);
+  
+  const listDiv = document.getElementById('bankSoalList');
+  listDiv.innerHTML = '<div class="text-center py-12"><div class="text-4xl mb-3">⏳</div><div class="text-slate-600">Memuat...</div></div>';
+  
+  try {
+    const response = await fetch(`/api/question-bank?${params.toString()}`);
+    const questions = await response.json();
+    
+    if (questions.length === 0) {
+      listDiv.innerHTML = `
+        <div class="text-center py-12">
+          <div class="text-6xl mb-3">📚</div>
+          <div class="font-semibold text-slate-900 text-lg">Tidak ada soal</div>
+          <div class="text-sm text-slate-600 mt-1">Coba ubah filter atau tambahkan soal ke bank terlebih dahulu</div>
+        </div>
+      `;
+      return;
+    }
+    
+    const colors = [
+      { border: 'border-blue-200', bg: 'from-blue-50 to-cyan-50', badge: 'bg-blue-100 text-blue-700' },
+      { border: 'border-purple-200', bg: 'from-purple-50 to-pink-50', badge: 'bg-purple-100 text-purple-700' },
+      { border: 'border-emerald-200', bg: 'from-emerald-50 to-teal-50', badge: 'bg-emerald-100 text-emerald-700' },
+      { border: 'border-amber-200', bg: 'from-amber-50 to-orange-50', badge: 'bg-amber-100 text-amber-700' }
+    ];
+    
+    const difficultyLabels = {
+      'EASY': { text: 'Mudah', color: 'bg-green-100 text-green-700' },
+      'MEDIUM': { text: 'Sedang', color: 'bg-yellow-100 text-yellow-700' },
+      'HARD': { text: 'Sulit', color: 'bg-red-100 text-red-700' }
+    };
+    
+    listDiv.innerHTML = questions.map((q, idx) => {
+      const color = colors[idx % colors.length];
+      const diff = difficultyLabels[q.difficulty] || difficultyLabels['MEDIUM'];
+      const isSelected = selectedQuestions.has(q.id);
+      
+      return `
+        <div class="mb-4 rounded-xl border-2 ${color.border} bg-gradient-to-br ${color.bg} p-4 ${isSelected ? 'ring-4 ring-indigo-400' : ''} transition-all">
+          <div class="flex items-start gap-4">
+            <input type="checkbox" 
+                   id="q_${q.id}" 
+                   ${isSelected ? 'checked' : ''}
+                   onchange="toggleQuestion(${q.id})"
+                   class="mt-1 w-5 h-5 rounded accent-indigo-500 cursor-pointer" />
+            <label for="q_${q.id}" class="flex-1 cursor-pointer">
+              <div class="flex items-center gap-2 mb-2">
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full ${color.badge} text-xs font-bold">
+                  ${q.subject_name}
+                </span>
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full ${diff.color} text-xs font-bold">
+                  ${diff.text}
+                </span>
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+                  ⭐ ${q.points} poin
+                </span>
+              </div>
+              <div class="text-slate-900 text-sm leading-relaxed line-clamp-2">
+                ${q.question_text.replace(/<[^>]*>/g, '').substring(0, 200)}...
+              </div>
+              ${q.tags ? `
+                <div class="mt-2 flex flex-wrap gap-1">
+                  ${q.tags.split(',').map(tag => `<span class="px-2 py-0.5 rounded-lg bg-white/80 text-xs text-slate-600">#${tag.trim()}</span>`).join('')}
+                </div>
+              ` : ''}
+            </label>
+          </div>
+        </div>
+      `;
+    }).join('');
+    
+  } catch (error) {
+    console.error('Error loading bank soal:', error);
+    listDiv.innerHTML = `
+      <div class="text-center py-12">
+        <div class="text-6xl mb-3">❌</div>
+        <div class="font-semibold text-red-900 text-lg">Gagal memuat bank soal</div>
+        <div class="text-sm text-red-600 mt-1">${error.message}</div>
+      </div>
+    `;
+  }
+}
+
+function toggleQuestion(id) {
+  if (selectedQuestions.has(id)) {
+    selectedQuestions.delete(id);
+  } else {
+    selectedQuestions.add(id);
+  }
+  updateSelectedCount();
+}
+
+function updateSelectedCount() {
+  document.getElementById('selectedCount').textContent = selectedQuestions.size;
+}
+
+async function addSelectedQuestions() {
+  if (selectedQuestions.size === 0) {
+    alert('Pilih minimal 1 soal');
+    return;
+  }
+  
+  const examId = <%= exam.id %>;
+  const questionIds = Array.from(selectedQuestions);
+  
+  try {
+    const response = await fetch(`/api/question-bank/add-to-exam/${examId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questionIds })
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert(`Berhasil menambahkan ${result.added} soal ke ujian`);
+      closeBankSoalModal();
+      location.reload();
+    } else {
+      alert('Gagal menambahkan soal: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Error adding questions:', error);
+    alert('Gagal menambahkan soal: ' + error.message);
+  }
+}
+
+// Close modal on ESC key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !document.getElementById('bankSoalModal').classList.contains('hidden')) {
+    closeBankSoalModal();
+  }
+  if (e.key === 'Escape' && !document.getElementById('studentsModal').classList.contains('hidden')) {
+    closeStudentsModal();
+  }
+});
+
+// Students Modal Functions
+const completedStudents = <%- JSON.stringify(exam.completed_students) %>;
+const notCompletedStudents = <%- JSON.stringify(exam.not_completed_students) %>;
+
+function showCompletedStudents() {
+  showStudentsModal('Sudah Mengerjakan', completedStudents, 'completed');
+}
+
+function showNotCompletedStudents() {
+  showStudentsModal('Belum Mengerjakan', notCompletedStudents, 'not_completed');
+}
+
+function showStudentsModal(title, students, type) {
+  const modal = document.getElementById('studentsModal');
+  const modalTitle = document.getElementById('studentsModalTitle');
+  const modalContent = document.getElementById('studentsModalContent');
+  
+  modalTitle.textContent = title;
+  
+  if (students.length === 0) {
+    modalContent.innerHTML = `
+      <div class="text-center py-12">
+        <div class="text-6xl mb-4">${type === 'completed' ? '✓' : '⏳'}</div>
+        <p class="text-slate-600 font-medium">Tidak ada siswa</p>
+      </div>
+    `;
+  } else {
+    let html = '<div class="space-y-2">';
+    students.forEach((student, index) => {
+      const bgColor = type === 'completed' ? 'from-green-50 to-emerald-50' : 'from-orange-50 to-amber-50';
+      const borderColor = type === 'completed' ? 'border-green-200' : 'border-orange-200';
+      const textColor = type === 'completed' ? 'text-green-900' : 'text-orange-900';
+      
+      html += `
+        <div class="flex items-center justify-between p-4 rounded-xl border-2 ${borderColor} bg-gradient-to-r ${bgColor}">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold">
+              ${index + 1}
+            </div>
+            <div>
+              <div class="font-semibold ${textColor}">${student.full_name}</div>
+              <div class="text-sm text-slate-600">${student.username} • ${student.class_name || 'Tanpa Kelas'}</div>
+            </div>
+          </div>
+          ${type === 'completed' && student.last_attempt ? `
+            <div class="text-xs text-slate-500">
+              ${new Date(student.last_attempt).toLocaleString('id-ID')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+    });
+    html += '</div>';
+    modalContent.innerHTML = html;
+  }
+  
+  modal.classList.remove('hidden');
+}
+
+function closeStudentsModal() {
+  document.getElementById('studentsModal').classList.add('hidden');
+}
+</script>
+
+<!-- Students Modal -->
+<div id="studentsModal" class="hidden fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+    <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6">
+      <div class="flex items-center justify-between">
+        <h2 id="studentsModalTitle" class="text-2xl font-bold text-white"></h2>
+        <button onclick="closeStudentsModal()" class="text-white hover:bg-white/20 rounded-xl p-2 transition-all">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div id="studentsModalContent" class="p-6 overflow-y-auto max-h-[60vh]">
+      <!-- Content will be inserted here -->
+    </div>
+  </div>
+</div>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

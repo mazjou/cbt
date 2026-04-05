@@ -1,0 +1,37 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Laporan Ujian</h1>
+    <p class="mt-1 text-slate-600">Ringkasan hasil siswa (maks. 200 data terbaru).</p>
+  </div>
+  <a href="/teacher" class="text-sm px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">Kembali</a>
+</div>
+
+<div class="mt-6 rounded-2xl border border-slate-200 bg-slate-100 p-5 overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="text-slate-500">
+      <tr>
+        <th class="text-left py-2">Ujian</th>
+        <th class="text-left py-2">Siswa</th>
+        <th class="text-left py-2">Kelas</th>
+        <th class="text-left py-2">Status</th>
+        <th class="text-right py-2">Nilai</th>
+        <th class="text-left py-2">Waktu</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-white/10">
+      <% if (!rows.length) { %>
+        <tr><td colspan="6" class="py-6 text-slate-600">Belum ada data.</td></tr>
+      <% } %>
+      <% rows.forEach(r => { %>
+        <tr>
+          <td class="py-3"><%= r.exam_title %></td>
+          <td class="py-3"><%= r.student_name %></td>
+          <td class="py-3"><%= r.class_name || '-' %></td>
+          <td class="py-3"><span class="px-2 py-1 rounded-lg border border-slate-200 bg-white"><%= r.status %></span></td>
+          <td class="py-3 text-right font-semibold"><%= r.score %></td>
+          <td class="py-3 text-slate-600"><%= r.started_at ? new Date(r.started_at).toLocaleString() : '-' %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,357 @@
+<div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-xl mb-6">
+  <div class="absolute inset-0 opacity-10">
+    <div class="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -mr-32 -mt-32"></div>
+    <div class="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full -ml-24 -mb-24"></div>
+  </div>
+  <div class="relative px-6 py-8">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-4">
+          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-white tracking-tight"><%= exam.title %></h1>
+          <p class="mt-1 text-indigo-100">Detail dan manajemen ujian</p>
+        </div>
+      </div>
+      <div class="flex gap-3">
+        <a href="/admin/exams/<%= exam.id %>/edit" class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100/80 backdrop-blur-sm hover:bg-emerald-200/90 text-emerald-800 font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Edit
+        </a>
+        <a href="/admin/exams" class="inline-flex items-center gap-2 px-4 py-2 bg-orange-100/80 backdrop-blur-sm hover:bg-orange-200/90 text-orange-800 font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Kembali
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <!-- Total Soal Card -->
+  <div class="relative overflow-hidden rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-300">
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-500 via-blue-600 to-indigo-700"></div>
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+    </div>
+    <div class="relative p-6">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-blue-100 text-sm font-medium uppercase tracking-wide">Total Soal</div>
+        <svg class="w-8 h-8 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div class="text-4xl font-bold text-white mb-1"><%= questions.length %></div>
+      <div class="text-blue-200 text-xs">Soal tersedia</div>
+    </div>
+  </div>
+
+  <!-- Siswa Selesai Card -->
+  <div class="relative overflow-hidden rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-300">
+    <div class="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700"></div>
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+    </div>
+    <div class="relative p-6">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-green-100 text-sm font-medium uppercase tracking-wide">Selesai</div>
+        <svg class="w-8 h-8 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div class="text-4xl font-bold text-white mb-1"><%= exam.completed_count %></div>
+      <div class="text-green-200 text-xs">dari <%= exam.total_students %> siswa</div>
+    </div>
+  </div>
+  <!-- Belum Mengerjakan Card -->
+  <div class="relative overflow-hidden rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-300">
+    <div class="absolute inset-0 bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-600"></div>
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+    </div>
+    <div class="relative p-6">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-orange-100 text-sm font-medium uppercase tracking-wide">Belum</div>
+        <svg class="w-8 h-8 text-orange-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div class="text-4xl font-bold text-white mb-1"><%= exam.not_completed_count %></div>
+      <div class="text-orange-200 text-xs">siswa belum mengerjakan</div>
+    </div>
+  </div>
+
+  <!-- Status Card -->
+  <div class="relative overflow-hidden rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-300">
+    <div class="absolute inset-0 bg-gradient-to-br from-purple-500 via-purple-600 to-indigo-700"></div>
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+    </div>
+    <div class="relative p-6">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-purple-100 text-sm font-medium uppercase tracking-wide">Status</div>
+        <svg class="w-8 h-8 text-purple-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <% if (exam.is_published) { %>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <% } else { %>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          <% } %>
+        </svg>
+      </div>
+      <div class="text-2xl font-bold text-white mb-1">
+        <% if (exam.is_published) { %>
+          Dipublikasi
+        <% } else { %>
+          Draft
+        <% } %>
+      </div>
+      <div class="text-purple-200 text-xs">
+        <% if (exam.is_published) { %>
+          Siswa dapat mengerjakan
+        <% } else { %>
+          Belum dipublikasi
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Exam Information -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <!-- Basic Info -->
+  <div class="bg-white rounded-2xl shadow-xl border-2 border-slate-100 overflow-hidden">
+    <div class="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-b-2 border-slate-200">
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-500 rounded-xl p-2">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 class="text-lg font-bold text-slate-800">Informasi Ujian</h2>
+      </div>
+    </div>
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="text-sm font-bold text-slate-600 uppercase tracking-wide">Mata Pelajaran</label>
+        <p class="mt-1 text-lg font-semibold text-slate-900"><%= exam.subject_name || '-' %></p>
+      </div>
+      <div>
+        <label class="text-sm font-bold text-slate-600 uppercase tracking-wide">Guru</label>
+        <p class="mt-1 text-lg font-semibold text-slate-900"><%= exam.teacher_name || '-' %></p>
+      </div>
+      <div>
+        <label class="text-sm font-bold text-slate-600 uppercase tracking-wide">Kelas Target</label>
+        <p class="mt-1 text-lg font-semibold text-slate-900"><%= exam.class_names || 'Semua Kelas' %></p>
+      </div>
+      <% if (exam.description) { %>
+        <div>
+          <label class="text-sm font-bold text-slate-600 uppercase tracking-wide">Deskripsi</label>
+          <p class="mt-1 text-slate-700 leading-relaxed"><%= exam.description %></p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="bg-white rounded-2xl shadow-xl border-2 border-slate-100 overflow-hidden">
+    <div class="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-b-2 border-slate-200">
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-2">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <h2 class="text-lg font-bold text-slate-800">Pengaturan</h2>
+      </div>
+    </div>
+    <div class="p-6 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm font-bold text-slate-600 uppercase tracking-wide">Durasi</label>
+          <p class="mt-1 text-lg font-semibold text-slate-900"><%= exam.duration_minutes %> menit</p>
+        </div>
+        <div>
+          <label class="text-sm font-bold text-slate-600 uppercase tracking-wide">Nilai Lulus</label>
+          <p class="mt-1 text-lg font-semibold text-slate-900"><%= exam.pass_score %></p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm font-bold text-slate-600 uppercase tracking-wide">Max Percobaan</label>
+          <p class="mt-1 text-lg font-semibold text-slate-900"><%= exam.max_attempts %></p>
+        </div>
+        <div>
+          <label class="text-sm font-bold text-slate-600 uppercase tracking-wide">Kode Akses</label>
+          <p class="mt-1 text-lg font-semibold text-slate-900"><%= exam.access_code || 'Tidak ada' %></p>
+        </div>
+      </div>
+      <% if (exam.start_at || exam.end_at) { %>
+        <div class="grid grid-cols-1 gap-4">
+          <% if (exam.start_at) { %>
+            <div>
+              <label class="text-sm font-bold text-slate-600 uppercase tracking-wide">Mulai</label>
+              <p class="mt-1 text-lg font-semibold text-slate-900"><%= new Date(exam.start_at).toLocaleString('id-ID') %></p>
+            </div>
+          <% } %>
+          <% if (exam.end_at) { %>
+            <div>
+              <label class="text-sm font-bold text-slate-600 uppercase tracking-wide">Berakhir</label>
+              <p class="mt-1 text-lg font-semibold text-slate-900"><%= new Date(exam.end_at).toLocaleString('id-ID') %></p>
+            </div>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+<!-- Progress Bar -->
+<div class="bg-white rounded-2xl shadow-xl border-2 border-slate-100 overflow-hidden mb-6">
+  <div class="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-b-2 border-slate-200">
+    <div class="flex items-center gap-3">
+      <div class="bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl p-2">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      </div>
+      <h2 class="text-lg font-bold text-slate-800">Progress Pengerjaan</h2>
+    </div>
+  </div>
+  <div class="p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div class="text-sm font-semibold text-slate-600">
+        <span class="text-emerald-600"><%= exam.completed_count %></span> dari 
+        <span class="text-slate-800"><%= exam.total_students %></span> siswa telah mengerjakan
+      </div>
+      <div class="text-2xl font-bold text-emerald-600">
+        <%= exam.completed_percentage %>%
+      </div>
+    </div>
+    <div class="w-full bg-slate-200 rounded-full h-4 overflow-hidden">
+      <div class="bg-gradient-to-r from-emerald-500 to-green-600 h-4 rounded-full transition-all duration-500" style="width: <%= exam.completed_percentage %>%"></div>
+    </div>
+    <div class="flex justify-between text-xs text-slate-500 mt-2">
+      <span>0%</span>
+      <span>50%</span>
+      <span>100%</span>
+    </div>
+  </div>
+</div>
+
+<!-- Questions List -->
+<div class="bg-white rounded-2xl shadow-xl border-2 border-slate-100 overflow-hidden">
+  <div class="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-b-2 border-slate-200">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl p-2">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <h2 class="text-lg font-bold text-slate-800">Daftar Soal (<%= questions.length %>)</h2>
+      </div>
+      <div class="flex gap-2">
+        <a href="/teacher/exams/<%= exam.id %>" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+          ➕ Tambah Soal
+        </a>
+      </div>
+    </div>
+  </div>
+  
+  <div class="overflow-x-auto">
+    <% if (questions.length === 0) { %>
+      <div class="p-12 text-center">
+        <div class="flex flex-col items-center gap-3">
+          <div class="bg-gradient-to-r from-slate-100 to-slate-200 rounded-full p-4">
+            <svg class="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p class="text-slate-500 font-medium">Belum ada soal</p>
+          <p class="text-slate-400 text-sm">Tambahkan soal untuk ujian ini</p>
+          <a href="/teacher/exams/<%= exam.id %>" class="mt-3 px-6 py-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+            Tambah Soal Pertama
+          </a>
+        </div>
+      </div>
+    <% } else { %>
+      <table class="w-full">
+        <thead class="bg-gradient-to-r from-indigo-50 to-purple-50 border-b-2 border-indigo-100">
+          <tr>
+            <th class="px-4 py-4 text-left text-xs font-bold text-indigo-900 uppercase tracking-wider">No</th>
+            <th class="px-4 py-4 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Soal</th>
+            <th class="px-4 py-4 text-left text-xs font-bold text-pink-900 uppercase tracking-wider">Tipe</th>
+            <th class="px-4 py-4 text-left text-xs font-bold text-cyan-900 uppercase tracking-wider">Opsi</th>
+            <th class="px-4 py-4 text-left text-xs font-bold text-blue-900 uppercase tracking-wider">Poin</th>
+            <th class="px-4 py-4 text-left text-xs font-bold text-red-900 uppercase tracking-wider">Aksi</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% questions.forEach((question, index) => { %>
+            <tr class="hover:bg-gradient-to-r hover:from-indigo-50 hover:to-purple-50 transition-all duration-200 <%= index % 2 === 0 ? 'bg-white' : 'bg-slate-50' %>">
+              <td class="px-4 py-4">
+                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-bold">
+                  <%= index + 1 %>
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <div class="font-semibold text-slate-900 line-clamp-2">
+                  <%= question.question_text.substring(0, 100) %><%= question.question_text.length > 100 ? '...' : '' %>
+                </div>
+                <% if (question.question_image) { %>
+                  <div class="mt-1">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      Gambar
+                    </span>
+                  </div>
+                <% } %>
+              </td>
+              <td class="px-4 py-4">
+                <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 border border-purple-300">
+                  <%= question.question_type === 'MULTIPLE_CHOICE' ? 'Pilihan Ganda' : question.question_type === 'ESSAY' ? 'Essay' : question.question_type %>
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-gradient-to-r from-cyan-500 to-cyan-600 text-white shadow-md">
+                  <%= question.option_count || 0 %>
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md">
+                  <%= question.points || 1 %>
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <div class="flex items-center gap-2">
+                  <a href="/teacher/questions/<%= question.id %>/edit" class="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+                    Edit
+                  </a>
+                  <form method="POST" action="/teacher/questions/<%= question.id %>?_method=DELETE" class="inline" onsubmit="return confirm('Yakin ingin menghapus soal ini?');">
+                    <button type="submit" class="px-3 py-1.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-xs font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+                      Hapus
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </div>
+</div>

@@ -1,0 +1,379 @@
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">🖥️ Monitoring Sistem</h1>
+    <p class="mt-1 text-sm text-slate-500">Status server, database, dan aplikasi secara real-time</p>
+  </div>
+  <div class="flex items-center gap-3">
+    <span id="last-update" class="text-xs text-slate-400"></span>
+    <button onclick="fetchData()" class="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold transition-all">
+      🔄 Refresh
+    </button>
+    <a href="/admin" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">← Kembali</a>
+  </div>
+</div>
+
+    <!-- Info Kesiapan Produksi -->
+    <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+      <h2 class="font-bold text-amber-800 mb-3">⚠️ Checklist Kesiapan Ujian Massal</h2>
+      <div class="grid md:grid-cols-2 gap-2 text-sm" id="checklist">
+        <div class="flex items-center gap-2 p-2 rounded-lg bg-white border border-amber-100">
+          <span id="chk-db">⏳</span>
+          <span>Database PostgreSQL</span>
+        </div>
+        <div class="flex items-center gap-2 p-2 rounded-lg bg-white border border-amber-100">
+          <span id="chk-redis">⏳</span>
+          <span>Redis Session Store</span>
+          <span class="ml-auto text-xs text-slate-400">(opsional tapi disarankan)</span>
+        </div>
+        <div class="flex items-center gap-2 p-2 rounded-lg bg-white border border-amber-100">
+          <span id="chk-ram">⏳</span>
+          <span>RAM Node.js &lt; 300MB</span>
+        </div>
+        <div class="flex items-center gap-2 p-2 rounded-lg bg-white border border-amber-100">
+          <span id="chk-cpu">⏳</span>
+          <span>CPU &lt; 70%</span>
+        </div>
+        <div class="flex items-center gap-2 p-2 rounded-lg bg-white border border-amber-100">
+          <span id="chk-conn">⏳</span>
+          <span>Koneksi DB tersedia</span>
+        </div>
+        <div class="flex items-center gap-2 p-2 rounded-lg bg-white border border-amber-100">
+          <span id="chk-active">⏳</span>
+          <span>Tidak ada ujian berlangsung</span>
+        </div>
+      </div>
+      <div id="readiness-msg" class="mt-3 text-sm font-semibold text-amber-700">Memuat status...</div>
+    </div>
+
+<!-- Status Bar -->
+<div id="status-bar" class="mb-4 rounded-xl px-4 py-2 text-sm font-medium bg-slate-100 text-slate-500">
+  ⏳ Memuat data...
+</div>
+<div class="grid lg:grid-cols-2 gap-4">
+
+  <!-- ── SERVER ── -->
+  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="text-lg">🖥️</span>
+      <h2 class="font-bold text-slate-800">Server Node.js</h2>
+      <span id="srv-status" class="ml-auto text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">-</span>
+    </div>
+
+    <!-- CPU + RAM bar -->
+    <div class="space-y-3 mb-4">
+      <div>
+        <div class="flex justify-between text-xs text-slate-500 mb-1">
+          <span>CPU Usage</span>
+          <span id="cpu-pct" class="font-bold text-slate-700">-</span>
+        </div>
+        <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+          <div id="cpu-bar" class="h-full rounded-full transition-all duration-700 bg-blue-500" style="width:0%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex justify-between text-xs text-slate-500 mb-1">
+          <span>RAM Node.js (RSS)</span>
+          <span id="ram-pct" class="font-bold text-slate-700">-</span>
+        </div>
+        <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+          <div id="ram-bar" class="h-full rounded-full transition-all duration-700 bg-emerald-500" style="width:0%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info grid -->
+    <div class="grid grid-cols-2 gap-2">
+      <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+        <div class="text-xs text-slate-400">CPU</div>
+        <div id="cpu-val" class="text-xl font-bold text-slate-800 mt-0.5">-</div>
+        <div id="cpu-cores" class="text-xs text-slate-400 mt-0.5">-</div>
+      </div>
+      <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+        <div class="text-xs text-slate-400">RAM</div>
+        <div id="ram-val" class="text-xl font-bold text-slate-800 mt-0.5">-</div>
+        <div id="ram-detail" class="text-xs text-slate-400 mt-0.5">-</div>
+      </div>
+      <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+        <div class="text-xs text-slate-400">Uptime Server</div>
+        <div id="uptime-os" class="text-base font-bold text-slate-800 mt-0.5">-</div>
+      </div>
+      <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+        <div class="text-xs text-slate-400">Uptime Aplikasi</div>
+        <div id="uptime-app" class="text-base font-bold text-slate-800 mt-0.5">-</div>
+      </div>
+      <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+        <div class="text-xs text-slate-400">Node.js</div>
+        <div id="node-ver" class="text-base font-bold text-slate-800 mt-0.5">-</div>
+      </div>
+      <div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+        <div class="text-xs text-slate-400">Platform</div>
+        <div id="platform" class="text-base font-bold text-slate-800 mt-0.5">-</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DATABASE ── -->
+  <div class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-sm">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="text-lg">🐘</span>
+      <h2 class="font-bold text-slate-800">PostgreSQL</h2>
+      <span id="db-status" class="ml-auto text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">-</span>
+    </div>
+    <div class="space-y-3">
+      <div class="flex justify-between items-center py-2 border-b border-emerald-100">
+        <span class="text-sm text-slate-600">Koneksi Aktif</span>
+        <span id="db-active" class="font-bold text-emerald-700 text-lg">-</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-emerald-100">
+        <span class="text-sm text-slate-600">Total Koneksi</span>
+        <span id="db-total" class="font-bold text-slate-700">-</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-emerald-100">
+        <span class="text-sm text-slate-600">Uptime DB</span>
+        <span id="db-uptime" class="font-bold text-slate-700">-</span>
+      </div>
+      <div class="flex justify-between items-center py-2">
+        <span class="text-sm text-slate-600">Ukuran Database</span>
+        <span id="db-size" class="font-bold text-slate-700">-</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STATISTIK APLIKASI ── -->
+  <div class="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-5 shadow-sm">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="text-lg">📊</span>
+      <h2 class="font-bold text-slate-800">Statistik Aplikasi</h2>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="rounded-xl bg-white border border-blue-100 p-4 text-center">
+        <div id="stat-users" class="text-3xl font-bold text-blue-600">-</div>
+        <div class="text-xs text-slate-500 mt-1">Total Pengguna</div>
+      </div>
+      <div class="rounded-xl bg-white border border-purple-100 p-4 text-center">
+        <div id="stat-exams" class="text-3xl font-bold text-purple-600">-</div>
+        <div class="text-xs text-slate-500 mt-1">Total Ujian</div>
+      </div>
+      <div class="rounded-xl bg-white border border-amber-100 p-4 text-center">
+        <div id="stat-attempts" class="text-3xl font-bold text-amber-600">-</div>
+        <div class="text-xs text-slate-500 mt-1">Total Percobaan</div>
+      </div>
+      <div class="rounded-xl bg-white border border-green-100 p-4 text-center">
+        <div id="stat-active" class="text-3xl font-bold text-green-600">-</div>
+        <div class="text-xs text-slate-500 mt-1">Ujian Berlangsung</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROSES NODE.JS ── -->
+  <div class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-white p-5 shadow-sm">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="text-lg">⚡</span>
+      <h2 class="font-bold text-slate-800">Proses Node.js</h2>
+    </div>
+    <div class="space-y-3">
+      <div class="flex justify-between items-center py-2 border-b border-violet-100">
+        <span class="text-sm text-slate-600">PID</span>
+        <span id="proc-pid" class="font-bold text-violet-700 font-mono">-</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-violet-100">
+        <span class="text-sm text-slate-600">Heap Used</span>
+        <span id="proc-heap" class="font-bold text-slate-700">-</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-violet-100">
+        <span class="text-sm text-slate-600">Heap Total</span>
+        <span id="proc-heap-total" class="font-bold text-slate-700">-</span>
+      </div>
+      <div class="flex justify-between items-center py-2 border-b border-violet-100">
+        <span class="text-sm text-slate-600">RSS Memory</span>
+        <span id="proc-rss" class="font-bold text-slate-700">-</span>
+      </div>
+      <div class="flex justify-between items-center py-2">
+        <span class="text-sm text-slate-600">Hostname</span>
+        <span id="proc-host" class="font-bold text-slate-700 font-mono text-sm">-</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CPU History Chart -->
+<div class="mt-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="font-bold text-slate-800">📈 Riwayat CPU & RAM (60 detik terakhir)</h2>
+    <span class="text-xs text-slate-400">Auto-refresh setiap 5 detik</span>
+  </div>
+  <canvas id="chart-cpu" height="80"></canvas>
+</div>
+
+<script>
+const cpuHistory = [], ramHistory = [], labels = [];
+const MAX_POINTS = 12; // 12 × 5 detik = 60 detik
+
+function fmt(bytes) {
+  if (bytes >= 1024) return (bytes/1024).toFixed(1) + ' GB';
+  return bytes + ' MB';
+}
+function fmtUptime(sec) {
+  const d = Math.floor(sec/86400), h = Math.floor((sec%86400)/3600),
+        m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+  if (d > 0) return `${d}h ${h}j ${m}m`;
+  if (h > 0) return `${h}j ${m}m ${s}d`;
+  return `${m}m ${s}d`;
+}
+function colorBar(pct) {
+  if (pct >= 80) return 'bg-red-500';
+  if (pct >= 60) return 'bg-amber-500';
+  return 'bg-blue-500';
+}
+
+async function fetchData() {
+  try {
+    const r = await fetch('/admin/monitoring/data');
+    const d = await r.json();
+    if (!d.ok) return;
+
+    const s = d.server, db = d.db, st = d.stats;
+
+    // Status bar
+    document.getElementById('status-bar').className = 'mb-4 rounded-xl px-4 py-2 text-sm font-medium bg-green-50 border border-green-200 text-green-700';
+    document.getElementById('status-bar').textContent = '✅ Server Online — ' + new Date(d.timestamp).toLocaleString('id-ID');
+    document.getElementById('last-update').textContent = 'Update: ' + new Date().toLocaleTimeString('id-ID');
+
+    // CPU
+    const cpuPct = s.cpuUsage;
+    document.getElementById('cpu-pct').textContent = cpuPct + '%';
+    const cpuBar = document.getElementById('cpu-bar');
+    cpuBar.style.width = cpuPct + '%';
+    cpuBar.className = 'h-full rounded-full transition-all duration-700 ' + colorBar(cpuPct);
+    document.getElementById('cpu-val').textContent = cpuPct + '%';
+    document.getElementById('cpu-cores').textContent = s.cpuCores + ' core';
+
+    // RAM - tampilkan RAM proses Node.js (RSS), bukan RAM sistem
+    const maxRam = 512; // anggap max 512MB untuk bar (bisa disesuaikan)
+    const ramPct = Math.min(Math.round(s.nodeRss / maxRam * 100), 100);
+    document.getElementById('ram-pct').textContent = fmt(s.nodeRss) + ' RSS / ' + fmt(s.heapUsed) + ' Heap';
+    const ramBar = document.getElementById('ram-bar');
+    ramBar.style.width = ramPct + '%';
+    ramBar.className = 'h-full rounded-full transition-all duration-700 ' + (ramPct >= 80 ? 'bg-red-500' : ramPct >= 60 ? 'bg-amber-500' : 'bg-emerald-500');
+    document.getElementById('ram-val').textContent = fmt(s.nodeRss);
+    document.getElementById('ram-detail').textContent = 'Heap: ' + fmt(s.heapUsed) + ' / ' + fmt(s.heapTotal);
+
+    // Uptime
+    document.getElementById('uptime-os').textContent = fmtUptime(s.uptimeOs);
+    document.getElementById('uptime-app').textContent = fmtUptime(s.uptimeApp);
+    document.getElementById('node-ver').textContent = s.nodeVersion;
+    document.getElementById('platform').textContent = s.platform + ' ' + s.arch;
+    document.getElementById('srv-status').className = 'ml-auto text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold';
+    document.getElementById('srv-status').textContent = '● Online';
+
+    // DB
+    document.getElementById('db-active').textContent = db.active;
+    document.getElementById('db-total').textContent = db.total;
+    document.getElementById('db-uptime').textContent = db.uptime;
+    document.getElementById('db-size').textContent = d.dbSize;
+    document.getElementById('db-status').className = 'ml-auto text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold';
+    document.getElementById('db-status').textContent = '● Connected';
+
+    // Stats
+    document.getElementById('stat-users').textContent = st.users;
+    document.getElementById('stat-exams').textContent = st.exams;
+    document.getElementById('stat-attempts').textContent = st.attempts;
+    document.getElementById('stat-active').textContent = st.activeAttempts;
+
+    // Checklist kesiapan
+    const chk = (id, ok, warn) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = ok ? '✅' : (warn ? '⚠️' : '❌');
+    };
+    chk('chk-db', true);
+    chk('chk-ram', s.nodeRss < 300, s.nodeRss < 400);
+    chk('chk-cpu', cpuPct < 70, cpuPct < 85);
+    chk('chk-conn', db.active < 20, db.active < 25);
+    chk('chk-active', st.activeAttempts === 0, st.activeAttempts < 10);
+    // Redis: cek dari status bar
+    const redisOk = false; // tidak bisa cek dari sini, tampilkan warning
+    document.getElementById('chk-redis').textContent = '⚠️';
+
+    const allOk = s.nodeRss < 300 && cpuPct < 70 && db.active < 20;
+    const msg = document.getElementById('readiness-msg');
+    if (allOk) {
+      msg.className = 'mt-3 text-sm font-semibold text-green-700';
+      msg.textContent = '✅ Server siap untuk ujian massal';
+    } else {
+      msg.className = 'mt-3 text-sm font-semibold text-amber-700';
+      msg.textContent = '⚠️ Perhatikan item yang belum hijau sebelum memulai ujian massal';
+    }
+    document.getElementById('proc-pid').textContent = s.pid || '-';
+    document.getElementById('proc-heap').textContent = fmt(s.heapUsed || 0);
+    document.getElementById('proc-heap-total').textContent = fmt(s.heapTotal || 0);
+    document.getElementById('proc-rss').textContent = fmt(s.rss || 0);
+    document.getElementById('proc-host').textContent = s.hostname;
+
+    // Chart history
+    const now = new Date().toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    labels.push(now);
+    cpuHistory.push(cpuPct);
+    ramHistory.push(ramPct);
+    if (labels.length > MAX_POINTS) { labels.shift(); cpuHistory.shift(); ramHistory.shift(); }
+    drawChart();
+
+  } catch(e) {
+    document.getElementById('status-bar').className = 'mb-4 rounded-xl px-4 py-2 text-sm font-medium bg-red-50 border border-red-200 text-red-700';
+    document.getElementById('status-bar').textContent = '❌ Gagal memuat data: ' + e.message;
+  }
+}
+
+// Simple canvas chart
+function drawChart() {
+  const canvas = document.getElementById('chart-cpu');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+
+  if (cpuHistory.length < 2) return;
+
+  const pad = { t:10, r:10, b:24, l:36 };
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+
+  // Grid
+  ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1;
+  [0,25,50,75,100].forEach(v => {
+    const y = pad.t + cH - (v/100)*cH;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l+cW, y); ctx.stroke();
+    ctx.fillStyle = '#94a3b8'; ctx.font = '10px Arial';
+    ctx.fillText(v+'%', 0, y+4);
+  });
+
+  function drawLine(data, color) {
+    ctx.beginPath(); ctx.strokeStyle = color; ctx.lineWidth = 2;
+    data.forEach((v, i) => {
+      const x = pad.l + (i/(MAX_POINTS-1))*cW;
+      const y = pad.t + cH - (v/100)*cH;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    // Fill
+    ctx.lineTo(pad.l + ((data.length-1)/(MAX_POINTS-1))*cW, pad.t+cH);
+    ctx.lineTo(pad.l, pad.t+cH);
+    ctx.closePath();
+    ctx.fillStyle = color.replace(')', ',0.1)').replace('rgb','rgba');
+    ctx.fill();
+  }
+
+  drawLine(cpuHistory, 'rgb(99,102,241)');
+  drawLine(ramHistory, 'rgb(16,185,129)');
+
+  // Legend
+  ctx.fillStyle = 'rgb(99,102,241)'; ctx.fillRect(pad.l, H-14, 12, 4);
+  ctx.fillStyle = '#475569'; ctx.font = '10px Arial'; ctx.fillText('CPU', pad.l+16, H-10);
+  ctx.fillStyle = 'rgb(16,185,129)'; ctx.fillRect(pad.l+60, H-14, 12, 4);
+  ctx.fillStyle = '#475569'; ctx.fillText('RAM', pad.l+76, H-10);
+}
+
+// Auto refresh setiap 5 detik
+fetchData();
+setInterval(fetchData, 5000);
+</script>

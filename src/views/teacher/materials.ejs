@@ -1,0 +1,91 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Kelola Materi</h1>
+    <p class="mt-1 text-slate-600">Buat materi, publish/unpublish, dan lihat konten.</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/teacher/materials/new" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold shadow-lg transition-all">📚 + Materi</a>
+    <a href="/teacher" class="inline-flex items-center gap-2 px-4 py-2 bg-orange-100/80 backdrop-blur-sm hover:bg-orange-200/90 text-orange-800 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Kembali
+    </a>
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 p-5 shadow-soft">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold text-teal-900">Daftar Materi</h2>
+    <div class="text-sm text-teal-700">Total: <span class="font-semibold"><%= materials.length %></span> materi</div>
+  </div>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-teal-700">
+        <tr>
+          <th class="text-left py-2">Judul</th>
+          <th class="text-left py-2">Mapel</th>
+          <th class="text-left py-2">Kelas</th>
+          <th class="text-left py-2">Status</th>
+          <th class="text-right py-2">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!materials.length) { %>
+          <tr>
+            <td class="py-8 text-center text-teal-700" colspan="5">
+              <div class="text-4xl mb-2">📖</div>
+              <div class="font-semibold">Belum ada materi</div>
+              <div class="text-sm mt-1">Klik tombol "+ Materi" untuk membuat materi baru</div>
+            </td>
+          </tr>
+        <% } %>
+        <% materials.forEach((m, index) => { 
+          const colors = [
+            { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-900', subtext: 'text-blue-600' },
+            { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-900', subtext: 'text-purple-600' },
+            { bg: 'bg-pink-50', border: 'border-pink-200', text: 'text-pink-900', subtext: 'text-pink-600' },
+            { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-900', subtext: 'text-amber-600' },
+            { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-900', subtext: 'text-emerald-600' },
+            { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-900', subtext: 'text-cyan-600' }
+          ];
+          const color = colors[index % colors.length];
+        %>
+          <tr class="border-t border-teal-200">
+            <td class="py-3">
+              <div class="font-medium <%= color.text %>">
+                <a class="hover:underline" href="/teacher/materials/<%= m.id %>"><%= m.title %></a>
+              </div>
+              <% if (m.description) { %>
+                <div class="text-xs <%= color.subtext %> mt-1"><%= (m.description || '').slice(0, 80) %><%= (m.description || '').length > 80 ? '…' : '' %></div>
+              <% } %>
+            </td>
+            <td class="py-3">
+              <span class="px-2 py-1 rounded-lg <%= color.bg %> <%= color.border %> border <%= color.text %> font-medium text-xs"><%= m.subject_name %></span>
+            </td>
+            <td class="py-3 text-teal-800"><%= m.class_name || 'Semua' %></td>
+            <td class="py-3">
+              <% if (m.is_published) { %>
+                <span class="px-2 py-1 rounded-lg border border-emerald-300 bg-emerald-100 text-emerald-700 font-medium text-xs">✅ Published</span>
+              <% } else { %>
+                <span class="px-2 py-1 rounded-lg border border-slate-300 bg-slate-100 text-slate-700 font-medium text-xs">📝 Draft</span>
+              <% } %>
+            </td>
+            <td class="py-3">
+              <div class="flex justify-end gap-2">
+                <form action="/teacher/materials/<%= m.id %>/toggle-publish" method="POST">
+                  <button class="px-3 py-1.5 rounded-xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 text-orange-800 font-medium text-xs transition-all">
+                    <%= m.is_published ? '👁️ Unpublish' : '✅ Publish' %>
+                  </button>
+                </form>
+                <a href="/teacher/materials/<%= m.id %>/edit" class="px-3 py-1.5 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 text-indigo-800 font-medium text-xs transition-all">✏️ Edit</a>
+                <a href="/teacher/materials/<%= m.id %>" class="px-3 py-1.5 rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 text-cyan-800 font-medium text-xs transition-all">👁️ Lihat</a>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>

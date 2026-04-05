@@ -1,0 +1,343 @@
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Daftar Nilai</h1>
+    <p class="mt-1 text-slate-600">Semua hasil ujian siswa untuk ujian yang Anda buat. Gunakan filter untuk mempermudah.</p>
+  </div>
+  <a href="/teacher" class="text-sm px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">Kembali</a>
+</div>
+
+<div class="mt-6 space-y-4">
+  <!-- Card Filter -->
+  <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5">
+    <h2 class="text-lg font-semibold text-indigo-900 mb-4">Filter Daftar Nilai</h2>
+    <form method="GET" action="/teacher/grades" class="grid lg:grid-cols-6 gap-3">
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Ujian</label>
+        <select name="exam_id" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="">Semua</option>
+          <% exams.forEach(e => { %>
+            <option value="<%= e.id %>" <%= String(filters.exam_id||'')===String(e.id) ? 'selected' : '' %>><%= e.title %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Kelas</label>
+        <select name="class_id" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="">Semua</option>
+          <% classes.forEach(c => { %>
+            <option value="<%= c.id %>" <%= String(filters.class_id||'')===String(c.id) ? 'selected' : '' %>><%= c.name %></option>
+          <% }) %>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Status</label>
+        <select name="status" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="">Semua Status</option>
+          <option value="SUBMITTED" <%= filters.status === 'SUBMITTED' ? 'selected' : '' %>>Selesai</option>
+          <option value="IN_PROGRESS" <%= filters.status === 'IN_PROGRESS' ? 'selected' : '' %>>Sedang Dikerjakan</option>
+          <option value="ABANDONED" <%= filters.status === 'ABANDONED' ? 'selected' : '' %>>Ditinggalkan</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Keterangan</label>
+        <select name="result" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="">Semua</option>
+          <option value="LULUS" <%= filters.result === 'LULUS' ? 'selected' : '' %>>Lulus</option>
+          <option value="TIDAK_LULUS" <%= filters.result === 'TIDAK_LULUS' ? 'selected' : '' %>>Tidak Lulus</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Cari nama/username</label>
+        <input name="q" value="<%= filters.q || '' %>" placeholder="contoh: Budi" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Per halaman</label>
+        <select name="limit" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="10" <%= pagination.limit == 10 ? 'selected' : '' %>>10 per halaman</option>
+          <option value="20" <%= pagination.limit == 20 ? 'selected' : '' %>>20 per halaman</option>
+          <option value="50" <%= pagination.limit == 50 ? 'selected' : '' %>>50 per halaman</option>
+          <option value="100" <%= pagination.limit == 100 ? 'selected' : '' %>>100 per halaman</option>
+        </select>
+      </div>
+
+      <div class="lg:col-span-6 flex items-end gap-2">
+        <button class="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 transition-colors">Terapkan</button>
+        <a href="/teacher/grades" class="px-4 py-2 rounded-xl border border-indigo-300 bg-white hover:bg-indigo-50 text-indigo-800 font-medium text-sm transition-colors">Reset</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Card Reset Hasil (hanya muncul jika ada filter exam_id) -->
+  <% if (filters.exam_id) { %>
+    <div class="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 to-rose-100 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div>
+        <div class="text-sm text-rose-700 font-semibold">Aksi berisiko</div>
+        <div class="text-sm text-rose-600">Reset akan menghapus <span class="font-semibold">semua</span> hasil (nilai & jawaban) untuk ujian yang dipilih di filter.</div>
+      </div>
+      <form action="/teacher/exams/<%= filters.exam_id %>/reset-results" method="POST" onsubmit="return confirm('Reset akan menghapus SEMUA hasil ujian (nilai & jawaban) untuk ujian ini. Lanjutkan?')">
+        <button class="px-4 py-2 rounded-xl border border-rose-300 bg-rose-200 hover:bg-rose-300 text-rose-800 font-medium transition-colors">Reset Hasil Ujian Ini</button>
+      </form>
+    </div>
+  <% } %>
+
+  <!-- Card Tabel Daftar Nilai -->
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-purple-900">Daftar Nilai</h2>
+      <div class="flex items-center gap-3">
+        <div class="text-sm text-purple-700">Total: <span class="font-semibold"><%= pagination.total %></span> data</div>
+        <% if (rows.length > 0) { %>
+          <a href="/teacher/grades/download?<%= new URLSearchParams(filters).toString() %>" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-800 font-medium text-sm transition-all">
+            📥 Download Excel
+          </a>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-purple-700">
+          <tr>
+            <th class="text-left py-2">
+              <input type="checkbox" id="selectAll" class="rounded border-purple-300 text-purple-600 focus:ring-purple-500" onchange="toggleSelectAll()">
+            </th>
+            <th class="text-left py-2">Ujian</th>
+            <th class="text-left py-2">Siswa</th>
+            <th class="text-left py-2">Kelas</th>
+            <th class="text-left py-2">Status</th>
+            <th class="text-right py-2">Nilai & Ket.</th>
+            <th class="text-left py-2">Waktu</th>
+            <th class="text-right py-2">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!rows.length) { %>
+            <tr><td colspan="8" class="py-8 text-center text-purple-600">Belum ada data untuk filter tersebut.</td></tr>
+          <% } %>
+          <% rows.forEach(r => { %>
+            <tr class="border-t border-purple-200">
+              <td class="py-3">
+                <input type="checkbox" class="attempt-checkbox rounded border-purple-300 text-purple-600 focus:ring-purple-500" 
+                       value="<%= r.id %>" data-student="<%= r.student_name %>" data-exam="<%= r.exam_title %>" 
+                       onchange="updateBulkActions()">
+              </td>
+              <td class="py-3">
+                <div class="font-medium text-purple-900"><%= r.exam_title %></div>
+                <div class="text-xs text-purple-600">Passing: <%= r.pass_score %></div>
+              </td>
+              <td class="py-3">
+                <div class="font-medium text-purple-900"><%= r.student_name %></div>
+                <div class="text-xs text-purple-600"><%= r.username %></div>
+              </td>
+              <td class="py-3 text-purple-800"><%= r.class_name || '-' %></td>
+              <td class="py-3"><span class="px-2 py-1 rounded-lg border border-purple-300 bg-white text-purple-800 font-medium"><%= r.status %></span></td>
+              <td class="py-3 text-right">
+                <div class="font-semibold text-purple-900 text-lg"><%= r.score %></div>
+                <% if (r.status === 'SUBMITTED') { %>
+                  <span class="inline-block px-2 py-1 rounded text-xs font-medium <%= r.is_pass ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700' %>">
+                    <%= r.is_pass ? 'LULUS' : 'TIDAK LULUS' %>
+                  </span>
+                <% } else { %>
+                  <span class="text-purple-500 text-xs">-</span>
+                <% } %>
+              </td>
+              <td class="py-3 text-purple-700 text-xs"><%= r.started_at ? new Date(r.started_at).toLocaleString('id-ID') : '-' %></td>
+              <td class="py-3 text-right">
+                <div class="flex justify-end gap-2">
+                  <a href="/teacher/attempts/<%= r.id %>" class="px-3 py-2 rounded-xl border border-purple-300 bg-white hover:bg-purple-50 text-purple-800 font-medium text-xs transition-colors">Detail</a>
+                  <form action="/teacher/attempts/<%= r.id %>/reset" method="POST" onsubmit="return confirm('Reset nilai <%= r.student_name %> untuk ujian <%= r.exam_title %>? Siswa dapat mengulang ujian.')">
+                    <button class="px-3 py-2 rounded-xl border border-rose-300 bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium text-xs transition-colors">Reset</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Bulk Actions Bar -->
+    <div id="bulkActionsBar" class="hidden mt-4 p-4 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <span class="text-amber-800 font-medium">
+            <span id="selectedCount">0</span> nilai dipilih
+          </span>
+          <button onclick="clearSelection()" class="text-sm text-amber-600 hover:text-amber-800 underline">
+            Batal Pilih
+          </button>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="bulkReset()" class="px-4 py-2 rounded-xl border border-rose-300 bg-gradient-to-br from-rose-100 to-rose-200 hover:from-rose-200 hover:to-rose-300 text-rose-800 font-medium text-sm transition-all">
+            🗑️ Reset Nilai Terpilih
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <% if (pagination.totalPages > 1) { %>
+      <div class="mt-4 flex items-center justify-between border-t border-purple-200 pt-4">
+        <div class="text-sm text-purple-700">
+          Menampilkan <%= (pagination.page - 1) * pagination.limit + 1 %> - <%= Math.min(pagination.page * pagination.limit, pagination.total) %> dari <%= pagination.total %> data
+        </div>
+        <div class="flex gap-2">
+          <% if (pagination.page > 1) { %>
+            <a href="?page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>&exam_id=<%= filters.exam_id %>&class_id=<%= filters.class_id %>&status=<%= filters.status %>&result=<%= filters.result %>&q=<%= filters.q %>" 
+               class="px-4 py-2 rounded-lg border border-purple-300 bg-white hover:bg-purple-50 text-purple-800 font-medium text-sm transition-colors">
+              ← Sebelumnya
+            </a>
+          <% } %>
+          
+          <% 
+            const startPage = Math.max(1, pagination.page - 2);
+            const endPage = Math.min(pagination.totalPages, pagination.page + 2);
+            for (let i = startPage; i <= endPage; i++) { 
+          %>
+            <a href="?page=<%= i %>&limit=<%= pagination.limit %>&exam_id=<%= filters.exam_id %>&class_id=<%= filters.class_id %>&status=<%= filters.status %>&result=<%= filters.result %>&q=<%= filters.q %>" 
+               class="px-4 py-2 rounded-lg border <%= i === pagination.page ? 'border-purple-600 bg-purple-600 text-white' : 'border-purple-300 bg-white hover:bg-purple-50 text-purple-800' %> font-medium text-sm transition-colors">
+              <%= i %>
+            </a>
+          <% } %>
+          
+          <% if (pagination.page < pagination.totalPages) { %>
+            <a href="?page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>&exam_id=<%= filters.exam_id %>&class_id=<%= filters.class_id %>&status=<%= filters.status %>&result=<%= filters.result %>&q=<%= filters.q %>" 
+               class="px-4 py-2 rounded-lg border border-purple-300 bg-white hover:bg-purple-50 text-purple-800 font-medium text-sm transition-colors">
+              Selanjutnya →
+            </a>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<script>
+function toggleSelectAll() {
+  const selectAll = document.getElementById('selectAll');
+  const checkboxes = document.querySelectorAll('.attempt-checkbox');
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = selectAll.checked;
+  });
+  
+  updateBulkActions();
+}
+
+function updateBulkActions() {
+  const checkboxes = document.querySelectorAll('.attempt-checkbox:checked');
+  const bulkActionsBar = document.getElementById('bulkActionsBar');
+  const selectedCount = document.getElementById('selectedCount');
+  const selectAll = document.getElementById('selectAll');
+  
+  selectedCount.textContent = checkboxes.length;
+  
+  if (checkboxes.length > 0) {
+    bulkActionsBar.classList.remove('hidden');
+  } else {
+    bulkActionsBar.classList.add('hidden');
+  }
+  
+  // Update select all checkbox state
+  const allCheckboxes = document.querySelectorAll('.attempt-checkbox');
+  if (checkboxes.length === allCheckboxes.length && allCheckboxes.length > 0) {
+    selectAll.checked = true;
+    selectAll.indeterminate = false;
+  } else if (checkboxes.length > 0) {
+    selectAll.checked = false;
+    selectAll.indeterminate = true;
+  } else {
+    selectAll.checked = false;
+    selectAll.indeterminate = false;
+  }
+}
+
+function clearSelection() {
+  const checkboxes = document.querySelectorAll('.attempt-checkbox');
+  const selectAll = document.getElementById('selectAll');
+  
+  checkboxes.forEach(checkbox => {
+    checkbox.checked = false;
+  });
+  selectAll.checked = false;
+  selectAll.indeterminate = false;
+  
+  updateBulkActions();
+}
+
+function bulkReset() {
+  const checkboxes = document.querySelectorAll('.attempt-checkbox:checked');
+  
+  console.log('=== CLIENT BULK RESET DEBUG ===');
+  console.log('Found checkboxes:', checkboxes.length);
+  
+  if (checkboxes.length === 0) {
+    alert('Pilih minimal satu nilai untuk direset.');
+    return;
+  }
+  
+  // Build confirmation message
+  let message = `Anda akan mereset ${checkboxes.length} nilai:\n\n`;
+  checkboxes.forEach((checkbox, index) => {
+    if (index < 5) { // Show max 5 items in confirmation
+      const student = checkbox.dataset.student;
+      const exam = checkbox.dataset.exam;
+      message += `• ${student} - ${exam}\n`;
+    }
+  });
+  
+  if (checkboxes.length > 5) {
+    message += `... dan ${checkboxes.length - 5} lainnya\n`;
+  }
+  
+  message += '\nSiswa dapat mengulang ujian setelah nilai direset. Lanjutkan?';
+  
+  if (!confirm(message)) {
+    return;
+  }
+  
+  // Collect attempt IDs
+  const attemptIds = Array.from(checkboxes).map(cb => cb.value);
+  console.log('Attempt IDs to send:', attemptIds);
+  
+  // Create form and submit
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '/teacher/attempts/bulk-reset';
+  
+  // Add CSRF token if available
+  const csrfToken = document.querySelector('meta[name="csrf-token"]');
+  if (csrfToken) {
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = '_token';
+    csrfInput.value = csrfToken.getAttribute('content');
+    form.appendChild(csrfInput);
+  }
+  
+  attemptIds.forEach(id => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'attempt_ids[]';
+    input.value = id;
+    form.appendChild(input);
+    console.log('Added input:', input.name, '=', input.value);
+  });
+  
+  console.log('Form HTML:', form.innerHTML);
+  console.log('Submitting form to:', form.action);
+  
+  document.body.appendChild(form);
+  form.submit();
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+  updateBulkActions();
+});
+</script>

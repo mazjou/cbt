@@ -1,0 +1,295 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Kelola Mata Pelajaran</h1>
+    <p class="mt-1 text-slate-600">Tambah / hapus mapel.</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/admin/subjects/download" class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all shadow-md flex items-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      Download Excel
+    </a>
+    <a href="/admin/subjects/import" class="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold">Import Mapel</a>
+    <a href="/admin" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Kembali</a>
+  </div>
+</div>
+
+<div class="mt-6 space-y-4">
+  <!-- Card Tambah Mapel -->
+  <div class="rounded-2xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-5">
+    <h2 class="font-semibold text-green-900">Tambah Mapel</h2>
+    <form method="POST" action="/admin/subjects" class="mt-4 grid md:grid-cols-3 gap-3">
+      <div>
+        <label class="text-sm text-green-700 font-medium">Kode</label>
+        <input name="code" required class="mt-1 w-full rounded-xl bg-white border border-green-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="MAT" />
+      </div>
+      <div>
+        <label class="text-sm text-green-700 font-medium">Nama</label>
+        <input name="name" required class="mt-1 w-full rounded-xl bg-white border border-green-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Matematika" />
+      </div>
+      <div class="flex items-end">
+        <button class="w-full rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 transition-colors">Simpan</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Card Daftar Mapel -->
+  <div class="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="font-semibold text-orange-900">Daftar Mapel</h2>
+      <div class="flex items-center gap-4">
+        <div id="bulkActionBar" class="hidden">
+          <form action="/admin/subjects/bulk-delete" method="POST" onsubmit="return confirmBulkDelete()">
+            <button type="submit" class="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Hapus <span id="selectedCount">0</span> Mapel
+            </button>
+            <input type="hidden" name="subject_ids" id="bulkDeleteIds" value="[]" />
+          </form>
+        </div>
+        <div class="text-sm text-orange-700">Total: <span class="font-semibold"><%= pagination.total %></span> mapel</div>
+      </div>
+    </div>
+
+    <form method="GET" action="/admin/subjects" class="mb-4 flex gap-3">
+      <input type="text" name="search" value="<%= filters.search %>" placeholder="Cari kode/nama mapel..." 
+             class="flex-1 px-4 py-2 rounded-xl bg-white border border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+      <select name="limit" class="px-4 py-2 rounded-xl bg-white border border-orange-200 focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+        <option value="10" <%= pagination.limit == 10 ? 'selected' : '' %>>10 per halaman</option>
+        <option value="20" <%= pagination.limit == 20 ? 'selected' : '' %>>20 per halaman</option>
+        <option value="50" <%= pagination.limit == 50 ? 'selected' : '' %>>50 per halaman</option>
+      </select>
+      <button type="submit" class="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-medium transition-colors">Filter</button>
+      <a href="/admin/subjects" class="px-4 py-2 border border-orange-300 bg-white hover:bg-orange-50 rounded-xl text-orange-800 font-medium transition-colors">Reset</a>
+    </form>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-orange-700">
+          <tr>
+            <th class="text-left py-2 w-12">
+              <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-orange-300 text-orange-600 focus:ring-orange-500 cursor-pointer" />
+            </th>
+            <th class="text-left font-medium py-2">Kode</th>
+            <th class="text-left font-medium py-2">Nama</th>
+            <th class="text-right font-medium py-2">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (subjects.length === 0) { %>
+            <tr>
+              <td colspan="4" class="py-8 text-center text-orange-600">Tidak ada data mata pelajaran.</td>
+            </tr>
+          <% } %>
+          <% subjects.forEach(s => { %>
+            <tr id="subject-row-<%= s.id %>" class="border-t border-orange-200">
+              <td class="py-2">
+                <input type="checkbox" class="item-checkbox w-4 h-4 rounded border-orange-300 text-orange-600 focus:ring-orange-500 cursor-pointer" data-item-id="<%= s.id %>" />
+              </td>
+              <td class="py-2 font-mono subject-code text-orange-900"><%= s.code || '-' %></td>
+              <td class="py-2 subject-name text-orange-900"><%= s.name %></td>
+              <td class="py-2 text-right">
+                <button type="button" data-subject-id="<%= s.id %>" class="btn-open-subject-modal px-3 py-1.5 rounded-lg border border-orange-300 bg-white hover:bg-orange-50 text-orange-800 font-medium inline-block mr-2 transition-colors">Edit</button>
+                <form method="POST" action="/admin/subjects/<%= s.id %>?_method=DELETE" onsubmit="return confirm('Hapus mapel ini?');" class="inline">
+                  <button class="px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium transition-colors">Hapus</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (pagination.totalPages > 1) { %>
+      <div class="mt-4 flex items-center justify-between border-t border-orange-200 pt-4">
+        <div class="text-sm text-orange-700">
+          Menampilkan <%= (pagination.page - 1) * pagination.limit + 1 %> - <%= Math.min(pagination.page * pagination.limit, pagination.total) %> dari <%= pagination.total %> data
+        </div>
+        <div class="flex gap-2">
+          <% if (pagination.page > 1) { %>
+            <a href="?page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>" 
+               class="px-4 py-2 rounded-lg border border-orange-300 bg-white hover:bg-orange-50 text-orange-800 font-medium text-sm transition-colors">
+              ← Sebelumnya
+            </a>
+          <% } %>
+          
+          <% 
+            const startPage = Math.max(1, pagination.page - 2);
+            const endPage = Math.min(pagination.totalPages, pagination.page + 2);
+            for (let i = startPage; i <= endPage; i++) { 
+          %>
+            <a href="?page=<%= i %>&limit=<%= pagination.limit %>&search=<%= filters.search %>" 
+               class="px-4 py-2 rounded-lg border <%= i === pagination.page ? 'border-orange-600 bg-orange-600 text-white' : 'border-orange-300 bg-white hover:bg-orange-50 text-orange-800' %> font-medium text-sm transition-colors">
+              <%= i %>
+            </a>
+          <% } %>
+          
+          <% if (pagination.page < pagination.totalPages) { %>
+            <a href="?page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>" 
+               class="px-4 py-2 rounded-lg border border-orange-300 bg-white hover:bg-orange-50 text-orange-800 font-medium text-sm transition-colors">
+              Selanjutnya →
+            </a>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+
+<!-- Modal Edit Mapel -->
+<div id="subjectModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-black/40" data-close-subject-modal></div>
+  <div class="relative mx-auto mt-16 w-[92%] max-w-lg rounded-2xl bg-white shadow-xl">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <div>
+        <h3 class="text-lg font-semibold">Edit Mata Pelajaran</h3>
+        <p class="text-sm text-slate-500">Disimpan tanpa pindah halaman.</p>
+      </div>
+      <button type="button" class="rounded-xl border border-slate-200 px-3 py-1.5 hover:bg-slate-100" data-close-subject-modal>✕</button>
+    </div>
+
+    <form id="subjectModalForm" class="p-5 space-y-3">
+      <input type="hidden" id="sm_id" />
+      <div>
+        <label class="text-sm text-slate-600">Kode</label>
+        <input id="sm_code" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+      <div>
+        <label class="text-sm text-slate-600">Nama</label>
+        <input id="sm_name" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+
+      <div id="sm_error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700 text-sm"></div>
+      <div id="sm_success" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700 text-sm"></div>
+
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" class="rounded-xl border border-slate-200 px-4 py-2 hover:bg-slate-100" data-close-subject-modal>Batal</button>
+        <button id="sm_save" type="submit" class="rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-4 py-2">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Bulk delete functionality
+(function () {
+  const selectAllCheckbox = document.getElementById('selectAll');
+  const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+  const bulkActionBar = document.getElementById('bulkActionBar');
+  const selectedCountSpan = document.getElementById('selectedCount');
+  const bulkDeleteIdsInput = document.getElementById('bulkDeleteIds');
+
+  function updateBulkActionBar() {
+    const selectedIds = Array.from(itemCheckboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.getAttribute('data-item-id'));
+    
+    if (selectedIds.length > 0) {
+      bulkActionBar.classList.remove('hidden');
+      selectedCountSpan.textContent = selectedIds.length;
+      bulkDeleteIdsInput.value = JSON.stringify(selectedIds);
+    } else {
+      bulkActionBar.classList.add('hidden');
+    }
+    
+    const allChecked = itemCheckboxes.length > 0 && Array.from(itemCheckboxes).every(cb => cb.checked);
+    const someChecked = Array.from(itemCheckboxes).some(cb => cb.checked);
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = allChecked;
+      selectAllCheckbox.indeterminate = someChecked && !allChecked;
+    }
+  }
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      itemCheckboxes.forEach(cb => {
+        cb.checked = this.checked;
+      });
+      updateBulkActionBar();
+    });
+  }
+
+  itemCheckboxes.forEach(cb => {
+    cb.addEventListener('change', updateBulkActionBar);
+  });
+
+  window.confirmBulkDelete = function() {
+    const count = selectedCountSpan.textContent;
+    return confirm(`Anda yakin ingin menghapus ${count} mata pelajaran?\n\nPeringatan: Data terkait (ujian, materi) juga akan dihapus!`);
+  };
+})();
+
+// Modal edit functionality
+(function(){
+  const modal=document.getElementById('subjectModal');
+  const form=document.getElementById('subjectModalForm');
+  const btnSave=document.getElementById('sm_save');
+  const elErr=document.getElementById('sm_error');
+  const elOk=document.getElementById('sm_success');
+  const elId=document.getElementById('sm_id');
+  const elCode=document.getElementById('sm_code');
+  const elName=document.getElementById('sm_name');
+
+  function showModal(){ modal.classList.remove('hidden'); modal.setAttribute('aria-hidden','false'); }
+  function hideModal(){
+    modal.classList.add('hidden'); modal.setAttribute('aria-hidden','true');
+    elErr.classList.add('hidden'); elOk.classList.add('hidden');
+    elErr.textContent=''; elOk.textContent='';
+  }
+  function setLoading(on){ btnSave.disabled=on; btnSave.textContent=on?'Menyimpan...':'Simpan'; }
+  function showError(msg){ elOk.classList.add('hidden'); elErr.textContent=msg||'Terjadi kesalahan.'; elErr.classList.remove('hidden'); }
+  function showSuccess(msg){ elErr.classList.add('hidden'); elOk.textContent=msg||'Berhasil.'; elOk.classList.remove('hidden'); }
+
+  async function openFor(id){
+    setLoading(true);
+    try{
+      const r=await fetch(`/admin/subjects/${id}/json`,{headers:{'Accept':'application/json'}});
+      const j=await r.json();
+      if(!r.ok||!j.ok) throw new Error((j&&j.message)||'Gagal memuat data mapel.');
+      elId.value=j.item.id;
+      elCode.value=j.item.code||'';
+      elName.value=j.item.name||'';
+      showModal();
+    }catch(e){ alert(e.message||'Gagal memuat data mapel.'); }
+    finally{ setLoading(false); }
+  }
+
+  document.querySelectorAll('.btn-open-subject-modal').forEach(btn=>{
+    btn.addEventListener('click',()=>openFor(btn.getAttribute('data-subject-id')));
+  });
+  modal.querySelectorAll('[data-close-subject-modal]').forEach(el=>el.addEventListener('click',hideModal));
+  document.addEventListener('keydown',(e)=>{ if(e.key==='Escape'&&!modal.classList.contains('hidden')) hideModal(); });
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const id=elId.value;
+    setLoading(true);
+    try{
+      const payload={code:elCode.value,name:elName.value};
+      const r=await fetch(`/admin/subjects/${id}/ajax-update`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify(payload)
+      });
+      const j=await r.json();
+      if(!r.ok||!j.ok) throw new Error((j&&j.message)||'Gagal menyimpan perubahan.');
+
+      const row=document.getElementById(`subject-row-${id}`);
+      if(row){
+        row.querySelector('.subject-code').textContent=j.item.code || '-';
+        row.querySelector('.subject-name').textContent=j.item.name;
+      }
+      showSuccess('Perubahan mapel tersimpan.');
+      setTimeout(hideModal, 600);
+    }catch(err){
+      showError(err.message);
+    }finally{
+      setLoading(false);
+    }
+  });
+})();
+</script>

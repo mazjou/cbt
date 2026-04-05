@@ -1,0 +1,3 @@
+question_text,points,correct,A,B,C,D,E,image
+"Contoh soal: Ibu kota Indonesia adalah ...",1,A,"Jakarta","Bandung","Surabaya","Medan","Semarang","contoh.png"
+"Contoh soal (pakai URL gambar)",1,B,"Opsi A","Opsi B","Opsi C","Opsi D","Opsi E","https://example.com/gambar.png"

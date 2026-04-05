@@ -1,0 +1,144 @@
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <div class="text-sm text-slate-500">Upload Gambar Soal & Jawaban</div>
+    <h1 class="text-2xl font-bold text-indigo-900"><%= exam.title %></h1>
+    <p class="mt-1 text-sm text-slate-600">Upload gambar untuk soal dan opsi jawaban. Nama file harus cocok dengan kolom <code class="px-1 py-0.5 bg-slate-100 rounded text-xs">image / image_a / image_b / ...</code> di Excel.</p>
+  </div>
+  <a href="/teacher/exams/<%= exam.id %>" class="px-4 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-medium text-sm">← Kembali</a>
+</div>
+
+<%- include('../partials/flash') %>
+
+<div class="grid lg:grid-cols-2 gap-6">
+
+  <!-- Form Upload -->
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-6">
+    <h2 class="text-lg font-semibold text-purple-900 mb-4">📤 Upload Gambar (Soal & Jawaban)</h2>
+
+    <form action="/teacher/exams/<%= exam.id %>/questions/upload-images" method="POST" enctype="multipart/form-data" class="space-y-4">
+      <div>
+        <label class="text-sm text-purple-700 font-medium">Pilih File Gambar (bisa multiple)</label>
+        <input type="file" name="images" accept="image/*" multiple required
+          class="mt-2 w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
+        <div id="fileList" class="mt-2 text-xs text-purple-600 flex flex-wrap gap-1"></div>
+      </div>
+
+      <div class="rounded-xl bg-white border border-purple-200 p-4 text-sm text-purple-800 space-y-2">
+        <div class="font-semibold">📋 Cara pencocokan gambar:</div>
+        <table class="w-full text-xs mt-2 border-collapse">
+          <thead><tr class="bg-purple-50"><th class="text-left p-2 border border-purple-200">Kolom Excel</th><th class="text-left p-2 border border-purple-200">Nama file contoh</th><th class="text-left p-2 border border-purple-200">Untuk</th></tr></thead>
+          <tbody>
+            <tr><td class="p-2 border border-purple-100"><code>image</code></td><td class="p-2 border border-purple-100">mt01.jpg</td><td class="p-2 border border-purple-100">Gambar soal</td></tr>
+            <tr class="bg-purple-50"><td class="p-2 border border-purple-100"><code>image_a</code></td><td class="p-2 border border-purple-100">mt01a.jpg</td><td class="p-2 border border-purple-100">Gambar opsi A</td></tr>
+            <tr><td class="p-2 border border-purple-100"><code>image_b</code></td><td class="p-2 border border-purple-100">mt01b.jpg</td><td class="p-2 border border-purple-100">Gambar opsi B</td></tr>
+            <tr class="bg-purple-50"><td class="p-2 border border-purple-100"><code>image_c</code></td><td class="p-2 border border-purple-100">mt01c.jpg</td><td class="p-2 border border-purple-100">Gambar opsi C</td></tr>
+            <tr><td class="p-2 border border-purple-100"><code>image_d</code></td><td class="p-2 border border-purple-100">mt01d.jpg</td><td class="p-2 border border-purple-100">Gambar opsi D</td></tr>
+            <tr class="bg-purple-50"><td class="p-2 border border-purple-100"><code>image_e</code></td><td class="p-2 border border-purple-100">mt01e.jpg</td><td class="p-2 border border-purple-100">Gambar opsi E</td></tr>
+          </tbody>
+        </table>
+        <div class="text-xs text-purple-600 mt-2">💡 Pola nomor urut juga didukung: <code>q1.jpg, q2.jpg</code> untuk soal ke-1, ke-2, dst.</div>
+      </div>
+
+      <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold py-3 transition-all">
+        🚀 Upload & Pasangkan Gambar
+      </button>
+    </form>
+  </div>
+
+  <!-- Status Gambar -->
+  <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6">
+    <h2 class="text-lg font-semibold text-indigo-900 mb-1">📝 Status Gambar per Soal</h2>
+    <p class="text-xs text-indigo-600 mb-3">Total: <%= questions.length %> soal</p>
+
+    <%
+      let totalWithImg = 0, totalPending = 0, totalOptImg = 0;
+      questions.forEach(q => {
+        if (q.question_image && q.question_image.startsWith('/public/')) totalWithImg++;
+        else if (q.question_image) totalPending++;
+        const opts = q.options || [];
+        opts.forEach(o => { if (o.image && o.image.startsWith('/public/')) totalOptImg++; });
+      });
+    %>
+
+    <div class="grid grid-cols-3 gap-2 mb-4">
+      <div class="rounded-xl bg-green-50 border border-green-200 p-3 text-center">
+        <div class="text-xl font-bold text-green-700"><%= totalWithImg %></div>
+        <div class="text-xs text-green-600">Soal bergambar</div>
+      </div>
+      <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center">
+        <div class="text-xl font-bold text-amber-700"><%= totalPending %></div>
+        <div class="text-xs text-amber-600">Menunggu upload</div>
+      </div>
+      <div class="rounded-xl bg-blue-50 border border-blue-200 p-3 text-center">
+        <div class="text-xl font-bold text-blue-700"><%= totalOptImg %></div>
+        <div class="text-xs text-blue-600">Gambar opsi</div>
+      </div>
+    </div>
+
+    <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+      <% questions.forEach((q, i) => {
+        const opts = q.options || [];
+        const hasOptImg = opts.some(o => o.image);
+        const qImgOk = q.question_image && q.question_image.startsWith('/public/');
+        const qImgPending = q.question_image && !q.question_image.startsWith('/public/') && !q.question_image.startsWith('http');
+      %>
+      <div class="rounded-xl bg-white border <%= qImgOk ? 'border-green-200' : qImgPending ? 'border-amber-200' : 'border-slate-200' %> p-3">
+        <div class="flex items-start gap-2">
+          <span class="text-xs font-mono text-slate-400 mt-0.5 w-5 shrink-0"><%= i+1 %></span>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs text-slate-600 truncate"><%= q.question_text ? q.question_text.replace(/<[^>]+>/g,'').slice(0,55) : '(soal tanpa teks)' %>...</div>
+
+            <!-- Status gambar soal -->
+            <div class="mt-1 flex items-center gap-1 flex-wrap">
+              <span class="text-xs font-medium text-slate-500">Soal:</span>
+              <% if (qImgOk) { %>
+                <span class="text-xs text-green-600">✓ ada</span>
+                <img src="<%= q.question_image %>" class="h-6 w-6 object-cover rounded border border-green-200" />
+              <% } else if (qImgPending) { %>
+                <span class="text-xs text-amber-600">⏳ <code class="bg-amber-50 px-0.5 rounded"><%= q.question_image %></code></span>
+              <% } else if (q.question_image && q.question_image.startsWith('http')) { %>
+                <span class="text-xs text-blue-600">🔗 URL</span>
+              <% } else { %>
+                <span class="text-xs text-slate-400">—</span>
+              <% } %>
+            </div>
+
+            <!-- Status gambar opsi -->
+            <% if (hasOptImg) { %>
+            <div class="mt-1 flex items-center gap-1 flex-wrap">
+              <span class="text-xs font-medium text-slate-500">Opsi:</span>
+              <% opts.forEach(o => { %>
+                <% if (o.image && o.image.startsWith('/public/')) { %>
+                  <span class="text-xs text-green-600"><%= o.label %>✓</span>
+                <% } else if (o.image) { %>
+                  <span class="text-xs text-amber-600"><%= o.label %>⏳</span>
+                <% } %>
+              <% }) %>
+            </div>
+            <% } %>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 flex items-center justify-between gap-4">
+  <div class="text-sm text-blue-800">
+    💡 Upload gambar bisa dilakukan kapan saja, bahkan setelah ujian sudah ada soalnya.
+  </div>
+  <a href="/teacher/exams/<%= exam.id %>/import" class="shrink-0 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium">Import Soal Lagi</a>
+</div>
+
+<script>
+  document.querySelector('input[name="images"]').addEventListener('change', function() {
+    const files = Array.from(this.files);
+    const el = document.getElementById('fileList');
+    el.innerHTML = files.map(f =>
+      `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs">
+        🖼️ ${f.name}
+      </span>`
+    ).join('');
+  });
+</script>

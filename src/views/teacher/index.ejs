@@ -1,0 +1,209 @@
+<div class="flex items-end justify-between gap-4">
+  <div>
+    <div class="text-sm text-indigo-600 font-medium flex items-center gap-2">
+      <span>👨‍🏫</span>
+      <span>Selamat Datang, Guru!</span>
+    </div>
+    <h1 class="mt-1 text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Dashboard Guru</h1>
+    <p class="mt-1 text-slate-600 flex items-center gap-2">
+      <span>📊</span>
+      <span>Ringkasan aktivitas dan akses cepat ke semua fitur</span>
+    </p>
+  </div>
+</div>
+
+<!-- Statistik -->
+<div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="rounded-2xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 p-5 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-3xl">📝</span>
+      <div class="text-sm text-orange-700 font-bold">Ujian Anda</div>
+    </div>
+    <div class="text-4xl font-bold text-orange-900 tabular-nums"><%= stats?.exams ?? 0 %></div>
+    <div class="mt-2 text-xs text-orange-600 font-medium">Total ujian yang dibuat</div>
+  </div>
+  
+  <div class="rounded-2xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-100 p-5 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-3xl">📚</span>
+      <div class="text-sm text-purple-700 font-bold">Materi Anda</div>
+    </div>
+    <div class="text-4xl font-bold text-purple-900 tabular-nums"><%= stats?.materials ?? 0 %></div>
+    <div class="mt-2 text-xs text-purple-600 font-medium">Total materi pembelajaran</div>
+  </div>
+
+  <div class="rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 p-5 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-3xl">📋</span>
+      <div class="text-sm text-green-700 font-bold">Tugas Anda</div>
+    </div>
+    <div class="text-4xl font-bold text-green-900 tabular-nums"><%= stats?.assignments ?? 0 %></div>
+    <div class="mt-2 text-xs text-green-600 font-medium">Total tugas yang diberikan</div>
+  </div>
+
+  <div class="rounded-2xl border-2 border-cyan-200 bg-gradient-to-br from-cyan-50 via-blue-50 to-cyan-100 p-5 shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-3xl">✅</span>
+      <div class="text-sm text-cyan-700 font-bold">Total Percobaan</div>
+    </div>
+    <div class="text-4xl font-bold text-cyan-900 tabular-nums"><%= stats?.attempts ?? 0 %></div>
+    <div class="mt-2 text-xs text-cyan-600 font-medium">Siswa mengerjakan ujian</div>
+  </div>
+</div>
+
+<!-- Aksi Cepat -->
+<div class="mt-6 rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-purple-50 to-indigo-100 p-6 shadow-lg">
+  <div class="flex items-center gap-2 mb-5">
+    <span class="text-2xl">⚡</span>
+    <h2 class="text-xl font-bold text-indigo-900">Aksi Cepat</h2>
+  </div>
+  
+  <div class="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <a href="/teacher/live-classes/new" class="p-4 rounded-xl border-2 border-red-200 bg-gradient-to-br from-red-50 to-rose-100 hover:from-red-100 hover:to-rose-200 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="text-2xl mb-2">🎥</div>
+      <div class="font-bold text-red-900 text-sm">Buat Live Class</div>
+      <div class="text-xs text-red-700 mt-1 font-medium">Video conference</div>
+    </a>
+
+    <a href="/teacher/exams/new" class="p-4 rounded-xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-100 hover:from-blue-100 hover:to-cyan-200 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="text-2xl mb-2">📝</div>
+      <div class="font-bold text-blue-900 text-sm">Buat Ujian</div>
+      <div class="text-xs text-blue-700 mt-1 font-medium">Pilihan ganda</div>
+    </a>
+
+    <a href="/teacher/materials/new" class="p-4 rounded-xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-100 hover:from-purple-100 hover:to-pink-200 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="text-2xl mb-2">📚</div>
+      <div class="font-bold text-purple-900 text-sm">Buat Materi</div>
+      <div class="text-xs text-purple-700 mt-1 font-medium">Upload materi</div>
+    </a>
+
+    <a href="/teacher/assignments/new" class="p-4 rounded-xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-emerald-100 hover:from-green-100 hover:to-emerald-200 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="text-2xl mb-2">📋</div>
+      <div class="font-bold text-green-900 text-sm">Buat Tugas</div>
+      <div class="text-xs text-green-700 mt-1 font-medium">Upload file</div>
+    </a>
+
+    <a href="/teacher/grades" class="p-4 rounded-xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-orange-100 hover:from-amber-100 hover:to-orange-200 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="text-2xl mb-2">⭐</div>
+      <div class="font-bold text-amber-900 text-sm">Lihat Nilai</div>
+      <div class="text-xs text-amber-700 mt-1 font-medium">Hasil ujian</div>
+    </a>
+  </div>
+</div>
+
+<!-- Menu Lengkap -->
+<div class="mt-6 rounded-2xl border-2 border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-6 shadow-lg">
+  <div class="flex items-center gap-2 mb-5">
+    <span class="text-2xl">📱</span>
+    <h2 class="text-xl font-bold text-slate-900">Menu Lengkap</h2>
+  </div>
+  
+  <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+    <a href="/teacher/live-classes" class="flex items-center gap-3 p-4 rounded-xl border-2 border-red-200 bg-white hover:border-red-400 hover:bg-gradient-to-br hover:from-red-50 hover:to-rose-100 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-red-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
+        <span class="text-2xl">🎥</span>
+      </div>
+      <div class="flex-1">
+        <div class="font-bold text-slate-900 text-sm group-hover:text-red-900">Live Classes</div>
+        <div class="text-xs text-slate-600 font-medium">Video conference</div>
+      </div>
+    </a>
+
+    <a href="/teacher/exams" class="flex items-center gap-3 p-4 rounded-xl border-2 border-blue-200 bg-white hover:border-blue-400 hover:bg-gradient-to-br hover:from-blue-50 hover:to-cyan-100 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
+        <span class="text-2xl">📝</span>
+      </div>
+      <div class="flex-1">
+        <div class="font-bold text-slate-900 text-sm group-hover:text-blue-900">Ujian Saya</div>
+        <div class="text-xs text-slate-600 font-medium">Kelola ujian</div>
+      </div>
+    </a>
+
+    <a href="/teacher/materials" class="flex items-center gap-3 p-4 rounded-xl border-2 border-purple-200 bg-white hover:border-purple-400 hover:bg-gradient-to-br hover:from-purple-50 hover:to-pink-100 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
+        <span class="text-2xl">📚</span>
+      </div>
+      <div class="flex-1">
+        <div class="font-bold text-slate-900 text-sm group-hover:text-purple-900">Materi Saya</div>
+        <div class="text-xs text-slate-600 font-medium">Kelola materi</div>
+      </div>
+    </a>
+
+    <a href="/teacher/assignments" class="flex items-center gap-3 p-4 rounded-xl border-2 border-green-200 bg-white hover:border-green-400 hover:bg-gradient-to-br hover:from-green-50 hover:to-emerald-100 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
+        <span class="text-2xl">📋</span>
+      </div>
+      <div class="flex-1">
+        <div class="font-bold text-slate-900 text-sm group-hover:text-green-900">Tugas Saya</div>
+        <div class="text-xs text-slate-600 font-medium">Kelola tugas</div>
+      </div>
+    </a>
+
+    <a href="/teacher/grades" class="flex items-center gap-3 p-4 rounded-xl border-2 border-amber-200 bg-white hover:border-amber-400 hover:bg-gradient-to-br hover:from-amber-50 hover:to-orange-100 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
+        <span class="text-2xl">⭐</span>
+      </div>
+      <div class="flex-1">
+        <div class="font-bold text-slate-900 text-sm group-hover:text-amber-900">Daftar Nilai</div>
+        <div class="text-xs text-slate-600 font-medium">Hasil ujian siswa</div>
+      </div>
+    </a>
+
+    <a href="/teacher/question-bank" class="flex items-center gap-3 p-4 rounded-xl border-2 border-indigo-200 bg-white hover:border-indigo-400 hover:bg-gradient-to-br hover:from-indigo-50 hover:to-purple-100 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
+        <span class="text-2xl">💾</span>
+      </div>
+      <div class="flex-1">
+        <div class="font-bold text-slate-900 text-sm group-hover:text-indigo-900">Bank Soal</div>
+        <div class="text-xs text-slate-600 font-medium">Soal reusable</div>
+      </div>
+    </a>
+
+    <a href="/teacher/material-views" class="flex items-center gap-3 p-4 rounded-xl border-2 border-teal-200 bg-white hover:border-teal-400 hover:bg-gradient-to-br hover:from-teal-50 hover:to-cyan-100 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
+        <span class="text-2xl">📊</span>
+      </div>
+      <div class="flex-1">
+        <div class="font-bold text-slate-900 text-sm group-hover:text-teal-900">Rekap Materi</div>
+        <div class="text-xs text-slate-600 font-medium">Siswa lihat materi</div>
+      </div>
+    </a>
+
+    <a href="/notifications" class="flex items-center gap-3 p-4 rounded-xl border-2 border-rose-200 bg-white hover:border-rose-400 hover:bg-gradient-to-br hover:from-rose-50 hover:to-pink-100 transition-all transform hover:scale-105 shadow-md hover:shadow-lg group">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-md group-hover:shadow-lg transition-all">
+        <span class="text-2xl">📢</span>
+      </div>
+      <div class="flex-1">
+        <div class="font-bold text-slate-900 text-sm group-hover:text-rose-900">Notifikasi</div>
+        <div class="text-xs text-slate-600 font-medium">Kirim peringatan</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Panduan Singkat -->
+<div class="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+  <h2 class="text-lg font-semibold text-slate-900 mb-4">Panduan Singkat</h2>
+  
+  <div class="grid md:grid-cols-2 gap-4">
+    <div class="p-4 rounded-lg bg-white border border-slate-200">
+      <div class="font-semibold text-slate-900 mb-2 text-sm">Membuat Ujian</div>
+      <ol class="list-decimal list-inside text-xs text-slate-600 space-y-1">
+        <li>Klik "Buat Ujian" → isi judul, durasi, kelas</li>
+        <li>Tambah soal pilihan ganda dengan poin</li>
+        <li>Atur kode akses (opsional)</li>
+        <li>Publish agar siswa bisa mengerjakan</li>
+      </ol>
+    </div>
+
+    <div class="p-4 rounded-lg bg-white border border-slate-200">
+      <div class="font-semibold text-slate-900 mb-2 text-sm">Membuat Materi</div>
+      <ol class="list-decimal list-inside text-xs text-slate-600 space-y-1">
+        <li>Klik "Buat Materi" → isi judul & deskripsi</li>
+        <li>Upload file atau isi konten HTML</li>
+        <li>Tambah video YouTube/PDF (opsional)</li>
+        <li>Atur durasi auto-complete & publish</li>
+      </ol>
+    </div>
+  </div>
+</div>

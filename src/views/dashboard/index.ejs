@@ -1,0 +1,89 @@
+<div class="flex items-end justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Dashboard</h1>
+    <p class="mt-1 text-slate-600">Ringkasan cepat aktivitas Anda.</p>
+  </div>
+</div>
+
+<div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  <% if (user.role==='ADMIN') { %>
+    <div class="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5 shadow-soft">
+      <div class="text-sm text-blue-700 font-medium">Total Pengguna</div>
+      <div class="mt-2 text-3xl font-semibold text-blue-900"><%= stats.users ?? 0 %></div>
+    </div>
+    <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5 shadow-soft">
+      <div class="text-sm text-purple-700 font-medium">Total Ujian</div>
+      <div class="mt-2 text-3xl font-semibold text-purple-900"><%= stats.exams ?? 0 %></div>
+    </div>
+    <div class="rounded-2xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-5 shadow-soft">
+      <div class="text-sm text-green-700 font-medium">Total Soal</div>
+      <div class="mt-2 text-3xl font-semibold text-green-900"><%= stats.questions ?? 0 %></div>
+    </div>
+  <% } %>
+
+  <% if (user.role==='TEACHER') { %>
+    <div class="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 p-5 shadow-soft">
+      <div class="text-sm text-orange-700 font-medium">Ujian Anda</div>
+      <div class="mt-2 text-3xl font-semibold text-orange-900"><%= stats.exams ?? 0 %></div>
+    </div>
+    <div class="rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100 p-5 shadow-soft">
+      <div class="text-sm text-cyan-700 font-medium">Total Percobaan (Siswa)</div>
+      <div class="mt-2 text-3xl font-semibold text-cyan-900"><%= stats.attempts ?? 0 %></div>
+    </div>
+    <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5 shadow-soft">
+      <div class="text-sm text-indigo-700 font-medium">Aksi Cepat</div>
+      <a href="/teacher/exams/new" class="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-colors">+ Buat Ujian</a>
+    </div>
+  <% } %>
+
+  <% if (user.role==='STUDENT') { %>
+    <div class="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100 p-5 shadow-soft">
+      <div class="text-sm text-pink-700 font-medium">Riwayat Ujian</div>
+      <div class="mt-2 text-3xl font-semibold text-pink-900"><%= stats.attempts ?? 0 %></div>
+    </div>
+    <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 p-5 shadow-soft">
+      <div class="text-sm text-teal-700 font-medium">Riwayat Materi</div>
+      <div class="mt-2 text-3xl font-semibold text-teal-900"><%= stats.materials ?? 0 %></div>
+    </div>
+    <div class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-violet-100 p-5 shadow-soft">
+      <div class="text-sm text-violet-700 font-medium">Terakhir</div>
+      <% if (stats.last_attempt) { %>
+        <div class="mt-2 text-xl font-semibold text-violet-900"><%= stats.last_attempt.title %></div>
+        <div class="mt-1 text-sm text-violet-700">Status: <span class="font-medium"><%= stats.last_attempt.status %></span> • Nilai: <span class="font-medium"><%= stats.last_attempt.score %></span></div>
+      <% } else { %>
+        <div class="mt-2 text-violet-700">Belum ada ujian yang dikerjakan.</div>
+      <% } %>
+      <div class="mt-4">
+        <a href="/student/exams" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-700 text-white font-semibold transition-colors">Lihat Ujian Tersedia</a>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<div class="mt-8 rounded-3xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 shadow-soft">
+  <h2 class="text-lg font-semibold text-emerald-900">Menu</h2>
+  <p class="mt-1 text-emerald-700 text-sm">Navigasi sesuai peran Anda.</p>
+  <div class="mt-4 flex flex-wrap gap-2">
+    <% if (user.role==='ADMIN') { %>
+      <a href="/admin/users" class="px-4 py-2 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-800 font-medium transition-colors">Kelola Pengguna</a>
+      <a href="/admin/classes" class="px-4 py-2 rounded-xl border border-purple-200 bg-purple-50 hover:bg-purple-100 text-purple-800 font-medium transition-colors">Kelola Kelas</a>
+      <a href="/admin/subjects" class="px-4 py-2 rounded-xl border border-green-200 bg-green-50 hover:bg-green-100 text-green-800 font-medium transition-colors">Kelola Mapel</a>
+      <a href="/admin/exams" class="px-4 py-2 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 text-red-800 font-medium transition-colors">Kelola Ujian</a>
+      <a href="/admin/grades" class="px-4 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-medium transition-colors">Kelola Nilai</a>
+      <a href="/admin/materials" class="px-4 py-2 rounded-xl border border-cyan-200 bg-cyan-50 hover:bg-cyan-100 text-cyan-800 font-medium transition-colors">Kelola Materi</a>
+      <a href="/admin/assignments" class="px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium transition-colors">Kelola Tugas</a>
+      <a href="/admin/question-bank" class="px-4 py-2 rounded-xl border border-pink-200 bg-pink-50 hover:bg-pink-100 text-pink-800 font-medium transition-colors">Bank Soal</a>
+    <% } %>
+    <% if (user.role==='TEACHER') { %>
+      <a href="/teacher/exams" class="px-4 py-2 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 font-medium transition-colors">Ujian Saya</a>
+      <a href="/teacher/grades" class="px-4 py-2 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 font-medium transition-colors">Daftar Nilai</a>
+    <% } %>
+    <% if (user.role==='STUDENT') { %>
+      <a href="/student/exams" class="px-4 py-2 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 font-medium transition-colors">Ujian Tersedia</a>
+      <a href="/student/materials" class="px-4 py-2 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 font-medium transition-colors">Materi</a>
+      <a href="/student/live-classes" class="px-4 py-2 rounded-xl border border-red-300 bg-white hover:bg-red-50 text-red-800 font-medium transition-colors">🎥 Live Classes</a>
+      <a href="/student/history" class="px-4 py-2 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 font-medium transition-colors">Riwayat Ujian</a>
+      <a href="/student/material-history" class="px-4 py-2 rounded-xl border border-emerald-300 bg-white hover:bg-emerald-50 text-emerald-800 font-medium transition-colors">Riwayat Materi</a>
+    <% } %>
+  </div>
+</div>

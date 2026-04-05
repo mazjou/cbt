@@ -1,0 +1,17 @@
+<div class="p-6">
+  <h1 class="text-2xl font-bold">📊 Test Reports Page</h1>
+  <p>This is a minimal test version to check if the template rendering works.</p>
+  
+  <div class="mt-4">
+    <h2>Data Check:</h2>
+    <ul>
+      <li>Title: <%= title %></li>
+      <li>Filters: <%= JSON.stringify(filters) %></li>
+      <li>Summary keys: <%= Object.keys(summary).join(', ') %></li>
+      <li>Active Teachers: <%= activeTeachers.length %></li>
+      <li>Active Students: <%= activeStudents.length %></li>
+      <li>Active Classes: <%= activeClasses.length %></li>
+      <li>Popular Subjects: <%= popularSubjects.length %></li>
+    </ul>
+  </div>
+</div>

@@ -1,0 +1,124 @@
+<div class="flex items-start justify-between gap-4">
+  <div>
+    <div class="text-sm text-slate-500">Preview Import Soal</div>
+    <h1 class="text-3xl font-semibold tracking-tight"><%= exam.title %></h1>
+    <p class="mt-2 text-slate-600">
+      Di bawah ini adalah hasil parsing Excel/CSV. Silakan cek dulu sebelum disimpan.
+    </p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/teacher/exams/<%= exam.id %>/import" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Kembali</a>
+    <a href="/teacher/exams/<%= exam.id %>" class="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold">Ujian</a>
+  </div>
+</div>
+
+<div class="mt-6 grid lg:grid-cols-3 gap-4">
+  <div class="rounded-2xl border border-slate-200 bg-slate-100 p-5">
+    <div class="text-lg font-semibold">Ringkasan</div>
+    <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+      <div class="rounded-xl bg-white border border-slate-200 p-3">
+        <div class="text-slate-500">Valid</div>
+        <div class="text-2xl font-semibold text-slate-900"><%= preview.length %></div>
+      </div>
+      <div class="rounded-xl bg-white border border-slate-200 p-3">
+        <div class="text-slate-500">Gagal / Perlu dibenahi</div>
+        <div class="text-2xl font-semibold text-slate-900"><%= errors.length %></div>
+      </div>
+    </div>
+
+    <form action="/teacher/exams/<%= exam.id %>/questions/import/commit" method="POST" class="mt-4">
+      <input type="hidden" name="importId" value="<%= importId %>" />
+      <button class="w-full rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold py-3" <%= preview.length ? '' : 'disabled' %>>
+        Simpan Import
+      </button>
+      <% if (!preview.length) { %>
+        <div class="mt-2 text-xs text-amber-200">Tidak ada soal valid. Perbaiki file lalu upload ulang.</div>
+      <% } %>
+    </form>
+
+    <% if (errors.length) { %>
+      <a href="/teacher/exams/<%= exam.id %>/questions/import/errors.csv" class="mt-3 inline-flex w-full justify-center px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm">
+        Download Laporan Error (CSV)
+      </a>
+    <% } %>
+
+    <div class="mt-4 text-xs text-slate-500">
+      Tips: jika banyak error, cek penamaan kolom & pastikan kunci jawaban A–E. Untuk file besar, pecah per 100–200 soal.
+    </div>
+  </div>
+
+  <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-100 p-5">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div>
+        <div class="text-lg font-semibold">Preview Soal Valid</div>
+        <div class="text-sm text-slate-600">Menampilkan hingga 10 soal pertama yang valid.</div>
+      </div>
+    </div>
+
+    <% if (!preview.length) { %>
+      <div class="mt-4 rounded-xl bg-white border border-slate-200 p-4 text-slate-600">Tidak ada soal valid untuk ditampilkan.</div>
+    <% } else { %>
+      <div class="mt-4 space-y-4">
+        <% preview.slice(0,10).forEach((q, i) => { %>
+          <div class="rounded-2xl border border-slate-200 bg-slate-100/30 p-4">
+            <div class="flex items-center justify-between gap-3">
+              <div class="text-sm text-slate-500">Row <%= q.rowNo %> • Poin <%= q.points %></div>
+              <div class="text-xs px-2 py-1 rounded-lg bg-slate-100 border border-slate-200">Kunci: <span class="font-semibold"><%= q.correct %></span></div>
+            </div>
+            <div class="mt-2 whitespace-pre-wrap text-slate-900"><%= q.question_text %></div>
+            <% if (q.question_image) { %>
+              <div class="mt-3">
+                <img src="<%= q.question_image %>" alt="Gambar soal" class="max-h-56 rounded-xl border border-slate-200" />
+              </div>
+            <% } %>
+            <div class="mt-3 grid md:grid-cols-2 gap-2 text-sm">
+              <% ['A','B','C','D','E'].forEach((lbl) => { %>
+                <div class="rounded-xl bg-slate-100 border border-slate-200 p-3">
+                  <div class="text-xs text-slate-500"><%= lbl %></div>
+                  <div class="text-slate-900"><%= q.options[lbl] %></div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<% if (errors.length) { %>
+  <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-100 p-5">
+    <div class="text-lg font-semibold">Baris yang Gagal / Perlu Dibenahi</div>
+    <div class="mt-1 text-sm text-slate-600">Klik download CSV untuk laporan lengkap. Di bawah ini ringkasan (hingga 30 baris).</div>
+
+    <div class="mt-4 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-slate-500">
+            <th class="py-2 pr-4">Row</th>
+            <th class="py-2 pr-4">Masalah</th>
+            <th class="py-2">Potongan Data</th>
+          </tr>
+        </thead>
+        <tbody class="text-slate-600">
+          <% errors.slice(0,30).forEach((e) => { %>
+            <tr class="border-t border-slate-200 align-top">
+              <td class="py-3 pr-4 font-mono"><%= e.rowNo %></td>
+              <td class="py-3 pr-4">
+                <ul class="list-disc pl-5 space-y-1">
+                  <% (e.reasons || []).forEach((r) => { %>
+                    <li><%= r %></li>
+                  <% }) %>
+                </ul>
+              </td>
+              <td class="py-3">
+                <div class="text-xs text-slate-500">Question:</div>
+                <div class="max-h-16 overflow-hidden"><%= e.snapshot?.question_text || '' %></div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+<% } %>

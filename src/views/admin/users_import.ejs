@@ -1,0 +1,64 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <div class="text-sm text-slate-500">Pengguna → Siswa</div>
+    <h1 class="text-3xl font-semibold tracking-tight">Import Masal Siswa</h1>
+    <p class="mt-1 text-slate-600">Upload Excel (.xlsx) / CSV untuk menambah atau memperbarui akun siswa secara cepat.</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/admin/users" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Kembali</a>
+  </div>
+</div>
+
+<div class="mt-6 grid lg:grid-cols-2 gap-4">
+  <div class="rounded-2xl border border-slate-200 bg-slate-100 p-5">
+    <div class="text-lg font-semibold">Langkah & Format</div>
+    <ul class="mt-3 text-sm text-slate-600 list-disc pl-5 space-y-2">
+      <li>Download template CSV, lalu isi data siswa (boleh juga Excel).</li>
+      <li>Kolom wajib: <span class="font-mono text-slate-900">username</span> (boleh NIS), <span class="font-mono text-slate-900">full_name</span>.</li>
+      <li>Kolom kelas: <span class="font-mono text-slate-900">class</span> / <span class="font-mono text-slate-900">kelas</span> (isi <b>kode</b> atau <b>nama</b> kelas persis seperti di menu Kelas).</li>
+      <li>Kolom password opsional: <span class="font-mono text-slate-900">password</span>. Jika kosong, password default <span class="font-mono text-slate-900">123456</span>.</li>
+      <li>Jika username sudah ada, sistem akan <b>update</b> nama/kelas (password hanya berubah jika kolom password diisi).</li>
+    </ul>
+
+    <div class="mt-4 flex flex-wrap gap-2">
+      <a href="/public/templates/student_import_template.csv" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm">Download Template CSV</a>
+      <a href="/public/templates/student_import_template.xlsx" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm">Download Template XLSX</a>
+      <a href="/admin/classes" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm">Cek Daftar Kelas</a>
+    </div>
+
+    <details class="mt-4">
+      <summary class="cursor-pointer text-sm text-slate-600">Contoh isi template (klik untuk lihat)</summary>
+      <pre class="mt-3 text-xs whitespace-pre-wrap rounded-xl bg-white border border-slate-200 p-4 text-slate-600">username,full_name,class,password
+12345,Budi Santoso,XII RPL 1,123456
+12346,Sinta Ayu,XII RPL 1,
+12347,Andi Pratama,XII TKJ 2,andi@2026
+</pre>
+    </details>
+  </div>
+
+  <div class="rounded-2xl border border-slate-200 bg-slate-100 p-5">
+    <div class="text-lg font-semibold">Upload Import</div>
+    <form action="/admin/users/import/preview" method="POST" enctype="multipart/form-data" class="mt-4 space-y-4">
+      <div>
+        <label class="text-sm text-slate-600">File Excel/CSV</label>
+        <input type="file" name="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-3" />
+        <div class="mt-1 text-xs text-slate-500">Disarankan per 200–500 siswa per file agar proses stabil.</div>
+      </div>
+
+      <button class="w-full rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold py-3">Preview & Validasi</button>
+    </form>
+
+    <div class="mt-4 rounded-xl bg-white border border-slate-200 p-4">
+      <div class="text-sm font-semibold">Daftar Kelas (ringkas)</div>
+      <div class="mt-2 text-xs text-slate-600">Pastikan kolom <span class="font-mono">class/kelas</span> sesuai.</div>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <% (classes || []).slice(0, 18).forEach(c => { %>
+          <span class="text-xs px-2 py-1 rounded-lg border border-slate-200 bg-slate-50"><span class="font-mono"><%= c.code || '-' %></span> — <%= c.name %></span>
+        <% }) %>
+        <% if ((classes || []).length > 18) { %>
+          <span class="text-xs text-slate-500">+ <%= (classes || []).length - 18 %> kelas lainnya</span>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,49 @@
+{
+  "name": "LMS SMKN 1 Kras",
+  "short_name": "LMS SMKN1",
+  "description": "Learning Management System SMK Negeri 1 Kras - Inovasi Kreasi Prestasi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#4F46E5",
+  "theme_color": "#4F46E5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Buka dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Materi",
+      "short_name": "Materi",
+      "description": "Lihat materi pembelajaran",
+      "url": "/student/materials",
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Ujian",
+      "short_name": "Ujian",
+      "description": "Lihat ujian tersedia",
+      "url": "/student/exams",
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96" }]
+    }
+  ]
+}

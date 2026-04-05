@@ -1,0 +1,215 @@
+<!-- KaTeX offline -->
+<link rel="stylesheet" href="/public/lib/katex/katex.min.css">
+<!-- Summernote offline -->
+<link rel="stylesheet" href="/public/lib/summernote/summernote-lite.min.css">
+
+<style>
+/* Fix font path summernote - override @font-face */
+@font-face {
+  font-family: 'summernote';
+  src: url('/public/lib/summernote/font/summernote.woff2') format('woff2'),
+       url('/public/lib/summernote/font/summernote.woff') format('woff'),
+       url('/public/lib/summernote/font/summernote.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Override Summernote agar cocok dengan desain */
+.note-editor.note-frame { border-radius: 12px !important; border: 2px solid #c7d2fe !important; }
+.note-editor.note-frame.focus { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important; }
+.note-toolbar { background: #f0f4ff !important; border-bottom: 1px solid #c7d2fe !important; border-radius: 10px 10px 0 0 !important; padding: 6px !important; }
+.note-btn { border-radius: 6px !important; }
+.note-editable { min-height: 120px !important; font-size: 15px !important; }
+.math-formula { display: inline-block; vertical-align: middle; padding: 0 2px; cursor: pointer; }
+.math-formula:hover { background: #ede9fe; border-radius: 4px; }
+.math-formula-block { margin: 8px 0; }
+.math-icon { font-style: normal; font-size: 16px; font-weight: bold; font-family: serif; }
+.math-shortcut:hover { background: #e0e7ff !important; border-color: #6366f1 !important; }
+</style>
+
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-3xl font-bold text-indigo-900">Tambah Soal ke Bank</h1>
+    <p class="mt-1 text-slate-600">Soal yang disimpan dapat digunakan ulang untuk berbagai ujian</p>
+  </div>
+  <a href="/teacher/question-bank" class="px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">
+    ← Kembali
+  </a>
+</div>
+
+<form action="/teacher/question-bank" method="POST" enctype="multipart/form-data" class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 space-y-4" id="bankQuestionForm">
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Mata Pelajaran *</label>
+      <select name="subject_id" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="">Pilih Mata Pelajaran</option>
+        <% subjects.forEach(s => { %>
+          <option value="<%= s.id %>"><%= s.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Tingkat Kesulitan *</label>
+      <select name="difficulty" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="EASY">Mudah</option>
+        <option value="MEDIUM" selected>Sedang</option>
+        <option value="HARD">Sulit</option>
+      </select>
+    </div>
+  </div>
+
+  <div>
+    <label class="text-sm text-indigo-700 font-medium">Bab/Materi (opsional)</label>
+    <input type="text" name="chapter" placeholder="Contoh: Bab 1 - Trigonometri, Materi Persamaan Linear"
+      class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    <div class="mt-1 text-xs text-indigo-600">Isi dengan bab atau topik materi untuk memudahkan pencarian</div>
+  </div>
+
+  <div>
+    <label class="text-sm text-indigo-700 font-medium">Pertanyaan *</label>
+    <textarea id="editor_question" name="question_text" class="summernote-editor"></textarea>
+  </div>
+
+  <div>
+    <label class="text-sm text-indigo-700 font-medium">Gambar Soal (opsional)</label>
+    <input type="file" name="image" accept="image/*"
+      class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200" />
+    <div class="mt-1 text-xs text-indigo-600">Max 10MB</div>
+  </div>
+
+  <div>
+    <label class="text-sm text-indigo-700 font-medium">PDF Soal (opsional)</label>
+    <input type="file" name="pdf" accept="application/pdf"
+      class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
+    <div class="mt-1 text-xs text-indigo-600">Max 10MB</div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Poin *</label>
+      <input type="number" name="points" value="1" min="1" required
+        class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    </div>
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Jawaban Benar *</label>
+      <select name="correct" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+      </select>
+    </div>
+  </div>
+
+  <div>
+    <label class="text-sm text-indigo-700 font-medium">Tags (opsional)</label>
+    <input type="text" name="tags" placeholder="Contoh: trigonometri,sudut,sin-cos"
+      class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    <div class="mt-1 text-xs text-indigo-600">Pisahkan dengan koma untuk kategorisasi</div>
+  </div>
+
+  <div class="space-y-3">
+    <% ['A','B','C','D','E'].forEach(opt => { %>
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Opsi <%= opt %> *</label>
+      <textarea id="editor_option_<%= opt.toLowerCase() %>" name="<%= opt.toLowerCase() %>" class="summernote-editor summernote-option"></textarea>
+    </div>
+    <% }) %>
+  </div>
+
+  <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-3 transition-all">
+    💾 Simpan ke Bank Soal
+  </button>
+</form>
+
+<!-- jQuery + Summernote + KaTeX + Math Plugin (semua offline) -->
+<script src="/public/lib/jquery/jquery.min.js"></script>
+<script>var $sn = jQuery.noConflict(true);</script>
+<script src="/public/lib/katex/katex.min.js"></script>
+<script>
+// Summernote butuh $ global sementara
+window.$ = window.jQuery = $sn;
+</script>
+<script src="/public/lib/summernote/summernote-lite.min.js"></script>
+<script src="/public/lib/summernote/summernote-math.js"></script>
+
+<script>
+$sn(document).ready(function () {
+  var $ = $sn;
+
+  // Konfigurasi toolbar Summernote
+  var toolbarQuestion = [
+    ['style', ['bold', 'italic', 'underline', 'strikethrough', 'clear']],
+    ['font', ['superscript', 'subscript']],
+    ['color', ['color']],
+    ['para', ['ul', 'ol']],
+    ['insert', ['picture', 'math']],
+    ['view', ['fullscreen', 'codeview']]
+  ];
+
+  var toolbarOption = [
+    ['style', ['bold', 'italic', 'underline', 'clear']],
+    ['font', ['superscript', 'subscript']],
+    ['color', ['color']],
+    ['insert', ['picture', 'math']]
+  ];
+
+  var commonConfig = {
+    lang: 'en-US',
+    disableDragAndDrop: false,
+    callbacks: {
+      onImageUpload: function (files) {
+        // Konversi gambar ke base64 agar tersimpan di HTML
+        var editor = this;
+        Array.from(files).forEach(function (file) {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            var img = $('<img>').attr('src', e.target.result)
+              .css({ maxWidth: '100%', height: 'auto', borderRadius: '8px', margin: '4px 0' });
+            $(editor).summernote('insertNode', img[0]);
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    },
+    plugins: ['math']
+  };
+
+  // Init editor pertanyaan
+  $('#editor_question').summernote($.extend({}, commonConfig, {
+    height: 160,
+    placeholder: 'Ketik pertanyaan... Klik ∑ untuk rumus matematika',
+    toolbar: toolbarQuestion
+  }));
+
+  // Init editor opsi A-E
+  $('.summernote-option').summernote($.extend({}, commonConfig, {
+    height: 90,
+    placeholder: 'Ketik opsi jawaban... Klik ∑ untuk rumus',
+    toolbar: toolbarOption
+  }));
+
+  // Validasi & submit
+  $('#bankQuestionForm').on('submit', function (e) {
+    var fields = [
+      { id: 'editor_question', name: 'Pertanyaan' },
+      { id: 'editor_option_a', name: 'Opsi A' },
+      { id: 'editor_option_b', name: 'Opsi B' },
+      { id: 'editor_option_c', name: 'Opsi C' },
+      { id: 'editor_option_d', name: 'Opsi D' },
+      { id: 'editor_option_e', name: 'Opsi E' }
+    ];
+
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i];
+      var content = $('#' + f.id).summernote('code');
+      var text = $('<div>').html(content).text().trim();
+      var hasImg = content.indexOf('<img') !== -1;
+      if (!text && !hasImg) {
+        e.preventDefault();
+        alert(f.name + ' tidak boleh kosong!');
+        $('#' + f.id).summernote('focus');
+        return false;
+      }
+    }
+  });
+
+});
+</script>

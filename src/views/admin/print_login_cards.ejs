@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title><%= title %></title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:Arial,sans-serif;background:#e5e7eb;}
+
+    /* Kontrol */
+    .no-print{
+      background:white;padding:12px 20px;
+      display:flex;align-items:center;justify-content:space-between;
+      flex-wrap:wrap;gap:10px;box-shadow:0 2px 6px rgba(0,0,0,.12);margin-bottom:14px;
+    }
+    .no-print h2{font-size:15px;color:#1e293b;}
+    .no-print small{color:#64748b;font-size:12px;}
+    .ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .btn{padding:7px 16px;border-radius:7px;font-weight:600;font-size:13px;
+         cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:5px;}
+    .btn-print{background:#4f46e5;color:white;}
+    .btn-back{background:#f1f5f9;color:#475569;}
+    select.fs{padding:6px 12px;border-radius:7px;border:2px solid #e2e8f0;font-size:13px;color:#475569;background:white;}
+
+    /* Halaman A4 Portrait: 2 kolom × 4 baris = 8 kartu */
+    .page{
+      width:210mm;
+      min-height:297mm;
+      margin:0 auto 16px;
+      background:white;
+      padding:6mm 6mm;
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      grid-template-rows:repeat(4,1fr);
+      gap:4mm;
+    }
+
+    /* Kartu: ~95mm × 65mm */
+    .kartu{
+      border:1.5px solid #1e3a8a;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      page-break-inside:avoid;
+      background:white;
+    }
+
+    /* ── HEADER ── */
+    .k-head{
+      display:flex;
+      align-items:stretch;
+      border-bottom:1.5px solid #1e3a8a;
+      background:#eff6ff;
+      flex-shrink:0;
+      height:14mm;
+    }
+    .k-logo{
+      width:14mm;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      border-right:1px solid #1e3a8a;padding:1.5mm;
+    }
+    .k-logo img{width:10mm;height:10mm;object-fit:contain;}
+    .k-title{
+      flex:1;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      padding:1mm 2mm;text-align:center;
+    }
+    .k-title .t1{font-size:7.5pt;font-weight:bold;text-transform:uppercase;color:#1e3a8a;letter-spacing:.3px;}
+    .k-title .t2{font-size:7pt;font-weight:bold;color:#1e3a8a;margin-top:1px;}
+    .k-title .t3{font-size:6.5pt;color:#374151;margin-top:1px;}
+    /* Panitia HORIZONTAL */
+    .k-panitia{
+      width:14mm;flex-shrink:0;
+      border-left:1px solid #1e3a8a;
+      display:flex;align-items:center;justify-content:center;
+      font-size:7pt;font-weight:bold;color:#1e3a8a;
+      text-align:center;padding:1mm;
+      /* HORIZONTAL - tidak pakai writing-mode */
+    }
+
+    /* ── BODY ── */
+    .k-body{
+      flex:1;
+      display:flex;
+      padding:2mm;
+      gap:2mm;
+      overflow:hidden;
+    }
+
+    /* Kolom KIRI: Foto + QR di bawah */
+    .k-foto{
+      width:20mm;flex-shrink:0;
+      display:flex;flex-direction:column;
+      align-items:center;gap:1.5mm;
+    }
+    .foto-box{
+      width:18mm;height:20mm;
+      border:1px solid #9ca3af;
+      display:flex;align-items:center;justify-content:center;
+      background:#f9fafb;overflow:hidden;flex-shrink:0;
+    }
+    .foto-box img{width:100%;height:100%;object-fit:cover;}
+    .foto-ph{font-size:5.5pt;color:#9ca3af;text-align:center;line-height:1.4;}
+    .qr-wrap{
+      width:18mm;height:18mm;
+      border:1px solid #e5e7eb;
+      display:flex;align-items:center;justify-content:center;
+      background:white;flex-shrink:0;
+    }
+    .qr-label{font-size:5pt;color:#9ca3af;text-align:center;}
+
+    /* Kolom TENGAH: Data */
+    .k-data{
+      flex:1;
+      display:flex;flex-direction:column;
+      justify-content:space-between;
+      overflow:hidden;
+      min-width:0;
+    }
+    .dt{width:100%;border-collapse:collapse;}
+    .dt td{font-size:6.5pt;padding:.8mm 0;vertical-align:middle;color:#111827;line-height:1.2;}
+    .dt .lb{width:15mm;color:#4b5563;white-space:nowrap;font-size:6pt;}
+    .dt .sp{width:3mm;text-align:center;}
+    .dt .vl{font-weight:600;}
+    .dt .mono{
+      font-family:'Courier New',monospace;
+      background:#f3f4f6;padding:1px 4px;
+      border-radius:3px;font-size:7pt;letter-spacing:.3px;
+    }
+    .badge{
+      display:inline-block;font-size:5.5pt;font-weight:bold;
+      padding:1px 5px;border-radius:8px;text-transform:uppercase;
+    }
+    .bs{background:#dcfce7;color:#166534;border:1px solid #86efac;}
+    .bt{background:#dbeafe;color:#1e40af;border:1px solid #93c5fd;}
+
+    /* TTD di bawah data */
+    .ttd{
+      border-top:1px dashed #d1d5db;
+      padding-top:1mm;
+      font-size:5.5pt;color:#374151;line-height:1.5;
+    }
+    .ttd .garis{border-bottom:1px solid #374151;width:22mm;margin:3mm 0 .5mm;}
+    .ttd .tnama{font-weight:bold;font-size:6pt;}
+    .ttd .tnip{font-size:5pt;color:#6b7280;}
+
+    /* Kolom KANAN tidak dipakai lagi - QR sudah di kiri bawah foto */
+
+    /* Footer */
+    .k-foot{
+      border-top:1px solid #e5e7eb;
+      padding:1mm 2mm;text-align:center;
+      font-size:5.5pt;color:#6b7280;background:#f9fafb;flex-shrink:0;
+    }
+
+    /* ── PRINT ── */
+    @media print{
+      body{background:white;}
+      .no-print{display:none;}
+      .page{
+        margin:0;padding:6mm;
+        width:210mm;min-height:297mm;
+        page-break-after:always;
+      }
+      .page:last-child{page-break-after:auto;}
+      @page{size:A4 portrait;margin:0;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- Kontrol -->
+<div class="no-print">
+  <div>
+    <h2>🖨️ Cetak Kartu Peserta</h2>
+    <small><%= users.length %> kartu • A4 Portrait • 8 kartu/halaman</small>
+  </div>
+  <div class="ctrl">
+    <form method="GET" action="/admin/users/print-cards" style="display:flex;gap:8px;">
+      <select name="role" class="fs" onchange="this.form.submit()">
+        <option value="">Semua Role</option>
+        <option value="TEACHER" <%=role==='TEACHER'?'selected':''%>>Guru</option>
+        <option value="STUDENT" <%=role==='STUDENT'?'selected':''%>>Siswa</option>
+      </select>
+      <select name="class_id" class="fs" onchange="this.form.submit()">
+        <option value="">Semua Kelas</option>
+        <%if(typeof classes!=='undefined')classes.forEach(c=>{%>
+          <option value="<%=c.id%>" <%=class_id==c.id?'selected':''%>><%=c.name%></option>
+        <%});%>
+      </select>
+    </form>
+    <button onclick="window.print()" class="btn btn-print">🖨️ Cetak</button>
+    <a href="/admin/users" class="btn btn-back">← Kembali</a>
+  </div>
+</div>
+
+<%
+  const tahunAjaran=(()=>{const y=new Date().getFullYear();return new Date().getMonth()>=6?`${y}/${y+1}`:`${y-1}/${y}`;})();
+  const tglCetak=new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'});
+  const appUrl=(process.env.APP_URL||'localhost:3000').replace(/^https?:\/\//,'');
+  const PERHAL=8;
+%>
+
+<%for(let p=0;p<users.length;p+=PERHAL){%>
+<div class="page">
+  <%for(let j=p;j<Math.min(p+PERHAL,users.length);j++){
+    const u=users[j];
+    const isSiswa=u.role==='STUDENT';
+    // Nomor peserta: pakai nomor_peserta jika ada, kosong jika tidak ada
+    const noPeserta=u.nomor_peserta || null;
+  %>
+  <div class="kartu">
+
+    <!-- Header -->
+    <div class="k-head">
+      <div class="k-logo">
+        <img src="/public/images/logo.png" alt="Logo"
+             onerror="this.outerHTML='<span style=\'font-size:14pt\'>🎓</span>'">
+      </div>
+      <div class="k-title">
+        <div class="t1">Kartu Peserta Ujian</div>
+        <div class="t2"><%=schoolInfo.name%></div>
+        <div class="t3">Tahun Pelajaran <%=tahunAjaran%></div>
+      </div>
+      <div class="k-panitia">Panitia</div>
+    </div>
+
+    <!-- Body: Foto | Data | QR -->
+    <div class="k-body">
+
+      <!-- KIRI: Foto + QR di bawah -->
+      <div class="k-foto">
+        <div class="foto-box">
+          <%if(u.profile_photo){%>
+            <img src="<%=u.profile_photo%>" alt="Foto">
+          <%}else{%>
+            <div class="foto-ph">📷<br>Foto<br>Peserta</div>
+          <%}%>
+        </div>
+        <div class="qr-wrap" id="qr-<%=j%>"></div>
+        <div class="qr-label">Scan login</div>
+      </div>
+
+      <!-- KANAN: Data + TTD -->
+      <div class="k-data">
+        <table class="dt">
+          <%if(noPeserta){%>
+          <tr><td class="lb">No Peserta</td><td class="sp">:</td><td class="vl"><%=noPeserta%></td></tr>
+          <%}%>
+          <tr><td class="lb">Nama</td><td class="sp">:</td><td class="vl" style="max-width:38mm;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><%=u.full_name%></td></tr>
+          <%if(u.class_name){%>
+          <tr><td class="lb">Kelas</td><td class="sp">:</td><td class="vl"><%=u.class_name%></td></tr>
+          <%}%>
+          <tr><td class="lb">Username</td><td class="sp">:</td><td class="vl mono"><%=u.username%></td></tr>
+          <tr><td class="lb">Password</td><td class="sp">:</td><td class="vl mono"><%=u.username%></td></tr>
+          <tr><td class="lb">URL Login</td><td class="sp">:</td><td class="vl" style="font-size:5.5pt;word-break:break-all;"><%=appUrl%></td></tr>
+          <tr>
+            <td class="lb">Status</td><td class="sp">:</td>
+            <td><span class="badge <%=isSiswa?'bs':'bt'%>"><%=isSiswa?'Siswa':'Guru'%></span></td>
+          </tr>
+        </table>
+
+        <div class="ttd">
+          <div><%=schoolInfo.address%>, <%=tglCetak%></div>
+          <div style="font-weight:bold;">Kepala Sekolah,</div>
+          <div class="garis"></div>
+          <div class="tnama"><%=process.env.PRINCIPAL_NAME||'Kepala Sekolah'%></div>
+          <div class="tnip">NIP. <%=process.env.PRINCIPAL_NIP||'-'%></div>
+        </div>
+      </div>
+
+      <!-- (QR sudah di kolom kiri bawah foto) -->
+
+    </div>
+
+    <!-- Footer -->
+    <div class="k-foot">Simpan kartu ini • Jangan bagikan kepada orang lain</div>
+  </div>
+  <%}%>
+</div>
+<%}%>
+
+<script>
+(function(){
+  var s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+  s.onload=function(){
+    <%for(let j=0;j<users.length;j++){
+      const u=users[j];
+      const qrText=(process.env.APP_URL||'http://localhost:3000')+'|'+u.username;
+    %>
+    try{new QRCode(document.getElementById('qr-<%=j%>'),{
+      text:'<%-qrText.replace(/\\/g,"\\\\").replace(/'/g,"\\'")%>',
+      width:66,height:66,colorDark:'#000',colorLight:'#fff',
+      correctLevel:QRCode.CorrectLevel.M
+    });}catch(e){}
+    <%}%>
+  };
+  s.onerror=function(){
+    document.querySelectorAll('[id^="qr-"]').forEach(function(el){
+      el.style.cssText='font-size:6pt;text-align:center;padding:3mm;color:#9ca3af;';
+      el.textContent='QR';
+    });
+  };
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>

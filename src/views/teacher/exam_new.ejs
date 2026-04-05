@@ -1,0 +1,311 @@
+<div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500 p-1 shadow-2xl">
+  <div class="rounded-3xl bg-white p-6">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="text-5xl animate-bounce">📝</span>
+          <div>
+            <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 bg-clip-text text-transparent">
+              Buat Ujian Baru
+            </h1>
+            <p class="mt-2 text-slate-600 flex items-center gap-2">
+              <span>✨</span>
+              <span>Atur mapel, jadwal, durasi, dan keamanan dengan mudah!</span>
+            </p>
+          </div>
+        </div>
+      </div>
+      <a href="/teacher/exams" class="text-sm px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">
+        Kembali
+      </a>
+    </div>
+  </div>
+</div>
+
+<form action="/teacher/exams" method="POST" class="mt-6 space-y-6">
+  <!-- Section 1: Mata Pelajaran & Kelas -->
+  <div class="rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-6 shadow-lg hover:shadow-xl transition-shadow">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-4xl">📚</span>
+      <h2 class="text-2xl font-bold text-blue-900">Mata Pelajaran & Kelas</h2>
+    </div>
+    
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-blue-800 mb-2">
+          <span class="text-xl">📖</span>
+          <span>Mata Pelajaran</span>
+          <span class="text-red-500">*</span>
+        </label>
+        <select name="subject_id" required class="w-full rounded-xl bg-white border-2 border-blue-200 px-4 py-3 focus:border-blue-500 focus:ring-4 focus:ring-blue-200 transition-all group-hover:border-blue-300">
+          <% subjects.forEach(s => { %>
+            <option value="<%= s.id %>"><%= s.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-blue-800 mb-2">
+          <span class="text-xl">🎓</span>
+          <span>Kelas (opsional, bisa pilih lebih dari 1)</span>
+        </label>
+        <div class="rounded-xl bg-white border-2 border-blue-200 p-4 max-h-48 overflow-y-auto hover:border-blue-300 transition-colors">
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 p-2 hover:bg-gradient-to-r hover:from-blue-100 hover:to-cyan-100 rounded-lg cursor-pointer transition-all">
+              <input type="checkbox" id="select-all-classes" class="rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-5 h-5" />
+              <span class="text-sm font-bold text-blue-900">✨ Pilih Semua Kelas</span>
+            </label>
+            <div class="border-t-2 border-blue-200 my-2"></div>
+            <% classes.forEach(c => { %>
+              <label class="flex items-center gap-2 p-2 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 rounded-lg cursor-pointer transition-all class-checkbox-label">
+                <input type="checkbox" name="class_ids" value="<%= c.id %>" class="rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-5 h-5 class-checkbox" />
+                <span class="text-sm text-slate-700"><%= c.name %></span>
+              </label>
+            <% }) %>
+          </div>
+        </div>
+        <div class="mt-2 flex items-center gap-2 text-xs">
+          <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 font-semibold">
+            <span id="selected-count">0</span> kelas dipilih
+          </span>
+          <span class="text-slate-500">Kosongkan untuk semua kelas</span>
+        </div>
+        <div id="selected-classes-display" class="mt-3 hidden">
+          <div class="text-xs text-blue-700 font-semibold mb-2">🎯 Kelas terpilih:</div>
+          <div id="selected-classes-tags" class="flex flex-wrap gap-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Detail Ujian -->
+  <div class="rounded-3xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-6 shadow-lg hover:shadow-xl transition-shadow">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-4xl">✍️</span>
+      <h2 class="text-2xl font-bold text-purple-900">Detail Ujian</h2>
+    </div>
+    
+    <div class="space-y-4">
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-purple-800 mb-2">
+          <span class="text-xl">🏷️</span>
+          <span>Judul Ujian</span>
+          <span class="text-red-500">*</span>
+        </label>
+        <input name="title" required class="w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-3 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all group-hover:border-purple-300" placeholder="Contoh: Penilaian Tengah Semester Matematika" />
+      </div>
+      
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-purple-800 mb-2">
+          <span class="text-xl">📄</span>
+          <span>Deskripsi (opsional)</span>
+        </label>
+        <textarea name="description" rows="3" class="w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-3 focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all group-hover:border-purple-300" placeholder="Petunjuk singkat untuk siswa..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Jadwal -->
+  <div class="rounded-3xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50 p-6 shadow-lg hover:shadow-xl transition-shadow">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-4xl">📅</span>
+      <h2 class="text-2xl font-bold text-emerald-900">Jadwal Ujian</h2>
+    </div>
+    
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-emerald-800 mb-2">
+          <span class="text-xl">🕐</span>
+          <span>Waktu Mulai (opsional)</span>
+        </label>
+        <input type="datetime-local" name="start_at" class="w-full rounded-xl bg-white border-2 border-emerald-200 px-4 py-3 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-200 transition-all group-hover:border-emerald-300" />
+      </div>
+      
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-emerald-800 mb-2">
+          <span class="text-xl">🕐</span>
+          <span>Waktu Selesai (opsional)</span>
+        </label>
+        <input type="datetime-local" name="end_at" class="w-full rounded-xl bg-white border-2 border-emerald-200 px-4 py-3 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-200 transition-all group-hover:border-emerald-300" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Pengaturan -->
+  <div class="rounded-3xl border-2 border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-6 shadow-lg hover:shadow-xl transition-shadow">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-4xl">⚙️</span>
+      <h2 class="text-2xl font-bold text-orange-900">Pengaturan Ujian</h2>
+    </div>
+    
+    <div class="grid md:grid-cols-4 gap-4">
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-orange-800 mb-2">
+          <span class="text-xl">⏱️</span>
+          <span>Durasi (menit)</span>
+        </label>
+        <input name="duration_minutes" type="number" min="1" value="60" class="w-full rounded-xl bg-white border-2 border-orange-200 px-4 py-3 focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all group-hover:border-orange-300" />
+      </div>
+      
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-orange-800 mb-2">
+          <span class="text-xl">🎯</span>
+          <span>KKM / Lulus</span>
+        </label>
+        <input name="pass_score" type="number" min="0" max="100" value="75" class="w-full rounded-xl bg-white border-2 border-orange-200 px-4 py-3 focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all group-hover:border-orange-300" />
+      </div>
+      
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-orange-800 mb-2">
+          <span class="text-xl">🔄</span>
+          <span>Max Attempt</span>
+        </label>
+        <input name="max_attempts" type="number" min="1" value="1" class="w-full rounded-xl bg-white border-2 border-orange-200 px-4 py-3 focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all group-hover:border-orange-300" />
+      </div>
+      
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-orange-800 mb-2">
+          <span class="text-xl">🔐</span>
+          <span>Kode Akses</span>
+        </label>
+        <input name="access_code" class="w-full rounded-xl bg-white border-2 border-orange-200 px-4 py-3 focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all group-hover:border-orange-300" placeholder="ABC123" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Keamanan -->
+  <div class="rounded-3xl border-2 border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 p-6 shadow-lg hover:shadow-xl transition-shadow">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-4xl">🔒</span>
+      <h2 class="text-2xl font-bold text-rose-900">Keamanan & Acak</h2>
+    </div>
+    
+    <div class="flex flex-wrap gap-4">
+      <label class="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-rose-200 bg-white hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 cursor-pointer transition-all transform hover:scale-105">
+        <input type="checkbox" name="shuffle_questions" checked class="rounded border-rose-300 text-rose-600 focus:ring-rose-500 w-5 h-5" />
+        <span class="flex items-center gap-2 text-sm font-semibold text-rose-800">
+          <span class="text-xl">🔀</span>
+          <span>Acak urutan soal</span>
+        </span>
+      </label>
+      
+      <label class="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-rose-200 bg-white hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 cursor-pointer transition-all transform hover:scale-105">
+        <input type="checkbox" name="shuffle_options" checked class="rounded border-rose-300 text-rose-600 focus:ring-rose-500 w-5 h-5" />
+        <span class="flex items-center gap-2 text-sm font-semibold text-rose-800">
+          <span class="text-xl">🎲</span>
+          <span>Acak opsi jawaban</span>
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Display Options -->
+  <div class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl p-8 border-2 border-blue-200 shadow-lg">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-3xl">👁️</span>
+      <h2 class="text-2xl font-bold text-blue-900">Tampilan untuk Siswa</h2>
+    </div>
+    
+    <div class="flex flex-wrap gap-4">
+      <label class="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-blue-200 bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 cursor-pointer transition-all transform hover:scale-105">
+        <input type="checkbox" name="show_score_to_student" checked class="rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-5 h-5" />
+        <span class="flex items-center gap-2 text-sm font-semibold text-blue-800">
+          <span class="text-xl">📊</span>
+          <span>Tampilkan nilai ke siswa</span>
+        </span>
+      </label>
+      
+      <label class="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-blue-200 bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 cursor-pointer transition-all transform hover:scale-105">
+        <input type="checkbox" name="show_review_to_student" class="rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-5 h-5" />
+        <span class="flex items-center gap-2 text-sm font-semibold text-blue-800">
+          <span class="text-xl">📝</span>
+          <span>Tampilkan pembahasan & jawaban benar</span>
+        </span>
+      </label>
+    </div>
+    
+    <div class="mt-4 p-4 bg-blue-100 rounded-xl border border-blue-200">
+      <p class="text-sm text-blue-700">
+        <strong>💡 Tips:</strong> Secara default, nilai akan ditampilkan ke siswa tetapi pembahasan tidak. 
+        Aktifkan "Tampilkan pembahasan" jika ingin siswa bisa melihat jawaban yang benar setelah ujian selesai.
+      </p>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="flex gap-4 pt-4">
+    <button type="submit" class="flex-1 px-8 py-4 rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center gap-3">
+      <span class="text-2xl">💾</span>
+      <span>Simpan Ujian</span>
+    </button>
+    
+    <a href="/teacher/exams" class="px-8 py-4 rounded-2xl border-2 border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 font-semibold text-slate-700 transition-all transform hover:scale-105 flex items-center justify-center gap-2">
+      <span>❌</span>
+      <span>Batal</span>
+    </a>
+  </div>
+</form>
+
+<script>
+  // Handle select all checkbox
+  const selectAllCheckbox = document.getElementById('select-all-classes');
+  const classCheckboxes = document.querySelectorAll('.class-checkbox');
+  const selectedCountSpan = document.getElementById('selected-count');
+  const selectedClassesDisplay = document.getElementById('selected-classes-display');
+  const selectedClassesTags = document.getElementById('selected-classes-tags');
+
+  // Array of colorful gradient classes
+  const tagColors = [
+    'bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border-blue-300',
+    'bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border-purple-300',
+    'bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-700 border-emerald-300',
+    'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 border-orange-300',
+    'bg-gradient-to-r from-rose-100 to-pink-100 text-rose-700 border-rose-300',
+    'bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-700 border-indigo-300'
+  ];
+
+  function updateSelectedCount() {
+    const checkedCount = document.querySelectorAll('.class-checkbox:checked').length;
+    selectedCountSpan.textContent = checkedCount;
+    
+    // Update tags display
+    selectedClassesTags.innerHTML = '';
+    const checkedBoxes = document.querySelectorAll('.class-checkbox:checked');
+    
+    if (checkedCount > 0) {
+      selectedClassesDisplay.classList.remove('hidden');
+      checkedBoxes.forEach((checkbox, index) => {
+        const label = checkbox.parentElement.querySelector('span').textContent;
+        const colorClass = tagColors[index % tagColors.length];
+        const tag = document.createElement('span');
+        tag.className = `inline-flex items-center gap-2 px-3 py-2 rounded-xl border-2 ${colorClass} font-semibold text-sm shadow-sm hover:shadow-md transition-all transform hover:scale-105`;
+        tag.innerHTML = `
+          <span>🎓</span>
+          <span>${label}</span>
+          <button type="button" onclick="document.querySelector('input[value=\\'${checkbox.value}\\']').click();" class="hover:scale-125 transition-transform">×</button>
+        `;
+        selectedClassesTags.appendChild(tag);
+      });
+    } else {
+      selectedClassesDisplay.classList.add('hidden');
+    }
+    
+    // Update select all checkbox state
+    selectAllCheckbox.checked = checkedCount === classCheckboxes.length;
+    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < classCheckboxes.length;
+  }
+
+  selectAllCheckbox.addEventListener('change', function() {
+    classCheckboxes.forEach(checkbox => {
+      checkbox.checked = this.checked;
+    });
+    updateSelectedCount();
+  });
+
+  classCheckboxes.forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectedCount);
+  });
+
+  // Initial count
+  updateSelectedCount();
+</script>

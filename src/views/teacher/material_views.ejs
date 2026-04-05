@@ -1,0 +1,268 @@
+<div class="flex items-end justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">👁️ Rekap Siswa Lihat Materi</h1>
+    <p class="mt-1 text-slate-600">Daftar siswa yang sudah menyelesaikan materi pembelajaran.</p>
+  </div>
+  <div>
+    <a href="/teacher" class="inline-flex items-center gap-2 px-4 py-2 bg-orange-100/80 backdrop-blur-sm hover:bg-orange-200/90 text-orange-800 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Kembali
+    </a>
+  </div>
+</div>
+
+<!-- Filter Card -->
+<div class="mt-6 rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 shadow-soft">
+  <div class="flex items-center gap-2 mb-4">
+    <span class="text-2xl">🔍</span>
+    <h2 class="text-xl font-semibold text-indigo-900">Filter Data</h2>
+  </div>
+  
+  <form method="GET" action="/teacher/material-views" class="space-y-4">
+    <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-sm font-medium text-indigo-900 mb-1">Materi</label>
+        <select name="material_id" class="w-full px-3 py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+          <option value="">Semua Materi</option>
+          <% materials.forEach(m => { %>
+            <option value="<%= m.id %>" <%= filters.material_id == m.id ? 'selected' : '' %>><%= m.title %></option>
+          <% }); %>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-indigo-900 mb-1">Kelas</label>
+        <select name="class_id" class="w-full px-3 py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+          <option value="">Semua Kelas</option>
+          <% classes.forEach(c => { %>
+            <option value="<%= c.id %>" <%= filters.class_id == c.id ? 'selected' : '' %>><%= c.name %></option>
+          <% }); %>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-indigo-900 mb-1">Cari Siswa</label>
+        <input type="text" name="q" value="<%= filters.q %>" placeholder="Nama atau username..." class="w-full px-3 py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-indigo-900 mb-1">Per Halaman</label>
+        <select name="limit" class="w-full px-3 py-2 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+          <option value="10" <%= pagination.limit == 10 ? 'selected' : '' %>>10</option>
+          <option value="20" <%= pagination.limit == 20 ? 'selected' : '' %>>20</option>
+          <option value="50" <%= pagination.limit == 50 ? 'selected' : '' %>>50</option>
+          <option value="100" <%= pagination.limit == 100 ? 'selected' : '' %>>100</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button type="submit" class="px-6 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-lg hover:from-indigo-600 hover:to-purple-600 transition-all font-medium">
+        🔍 Terapkan Filter
+      </button>
+      <a href="/teacher/material-views" class="px-6 py-2 bg-gradient-to-r from-slate-400 to-slate-500 text-white rounded-lg hover:from-slate-500 hover:to-slate-600 transition-all font-medium">
+        🔄 Reset
+      </a>
+    </div>
+  </form>
+</div>
+
+<!-- Stats -->
+<div class="mt-6 grid grid-cols-2 gap-4">
+  <div class="rounded-lg bg-emerald-50 border border-emerald-200 p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-emerald-600 font-medium">Sudah Lihat</p>
+        <p class="text-3xl font-bold text-emerald-900 mt-1"><%= pagination.total %></p>
+      </div>
+      <div class="text-5xl text-emerald-300">✅</div>
+    </div>
+  </div>
+  
+  <div class="rounded-lg bg-rose-50 border border-rose-200 p-4">
+    <div class="flex items-center justify-between">
+      <div>
+        <p class="text-sm text-rose-600 font-medium">Belum Lihat</p>
+        <p class="text-3xl font-bold text-rose-900 mt-1"><%= notViewedPagination.total %></p>
+      </div>
+      <div class="text-5xl text-rose-300">❌</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabel Data -->
+<div class="mt-6 rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 p-6 shadow-soft">
+  <div class="flex items-center gap-2 mb-4">
+    <span class="text-2xl">📊</span>
+    <h2 class="text-xl font-semibold text-teal-900">Data Siswa (<%= pagination.total %> total)</h2>
+  </div>
+
+  <% if (rows.length === 0) { %>
+    <div class="text-center py-12">
+      <div class="text-6xl mb-4">😴</div>
+      <p class="text-teal-700 text-lg font-medium">Belum ada siswa yang menyelesaikan materi</p>
+      <p class="text-teal-600 text-sm mt-2">Data akan muncul setelah siswa menyelesaikan materi pembelajaran</p>
+    </div>
+  <% } else { %>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b-2 border-teal-300">
+            <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">No</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">Nama Siswa</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">Username</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">Kelas</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">Materi</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">Dibuka</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-teal-900">Selesai</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% 
+          const colors = [
+            'bg-gradient-to-r from-blue-50 to-blue-100',
+            'bg-gradient-to-r from-purple-50 to-purple-100',
+            'bg-gradient-to-r from-pink-50 to-pink-100',
+            'bg-gradient-to-r from-orange-50 to-orange-100',
+            'bg-gradient-to-r from-teal-50 to-teal-100',
+            'bg-gradient-to-r from-cyan-50 to-cyan-100'
+          ];
+          rows.forEach((r, idx) => { 
+            const colorClass = colors[idx % colors.length];
+          %>
+            <tr class="border-b border-teal-200 <%= colorClass %> hover:opacity-80 transition-opacity">
+              <td class="px-4 py-3 text-sm text-slate-700"><%= (pagination.page - 1) * pagination.limit + idx + 1 %></td>
+              <td class="px-4 py-3 text-sm font-medium text-slate-900"><%= r.student_name %></td>
+              <td class="px-4 py-3 text-sm text-slate-700"><%= r.username %></td>
+              <td class="px-4 py-3 text-sm text-slate-700"><%= r.class_name || '-' %></td>
+              <td class="px-4 py-3 text-sm text-slate-700"><%= r.material_title %></td>
+              <td class="px-4 py-3 text-sm text-slate-700">
+                <%= r.opened_at ? new Date(r.opened_at).toLocaleString('id-ID') : '-' %>
+              </td>
+              <td class="px-4 py-3 text-sm">
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  ✅ <%= r.completed_at ? new Date(r.completed_at).toLocaleString('id-ID') : '-' %>
+                </span>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <% if (pagination.totalPages > 1) { %>
+      <div class="mt-6 flex items-center justify-between">
+        <div class="text-sm text-teal-700">
+          Halaman <%= pagination.page %> dari <%= pagination.totalPages %> 
+          (Total: <%= pagination.total %> data)
+        </div>
+        <div class="flex gap-2">
+          <% if (pagination.page > 1) { %>
+            <a href="?page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>&material_id=<%= filters.material_id %>&class_id=<%= filters.class_id %>&q=<%= filters.q %>" 
+               class="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all font-medium">
+              ← Sebelumnya
+            </a>
+          <% } %>
+          <% if (pagination.page < pagination.totalPages) { %>
+            <a href="?page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>&material_id=<%= filters.material_id %>&class_id=<%= filters.class_id %>&q=<%= filters.q %>" 
+               class="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg hover:from-teal-600 hover:to-cyan-600 transition-all font-medium">
+              Selanjutnya →
+            </a>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  <% } %>
+</div>
+
+<!-- Tabel Siswa Belum Lihat -->
+<% if (notViewedStudents.length > 0 || notViewedPagination.total > 0) { %>
+<div class="mt-6 rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 to-rose-100 p-6 shadow-soft">
+  <div class="flex items-center gap-2 mb-4">
+    <span class="text-2xl">❌</span>
+    <h2 class="text-xl font-semibold text-rose-900">Siswa Belum Lihat (<%= notViewedPagination.total %> siswa)</h2>
+  </div>
+
+  <% if (notViewedStudents.length === 0) { %>
+    <div class="text-center py-12">
+      <div class="text-6xl mb-4">🎉</div>
+      <p class="text-rose-700 text-lg font-medium">Semua siswa sudah melihat materi</p>
+      <p class="text-rose-600 text-sm mt-2">Tidak ada siswa yang belum melihat materi dengan filter ini</p>
+    </div>
+  <% } else { %>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr class="border-b-2 border-rose-300">
+            <th class="px-4 py-3 text-left text-sm font-semibold text-rose-900">No</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-rose-900">Nama Siswa</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-rose-900">Username</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-rose-900">Kelas</th>
+            <th class="px-4 py-3 text-left text-sm font-semibold text-rose-900">Materi</th>
+            <th class="px-4 py-3 text-center text-sm font-semibold text-rose-900">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% notViewedStudents.forEach((student, idx) => { %>
+            <tr class="border-b border-rose-200 bg-white hover:bg-rose-50 transition-colors">
+              <td class="px-4 py-3 text-sm text-slate-700"><%= (notViewedPagination.page - 1) * notViewedPagination.limit + idx + 1 %></td>
+              <td class="px-4 py-3 text-sm font-medium text-slate-900"><%= student.student_name %></td>
+              <td class="px-4 py-3 text-sm text-slate-700 font-mono"><%= student.username %></td>
+              <td class="px-4 py-3 text-sm">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+                  <%= student.class_name || '-' %>
+                </span>
+              </td>
+              <td class="px-4 py-3 text-sm text-slate-700"><%= student.material_title %></td>
+              <td class="px-4 py-3 text-center">
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800">
+                  ❌ Belum Dibuka
+                </span>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination for Not Viewed Students -->
+    <% if (notViewedPagination.totalPages > 1) { %>
+      <div class="mt-6 flex items-center justify-between">
+        <div class="text-sm text-rose-700">
+          Halaman <%= notViewedPagination.page %> dari <%= notViewedPagination.totalPages %> 
+          (Total: <%= notViewedPagination.total %> siswa belum lihat)
+        </div>
+        <div class="flex gap-2">
+          <% if (notViewedPagination.page > 1) { %>
+            <a href="?page=<%= pagination.page %>&limit=<%= pagination.limit %>&material_id=<%= filters.material_id %>&class_id=<%= filters.class_id %>&q=<%= filters.q %>&not_viewed_page=<%= notViewedPagination.page - 1 %>" 
+               class="px-4 py-2 bg-gradient-to-r from-rose-500 to-red-500 text-white rounded-lg hover:from-rose-600 hover:to-red-600 transition-all font-medium">
+              ← Sebelumnya
+            </a>
+          <% } %>
+          
+          <% 
+            const startPage = Math.max(1, notViewedPagination.page - 2);
+            const endPage = Math.min(notViewedPagination.totalPages, notViewedPagination.page + 2);
+            for (let i = startPage; i <= endPage; i++) { 
+          %>
+            <a href="?page=<%= pagination.page %>&limit=<%= pagination.limit %>&material_id=<%= filters.material_id %>&class_id=<%= filters.class_id %>&q=<%= filters.q %>&not_viewed_page=<%= i %>" 
+               class="px-4 py-2 <%= i === notViewedPagination.page ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white' : 'bg-white hover:bg-rose-50 text-rose-700 border border-rose-300' %> rounded-lg transition-all font-medium">
+              <%= i %>
+            </a>
+          <% } %>
+          
+          <% if (notViewedPagination.page < notViewedPagination.totalPages) { %>
+            <a href="?page=<%= pagination.page %>&limit=<%= pagination.limit %>&material_id=<%= filters.material_id %>&class_id=<%= filters.class_id %>&q=<%= filters.q %>&not_viewed_page=<%= notViewedPagination.page + 1 %>" 
+               class="px-4 py-2 bg-gradient-to-r from-rose-500 to-red-500 text-white rounded-lg hover:from-rose-600 hover:to-red-600 transition-all font-medium">
+              Selanjutnya →
+            </a>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  <% } %>
+</div>
+<% } %>

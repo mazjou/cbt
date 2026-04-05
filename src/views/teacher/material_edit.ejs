@@ -1,0 +1,134 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Edit Materi</h1>
+    <p class="mt-1 text-slate-600">Perbarui konten, embed, dan pengaturan kelas.</p>
+  </div>
+  <a href="/teacher/materials/<%= material.id %>" class="text-sm px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">Kembali</a>
+</div>
+
+<!-- Quill (WYSIWYG) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
+<script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+
+<div class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+  <form action="/teacher/materials/<%= material.id %>?_method=PUT" method="POST" enctype="multipart/form-data" class="space-y-4" id="materialForm">
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label class="text-sm text-slate-600">Mapel</label>
+        <select name="subject_id" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+          <% subjects.forEach(s => { %>
+            <option value="<%= s.id %>" <%= String(s.id) === String(material.subject_id) ? 'selected' : '' %>><%= s.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm text-slate-600">Kelas (opsional)</label>
+        <select name="class_id" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+          <option value="" <%= material.class_id ? '' : 'selected' %>>Semua</option>
+          <% classes.forEach(c => { %>
+            <option value="<%= c.id %>" <%= String(c.id) === String(material.class_id) ? 'selected' : '' %>><%= c.name %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label class="text-sm text-slate-600">Judul</label>
+      <input name="title" required value="<%= material.title %>" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2" />
+    </div>
+
+    <div>
+      <label class="text-sm text-slate-600">Deskripsi (opsional)</label>
+      <textarea name="description" rows="2" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2"><%= material.description || '' %></textarea>
+    </div>
+
+    <div>
+      <label class="text-sm text-slate-600">Durasi Auto-Complete (menit)</label>
+      <input type="number" name="auto_complete_minutes" value="<%= material.auto_complete_minutes || 5 %>" min="0" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2" />
+      <p class="mt-1 text-xs text-slate-500">Materi akan otomatis ditandai selesai setelah durasi ini. Isi 0 untuk menonaktifkan.</p>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div>
+        <label class="text-sm text-slate-600">Ganti konten via Word (.docx) (opsional)</label>
+        <input type="file" name="docx" accept=".docx" class="mt-1 w-full" />
+        <p class="mt-2 text-xs text-slate-500">Jika diupload, konten editor akan diganti dari DOCX.</p>
+      </div>
+      <div>
+        <label class="text-sm text-slate-600">Konten Materi</label>
+        <div class="mt-1 rounded-xl border border-slate-200 overflow-hidden">
+          <div id="editor" class="bg-white"></div>
+        </div>
+        <!-- initial content (unescaped) -->
+        <textarea id="content_html_initial" class="hidden"><%- material.content_html || '' %></textarea>
+        <textarea name="content_html" id="content_html" class="hidden"></textarea>
+      </div>
+    </div>
+
+    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div class="font-semibold">Embed (opsional)</div>
+      <p class="mt-1 text-xs text-slate-600">Bisa embed YouTube atau PDF. Jika upload PDF, otomatis dipakai sebagai embed PDF.</p>
+
+      <div class="mt-3 grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm text-slate-600">Mode Embed</label>
+          <select name="embed_mode" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+            <option value="" <%= material.embed_type ? '' : 'selected' %>>Tidak ada</option>
+            <option value="YOUTUBE" <%= material.embed_type === 'YOUTUBE' ? 'selected' : '' %>>YouTube</option>
+            <option value="PDF" <%= material.embed_type === 'PDF' ? 'selected' : '' %>>PDF (link)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm text-slate-600">Upload PDF (opsional)</label>
+          <input type="file" name="pdf" accept="application/pdf,.pdf" class="mt-1 w-full" />
+          <p class="mt-2 text-xs text-slate-500">Upload PDF akan menimpa embed PDF/link.</p>
+        </div>
+      </div>
+
+      <div class="mt-3 grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm text-slate-600">Link YouTube (opsional)</label>
+          <input name="youtube_url" value="<%= material.embed_type === 'YOUTUBE' ? material.embed_url : '' %>" placeholder="https://youtu.be/VIDEO_ID atau https://www.youtube.com/watch?v=VIDEO_ID" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2" />
+          <p class="mt-2 text-xs text-slate-500">Boleh paste URL biasa / embed. Sistem akan normalisasi.</p>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600">Link PDF (opsional)</label>
+          <input name="pdf_url" value="<%= material.embed_type === 'PDF' ? material.embed_url : '' %>" placeholder="https://contoh.com/file.pdf atau /public/uploads/materials/file.pdf" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2" />
+        </div>
+      </div>
+    </div>
+
+    <button class="rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-5 py-2.5">Simpan Perubahan</button>
+  </form>
+</div>
+
+<script>
+  (function() {
+    const quill = new Quill('#editor', {
+      theme: 'snow',
+      modules: {
+        toolbar: [
+          [{ header: [1, 2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          [{ list: 'ordered' }, { list: 'bullet' }],
+          [{ align: [] }],
+          ['link', 'image'],
+          ['clean']
+        ]
+      },
+      placeholder: 'Tulis materi di sini...'
+    });
+
+    const initial = document.getElementById('content_html_initial');
+    if (initial && initial.value) {
+      quill.root.innerHTML = initial.value;
+    }
+
+    const form = document.getElementById('materialForm');
+    const hidden = document.getElementById('content_html');
+    form.addEventListener('submit', function() {
+      hidden.value = quill.root.innerHTML;
+    });
+  })();
+</script>

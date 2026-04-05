@@ -1,0 +1,657 @@
+<!-- Header -->
+<div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 shadow-xl mb-6">
+  <div class="absolute inset-0 opacity-10">
+    <div class="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -mr-32 -mt-32"></div>
+    <div class="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full -ml-24 -mb-24"></div>
+  </div>
+  <div class="relative px-6 py-8">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-4">
+          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-white tracking-tight">Kelola Materi</h1>
+          <p class="mt-1 text-cyan-100">Lihat dan kelola semua materi yang dibuat oleh guru</p>
+        </div>
+      </div>
+      <div>
+        <a href="/admin" class="inline-flex items-center gap-2 px-4 py-2 bg-orange-100/80 backdrop-blur-sm hover:bg-orange-200/90 text-orange-800 font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Kembali
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+  <!-- Total Materi Card -->
+  <div class="relative overflow-hidden rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-300">
+    <div class="absolute inset-0 bg-gradient-to-br from-cyan-500 via-cyan-600 to-blue-700"></div>
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+    </div>
+    <div class="relative p-6">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-cyan-100 text-sm font-medium uppercase tracking-wide">Total Materi</div>
+        <svg class="w-8 h-8 text-cyan-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      </div>
+      <div class="text-4xl font-bold text-white mb-1"><%= pagination.total %></div>
+      <div class="text-cyan-200 text-xs">Materi di sistem</div>
+    </div>
+  </div>
+
+  <!-- Dipublikasi Card -->
+  <div class="relative overflow-hidden rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-300">
+    <div class="absolute inset-0 bg-gradient-to-br from-emerald-500 via-green-600 to-teal-700"></div>
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+    </div>
+    <div class="relative p-6">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-green-100 text-sm font-medium uppercase tracking-wide">Dipublikasi</div>
+        <svg class="w-8 h-8 text-green-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <div class="text-4xl font-bold text-white mb-1">
+        <%= materials.filter(m => m.is_published).length %>
+      </div>
+      <div class="text-green-200 text-xs">Materi aktif</div>
+    </div>
+  </div>
+
+  <!-- Draft Card -->
+  <div class="relative overflow-hidden rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-300">
+    <div class="absolute inset-0 bg-gradient-to-br from-orange-500 via-amber-600 to-yellow-600"></div>
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+    </div>
+    <div class="relative p-6">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-orange-100 text-sm font-medium uppercase tracking-wide">Draft</div>
+        <svg class="w-8 h-8 text-orange-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      </div>
+      <div class="text-4xl font-bold text-white mb-1">
+        <%= materials.filter(m => !m.is_published).length %>
+      </div>
+      <div class="text-orange-200 text-xs">Belum dipublikasi</div>
+    </div>
+  </div>
+
+  <!-- Total Pembaca Card -->
+  <div class="relative overflow-hidden rounded-2xl shadow-lg transform hover:scale-105 transition-all duration-300">
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700"></div>
+    <div class="absolute inset-0 opacity-20">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -mr-16 -mt-16"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-white rounded-full -ml-12 -mb-12"></div>
+    </div>
+    <div class="relative p-6">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-blue-100 text-sm font-medium uppercase tracking-wide">Pembaca</div>
+        <svg class="w-8 h-8 text-blue-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      </div>
+      <div class="text-4xl font-bold text-white mb-1">
+        <%= materials.reduce((sum, m) => sum + (m.read_count || 0), 0) %>
+      </div>
+      <div class="text-blue-200 text-xs">Total pembaca</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Materials Table -->
+<div class="bg-white rounded-2xl shadow-xl border-2 border-slate-100 overflow-hidden">
+  <div class="bg-gradient-to-r from-slate-50 to-slate-100 px-6 py-4 border-b-2 border-slate-200">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg p-2">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
+        </div>
+        <h2 class="text-lg font-bold text-slate-800">Daftar Materi</h2>
+      </div>
+      <div id="bulkActionBar" class="hidden">
+        <form action="/admin/materials/bulk-delete" method="POST" onsubmit="return confirmBulkDelete()">
+          <button type="submit" class="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Hapus <span id="selectedCount">0</span> Materi
+          </button>
+          <input type="hidden" name="material_ids" id="bulkDeleteIds" value="[]" />
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Filter Section Inside Card -->
+  <div class="bg-gradient-to-br from-cyan-50 to-blue-50 px-6 py-4 border-b-2 border-cyan-100">
+    <form method="GET" action="/admin/materials" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+      <div>
+        <input 
+          type="text" 
+          name="search" 
+          value="<%= filters.search %>" 
+          placeholder="Cari judul atau deskripsi..."
+          class="w-full px-4 py-2 border-2 border-cyan-200 rounded-xl focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all text-sm"
+        />
+      </div>
+
+      <div>
+        <select 
+          name="subject" 
+          class="w-full px-4 py-2 border-2 border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-sm"
+        >
+          <option value="">Semua Mapel</option>
+          <% subjects.forEach(s => { %>
+            <option value="<%= s.id %>" <%= filters.subject == s.id ? 'selected' : '' %>>
+              <%= s.code %> - <%= s.name %>
+            </option>
+          <% }); %>
+        </select>
+      </div>
+
+      <div>
+        <select 
+          name="teacher" 
+          class="w-full px-4 py-2 border-2 border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm"
+        >
+          <option value="">Semua Guru</option>
+          <% teachers.forEach(t => { %>
+            <option value="<%= t.id %>" <%= filters.teacher == t.id ? 'selected' : '' %>>
+              <%= t.full_name %>
+            </option>
+          <% }); %>
+        </select>
+      </div>
+
+      <div>
+        <select 
+          name="class" 
+          class="w-full px-4 py-2 border-2 border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-sm"
+        >
+          <option value="">Semua Kelas</option>
+          <% classes.forEach(c => { %>
+            <option value="<%= c.id %>" <%= filters.class == c.id ? 'selected' : '' %>>
+              <%= c.name %>
+            </option>
+          <% }); %>
+        </select>
+      </div>
+
+      <div>
+        <select 
+          name="status" 
+          class="w-full px-4 py-2 border-2 border-emerald-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-sm"
+        >
+          <option value="">Semua Status</option>
+          <option value="published" <%= filters.status === 'published' ? 'selected' : '' %>>Dipublikasi</option>
+          <option value="draft" <%= filters.status === 'draft' ? 'selected' : '' %>>Draft</option>
+        </select>
+      </div>
+
+      <div class="flex gap-2">
+        <button 
+          type="submit" 
+          class="flex-1 px-4 py-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md transform hover:scale-105 transition-all duration-200 text-sm"
+        >
+          Filter
+        </button>
+        <a 
+          href="/admin/materials" 
+          class="px-4 py-2 bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-medium rounded-xl shadow-md transform hover:scale-105 transition-all duration-200 text-sm"
+        >
+          Reset
+        </a>
+      </div>
+    </form>
+  </div>
+  
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead class="bg-gradient-to-r from-cyan-50 to-blue-50 border-b-2 border-cyan-100">
+        <tr>
+          <th class="px-4 py-4 text-left w-12">
+            <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-cyan-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" />
+          </th>
+          <th class="px-4 py-4 text-left text-xs font-bold text-cyan-900 uppercase tracking-wider">Materi</th>
+          <th class="px-4 py-4 text-left text-xs font-bold text-blue-900 uppercase tracking-wider">Tipe</th>
+          <th class="px-4 py-4 text-left text-xs font-bold text-indigo-900 uppercase tracking-wider">Mapel</th>
+          <th class="px-4 py-4 text-left text-xs font-bold text-purple-900 uppercase tracking-wider">Guru</th>
+          <th class="px-4 py-4 text-left text-xs font-bold text-pink-900 uppercase tracking-wider">Kelas</th>
+          <th class="px-4 py-4 text-left text-xs font-bold text-emerald-900 uppercase tracking-wider">Pembaca</th>
+          <th class="px-4 py-4 text-left text-xs font-bold text-orange-900 uppercase tracking-wider">Status</th>
+          <th class="px-4 py-4 text-left text-xs font-bold text-red-900 uppercase tracking-wider">Aksi</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% if (materials.length === 0) { %>
+          <tr>
+            <td colspan="9" class="px-4 py-12 text-center">
+              <div class="flex flex-col items-center gap-3">
+                <div class="bg-gradient-to-r from-slate-100 to-slate-200 rounded-full p-4">
+                  <svg class="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                </div>
+                <p class="text-slate-500 font-medium">Tidak ada materi ditemukan</p>
+                <p class="text-slate-400 text-sm">Coba ubah filter pencarian Anda</p>
+              </div>
+            </td>
+          </tr>
+        <% } else { %>
+          <% materials.forEach((material, index) => { %>
+            <tr class="hover:bg-gradient-to-r hover:from-cyan-50 hover:to-blue-50 transition-all duration-200 <%= index % 2 === 0 ? 'bg-white' : 'bg-slate-50' %>">
+              <td class="px-4 py-4">
+                <input type="checkbox" class="item-checkbox w-4 h-4 rounded border-cyan-300 text-cyan-600 focus:ring-cyan-500 cursor-pointer" data-item-id="<%= material.id %>" />
+              </td>
+              <td class="px-4 py-4">
+                <div class="font-semibold text-slate-900"><%= material.title %></div>
+                <% if (material.description) { %>
+                  <div class="text-sm text-slate-600 mt-1 line-clamp-2">
+                    <%= material.description.substring(0, 80) %><%= material.description.length > 80 ? '...' : '' %>
+                  </div>
+                <% } %>
+                <div class="flex items-center gap-2 mt-2">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700">
+                    <%= new Date(material.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) %>
+                  </span>
+                </div>
+              </td>
+              <td class="px-4 py-4">
+                <% if (material.embed_type === 'YOUTUBE') { %>
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300">
+                    YouTube
+                  </span>
+                <% } else if (material.embed_type === 'PDF') { %>
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300">
+                    PDF
+                  </span>
+                <% } else if (material.content_html) { %>
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300">
+                    HTML
+                  </span>
+                <% } else { %>
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300">
+                    -
+                  </span>
+                <% } %>
+              </td>
+              <td class="px-4 py-4">
+                <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-indigo-100 to-indigo-200 text-indigo-800 border border-indigo-300">
+                  <%= material.subject_code || '-' %>
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <span class="text-sm font-medium text-slate-700">
+                  <%= material.teacher_name || '-' %>
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-pink-100 to-pink-200 text-pink-800 border border-pink-300">
+                  <%= material.class_name || 'Semua' %>
+                </span>
+              </td>
+              <td class="px-4 py-4">
+                <div class="flex flex-col items-center gap-1">
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md">
+                    <%= material.read_count || 0 %>
+                  </span>
+                  <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                    <div class="bg-gradient-to-r from-emerald-500 to-green-600 h-2 rounded-full transition-all duration-300" style="width: <%= material.read_percentage || 0 %>%"></div>
+                  </div>
+                  <span class="text-xs font-semibold text-emerald-700">
+                    <%= material.read_percentage || 0 %>%
+                  </span>
+                </div>
+              </td>
+              <td class="px-4 py-4">
+                <% if (material.is_published) { %>
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-green-500 to-emerald-600 text-white shadow-lg">
+                    Dipublikasi
+                  </span>
+                <% } else { %>
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg">
+                    Draft
+                  </span>
+                <% } %>
+              </td>
+              <td class="px-4 py-4">
+                <div class="flex items-center gap-2">
+                  <button 
+                    onclick="viewMaterialDetail(<%= material.id %>)"
+                    class="px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all"
+                    title="Lihat Detail"
+                  >
+                    Detail
+                  </button>
+                  <form method="POST" action="/admin/materials/<%= material.id %>/toggle-publish" class="inline">
+                    <% if (material.is_published) { %>
+                      <button 
+                        type="submit"
+                        class="px-3 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-xs font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all"
+                        title="Unpublish"
+                      >
+                        Unpublish
+                      </button>
+                    <% } else { %>
+                      <button 
+                        type="submit"
+                        class="px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white text-xs font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all"
+                        title="Publish"
+                      >
+                        Publish
+                      </button>
+                    <% } %>
+                  </form>
+                  <form method="POST" action="/admin/materials/<%= material.id %>?_method=DELETE" class="inline" onsubmit="return confirm('Yakin ingin menghapus materi ini? Semua data terkait akan terhapus.');">
+                    <button 
+                      type="submit"
+                      class="px-3 py-1.5 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-xs font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all"
+                      title="Hapus"
+                    >
+                      Hapus
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }); %>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- Pagination -->
+  <% if (pagination.totalPages > 1) { %>
+    <div class="px-6 py-4 border-t-2 border-slate-100 bg-gradient-to-r from-slate-50 to-slate-100">
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-medium text-slate-700">
+          Menampilkan <span class="font-bold text-cyan-600"><%= (pagination.page - 1) * pagination.limit + 1 %></span> - 
+          <span class="font-bold text-cyan-600"><%= Math.min(pagination.page * pagination.limit, pagination.total) %></span> 
+          dari <span class="font-bold text-blue-600"><%= pagination.total %></span> materi
+        </div>
+        <div class="flex gap-2">
+          <% if (pagination.page > 1) { %>
+            <a 
+              href="?page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&subject=<%= filters.subject %>&teacher=<%= filters.teacher %>&class=<%= filters.class %>&status=<%= filters.status %>"
+              class="px-4 py-2 border-2 border-cyan-300 bg-white hover:bg-gradient-to-r hover:from-cyan-50 hover:to-blue-50 rounded-lg text-sm font-semibold text-cyan-700 transform hover:scale-105 transition-all"
+            >
+              Sebelumnya
+            </a>
+          <% } %>
+          
+          <% for (let i = 1; i <= pagination.totalPages; i++) { %>
+            <% if (i === 1 || i === pagination.totalPages || (i >= pagination.page - 2 && i <= pagination.page + 2)) { %>
+              <a 
+                href="?page=<%= i %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&subject=<%= filters.subject %>&teacher=<%= filters.teacher %>&class=<%= filters.class %>&status=<%= filters.status %>"
+                class="px-4 py-2 border-2 <%= i === pagination.page ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white border-cyan-600 shadow-lg' : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700' %> rounded-lg text-sm font-semibold transform hover:scale-105 transition-all"
+              >
+                <%= i %>
+              </a>
+            <% } else if (i === pagination.page - 3 || i === pagination.page + 3) { %>
+              <span class="px-2 py-2 text-slate-400 font-bold">...</span>
+            <% } %>
+          <% } %>
+          
+          <% if (pagination.page < pagination.totalPages) { %>
+            <a 
+              href="?page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&subject=<%= filters.subject %>&teacher=<%= filters.teacher %>&class=<%= filters.class %>&status=<%= filters.status %>"
+              class="px-4 py-2 border-2 border-cyan-300 bg-white hover:bg-gradient-to-r hover:from-cyan-50 hover:to-blue-50 rounded-lg text-sm font-semibold text-cyan-700 transform hover:scale-105 transition-all"
+            >
+              Selanjutnya
+            </a>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<!-- Detail Modal -->
+<div id="detailModal" class="hidden fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto transform transition-all">
+    <div class="bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 p-6 rounded-t-3xl">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="bg-white/20 backdrop-blur-sm rounded-xl p-2">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <h2 class="text-2xl font-bold text-white">Detail Materi</h2>
+        </div>
+        <button onclick="closeDetailModal()" class="text-white hover:bg-white/20 rounded-xl p-2 transition-all">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div id="detailContent" class="p-6">
+      <div class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-cyan-200 border-t-cyan-600"></div>
+        <p class="mt-4 text-slate-600 font-medium">Memuat data...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Bulk delete functionality
+(function () {
+  const selectAllCheckbox = document.getElementById('selectAll');
+  const itemCheckboxes = document.querySelectorAll('.item-checkbox');
+  const bulkActionBar = document.getElementById('bulkActionBar');
+  const selectedCountSpan = document.getElementById('selectedCount');
+  const bulkDeleteIdsInput = document.getElementById('bulkDeleteIds');
+
+  function updateBulkActionBar() {
+    const selectedIds = Array.from(itemCheckboxes)
+      .filter(cb => cb.checked)
+      .map(cb => cb.getAttribute('data-item-id'));
+    
+    if (selectedIds.length > 0) {
+      bulkActionBar.classList.remove('hidden');
+      selectedCountSpan.textContent = selectedIds.length;
+      bulkDeleteIdsInput.value = JSON.stringify(selectedIds);
+    } else {
+      bulkActionBar.classList.add('hidden');
+    }
+    
+    const allChecked = itemCheckboxes.length > 0 && Array.from(itemCheckboxes).every(cb => cb.checked);
+    const someChecked = Array.from(itemCheckboxes).some(cb => cb.checked);
+    if (selectAllCheckbox) {
+      selectAllCheckbox.checked = allChecked;
+      selectAllCheckbox.indeterminate = someChecked && !allChecked;
+    }
+  }
+
+  if (selectAllCheckbox) {
+    selectAllCheckbox.addEventListener('change', function() {
+      itemCheckboxes.forEach(cb => {
+        cb.checked = this.checked;
+      });
+      updateBulkActionBar();
+    });
+  }
+
+  itemCheckboxes.forEach(cb => {
+    cb.addEventListener('change', updateBulkActionBar);
+  });
+
+  window.confirmBulkDelete = function() {
+    const count = selectedCountSpan.textContent;
+    return confirm(`Anda yakin ingin menghapus ${count} materi?\n\nPeringatan: Data terkait (pembaca, progress) juga akan dihapus!`);
+  };
+})();
+
+// Detail modal functions
+function viewMaterialDetail(materialId) {
+  const modal = document.getElementById('detailModal');
+  const content = document.getElementById('detailContent');
+  
+  modal.classList.remove('hidden');
+  content.innerHTML = `
+    <div class="text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-16 w-16 border-4 border-cyan-200 border-t-cyan-600"></div>
+      <p class="mt-4 text-slate-600 font-medium">Memuat data...</p>
+    </div>
+  `;
+  
+  fetch('/admin/materials/' + materialId + '/json')
+    .then(res => res.json())
+    .then(data => {
+      if (data.ok && data.material) {
+        const m = data.material;
+        
+        let typeLabel = '';
+        let typeColor = '';
+        if (m.embed_type === 'YOUTUBE') {
+          typeLabel = 'YouTube Video';
+          typeColor = 'red';
+        } else if (m.embed_type === 'PDF') {
+          typeLabel = 'PDF Document';
+          typeColor = 'orange';
+        } else if (m.content_html) {
+          typeLabel = 'HTML Content';
+          typeColor = 'blue';
+        } else {
+          typeLabel = 'Tidak ada konten';
+          typeColor = 'gray';
+        }
+        
+        content.innerHTML = `
+          <div class="space-y-6">
+            <!-- Judul & Deskripsi -->
+            <div class="bg-gradient-to-br from-cyan-50 to-blue-50 rounded-2xl p-5 border-2 border-cyan-100">
+              <label class="text-sm font-bold text-cyan-900 uppercase tracking-wide">
+                Judul Materi
+              </label>
+              <p class="mt-2 text-lg font-semibold text-slate-900">${m.title}</p>
+            </div>
+            
+            <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-5 border-2 border-blue-100">
+              <label class="text-sm font-bold text-blue-900 uppercase tracking-wide">
+                Deskripsi
+              </label>
+              <p class="mt-2 text-slate-900">${m.description || '-'}</p>
+            </div>
+            
+            <!-- Info Dasar -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gradient-to-br from-${typeColor}-50 to-${typeColor}-100 rounded-2xl p-5 border-2 border-${typeColor}-100">
+                <label class="text-sm font-bold text-${typeColor}-900 uppercase tracking-wide">
+                  Tipe Materi
+                </label>
+                <p class="mt-2 text-slate-900 font-semibold">${typeLabel}</p>
+              </div>
+              <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border-2 border-indigo-100">
+                <label class="text-sm font-bold text-indigo-900 uppercase tracking-wide">
+                  Mata Pelajaran
+                </label>
+                <p class="mt-2 text-slate-900 font-semibold">${m.subject_name || '-'}</p>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5 border-2 border-purple-100">
+                <label class="text-sm font-bold text-purple-900 uppercase tracking-wide">
+                  Guru Pembuat
+                </label>
+                <p class="mt-2 text-slate-900 font-semibold">${m.teacher_name || '-'}</p>
+              </div>
+              <div class="bg-gradient-to-br from-pink-50 to-rose-50 rounded-2xl p-5 border-2 border-pink-100">
+                <label class="text-sm font-bold text-pink-900 uppercase tracking-wide">
+                  Kelas Target
+                </label>
+                <p class="mt-2 text-slate-900 font-semibold">${m.class_name || 'Semua Kelas'}</p>
+              </div>
+            </div>
+            
+            <!-- Statistik -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl p-5 border-2 border-emerald-100">
+                <label class="text-sm font-bold text-emerald-900 uppercase tracking-wide">
+                  Total Pembaca
+                </label>
+                <p class="mt-2 text-2xl font-bold text-emerald-600">${m.read_count || 0}</p>
+              </div>
+              <div class="bg-gradient-to-br from-green-50 to-teal-50 rounded-2xl p-5 border-2 border-green-100">
+                <label class="text-sm font-bold text-green-900 uppercase tracking-wide">
+                  Selesai Dibaca
+                </label>
+                <p class="mt-2 text-2xl font-bold text-green-600">${m.completed_count || 0}</p>
+              </div>
+            </div>
+            
+            <!-- Status -->
+            <div class="bg-gradient-to-br from-slate-50 to-gray-50 rounded-2xl p-5 border-2 border-slate-100">
+              <label class="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                Status Publikasi
+              </label>
+              <p class="mt-2">
+                <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${m.is_published ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white' : 'bg-gradient-to-r from-orange-500 to-amber-600 text-white'} shadow-lg">
+                  ${m.is_published ? 'Dipublikasi' : 'Draft'}
+                </span>
+              </p>
+            </div>
+          </div>
+        `;
+      } else {
+        content.innerHTML = `
+          <div class="text-center py-12">
+            <div class="bg-red-100 rounded-full p-4 inline-block mb-4">
+              <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <p class="text-red-600 font-semibold">Gagal memuat data materi.</p>
+          </div>
+        `;
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      content.innerHTML = `
+        <div class="text-center py-12">
+          <div class="bg-red-100 rounded-full p-4 inline-block mb-4">
+            <svg class="w-12 h-12 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <p class="text-red-600 font-semibold">Terjadi kesalahan saat memuat data.</p>
+        </div>
+      `;
+    });
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.add('hidden');
+}
+
+// Close modal when clicking outside
+document.getElementById('detailModal').addEventListener('click', function(e) {
+  if (e.target === this) {
+    closeDetailModal();
+  }
+});
+</script>

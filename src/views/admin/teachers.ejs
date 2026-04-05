@@ -1,0 +1,210 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Kelola Guru</h1>
+    <p class="mt-1 text-slate-600">Tambah/edit guru, reset password, aktif/nonaktif, import masal.</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/admin/teachers/download" class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all shadow-md flex items-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      Download Excel
+    </a>
+    <a href="/admin/teachers/import" class="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold">Import Guru</a>
+    <a href="/admin" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Kembali</a>
+  </div>
+</div>
+
+<div class="mt-6 grid lg:grid-cols-3 gap-4">
+  <div class="rounded-2xl border border-slate-200 bg-slate-100 p-5">
+    <h2 class="text-lg font-semibold">Tambah Guru</h2>
+    <form action="/admin/teachers" method="POST" class="mt-4 space-y-3">
+      <div>
+        <label class="text-sm text-slate-600">Username (NIP/NUPTK/email)</label>
+        <input name="username" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2" />
+      </div>
+      <div>
+        <label class="text-sm text-slate-600">Nama Lengkap</label>
+        <input name="full_name" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2" />
+      </div>
+      <div>
+        <label class="text-sm text-slate-600">Password</label>
+        <input name="password" placeholder="(kosong = 123456)" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2" />
+      </div>
+      <button class="w-full rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold py-2.5">Simpan</button>
+    </form>
+  </div>
+
+  <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-100 p-5 overflow-x-auto">
+    <h2 class="text-lg font-semibold">Daftar Guru</h2>
+    <table class="mt-4 w-full text-sm">
+      <thead class="text-slate-500">
+        <tr>
+          <th class="text-left py-2">Username</th>
+          <th class="text-left py-2">Nama</th>
+          <th class="text-left py-2">Status</th>
+          <th class="text-right py-2">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% (teachers || []).forEach(t => { %>
+          <tr id="teacher-row-<%= t.id %>" class="border-t border-slate-200">
+            <td class="py-2 font-mono teacher-username"><%= t.username %></td>
+            <td class="py-2 teacher-fullname"><%= t.full_name %></td>
+            <td class="py-2 teacher-active"><%= t.is_active ? 'Aktif' : 'Nonaktif' %></td>
+            <td class="py-2">
+              <div class="flex justify-end gap-2 flex-wrap">
+                <button type="button" data-teacher-id="<%= t.id %>" class="btn-open-teacher-modal px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100">Edit</button>
+
+                <form action="/admin/teachers/<%= t.id %>/toggle" method="POST">
+                  <button class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100">Toggle</button>
+                </form>
+
+                <form action="/admin/teachers/<%= t.id %>/reset" method="POST" class="flex gap-2">
+                  <input name="new_password" placeholder="reset pwd" class="w-32 rounded-lg bg-white border border-slate-200 px-2 py-1" />
+                  <button class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100">Reset</button>
+                </form>
+
+                <form action="/admin/teachers/<%= t.id %>?_method=DELETE" method="POST" onsubmit="return confirm('Hapus guru?')">
+                  <button class="px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-100">Hapus</button>
+                </form>
+              </div>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- Modal Edit Guru -->
+<div id="teacherModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-black/40" data-close-teacher-modal></div>
+  <div class="relative mx-auto mt-16 w-[92%] max-w-xl rounded-2xl bg-white shadow-xl">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <div>
+        <h3 class="text-lg font-semibold">Edit Guru</h3>
+        <p class="text-sm text-slate-500">Disimpan tanpa pindah halaman.</p>
+      </div>
+      <button type="button" class="rounded-xl border border-slate-200 px-3 py-1.5 hover:bg-slate-100" data-close-teacher-modal>✕</button>
+    </div>
+
+    <form id="teacherModalForm" class="p-5 space-y-3">
+      <input type="hidden" id="tm_id" />
+
+      <div>
+        <label class="text-sm text-slate-600">Username</label>
+        <input id="tm_username" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+      <div>
+        <label class="text-sm text-slate-600">Nama Lengkap</label>
+        <input id="tm_full_name" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm text-slate-600">Status</label>
+          <select id="tm_is_active" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+            <option value="1">Aktif</option>
+            <option value="0">Nonaktif</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600">Password baru (opsional)</label>
+          <input id="tm_new_password" placeholder="(kosong = tidak berubah)" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+      </div>
+
+      <div id="tm_error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700 text-sm"></div>
+      <div id="tm_success" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700 text-sm"></div>
+
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" class="rounded-xl border border-slate-200 px-4 py-2 hover:bg-slate-100" data-close-teacher-modal>Batal</button>
+        <button id="tm_save" type="submit" class="rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-4 py-2">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+(function(){
+  const modal=document.getElementById('teacherModal');
+  const form=document.getElementById('teacherModalForm');
+  const btnSave=document.getElementById('tm_save');
+  const elErr=document.getElementById('tm_error');
+  const elOk=document.getElementById('tm_success');
+
+  const elId=document.getElementById('tm_id');
+  const elUsername=document.getElementById('tm_username');
+  const elFullName=document.getElementById('tm_full_name');
+  const elActive=document.getElementById('tm_is_active');
+  const elNewPwd=document.getElementById('tm_new_password');
+
+  function showModal(){ modal.classList.remove('hidden'); modal.setAttribute('aria-hidden','false'); }
+  function hideModal(){
+    modal.classList.add('hidden'); modal.setAttribute('aria-hidden','true');
+    elErr.classList.add('hidden'); elOk.classList.add('hidden');
+    elErr.textContent=''; elOk.textContent='';
+    elNewPwd.value='';
+  }
+  function setLoading(on){ btnSave.disabled=on; btnSave.textContent=on?'Menyimpan...':'Simpan'; }
+  function showError(msg){ elOk.classList.add('hidden'); elErr.textContent=msg||'Terjadi kesalahan.'; elErr.classList.remove('hidden'); }
+  function showSuccess(msg){ elErr.classList.add('hidden'); elOk.textContent=msg||'Berhasil.'; elOk.classList.remove('hidden'); }
+
+  async function openFor(id){
+    setLoading(true);
+    try{
+      const r=await fetch(`/admin/teachers/${id}/json`,{headers:{'Accept':'application/json'}});
+      const j=await r.json();
+      if(!r.ok||!j.ok) throw new Error((j&&j.message)||'Gagal memuat data guru.');
+      elId.value=j.item.id;
+      elUsername.value=j.item.username||'';
+      elFullName.value=j.item.full_name||'';
+      elActive.value=String(j.item.is_active?1:0);
+      showModal();
+    }catch(e){ alert(e.message||'Gagal memuat data guru.'); }
+    finally{ setLoading(false); }
+  }
+
+  document.querySelectorAll('.btn-open-teacher-modal').forEach(btn=>{
+    btn.addEventListener('click',()=>openFor(btn.getAttribute('data-teacher-id')));
+  });
+  modal.querySelectorAll('[data-close-teacher-modal]').forEach(el=>el.addEventListener('click',hideModal));
+  document.addEventListener('keydown',(e)=>{ if(e.key==='Escape'&&!modal.classList.contains('hidden')) hideModal(); });
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const id=elId.value;
+    setLoading(true);
+    try{
+      const payload={
+        username: elUsername.value,
+        full_name: elFullName.value,
+        is_active: elActive.value,
+        new_password: elNewPwd.value
+      };
+      const r=await fetch(`/admin/teachers/${id}/ajax-update`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify(payload)
+      });
+      const j=await r.json();
+      if(!r.ok||!j.ok) throw new Error((j&&j.message)||'Gagal menyimpan perubahan.');
+
+      const row=document.getElementById(`teacher-row-${id}`);
+      if(row){
+        row.querySelector('.teacher-username').textContent=j.item.username;
+        row.querySelector('.teacher-fullname').textContent=j.item.full_name;
+        row.querySelector('.teacher-active').textContent=j.item.is_active ? 'Aktif' : 'Nonaktif';
+      }
+      showSuccess('Perubahan guru tersimpan.');
+      setTimeout(hideModal, 600);
+    }catch(err){
+      showError(err.message);
+    }finally{
+      setLoading(false);
+    }
+  });
+})();
+</script>

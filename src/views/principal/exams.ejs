@@ -1,0 +1,138 @@
+<div class="flex items-start justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Rekap Ujian</h1>
+    <p class="mt-1 text-slate-600">Daftar lengkap semua ujian dan progress siswa.</p>
+  </div>
+</div>
+
+<div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold">Rekap Ujian</h2>
+    <div class="text-sm text-slate-600">Total: <span class="font-semibold"><%= pagination.total %></span> ujian</div>
+  </div>
+
+  <form method="GET" action="/principal/exams" class="mb-4 flex flex-col sm:flex-row gap-3">
+    <input type="text" id="searchInput" name="search" value="<%= filters.search %>" placeholder="Cari ujian..." 
+           class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+    <select id="filterClass" name="class" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <option value="">Semua Kelas</option>
+      <% classes.forEach(c => { %>
+        <option value="<%= c.id %>" <%= filters.class == c.id ? 'selected' : '' %>><%= c.name %></option>
+      <% }) %>
+    </select>
+    <select id="filterStatus" name="status" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <option value="">Semua Status</option>
+      <option value="published" <%= filters.status === 'published' ? 'selected' : '' %>>Published</option>
+      <option value="draft" <%= filters.status === 'draft' ? 'selected' : '' %>>Draft</option>
+    </select>
+    <select name="limit" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+      <option value="10" <%= pagination.limit == 10 ? 'selected' : '' %>>10 per halaman</option>
+      <option value="20" <%= pagination.limit == 20 ? 'selected' : '' %>>20 per halaman</option>
+      <option value="50" <%= pagination.limit == 50 ? 'selected' : '' %>>50 per halaman</option>
+    </select>
+    <div class="flex gap-2">
+      <button type="submit" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">Filter</button>
+      <a href="/principal/exams" class="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Reset</a>
+    </div>
+  </form>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-slate-500 border-b border-slate-200">
+        <tr>
+          <th class="text-left py-3 px-2">Ujian</th>
+          <th class="text-left py-3 px-2">Mapel</th>
+          <th class="text-left py-3 px-2">Guru</th>
+          <th class="text-left py-3 px-2">Kelas</th>
+          <th class="text-center py-3 px-2">Soal</th>
+          <th class="text-center py-3 px-2">Durasi</th>
+          <th class="text-center py-3 px-2">Siswa Selesai</th>
+          <th class="text-center py-3 px-2">Rata-rata Nilai</th>
+          <th class="text-center py-3 px-2">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (exams.length === 0) { %>
+          <tr>
+            <td colspan="9" class="py-8 text-center text-slate-500">Tidak ada data ujian.</td>
+          </tr>
+        <% } %>
+        <% exams.forEach(e => { %>
+          <tr class="border-t border-slate-200 hover:bg-slate-50">
+            <td class="py-3 px-2">
+              <div class="font-medium text-slate-900"><%= e.title %></div>
+              <div class="text-xs text-slate-500">
+                <%= e.start_at ? new Date(e.start_at).toLocaleDateString('id-ID') : 'Tidak terjadwal' %>
+              </div>
+            </td>
+            <td class="py-3 px-2 text-slate-700"><%= e.subject_name %></td>
+            <td class="py-3 px-2 text-slate-700"><%= e.teacher_name %></td>
+            <td class="py-3 px-2 text-slate-600"><%= e.class_names || 'Semua Kelas' %></td>
+            <td class="py-3 px-2 text-center"><%= e.question_count %></td>
+            <td class="py-3 px-2 text-center"><%= e.duration_minutes %> menit</td>
+            <td class="py-3 px-2 text-center">
+              <span class="font-semibold text-slate-900"><%= e.done_count %></span>
+              <span class="text-slate-500">/<%= e.eligible_count %></span>
+              <% if (e.eligible_count > 0) { %>
+                <div class="text-xs text-slate-500">
+                  (<%= Math.round((e.done_count / e.eligible_count) * 100) %>%)
+                </div>
+              <% } %>
+            </td>
+            <td class="py-3 px-2 text-center">
+              <% if (e.avg_score !== null) { %>
+                <span class="font-semibold <%= e.avg_score >= e.pass_score ? 'text-green-600' : 'text-red-600' %>">
+                  <%= Math.round(e.avg_score) %>
+                </span>
+                <div class="text-xs text-slate-500">KKM: <%= e.pass_score %></div>
+              <% } else { %>
+                <span class="text-slate-400">-</span>
+              <% } %>
+            </td>
+            <td class="py-3 px-2 text-center">
+              <% if (e.is_published) { %>
+                <span class="inline-block px-2 py-1 text-xs font-medium text-green-700 bg-green-100 rounded">Published</span>
+              <% } else { %>
+                <span class="inline-block px-2 py-1 text-xs font-medium text-slate-600 bg-slate-100 rounded">Draft</span>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <% if (pagination.totalPages > 1) { %>
+    <div class="mt-4 flex items-center justify-between border-t border-slate-200 pt-4">
+      <div class="text-sm text-slate-600">
+        Menampilkan <%= (pagination.page - 1) * pagination.limit + 1 %> - <%= Math.min(pagination.page * pagination.limit, pagination.total) %> dari <%= pagination.total %> data
+      </div>
+      <div class="flex gap-2">
+        <% if (pagination.page > 1) { %>
+          <a href="?page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&class=<%= filters.class %>&status=<%= filters.status %>" 
+             class="px-4 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm transition-colors">
+            ← Sebelumnya
+          </a>
+        <% } %>
+        
+        <% 
+          const startPage = Math.max(1, pagination.page - 2);
+          const endPage = Math.min(pagination.totalPages, pagination.page + 2);
+          for (let i = startPage; i <= endPage; i++) { 
+        %>
+          <a href="?page=<%= i %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&class=<%= filters.class %>&status=<%= filters.status %>" 
+             class="px-4 py-2 rounded-lg border <%= i === pagination.page ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 hover:bg-slate-50 text-slate-700' %> font-medium text-sm transition-colors">
+            <%= i %>
+          </a>
+        <% } %>
+        
+        <% if (pagination.page < pagination.totalPages) { %>
+          <a href="?page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&class=<%= filters.class %>&status=<%= filters.status %>" 
+             class="px-4 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 font-medium text-sm transition-colors">
+            Selanjutnya →
+          </a>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+</div>

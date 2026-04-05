@@ -1,0 +1,161 @@
+<div class="fixed inset-0 bg-slate-900 flex flex-col">
+  <!-- Header -->
+  <div class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <a href="/teacher/live-classes" 
+         class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-xl transition-colors flex items-center gap-2">
+        <span>←</span>
+        <span>Kembali</span>
+      </a>
+      <div>
+        <h1 class="text-xl font-bold text-white"><%= liveClass.title %></h1>
+        <p class="text-sm text-slate-400"><%= liveClass.subject_name %> • <%= liveClass.class_name %></p>
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="text-white">
+        <span class="text-sm text-slate-400">Peserta:</span>
+        <span id="participantCount" class="font-bold ml-2">0</span>
+      </div>
+      <form action="/teacher/live-classes/<%= liveClass.id %>/end" method="POST">
+        <button class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-colors">
+          Akhiri Live Class
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Main Content - Full Width Video Conference -->
+  <div class="flex-1 overflow-hidden">
+    <div id="jitsi-container" class="w-full h-full"></div>
+  </div>
+</div>
+
+<!-- Socket.io Client -->
+<script src="/socket.io/socket.io.js"></script>
+
+<script>
+const liveClassId = <%= liveClass.id %>;
+const roomId = '<%= liveClass.room_id %>';
+const userName = '<%= user.full_name %>';
+const userRole = '<%= user.role %>';
+
+let socket;
+
+// Initialize Custom WebRTC
+function initWebRTC() {
+  const container = document.getElementById('jitsi-container');
+  
+  // Build URL with parameters for custom WebRTC app
+  const webrtcUrl = new URL('https://vc.tam.web.id/');
+  webrtcUrl.searchParams.set('room', `LMS_${roomId}`);
+  webrtcUrl.searchParams.set('name', `👨‍🏫 ${userName}`);
+  webrtcUrl.searchParams.set('role', 'teacher');
+  webrtcUrl.searchParams.set('userId', '<%= user.id %>');
+  webrtcUrl.searchParams.set('moderator', 'true');
+  
+  // Create iframe for custom WebRTC app
+  const iframe = document.createElement('iframe');
+  iframe.src = webrtcUrl.toString();
+  iframe.className = 'w-full h-full border-0';
+  iframe.allow = 'camera; microphone; fullscreen; display-capture';
+  iframe.style.border = 'none';
+  
+  // Show loading while iframe loads
+  container.innerHTML = `
+    <div class="flex items-center justify-center h-full bg-slate-800">
+      <div class="text-center p-8">
+        <div class="text-6xl mb-4 animate-pulse">🎥</div>
+        <h2 class="text-2xl font-bold text-white mb-4">Memuat Video Conference...</h2>
+        <p class="text-slate-400">Mohon tunggu sebentar</p>
+      </div>
+    </div>
+  `;
+  
+  // Add iframe after short delay
+  setTimeout(() => {
+    container.innerHTML = '';
+    container.appendChild(iframe);
+  }, 500);
+  
+  // Handle iframe load error
+  iframe.onerror = () => {
+    showWebRTCError('Gagal memuat aplikasi video conference. Pastikan koneksi internet Anda stabil.');
+  };
+  
+  console.log('Custom WebRTC initialized:', webrtcUrl.toString());
+}
+
+function showWebRTCError(message) {
+  const container = document.getElementById('jitsi-container');
+  container.innerHTML = `
+    <div class="flex items-center justify-center h-full bg-slate-800">
+      <div class="text-center p-8 max-w-2xl">
+        <div class="text-6xl mb-4">⚠️</div>
+        <h2 class="text-2xl font-bold text-white mb-4">Video Conference Tidak Tersedia</h2>
+        <p class="text-slate-300 mb-4">${message}</p>
+        
+        <div class="bg-slate-700 rounded-xl p-6 mb-6 text-left">
+          <h3 class="text-white font-bold mb-3">💡 Solusi:</h3>
+          <ul class="text-slate-300 text-sm space-y-2">
+            <li>✓ Gunakan browser <strong>Chrome</strong>, <strong>Firefox</strong>, atau <strong>Edge</strong> versi terbaru</li>
+            <li>✓ Pastikan browser memiliki akses ke <strong>Camera</strong> dan <strong>Microphone</strong></li>
+            <li>✓ Pastikan koneksi internet stabil</li>
+            <li>✓ Coba <strong>refresh</strong> halaman atau <strong>restart browser</strong></li>
+          </ul>
+        </div>
+        
+        <div class="flex gap-3 justify-center">
+          <button onclick="location.reload()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors">
+            🔄 Coba Lagi
+          </button>
+          <a href="/teacher/live-classes" class="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-xl transition-colors">
+            ← Kembali
+          </a>
+        </div>
+        
+        <p class="text-slate-500 text-xs mt-6">
+          Catatan: Fitur chat dan quiz tetap berfungsi tanpa video conference
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+// Initialize Socket.io for participant tracking
+function initSocket() {
+  socket = io({
+    auth: {
+      session: {
+        user: {
+          id: <%= user.id %>,
+          full_name: '<%= user.full_name %>',
+          role: '<%= user.role %>'
+        }
+      }
+    }
+  });
+
+  socket.on('connect', () => {
+    console.log('Connected to server');
+    socket.emit('live:join', { liveClassId });
+  });
+
+  socket.on('live:participant-joined', (data) => {
+    updateParticipantCount(data.participantCount);
+  });
+
+  socket.on('live:participant-left', (data) => {
+    updateParticipantCount(data.participantCount);
+  });
+}
+
+// Participant functions
+function updateParticipantCount(count) {
+  document.getElementById('participantCount').textContent = count;
+}
+
+// Initialize
+initWebRTC();
+initSocket();
+</script>

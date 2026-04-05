@@ -1,0 +1,77 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Edit Pengguna</h1>
+    <p class="mt-1 text-slate-600">Ubah data siswa/guru/admin. Password opsional.</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/admin/users" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Kembali</a>
+  </div>
+</div>
+
+<div class="mt-6 max-w-2xl rounded-2xl border border-slate-200 bg-slate-100 p-6">
+  <form action="/admin/users/<%= user.id %>/edit" method="POST" class="space-y-4">
+    <div>
+      <label class="text-sm text-slate-600">Username</label>
+      <input name="username" value="<%= user.username %>" required
+        class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <p class="mt-1 text-xs text-slate-500">Biasanya NIS/NIP. Harus unik.</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-sm text-slate-600">Nama Lengkap</label>
+        <input name="full_name" value="<%= user.full_name %>" required
+          class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+      <div>
+        <label class="text-sm text-slate-600">Nomor Peserta <span class="text-slate-400 font-normal">(opsional)</span></label>
+        <input name="nomor_peserta" value="<%= user.nomor_peserta || '' %>" placeholder="Contoh: 001, 2024-001"
+          class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        <p class="mt-1 text-xs text-slate-500">Jika diisi, tampil di kartu cetak. Harus unik.</p>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-sm text-slate-600">Role</label>
+        <select name="role" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+          <option value="STUDENT" <%= user.role==='STUDENT' ? 'selected' : '' %>>STUDENT</option>
+          <option value="TEACHER" <%= user.role==='TEACHER' ? 'selected' : '' %>>TEACHER</option>
+          <option value="PRINCIPAL" <%= user.role==='PRINCIPAL' ? 'selected' : '' %>>PRINCIPAL</option>
+          <option value="ADMIN" <%= user.role==='ADMIN' ? 'selected' : '' %>>ADMIN</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-600">Kelas (siswa)</label>
+        <select name="class_id" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+          <option value="">-</option>
+          <% classes.forEach(c => { %>
+            <option value="<%= c.id %>" <%= String(user.class_id||'')===String(c.id) ? 'selected' : '' %>><%= c.name %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-sm text-slate-600">Status</label>
+        <select name="is_active" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+          <option value="1" <%= user.is_active ? 'selected' : '' %>>Aktif</option>
+          <option value="0" <%= !user.is_active ? 'selected' : '' %>>Nonaktif</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-600">Password Baru (opsional)</label>
+        <input name="new_password" placeholder="(kosong = tidak diubah)"
+          class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button class="px-5 py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold">Simpan Perubahan</button>
+      <a href="/admin/users" class="px-5 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100">Batal</a>
+    </div>
+  </form>
+</div>

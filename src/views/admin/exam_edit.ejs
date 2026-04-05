@@ -1,0 +1,180 @@
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-3xl font-bold text-indigo-900">Edit Ujian</h1>
+    <p class="mt-1 text-slate-600">Edit pengaturan ujian sebagai admin</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/admin/exams/<%= exam.id %>" class="px-4 py-2 rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-100 hover:from-blue-100 hover:to-indigo-200 text-blue-800 font-medium transition-all">
+      👁️ Lihat Detail
+    </a>
+    <a href="/admin/exams" class="px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">
+      ← Kembali
+    </a>
+  </div>
+</div>
+
+<form method="POST" action="/admin/exams/<%= exam.id %>?_method=PUT" class="space-y-6">
+  <!-- Basic Information -->
+  <div class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl p-8 border-2 border-blue-200 shadow-lg">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-3xl">📝</span>
+      <h2 class="text-2xl font-bold text-blue-900">Informasi Dasar</h2>
+    </div>
+    
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-semibold text-blue-800 mb-2">Judul Ujian *</label>
+        <input type="text" name="title" value="<%= exam.title %>" required maxlength="150" class="w-full rounded-xl border-2 border-blue-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </div>
+      
+      <div>
+        <label class="block text-sm font-semibold text-blue-800 mb-2">Mata Pelajaran *</label>
+        <select name="subject_id" required class="w-full rounded-xl border-2 border-blue-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <option value="">Pilih Mata Pelajaran</option>
+          <% subjects.forEach(s => { %>
+            <option value="<%= s.id %>" <%= exam.subject_id == s.id ? 'selected' : '' %>><%= s.name %></option>
+          <% }) %>
+        </select>
+      </div>
+    </div>
+    
+    <div class="mt-6">
+      <label class="block text-sm font-semibold text-blue-800 mb-2">Guru Pengampu *</label>
+      <select name="teacher_id" required class="w-full rounded-xl border-2 border-blue-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="">Pilih Guru</option>
+        <% teachers.forEach(t => { %>
+          <option value="<%= t.id %>" <%= exam.teacher_id == t.id ? 'selected' : '' %>><%= t.full_name %></option>
+        <% }) %>
+      </select>
+    </div>
+    
+    <div class="mt-6">
+      <label class="block text-sm font-semibold text-blue-800 mb-2">Deskripsi (opsional)</label>
+      <textarea name="description" rows="3" class="w-full rounded-xl border-2 border-blue-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"><%= exam.description || '' %></textarea>
+    </div>
+  </div>
+
+  <!-- Class Selection -->
+  <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-3xl p-8 border-2 border-green-200 shadow-lg">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-3xl">🎯</span>
+      <h2 class="text-2xl font-bold text-green-900">Target Kelas</h2>
+    </div>
+    
+    <div class="grid md:grid-cols-3 gap-4">
+      <% classes.forEach(c => { %>
+        <label class="flex items-center gap-3 p-4 rounded-xl border-2 border-green-200 bg-white hover:bg-green-50 cursor-pointer transition-all">
+          <input type="checkbox" name="class_ids" value="<%= c.id %>" <%= exam.selected_classes && exam.selected_classes.includes(c.id) ? 'checked' : '' %> class="w-5 h-5 accent-green-500" />
+          <span class="text-sm font-medium text-green-900"><%= c.name %></span>
+        </label>
+      <% }) %>
+    </div>
+  </div>
+
+  <!-- Time Settings -->
+  <div class="bg-gradient-to-br from-purple-50 to-violet-100 rounded-3xl p-8 border-2 border-purple-200 shadow-lg">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-3xl">⏰</span>
+      <h2 class="text-2xl font-bold text-purple-900">Pengaturan Waktu</h2>
+    </div>
+    
+    <div class="grid md:grid-cols-2 gap-6">
+      <div>
+        <label class="block text-sm font-semibold text-purple-800 mb-2">Waktu Mulai (opsional)</label>
+        <input type="datetime-local" name="start_at" value="<%= exam.start_at ? new Date(new Date(exam.start_at).getTime() - new Date(exam.start_at).getTimezoneOffset() * 60000).toISOString().slice(0,16) : '' %>" class="w-full rounded-xl border-2 border-purple-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+      </div>
+      
+      <div>
+        <label class="block text-sm font-semibold text-purple-800 mb-2">Waktu Selesai (opsional)</label>
+        <input type="datetime-local" name="end_at" value="<%= exam.end_at ? new Date(new Date(exam.end_at).getTime() - new Date(exam.end_at).getTimezoneOffset() * 60000).toISOString().slice(0,16) : '' %>" class="w-full rounded-xl border-2 border-purple-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+      </div>
+    </div>
+    
+    <div class="mt-6 grid md:grid-cols-3 gap-6">
+      <div>
+        <label class="block text-sm font-semibold text-purple-800 mb-2">Durasi (menit)</label>
+        <input type="number" name="duration_minutes" value="<%= exam.duration_minutes %>" min="1" max="300" class="w-full rounded-xl border-2 border-purple-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+      </div>
+      
+      <div>
+        <label class="block text-sm font-semibold text-purple-800 mb-2">Nilai Lulus</label>
+        <input type="number" name="pass_score" value="<%= exam.pass_score %>" min="0" max="100" class="w-full rounded-xl border-2 border-purple-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+      </div>
+      
+      <div>
+        <label class="block text-sm font-semibold text-purple-800 mb-2">Maks Percobaan</label>
+        <input type="number" name="max_attempts" value="<%= exam.max_attempts %>" min="1" max="10" class="w-full rounded-xl border-2 border-purple-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Security & Randomization -->
+  <div class="bg-gradient-to-br from-rose-50 to-pink-100 rounded-3xl p-8 border-2 border-rose-200 shadow-lg">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-3xl">🔒</span>
+      <h2 class="text-2xl font-bold text-rose-900">Keamanan & Acak</h2>
+    </div>
+    
+    <div class="flex flex-wrap gap-4">
+      <label class="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-rose-200 bg-white hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 cursor-pointer transition-all transform hover:scale-105">
+        <input type="checkbox" name="shuffle_questions" <%= exam.shuffle_questions ? 'checked' : '' %> class="rounded border-rose-300 text-rose-600 focus:ring-rose-500 w-5 h-5" />
+        <span class="flex items-center gap-2 text-sm font-semibold text-rose-800">
+          <span class="text-xl">🔀</span>
+          <span>Acak urutan soal</span>
+        </span>
+      </label>
+      
+      <label class="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-rose-200 bg-white hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 cursor-pointer transition-all transform hover:scale-105">
+        <input type="checkbox" name="shuffle_options" <%= exam.shuffle_options ? 'checked' : '' %> class="rounded border-rose-300 text-rose-600 focus:ring-rose-500 w-5 h-5" />
+        <span class="flex items-center gap-2 text-sm font-semibold text-rose-800">
+          <span class="text-xl">🎲</span>
+          <span>Acak opsi jawaban</span>
+        </span>
+      </label>
+    </div>
+    
+    <div class="mt-6">
+      <label class="block text-sm font-semibold text-rose-800 mb-2">Kode Akses (opsional)</label>
+      <input type="text" name="access_code" value="<%= exam.access_code || '' %>" maxlength="20" class="w-full rounded-xl border-2 border-rose-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500" />
+    </div>
+  </div>
+
+  <!-- Display Options -->
+  <div class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl p-8 border-2 border-blue-200 shadow-lg">
+    <div class="flex items-center gap-3 mb-6">
+      <span class="text-3xl">👁️</span>
+      <h2 class="text-2xl font-bold text-blue-900">Tampilan untuk Siswa</h2>
+    </div>
+    
+    <div class="flex flex-wrap gap-4">
+      <label class="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-blue-200 bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 cursor-pointer transition-all transform hover:scale-105">
+        <input type="checkbox" name="show_score_to_student" <%= exam.show_score_to_student ? 'checked' : '' %> class="rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-5 h-5" />
+        <span class="flex items-center gap-2 text-sm font-semibold text-blue-800">
+          <span class="text-xl">📊</span>
+          <span>Tampilkan nilai ke siswa</span>
+        </span>
+      </label>
+      
+      <label class="flex items-center gap-3 px-5 py-3 rounded-xl border-2 border-blue-200 bg-white hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 cursor-pointer transition-all transform hover:scale-105">
+        <input type="checkbox" name="show_review_to_student" <%= exam.show_review_to_student ? 'checked' : '' %> class="rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-5 h-5" />
+        <span class="flex items-center gap-2 text-sm font-semibold text-blue-800">
+          <span class="text-xl">📝</span>
+          <span>Tampilkan pembahasan & jawaban benar</span>
+        </span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Action Buttons -->
+  <div class="flex gap-4 pt-4">
+    <button type="submit" class="flex-1 px-8 py-4 rounded-2xl bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 hover:from-purple-600 hover:via-pink-600 hover:to-orange-600 text-white font-bold text-lg shadow-xl hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center gap-3">
+      <span class="text-2xl">💾</span>
+      <span>Simpan Perubahan</span>
+    </button>
+    
+    <a href="/admin/exams/<%= exam.id %>" class="px-8 py-4 rounded-2xl border-2 border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 font-semibold text-slate-700 transition-all transform hover:scale-105 flex items-center justify-center gap-2">
+      <span>❌</span>
+      <span>Batal</span>
+    </a>
+  </div>
+</form>

@@ -1,0 +1,123 @@
+<div class="space-y-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <h1 class="text-2xl sm:text-3xl font-bold text-slate-800">Live Classes</h1>
+    <div class="flex gap-2 w-full sm:w-auto">
+      <a href="/teacher/live-classes/new" class="flex-1 sm:flex-none text-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-semibold rounded-xl shadow-sm transition-all">
+        + Buat Live Class
+      </a>
+      <a href="/teacher" class="flex-none inline-flex items-center gap-2 px-4 py-3 bg-orange-100/80 backdrop-blur-sm hover:bg-orange-200/90 text-orange-800 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        Kembali
+      </a>
+    </div>
+  </div>
+
+  <% if (liveClasses.length === 0) { %>
+    <div class="bg-white rounded-2xl shadow-soft p-8 sm:p-12 text-center">
+      <svg class="w-16 h-16 sm:w-24 sm:h-24 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+      </svg>
+      <h3 class="text-lg sm:text-xl font-semibold text-slate-700 mb-2">Belum Ada Live Class</h3>
+      <p class="text-sm sm:text-base text-slate-500 mb-6">Buat live class pertama Anda untuk mulai mengajar secara online</p>
+      <a href="/teacher/live-classes/new" class="inline-block px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors">
+        Buat Live Class
+      </a>
+    </div>
+  <% } else { %>
+    <div class="grid gap-4 sm:gap-6">
+      <% liveClasses.forEach(liveClass => { %>
+        <div class="bg-white rounded-2xl shadow-soft p-4 sm:p-6 hover:shadow-lg transition-shadow">
+          <!-- Header -->
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-2 mb-2">
+                <h3 class="text-lg sm:text-xl font-bold text-slate-800 break-words"><%= liveClass.title %></h3>
+                <% if (liveClass.status === 'LIVE') { %>
+                  <span class="inline-flex items-center justify-center px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-full animate-pulse w-fit">🔴 LIVE</span>
+                <% } else if (liveClass.status === 'SCHEDULED') { %>
+                  <span class="inline-flex items-center justify-center px-3 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded-full w-fit">📅 Terjadwal</span>
+                <% } else if (liveClass.status === 'ENDED') { %>
+                  <span class="inline-flex items-center justify-center px-3 py-1 bg-slate-100 text-slate-600 text-xs font-bold rounded-full w-fit">✓ Selesai</span>
+                <% } else if (liveClass.status === 'CANCELLED') { %>
+                  <span class="inline-flex items-center justify-center px-3 py-1 bg-red-100 text-red-600 text-xs font-bold rounded-full w-fit">✗ Dibatalkan</span>
+                <% } %>
+              </div>
+              
+              <!-- Info Grid -->
+              <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm text-slate-600 mb-3">
+                <span class="truncate">📚 <%= liveClass.subject_name %></span>
+                <% if (liveClass.class_name) { %>
+                  <span class="truncate">👥 <%= liveClass.class_name %></span>
+                <% } %>
+                <span>⏱️ <%= liveClass.duration_minutes %> mnt</span>
+                <% if (liveClass.status === 'LIVE') { %>
+                  <span class="text-green-600 font-semibold">👤 <%= liveClass.active_participants %></span>
+                <% } %>
+              </div>
+
+              <% if (liveClass.description) { %>
+                <p class="text-slate-600 text-xs sm:text-sm mb-3 line-clamp-2"><%= liveClass.description %></p>
+              <% } %>
+
+              <div class="text-xs sm:text-sm text-slate-500">
+                📅 <%= new Date(liveClass.scheduled_at).toLocaleString('id-ID', { 
+                  weekday: 'short', 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) %>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex sm:flex-col gap-2 w-full sm:w-auto sm:ml-4">
+              <% if (liveClass.status === 'SCHEDULED') { %>
+                <form action="/teacher/live-classes/<%= liveClass.id %>/start" method="POST" class="flex-1 sm:flex-none">
+                  <button class="w-full px-4 sm:px-6 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
+                    ▶️ Mulai
+                  </button>
+                </form>
+                <a href="/teacher/live-classes/<%= liveClass.id %>/edit" class="flex-1 sm:flex-none px-4 sm:px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-xl transition-colors text-center whitespace-nowrap">
+                  ✏️ Edit
+                </a>
+                <form action="/teacher/live-classes/<%= liveClass.id %>/delete" method="POST" class="flex-1 sm:flex-none" onsubmit="return confirm('Yakin ingin menghapus live class ini?')">
+                  <button class="w-full px-4 sm:px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
+                    🗑️ Hapus
+                  </button>
+                </form>
+              <% } else if (liveClass.status === 'LIVE') { %>
+                <a href="/teacher/live-classes/<%= liveClass.id %>/room" class="flex-1 sm:flex-none px-4 sm:px-6 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl transition-colors text-center whitespace-nowrap">
+                  🎥 Masuk
+                </a>
+                <form action="/teacher/live-classes/<%= liveClass.id %>/end" method="POST" class="flex-1 sm:flex-none">
+                  <button class="w-full px-4 sm:px-6 py-2 bg-slate-600 hover:bg-slate-700 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
+                    ⏹️ Akhiri
+                  </button>
+                </form>
+              <% } else if (liveClass.status === 'ENDED') { %>
+                <a href="/teacher/live-classes/<%= liveClass.id %>/report" class="flex-1 sm:flex-none px-4 sm:px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-colors text-center whitespace-nowrap">
+                  📊 Laporan
+                </a>
+                <form action="/teacher/live-classes/<%= liveClass.id %>/delete" method="POST" class="flex-1 sm:flex-none" onsubmit="return confirm('Yakin ingin menghapus live class ini?')">
+                  <button class="w-full px-4 sm:px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
+                    🗑️ Hapus
+                  </button>
+                </form>
+              <% } else if (liveClass.status === 'CANCELLED') { %>
+                <form action="/teacher/live-classes/<%= liveClass.id %>/delete" method="POST" class="flex-1 sm:flex-none" onsubmit="return confirm('Yakin ingin menghapus live class ini?')">
+                  <button class="w-full px-4 sm:px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl transition-colors whitespace-nowrap">
+                    🗑️ Hapus
+                  </button>
+                </form>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>

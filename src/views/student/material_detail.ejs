@@ -1,0 +1,110 @@
+<div class="flex items-start justify-between gap-4">
+  <div>
+    <div class="text-xs text-slate-500"><%= material.subject_name %> • <%= material.teacher_name %> • <%= material.class_name || 'Semua kelas' %></div>
+    <h1 class="mt-1 text-3xl font-semibold tracking-tight"><%= material.title %></h1>
+    <% if (material.description) { %>
+      <p class="mt-2 text-slate-600"><%= material.description %></p>
+    <% } %>
+  </div>
+  <div class="flex gap-2">
+    <a href="/student/materials" class="text-sm px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">Kembali</a>
+  </div>
+</div>
+
+<div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-soft">
+  <div class="text-sm text-slate-600">
+    <% if (read && read.completed_at) { %>
+      Status: <span class="font-semibold text-emerald-700">Selesai</span>
+    <% } else if (read && read.first_opened_at) { %>
+      Status: <span class="font-semibold text-sky-700">Sudah dibaca</span>
+      <% if (material.auto_complete_minutes && material.auto_complete_minutes > 0) { %>
+        <span class="ml-2 text-xs text-slate-500">• Otomatis selesai dalam <span id="autoCompleteTimer" class="font-semibold"></span></span>
+      <% } %>
+    <% } else { %>
+      Status: <span class="font-semibold">Belum dibaca</span>
+    <% } %>
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+  
+  <% if (material.embed_type === 'YOUTUBE' && material.embed_url) { %>
+    <div class="mb-6">
+      <div class="aspect-video w-full rounded-2xl overflow-hidden border border-slate-200">
+        <iframe
+          class="w-full h-full"
+          src="<%= material.embed_url %>"
+          title="YouTube video"
+          frameborder="0"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </div>
+      <% const ytId = String(material.embed_url).match(/\/embed\/([a-zA-Z0-9_-]{6,})/); const ytWatch = ytId ? `https://www.youtube.com/watch?v=${ytId[1]}` : null; %>
+      <div class="mt-2 text-xs text-slate-500">
+        Jika video tidak bisa diputar (mis. <span class="font-semibold">Error 153</span>), kemungkinan pemilik video menonaktifkan embed.
+        <% if (ytWatch) { %>
+          <a class="underline" href="<%= ytWatch %>" target="_blank" rel="noopener">Tonton di YouTube</a>.
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (material.embed_type === 'PDF' && material.embed_url) { %>
+    <div class="mb-6">
+      <div class="w-full rounded-2xl overflow-hidden border border-slate-200">
+        <iframe class="w-full" style="height: 70vh" src="<%= material.embed_url %>" title="PDF"></iframe>
+      </div>
+      <div class="mt-2 text-xs text-slate-500">Jika PDF tidak tampil, <a class="underline" href="<%= material.embed_url %>" target="_blank" rel="noopener">buka di tab baru</a>.</div>
+    </div>
+  <% } %>
+
+  <div class="prose max-w-none">
+    <%- material.content_html %>
+  </div>
+</div>
+
+<% if (material.auto_complete_minutes && material.auto_complete_minutes > 0 && read && read.first_opened_at && !read.completed_at) { %>
+<script>
+(function() {
+  const autoCompleteMinutes = <%= material.auto_complete_minutes %>;
+  const firstOpenedAt = new Date('<%= read.first_opened_at %>');
+  const autoCompleteAt = new Date(firstOpenedAt.getTime() + (autoCompleteMinutes * 60 * 1000));
+  const timerElement = document.getElementById('autoCompleteTimer');
+  
+  function updateTimer() {
+    const now = new Date();
+    const remaining = autoCompleteAt - now;
+    
+    if (remaining <= 0) {
+      // Auto complete via fetch
+      fetch('/student/materials/<%= material.id %>/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      }).then(() => {
+        window.location.reload();
+      }).catch(err => {
+        console.error('Auto-complete failed:', err);
+      });
+      return;
+    }
+    
+    const minutes = Math.floor(remaining / 60000);
+    const seconds = Math.floor((remaining % 60000) / 1000);
+    
+    if (timerElement) {
+      timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
+  }
+  
+  updateTimer();
+  const interval = setInterval(updateTimer, 1000);
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => clearInterval(interval));
+})();
+</script>
+<% } %>

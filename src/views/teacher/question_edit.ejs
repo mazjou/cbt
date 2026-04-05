@@ -1,0 +1,235 @@
+﻿<!-- Header -->
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <div class="text-sm text-slate-500 mb-1">Edit Soal</div>
+    <h1 class="text-2xl font-bold bg-gradient-to-r from-violet-600 to-pink-500 bg-clip-text text-transparent"><%= exam.title %></h1>
+    <p class="mt-1 text-slate-500 text-sm">Perbarui teks soal, gambar, poin, dan kunci jawaban (Aï¿½E).</p>
+  </div>
+  <a href="/teacher/exams/<%= exam.id %>" class="text-sm px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-700 font-medium transition-all shadow-sm">Kembali</a>
+</div>
+
+<form action="/teacher/questions/<%= question.id %>?_method=PUT" method="POST" enctype="multipart/form-data" id="editQuestionForm" class="space-y-5">
+
+  <!-- Pertanyaan -->
+  <div class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-5 shadow-sm">
+    <label class="flex items-center gap-2 text-sm font-semibold text-violet-700 mb-2">
+      Pertanyaan
+    </label>
+    <div id="question_editor" contenteditable="true"
+      class="w-full min-h-[140px] rounded-xl bg-white border-2 border-violet-200 px-4 py-3 focus:outline-none focus:border-violet-400 overflow-auto text-slate-800 transition-all"
+      style="max-height:400px"><%- question.question_text %></div>
+    <div class="mt-1.5 text-xs text-violet-500">Ctrl+V untuk paste gambar dari clipboard</div>
+    <input type="hidden" name="question_text" id="question_text_input" />
+  </div>
+
+  <!-- Poin & Jawaban Benar -->
+  <div class="grid grid-cols-2 gap-4">
+    <div class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-yellow-50 p-4 shadow-sm">
+      <label class="flex items-center gap-2 text-sm font-semibold text-amber-700 mb-2">Poin</label>
+      <input type="number" name="points" value="<%= question.points %>" min="1"
+        class="w-full rounded-xl bg-white border-2 border-amber-200 px-4 py-2.5 focus:outline-none focus:border-amber-400 text-slate-800 font-semibold transition-all" />
+    </div>
+    <div class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-4 shadow-sm">
+      <label class="flex items-center gap-2 text-sm font-semibold text-emerald-700 mb-2">Jawaban Benar</label>
+      <select name="correct" required
+        class="w-full rounded-xl bg-white border-2 border-emerald-200 px-4 py-2.5 focus:outline-none focus:border-emerald-400 text-slate-800 font-semibold transition-all">
+        <% ;['A','B','C','D','E'].forEach((lbl)=>{ %>
+          <option value="<%= lbl %>" <%= correct_label===lbl ? 'selected' : '' %>><%= lbl %></option>
+        <% }) %>
+      </select>
+    </div>
+  </div>
+
+  <!-- Gambar Soal -->
+  <div class="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50 p-5 shadow-sm">
+    <label class="flex items-center gap-2 text-sm font-semibold text-sky-700 mb-3">
+      Gambar Soal <span class="text-xs font-normal text-sky-400">(opsional)</span>
+    </label>
+    <% if (question.question_image) { %>
+      <div class="mb-3 rounded-xl border border-sky-200 bg-white p-3">
+        <div class="text-xs text-sky-600 font-medium mb-2">Gambar saat ini:</div>
+        <img src="<%= question.question_image %>" alt="gambar_soal" class="max-h-48 rounded-xl border border-sky-200 shadow-sm" />
+        <label class="mt-3 inline-flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" name="remove_image" value="1" class="accent-sky-500 w-4 h-4" />
+          <span class="text-sky-700">Hapus gambar ini</span>
+        </label>
+      </div>
+    <% } %>
+    <input type="file" name="image" accept="image/*"
+      class="w-full rounded-xl bg-white border-2 border-sky-200 px-4 py-2.5 text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200 transition-all" />
+    <div class="mt-1.5 text-xs text-sky-500">Max 5MB. Format: JPG, PNG, GIF, WebP</div>
+  </div>
+
+  <!-- PDF Soal -->
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-fuchsia-50 p-5 shadow-sm">
+    <label class="flex items-center gap-2 text-sm font-semibold text-purple-700 mb-3">
+      PDF Soal <span class="text-xs font-normal text-purple-400">(opsional)</span>
+    </label>
+    <% if (question.question_pdf) { %>
+      <div class="mb-3 rounded-xl border border-purple-200 bg-white p-3">
+        <div class="text-xs text-purple-600 font-medium mb-2">PDF saat ini:</div>
+        <iframe src="<%= question.question_pdf %>" class="w-full h-56 rounded-xl border border-purple-200" frameborder="0"></iframe>
+        <label class="mt-3 inline-flex items-center gap-2 text-sm cursor-pointer">
+          <input type="checkbox" name="remove_pdf" value="1" class="accent-purple-500 w-4 h-4" />
+          <span class="text-purple-700">Hapus PDF ini</span>
+        </label>
+      </div>
+    <% } %>
+    <input type="file" name="pdf" accept="application/pdf"
+      class="w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-2.5 text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 transition-all" />
+    <div class="mt-1.5 text-xs text-purple-500">Max 10MB. Format: PDF</div>
+  </div>
+
+  <!-- Opsi Jawaban -->
+  <div class="space-y-3">
+    <div class="text-sm font-semibold text-slate-600 flex items-center gap-2">Opsi Jawaban</div>
+
+    <!-- Opsi A - Rose -->
+    <div class="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 p-4 shadow-sm">
+      <label class="flex items-center gap-2 text-sm font-semibold text-rose-700 mb-2">
+        <span class="w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center font-bold">A</span> Opsi A
+      </label>
+      <div id="option_a_editor" contenteditable="true"
+        class="w-full min-h-[70px] rounded-xl bg-white border-2 border-rose-200 px-4 py-3 focus:outline-none focus:border-rose-400 overflow-auto text-slate-800 transition-all"
+        style="max-height:250px"><%- options.A || '' %></div>
+      <input type="hidden" name="a" id="option_a_input" />
+    </div>
+
+    <!-- Opsi B - Orange -->
+    <div class="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
+      <label class="flex items-center gap-2 text-sm font-semibold text-orange-700 mb-2">
+        <span class="w-6 h-6 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-bold">B</span> Opsi B
+      </label>
+      <div id="option_b_editor" contenteditable="true"
+        class="w-full min-h-[70px] rounded-xl bg-white border-2 border-orange-200 px-4 py-3 focus:outline-none focus:border-orange-400 overflow-auto text-slate-800 transition-all"
+        style="max-height:250px"><%- options.B || '' %></div>
+      <input type="hidden" name="b" id="option_b_input" />
+    </div>
+
+    <!-- Opsi C - Lime -->
+    <div class="rounded-2xl border border-lime-200 bg-gradient-to-br from-lime-50 to-green-50 p-4 shadow-sm">
+      <label class="flex items-center gap-2 text-sm font-semibold text-lime-700 mb-2">
+        <span class="w-6 h-6 rounded-full bg-lime-500 text-white text-xs flex items-center justify-center font-bold">C</span> Opsi C
+      </label>
+      <div id="option_c_editor" contenteditable="true"
+        class="w-full min-h-[70px] rounded-xl bg-white border-2 border-lime-200 px-4 py-3 focus:outline-none focus:border-lime-400 overflow-auto text-slate-800 transition-all"
+        style="max-height:250px"><%- options.C || '' %></div>
+      <input type="hidden" name="c" id="option_c_input" />
+    </div>
+
+    <!-- Opsi D - Sky -->
+    <div class="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50 p-4 shadow-sm">
+      <label class="flex items-center gap-2 text-sm font-semibold text-sky-700 mb-2">
+        <span class="w-6 h-6 rounded-full bg-sky-500 text-white text-xs flex items-center justify-center font-bold">D</span> Opsi D
+      </label>
+      <div id="option_d_editor" contenteditable="true"
+        class="w-full min-h-[70px] rounded-xl bg-white border-2 border-sky-200 px-4 py-3 focus:outline-none focus:border-sky-400 overflow-auto text-slate-800 transition-all"
+        style="max-height:250px"><%- options.D || '' %></div>
+      <input type="hidden" name="d" id="option_d_input" />
+    </div>
+
+    <!-- Opsi E - Violet -->
+    <div class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-4 shadow-sm">
+      <label class="flex items-center gap-2 text-sm font-semibold text-violet-700 mb-2">
+        <span class="w-6 h-6 rounded-full bg-violet-500 text-white text-xs flex items-center justify-center font-bold">E</span> Opsi E
+      </label>
+      <div id="option_e_editor" contenteditable="true"
+        class="w-full min-h-[70px] rounded-xl bg-white border-2 border-violet-200 px-4 py-3 focus:outline-none focus:border-violet-400 overflow-auto text-slate-800 transition-all"
+        style="max-height:250px"><%- options.E || '' %></div>
+      <input type="hidden" name="e" id="option_e_input" />
+    </div>
+  </div>
+
+  <!-- Tombol Aksi -->
+  <div class="flex flex-col sm:flex-row gap-3 pt-2">
+    <button type="submit"
+      class="flex-1 rounded-xl bg-gradient-to-r from-violet-500 to-pink-500 hover:from-violet-600 hover:to-pink-600 text-white font-bold py-3 shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]">
+      Simpan Perubahan
+    </button>
+    <a href="/teacher/exams/<%= exam.id %>"
+      class="flex-1 text-center rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold py-3 transition-all">
+      Batal
+    </a>
+  </div>
+
+</form>
+
+<script>
+  const editorMap = {
+    question_text_input: 'question_editor',
+    option_a_input: 'option_a_editor',
+    option_b_input: 'option_b_editor',
+    option_c_input: 'option_c_editor',
+    option_d_input: 'option_d_editor',
+    option_e_input: 'option_e_editor'
+  };
+
+  // Paste image handler
+  Object.values(editorMap).forEach(editorId => {
+    const editor = document.getElementById(editorId);
+    if (!editor) return;
+    editor.addEventListener('paste', function(e) {
+      e.preventDefault();
+      const items = e.clipboardData.items;
+      let hasImage = false;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          hasImage = true;
+          const reader = new FileReader();
+          reader.onload = ev => {
+            const img = document.createElement('img');
+            img.src = ev.target.result;
+            img.style.cssText = 'max-width:100%;height:auto;margin:8px 0;border-radius:8px;border:2px solid #e0e7ff;';
+            const sel = window.getSelection();
+            if (sel.rangeCount > 0) {
+              const range = sel.getRangeAt(0);
+              range.deleteContents();
+              range.insertNode(img);
+              range.setStartAfter(img);
+              range.setEndAfter(img);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            } else {
+              editor.appendChild(img);
+            }
+          };
+          reader.readAsDataURL(items[i].getAsFile());
+        }
+      }
+      if (!hasImage) document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+    });
+  });
+
+  // Form submit
+  document.getElementById('editQuestionForm').addEventListener('submit', function(e) {
+    for (const [inputId, editorId] of Object.entries(editorMap)) {
+      const input = document.getElementById(inputId);
+      const editor = document.getElementById(editorId);
+      if (input && editor) input.value = editor.innerHTML;
+    }
+    const checks = [
+      { id: 'question_editor', name: 'Pertanyaan' },
+      { id: 'option_a_editor', name: 'Opsi A' },
+      { id: 'option_b_editor', name: 'Opsi B' },
+      { id: 'option_c_editor', name: 'Opsi C' },
+      { id: 'option_d_editor', name: 'Opsi D' },
+      { id: 'option_e_editor', name: 'Opsi E' }
+    ];
+    for (const f of checks) {
+      const ed = document.getElementById(f.id);
+      if (ed && ed.textContent.trim() === '' && ed.querySelectorAll('img').length === 0) {
+        e.preventDefault();
+        alert(`${f.name} tidak boleh kosong!`);
+        ed.focus();
+        return false;
+      }
+    }
+  });
+</script>
+
+<style>
+  [contenteditable] { outline: none; }
+  [contenteditable]:focus { box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
+  [contenteditable] img { cursor: pointer; transition: transform 0.2s; border-radius: 8px; }
+  [contenteditable] img:hover { transform: scale(1.02); }
+</style>

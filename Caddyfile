@@ -1,0 +1,87 @@
+# Caddyfile untuk LMS SMKN 1 Kras
+# Server: 10.10.102.8 (Caddy, Node.js, Redis, MySQL dalam 1 server)
+
+# Global options
+{
+    # Email untuk Let's Encrypt notifications
+    email admin@smkn1kras.sch.id
+    
+    # Disable admin API (optional, untuk security)
+    # admin off
+}
+
+# Main application
+liveclass.tam.web.id {
+    # Reverse proxy ke aplikasi Node.js
+    reverse_proxy localhost:3000 {
+        # Forward headers untuk mendapatkan IP asli client
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up Host {host}
+        
+        # WebSocket support (untuk Live Class dengan Jitsi)
+        header_up Upgrade {http.request.header.Upgrade}
+        header_up Connection {http.request.header.Connection}
+        
+        # Timeout settings
+        transport http {
+            dial_timeout 10s
+            response_header_timeout 30s
+            read_timeout 60s
+        }
+    }
+    
+    # Compression untuk performa lebih baik
+    encode gzip zstd
+    
+    # Security headers
+    header {
+        # HSTS - Force HTTPS
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+        
+        # Prevent MIME sniffing
+        X-Content-Type-Options "nosniff"
+        
+        # XSS Protection
+        X-XSS-Protection "1; mode=block"
+        
+        # Referrer Policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        
+        # Hide server info
+        -Server
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/liveclass.log {
+            roll_size 100mb
+            roll_keep 10
+            roll_keep_for 720h
+        }
+        format json
+        level INFO
+    }
+    
+    # Error handling
+    handle_errors {
+        @502 expression {http.error.status_code} == 502
+        handle @502 {
+            respond "Aplikasi sedang maintenance. Silakan coba beberapa saat lagi." 502
+        }
+        
+        @503 expression {http.error.status_code} == 503
+        handle @503 {
+            respond "Service tidak tersedia. Silakan hubungi administrator." 503
+        }
+    }
+}
+
+# Redirect www ke non-www (optional)
+www.liveclass.tam.web.id {
+    redir https://liveclass.tam.web.id{uri} permanent
+}

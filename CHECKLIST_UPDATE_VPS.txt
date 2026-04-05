@@ -1,0 +1,252 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                  CHECKLIST UPDATE VPS                            ║
+║          Fitur Recovery Submission Ujian                         ║
+╚══════════════════════════════════════════════════════════════════╝
+
+TANGGAL UPDATE: _______________  JAM: _______________
+
+DILAKUKAN OLEH: _______________________________________
+
+
+═══════════════════════════════════════════════════════════════════
+ PERSIAPAN (1 HARI SEBELUMNYA)
+═══════════════════════════════════════════════════════════════════
+
+[ ] Informasikan maintenance ke guru/siswa
+[ ] Tentukan waktu update (malam/akhir pekan)
+[ ] Pastikan tidak ada ujian penting yang dijadwalkan
+[ ] Siapkan akses SSH ke VPS
+[ ] Siapkan password database MySQL
+[ ] Siapkan nomor kontak darurat
+
+
+═══════════════════════════════════════════════════════════════════
+ CEK KONDISI SEBELUM UPDATE
+═══════════════════════════════════════════════════════════════════
+
+[ ] Aplikasi berjalan normal
+[ ] Tidak ada error di log
+[ ] Disk space cukup (minimal 5GB free)
+[ ] Koneksi internet stabil
+[ ] Tidak ada siswa yang sedang mengerjakan ujian
+
+    Jumlah siswa sedang ujian: _______ (harus 0)
+
+
+═══════════════════════════════════════════════════════════════════
+ BACKUP (WAJIB!)
+═══════════════════════════════════════════════════════════════════
+
+[ ] Backup database berhasil
+    File: backup___________________.sql
+    Size: _________ MB
+    
+[ ] Backup folder aplikasi berhasil
+    File: lms_backup___________________.tar.gz
+    Size: _________ MB
+
+[ ] Backup tersimpan di lokasi aman
+    Lokasi: _______________________________________
+
+[ ] Catat nama file backup (untuk rollback)
+
+
+═══════════════════════════════════════════════════════════════════
+ PROSES UPDATE
+═══════════════════════════════════════════════════════════════════
+
+[ ] Stop aplikasi (pm2 stop lms-app)
+    Waktu stop: _______________
+
+[ ] Pull update dari Git
+    Branch: _______________
+    Commit: _______________
+
+[ ] Install dependencies (npm install)
+    Status: [ ] Berhasil  [ ] Ada warning  [ ] Error
+
+[ ] Jalankan database migration
+    Status: [ ] Berhasil  [ ] Error
+    
+[ ] Verifikasi tabel submission_backups ada
+    Status: [ ] Ada  [ ] Tidak ada
+
+[ ] Verifikasi kolom submission_status ada
+    Status: [ ] Ada  [ ] Tidak ada
+
+[ ] Test syntax JavaScript
+    admin.js: [ ] OK  [ ] Error
+    student.js: [ ] OK  [ ] Error
+    submission-utils.js: [ ] OK  [ ] Error
+
+[ ] Start aplikasi (pm2 start lms-app)
+    Waktu start: _______________
+    Status: [ ] Running  [ ] Error
+
+
+═══════════════════════════════════════════════════════════════════
+ TESTING SETELAH UPDATE
+═══════════════════════════════════════════════════════════════════
+
+[ ] Aplikasi running tanpa error
+    pm2 status: [ ] Online  [ ] Error
+
+[ ] Tidak ada error di log
+    Error count: _______
+
+[ ] Dashboard admin bisa diakses
+    URL: http://_______________/admin
+    Status: [ ] OK  [ ] Error
+
+[ ] Card "Submission Gagal" muncul di dashboard
+    Status: [ ] Muncul  [ ] Tidak muncul
+
+[ ] Route /admin/failed-submissions berfungsi
+    Status: [ ] OK  [ ] Error 500  [ ] Error lain
+
+[ ] Login siswa berfungsi
+    Status: [ ] OK  [ ] Error
+
+[ ] Lihat daftar ujian berfungsi
+    Status: [ ] OK  [ ] Error
+
+[ ] Test submission ujian (jika ada ujian test)
+    Status: [ ] Berhasil  [ ] Gagal  [ ] Skip
+
+
+═══════════════════════════════════════════════════════════════════
+ MONITORING (1 JAM PERTAMA)
+═══════════════════════════════════════════════════════════════════
+
+Jam: _______________
+[ ] Cek log - tidak ada error
+[ ] Cek memory usage - normal
+[ ] Cek CPU usage - normal
+[ ] Test login beberapa user - OK
+
+Jam: _______________
+[ ] Cek log - tidak ada error
+[ ] Cek memory usage - normal
+[ ] Cek CPU usage - normal
+
+Jam: _______________
+[ ] Cek log - tidak ada error
+[ ] Cek memory usage - normal
+[ ] Cek CPU usage - normal
+
+
+═══════════════════════════════════════════════════════════════════
+ VERIFIKASI FITUR BARU
+═══════════════════════════════════════════════════════════════════
+
+[ ] Tabel submission_backups ada di database
+    Query: SHOW TABLES LIKE 'submission_backups';
+    Result: [ ] Ada  [ ] Tidak ada
+
+[ ] Kolom submission_status ada di tabel attempts
+    Query: SHOW COLUMNS FROM attempts LIKE 'submission_status';
+    Result: [ ] Ada  [ ] Tidak ada
+
+[ ] Route recovery berfungsi
+    URL: /admin/failed-submissions
+    Result: [ ] Halaman muncul  [ ] Error
+
+[ ] Backup otomatis berfungsi (test dengan submission)
+    Status: [ ] Berhasil  [ ] Gagal  [ ] Belum test
+
+
+═══════════════════════════════════════════════════════════════════
+ ROLLBACK (JIKA ADA MASALAH)
+═══════════════════════════════════════════════════════════════════
+
+[ ] Ada masalah serius yang memerlukan rollback
+    Masalah: _______________________________________
+    
+[ ] Stop aplikasi
+[ ] Restore database dari backup
+[ ] Restore folder aplikasi dari backup
+[ ] Start aplikasi
+[ ] Verifikasi aplikasi normal kembali
+
+    Waktu rollback: _______________
+
+
+═══════════════════════════════════════════════════════════════════
+ DOKUMENTASI
+═══════════════════════════════════════════════════════════════════
+
+Waktu mulai update: _______________
+Waktu selesai update: _______________
+Total downtime: _______ menit
+
+Status akhir: [ ] Berhasil  [ ] Rollback  [ ] Masalah
+
+Catatan/Masalah yang ditemui:
+_________________________________________________________________
+_________________________________________________________________
+_________________________________________________________________
+_________________________________________________________________
+
+Solusi yang diterapkan:
+_________________________________________________________________
+_________________________________________________________________
+_________________________________________________________________
+_________________________________________________________________
+
+
+═══════════════════════════════════════════════════════════════════
+ INFORMASI SETELAH UPDATE
+═══════════════════════════════════════════════════════════════════
+
+[ ] Informasikan ke guru/siswa bahwa maintenance selesai
+[ ] Update dokumentasi internal
+[ ] Simpan checklist ini untuk referensi
+[ ] Jadwalkan monitoring rutin
+
+
+═══════════════════════════════════════════════════════════════════
+ TANDA TANGAN
+═══════════════════════════════════════════════════════════════════
+
+Dilakukan oleh:
+
+Nama: _______________________________________
+
+Tanda tangan: _______________________________________
+
+Tanggal: _______________
+
+
+Diverifikasi oleh:
+
+Nama: _______________________________________
+
+Tanda tangan: _______________________________________
+
+Tanggal: _______________
+
+
+═══════════════════════════════════════════════════════════════════
+ KONTAK DARURAT
+═══════════════════════════════════════════════════════════════════
+
+Developer/Support: _______________________________________
+Nomor HP: _______________________________________
+Email: _______________________________________
+
+Admin VPS: _______________________________________
+Nomor HP: _______________________________________
+
+Kepala Sekolah: _______________________________________
+Nomor HP: _______________________________________
+
+
+═══════════════════════════════════════════════════════════════════
+
+CATATAN PENTING:
+- Simpan file backup minimal 30 hari
+- Monitor aplikasi 1 minggu setelah update
+- Jika ada masalah, segera hubungi developer/support
+- Jangan hapus backup sebelum yakin update berhasil 100%
+
+═══════════════════════════════════════════════════════════════════

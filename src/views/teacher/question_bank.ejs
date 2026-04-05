@@ -1,0 +1,160 @@
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-3xl font-bold text-indigo-900">Bank Soal</h1>
+    <p class="mt-1 text-slate-600">Kelola soal yang dapat digunakan ulang untuk berbagai ujian</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/teacher/question-bank/new" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg>
+      Tambah Soal
+    </a>
+    <a href="/teacher" class="inline-flex items-center gap-2 px-4 py-2.5 bg-orange-100/80 backdrop-blur-sm hover:bg-orange-200/90 text-orange-800 font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Kembali
+    </a>
+  </div>
+</div>
+
+<!-- Filter -->
+<div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 mb-6">
+  <form method="GET" class="grid md:grid-cols-4 gap-3">
+    <div>
+      <label class="text-sm text-slate-600 font-medium">Mata Pelajaran</label>
+      <select name="subject_id" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="">Semua</option>
+        <% subjects.forEach(s => { %>
+          <option value="<%= s.id %>" <%= filters.subject_id == s.id ? 'selected' : '' %>><%= s.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    
+    <div>
+      <label class="text-sm text-slate-600 font-medium">Tingkat Kesulitan</label>
+      <select name="difficulty" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="">Semua</option>
+        <option value="EASY" <%= filters.difficulty === 'EASY' ? 'selected' : '' %>>Mudah</option>
+        <option value="MEDIUM" <%= filters.difficulty === 'MEDIUM' ? 'selected' : '' %>>Sedang</option>
+        <option value="HARD" <%= filters.difficulty === 'HARD' ? 'selected' : '' %>>Sulit</option>
+      </select>
+    </div>
+    
+    <div>
+      <label class="text-sm text-slate-600 font-medium">Cari</label>
+      <input type="text" name="search" value="<%= filters.search || '' %>" placeholder="Cari soal atau tag..." class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    </div>
+    
+    <div class="flex items-end gap-2">
+      <button type="submit" class="flex-1 rounded-xl bg-gradient-to-r from-indigo-400 to-purple-400 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-2 shadow-md transform hover:scale-105 transition-all">Filter</button>
+      <a href="/teacher/question-bank" class="px-4 py-2 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-all">Reset</a>
+    </div>
+  </form>
+</div>
+
+<!-- List Soal -->
+<% if (!questions.length) { %>
+  <div class="text-center py-12 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50">
+    <div class="text-6xl mb-3">📚</div>
+    <div class="font-semibold text-slate-900 text-lg">Bank soal masih kosong</div>
+    <div class="text-sm text-slate-600 mt-1">Tambahkan soal untuk dapat digunakan ulang di berbagai ujian</div>
+    <a href="/teacher/question-bank/new" class="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-semibold shadow-lg transform hover:scale-105 transition-all duration-200">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+      </svg>
+      Tambah Soal Pertama
+    </a>
+  </div>
+<% } else { %>
+  <div class="space-y-4">
+    <% questions.forEach((q, idx) => { 
+      const colors = [
+        { border: 'border-blue-200', bg: 'from-blue-50 to-cyan-50', text: 'text-blue-900', badge: 'bg-blue-100 text-blue-700' },
+        { border: 'border-purple-200', bg: 'from-purple-50 to-pink-50', text: 'text-purple-900', badge: 'bg-purple-100 text-purple-700' },
+        { border: 'border-emerald-200', bg: 'from-emerald-50 to-teal-50', text: 'text-emerald-900', badge: 'bg-emerald-100 text-emerald-700' },
+        { border: 'border-amber-200', bg: 'from-amber-50 to-orange-50', text: 'text-amber-900', badge: 'bg-amber-100 text-amber-700' }
+      ];
+      const color = colors[idx % colors.length];
+      
+      const difficultyLabel = {
+        'EASY': { text: 'Mudah', color: 'bg-green-100 text-green-700' },
+        'MEDIUM': { text: 'Sedang', color: 'bg-yellow-100 text-yellow-700' },
+        'HARD': { text: 'Sulit', color: 'bg-red-100 text-red-700' }
+      };
+      const diff = difficultyLabel[q.difficulty] || difficultyLabel['MEDIUM'];
+    %>
+      <div class="rounded-2xl border-2 <%= color.border %> bg-gradient-to-br <%= color.bg %> p-5 shadow-md hover:shadow-lg transition-all">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full <%= color.badge %> text-xs font-bold">
+                <%= q.subject_name %>
+              </span>
+              <% if (q.chapter) { %>
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-bold">
+                  📚 <%= q.chapter %>
+                </span>
+              <% } %>
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full <%= diff.color %> text-xs font-bold">
+                <%= diff.text %>
+              </span>
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+                ⭐ <%= q.points %> poin
+              </span>
+              <% if (q.usage_count > 0) { %>
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
+                  📊 Digunakan <%= q.usage_count %>x
+                </span>
+              <% } %>
+            </div>
+            
+            <div class="text-slate-900 leading-relaxed prose prose-sm max-w-none line-clamp-2">
+              <%- q.question_text %>
+            </div>
+            
+            <% if (q.tags) { %>
+              <div class="mt-2 flex flex-wrap gap-1">
+                <% q.tags.split(',').forEach(tag => { %>
+                  <span class="px-2 py-1 rounded-lg bg-white/80 text-xs text-slate-600">#<%= tag.trim() %></span>
+                <% }) %>
+              </div>
+            <% } %>
+            
+            <div class="mt-2 text-xs text-slate-500">
+              Dibuat: <%= new Date(q.created_at).toLocaleDateString('id-ID') %>
+            </div>
+          </div>
+          
+          <div class="flex flex-col gap-2">
+            <a href="/teacher/question-bank/<%= q.id %>" class="px-3 py-2 rounded-xl border <%= color.border %> bg-white hover:bg-slate-50 <%= color.text %> font-medium text-xs transition-all text-center">
+              👁️ Detail
+            </a>
+            <a href="/teacher/question-bank/<%= q.id %>/edit" class="px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium text-xs transition-all text-center">
+              ✏️ Edit
+            </a>
+            <form action="/teacher/question-bank/<%= q.id %>?_method=DELETE" method="POST" onsubmit="return confirm('Hapus soal ini dari bank?')" class="inline">
+              <button class="w-full px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 font-medium text-xs transition-all">
+                🗑️ Hapus
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+  
+  <div class="mt-6 text-center text-sm text-slate-600">
+    Total: <%= questions.length %> soal
+  </div>
+<% } %>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

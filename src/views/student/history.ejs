@@ -1,0 +1,44 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Riwayat Ujian</h1>
+    <p class="mt-1 text-slate-600">Maks. 100 attempt terbaru.</p>
+  </div>
+</div>
+
+<div class="mt-4 flex flex-wrap gap-2">
+  <a href="/student/exams" class="px-4 py-2 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 text-indigo-800 font-medium transition-all">Ujian</a>
+  <a href="/student/materials" class="px-4 py-2 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200 text-teal-800 font-medium transition-all">Materi</a>
+  <a href="/student/material-history" class="px-4 py-2 rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 text-cyan-800 font-medium transition-all">Riwayat Materi</a>
+</div>
+
+<div class="mt-6 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5 overflow-x-auto">
+  <table class="w-full text-sm">
+    <thead class="text-purple-700">
+      <tr>
+        <th class="text-left py-2">Ujian</th>
+        <th class="text-left py-2">Mapel</th>
+        <th class="text-left py-2">Status</th>
+        <th class="text-right py-2">Nilai</th>
+        <th class="text-right py-2">Aksi</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-purple-200">
+      <% if (!rows.length) { %>
+        <tr>
+          <td colspan="5" class="py-4 text-purple-700">Belum ada riwayat.</td>
+        </tr>
+      <% } %>
+      <% rows.forEach(r => { %>
+        <tr>
+          <td class="py-3 text-purple-900"><%= r.exam_title %></td>
+          <td class="py-3 text-purple-800"><%= r.subject_name %></td>
+          <td class="py-3 text-purple-800"><%= r.status %></td>
+          <td class="py-3 text-right font-semibold text-purple-900"><%= r.score %></td>
+          <td class="py-3 text-right">
+            <a href="/student/attempts/<%= r.id %>/result" class="px-3 py-2 rounded-lg border border-purple-300 bg-white hover:bg-purple-50 text-purple-800 font-medium transition-colors">Detail</a>
+          </td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>

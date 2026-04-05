@@ -1,0 +1,596 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Kelola Pengguna</h1>
+    <p class="mt-1 text-slate-600">Buat admin/guru/siswa, reset password, aktif/nonaktif.</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/admin/users/print-cards" class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-semibold transition-all shadow-md flex items-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+      </svg>
+      Cetak Kartu
+    </a>
+    <a href="/admin/users/download" class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all shadow-md flex items-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      Download Excel
+    </a>
+    <a href="/admin/users/import" class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-400 to-purple-500 hover:from-violet-500 hover:to-purple-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+      Import Siswa
+    </a>
+    <a href="/admin" class="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-500 hover:to-blue-500 text-white font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+      Kembali
+    </a>
+  </div>
+</div>
+
+<div class="mt-6 space-y-4">
+  <!-- Card Daftar Pengguna -->
+  <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-teal-900">Daftar Pengguna</h2>
+      <div class="flex items-center gap-4">
+        <div id="bulkActionBar" class="hidden flex items-center gap-2">
+          <!-- Bulk Download Excel -->
+          <button type="button" onclick="downloadSelectedExcel()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Download Excel
+          </button>
+          
+          <!-- Bulk Print Cards -->
+          <button type="button" onclick="printSelectedCards()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Cetak Kartu
+          </button>
+          
+          <!-- Bulk Delete -->
+          <form action="/admin/users/bulk-delete" method="POST" onsubmit="return confirmBulkDelete()" class="inline">
+            <button type="submit" class="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Hapus <span id="selectedCount">0</span>
+            </button>
+            <input type="hidden" name="user_ids" id="bulkDeleteIds" value="[]" />
+          </form>
+          
+          <!-- Bulk Move Class -->
+          <div class="flex items-center gap-2">
+            <select id="bulkMoveClassSelect" class="rounded-xl bg-white border border-indigo-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+              <option value="">Pilih Kelas Tujuan</option>
+              <% classes.forEach(c => { %>
+                <option value="<%= c.id %>"><%= c.name %></option>
+              <% }) %>
+              <option value="null">Tanpa Kelas</option>
+            </select>
+            <button type="button" onclick="bulkMoveClass()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+              Pindah Kelas
+            </button>
+          </div>
+        </div>
+        <div class="text-sm text-teal-700">Total: <span class="font-semibold"><%= pagination.total %></span> pengguna</div>
+      </div>
+    </div>
+    
+    <!-- Filter Section -->
+    <form method="GET" action="/admin/users" class="mb-4 grid md:grid-cols-6 gap-3">
+      <input type="text" name="search" value="<%= filters.search %>" placeholder="Cari username/nama..." 
+             class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+      
+      <select name="role" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+        <option value="">Semua Role</option>
+        <option value="STUDENT" <%= filters.role === 'STUDENT' ? 'selected' : '' %>>STUDENT</option>
+        <option value="TEACHER" <%= filters.role === 'TEACHER' ? 'selected' : '' %>>TEACHER</option>
+        <option value="PRINCIPAL" <%= filters.role === 'PRINCIPAL' ? 'selected' : '' %>>PRINCIPAL</option>
+        <option value="ADMIN" <%= filters.role === 'ADMIN' ? 'selected' : '' %>>ADMIN</option>
+      </select>
+      
+      <select name="class" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+        <option value="">Semua Kelas</option>
+        <% classes.forEach(c => { %>
+          <option value="<%= c.id %>" <%= String(filters.class) === String(c.id) ? 'selected' : '' %>><%= c.name %></option>
+        <% }) %>
+      </select>
+      
+      <select name="status" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+        <option value="">Semua Status</option>
+        <option value="active" <%= filters.status === 'active' ? 'selected' : '' %>>Aktif</option>
+        <option value="inactive" <%= filters.status === 'inactive' ? 'selected' : '' %>>Nonaktif</option>
+      </select>
+      
+      <select name="limit" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+        <option value="10" <%= pagination.limit == 10 ? 'selected' : '' %>>10 per halaman</option>
+        <option value="20" <%= pagination.limit == 20 ? 'selected' : '' %>>20 per halaman</option>
+        <option value="50" <%= pagination.limit == 50 ? 'selected' : '' %>>50 per halaman</option>
+        <option value="100" <%= pagination.limit == 100 ? 'selected' : '' %>>100 per halaman</option>
+      </select>
+      
+      <div class="flex gap-2">
+        <button type="submit" class="flex-1 rounded-xl bg-gradient-to-r from-teal-400 to-emerald-500 hover:from-teal-500 hover:to-emerald-600 text-white font-semibold py-2 text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+          Filter
+        </button>
+        <a href="/admin/users" class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-medium text-sm transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center justify-center">
+          Reset
+        </a>
+      </div>
+    </form>
+    
+    <!-- Table -->
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-teal-700">
+          <tr>
+            <th class="text-left py-2 w-12">
+              <input type="checkbox" id="selectAll" class="w-4 h-4 rounded border-teal-300 text-teal-600 focus:ring-teal-500 cursor-pointer" />
+            </th>
+            <th class="text-left py-2">Username</th>
+            <th class="text-left py-2">Nama</th>
+            <th class="text-left py-2">Role</th>
+            <th class="text-left py-2">Kelas</th>
+            <th class="text-left py-2">Status</th>
+            <th class="text-right py-2">Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (users.length === 0) { %>
+            <tr>
+              <td colspan="7" class="py-8 text-center text-teal-600">Tidak ada data pengguna.</td>
+            </tr>
+          <% } %>
+          <% users.forEach(u => { %>
+            <tr id="user-row-<%= u.id %>" class="border-t border-teal-200">
+              <td class="py-2">
+                <input type="checkbox" class="user-checkbox w-4 h-4 rounded border-teal-300 text-teal-600 focus:ring-teal-500 cursor-pointer" data-user-id="<%= u.id %>" />
+              </td>
+              <td class="py-2 font-mono user-username text-teal-900"><%= u.username %></td>
+              <td class="py-2 user-fullname text-teal-900"><%= u.full_name %></td>
+              <td class="py-2 user-role"><span class="px-2 py-1 rounded-lg border border-teal-300 bg-white text-teal-800 font-medium"><%= u.role %></span></td>
+              <td class="py-2 text-teal-700 user-class"><%= u.class_name || '-' %></td>
+              <td class="py-2 user-active text-teal-800"><%= u.is_active ? 'Aktif' : 'Nonaktif' %></td>
+              <td class="py-2">
+                <div class="flex justify-end gap-2 flex-wrap">
+                  <!-- Edit Button - Soft Blue Gradient -->
+                  <button type="button" data-user-id="<%= u.id %>" class="btn-open-user-modal px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
+                    Edit
+                  </button>
+                  
+                  <!-- Toggle Button - Soft Purple Gradient -->
+                  <form action="/admin/users/<%= u.id %>/toggle" method="POST">
+                    <button class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-400 to-purple-500 hover:from-purple-500 hover:to-purple-600 text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
+                      Toggle
+                    </button>
+                  </form>
+                  
+                  <!-- Reset Password - Soft Orange Gradient -->
+                  <form action="/admin/users/<%= u.id %>/reset" method="POST" class="flex gap-2">
+                    <input name="new_password" placeholder="reset pwd" class="w-32 rounded-lg bg-white border-2 border-orange-300 px-2 py-1 text-orange-900 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent" />
+                    <button class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
+                      Reset
+                    </button>
+                  </form>
+                  
+                  <!-- Delete Button - Soft Red Gradient -->
+                  <form action="/admin/users/<%= u.id %>?_method=DELETE" method="POST" onsubmit="return confirm('Hapus pengguna?')">
+                    <button class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-400 to-rose-500 hover:from-rose-500 hover:to-rose-600 text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
+                      Hapus
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    
+    <!-- Pagination -->
+    <% if (pagination.totalPages > 1) { %>
+      <div class="mt-4 flex items-center justify-between border-t border-teal-200 pt-4">
+        <div class="text-sm text-teal-700">
+          Menampilkan <%= (pagination.page - 1) * pagination.limit + 1 %> - <%= Math.min(pagination.page * pagination.limit, pagination.total) %> dari <%= pagination.total %> data
+        </div>
+        <div class="flex gap-2">
+          <% if (pagination.page > 1) { %>
+            <a href="?page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&role=<%= filters.role %>&class=<%= filters.class %>&status=<%= filters.status %>" 
+               class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-400 to-cyan-400 hover:from-blue-500 hover:to-cyan-500 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
+              ← Sebelumnya
+            </a>
+          <% } %>
+          
+          <% 
+            const startPage = Math.max(1, pagination.page - 2);
+            const endPage = Math.min(pagination.totalPages, pagination.page + 2);
+            for (let i = startPage; i <= endPage; i++) { 
+          %>
+            <a href="?page=<%= i %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&role=<%= filters.role %>&class=<%= filters.class %>&status=<%= filters.status %>" 
+               class="px-4 py-2 rounded-lg <%= i === pagination.page ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-md' : 'bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 text-gray-700' %> font-medium text-sm transition-all duration-200 hover:shadow-md transform hover:scale-105">
+              <%= i %>
+            </a>
+          <% } %>
+          
+          <% if (pagination.page < pagination.totalPages) { %>
+            <a href="?page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&role=<%= filters.role %>&class=<%= filters.class %>&status=<%= filters.status %>" 
+               class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-400 to-cyan-400 hover:from-blue-500 hover:to-cyan-500 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
+              Selanjutnya →
+            </a>
+          <% } %>
+        </div>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Card Tambah Pengguna -->
+  <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5">
+    <h2 class="text-lg font-semibold text-indigo-900">Tambah Pengguna</h2>
+    <form action="/admin/users" method="POST" class="mt-4 grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Username</label>
+        <input name="username" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Nama Lengkap</label>
+        <input name="full_name" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Nomor Peserta <span class="text-indigo-400 font-normal">(opsional)</span></label>
+        <input name="nomor_peserta" placeholder="Contoh: 001, 2024-001" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Role</label>
+        <select name="role" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="STUDENT">STUDENT</option>
+          <option value="TEACHER">TEACHER</option>
+          <option value="PRINCIPAL">PRINCIPAL</option>
+          <option value="ADMIN">ADMIN</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Kelas (siswa)</label>
+        <select name="class_id" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="">-</option>
+          <% classes.forEach(c => { %>
+            <option value="<%= c.id %>"><%= c.name %></option>
+          <% }) %>
+        </select>
+      </div>
+      <div>
+        <label class="text-sm text-indigo-700 font-medium">Password</label>
+        <input name="password" placeholder="(kosong = pakai username)" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+      <div class="lg:col-span-3 flex justify-end">
+        <button class="px-8 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-2.5 transition-all duration-200 shadow-md hover:shadow-lg">
+          Simpan
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Edit Pengguna (tanpa pindah halaman) -->
+<div id="userModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-black/40" data-close-user-modal></div>
+  <div class="relative mx-auto mt-16 w-[92%] max-w-xl rounded-2xl bg-white shadow-xl">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <div>
+        <h3 class="text-lg font-semibold">Edit Pengguna</h3>
+        <p class="text-sm text-slate-500">Perubahan disimpan tanpa pindah halaman.</p>
+      </div>
+      <button type="button" class="rounded-xl bg-gradient-to-r from-red-400 to-pink-400 hover:from-red-500 hover:to-pink-500 text-white font-bold px-3 py-1.5 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105" data-close-user-modal>
+        ✕
+      </button>
+    </div>
+
+    <form id="userModalForm" class="p-5 space-y-3">
+      <input type="hidden" name="id" id="um_id" />
+
+      <div>
+        <label class="text-sm text-slate-600">Username</label>
+        <input name="username" id="um_username" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-600">Nama Lengkap</label>
+        <input name="full_name" id="um_full_name" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-600">Nomor Peserta <span class="text-slate-400 font-normal">(opsional - tampil di kartu cetak)</span></label>
+        <input name="nomor_peserta" id="um_nomor_peserta" placeholder="Contoh: 001, 2024-001" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm text-slate-600">Role</label>
+          <select name="role" id="um_role" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+            <option value="STUDENT">STUDENT</option>
+            <option value="TEACHER">TEACHER</option>
+            <option value="PRINCIPAL">PRINCIPAL</option>
+            <option value="ADMIN">ADMIN</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600">Kelas (siswa)</label>
+          <select name="class_id" id="um_class_id" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+            <option value="">-</option>
+            <% classes.forEach(c => { %>
+              <option value="<%= c.id %>"><%= c.name %></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm text-slate-600">Status</label>
+          <select name="is_active" id="um_is_active" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+            <option value="1">Aktif</option>
+            <option value="0">Nonaktif</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-slate-600">Password baru (opsional)</label>
+          <input name="new_password" id="um_new_password" placeholder="(kosong = tidak berubah)" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+      </div>
+
+      <div id="um_error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700 text-sm"></div>
+      <div id="um_success" class="hidden rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700 text-sm"></div>
+
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" class="rounded-xl bg-gradient-to-r from-gray-400 to-gray-500 hover:from-gray-500 hover:to-gray-600 text-white font-medium px-4 py-2 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105" data-close-user-modal>
+          Batal
+        </button>
+        <button id="um_save" type="submit" class="rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 hover:from-emerald-500 hover:to-teal-600 text-white font-semibold px-4 py-2 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+          Simpan
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  // Bulk delete functionality
+  (function () {
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+    const bulkActionBar = document.getElementById('bulkActionBar');
+    const selectedCountSpan = document.getElementById('selectedCount');
+    const bulkDeleteIdsInput = document.getElementById('bulkDeleteIds');
+
+    function updateBulkActionBar() {
+      const selectedIds = Array.from(userCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.getAttribute('data-user-id'));
+      
+      if (selectedIds.length > 0) {
+        bulkActionBar.classList.remove('hidden');
+        selectedCountSpan.textContent = selectedIds.length;
+        bulkDeleteIdsInput.value = JSON.stringify(selectedIds);
+      } else {
+        bulkActionBar.classList.add('hidden');
+      }
+      
+      // Update select all checkbox state
+      const allChecked = userCheckboxes.length > 0 && Array.from(userCheckboxes).every(cb => cb.checked);
+      const someChecked = Array.from(userCheckboxes).some(cb => cb.checked);
+      selectAllCheckbox.checked = allChecked;
+      selectAllCheckbox.indeterminate = someChecked && !allChecked;
+    }
+
+    selectAllCheckbox.addEventListener('change', function() {
+      userCheckboxes.forEach(cb => {
+        cb.checked = this.checked;
+      });
+      updateBulkActionBar();
+    });
+
+    userCheckboxes.forEach(cb => {
+      cb.addEventListener('change', updateBulkActionBar);
+    });
+
+    window.confirmBulkDelete = function() {
+      const count = selectedCountSpan.textContent;
+      return confirm(`Anda yakin ingin menghapus ${count} pengguna?\n\nPeringatan: Data terkait (ujian, tugas, notifikasi) juga akan dihapus!`);
+    };
+
+    // Bulk move class functionality - moved inside to access userCheckboxes
+    window.bulkMoveClass = function() {
+      const selectedIds = Array.from(userCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.getAttribute('data-user-id'));
+      
+      if (selectedIds.length === 0) {
+        alert('Pilih pengguna yang ingin dipindah kelas terlebih dahulu.');
+        return;
+      }
+      
+      const targetClassId = document.getElementById('bulkMoveClassSelect').value;
+      if (!targetClassId) {
+        alert('Pilih kelas tujuan terlebih dahulu.');
+        return;
+      }
+      
+      const targetClassName = targetClassId === 'null' ? 'Tanpa Kelas' : 
+        document.querySelector(`#bulkMoveClassSelect option[value="${targetClassId}"]`).textContent;
+      
+      if (!confirm(`Anda yakin ingin memindahkan ${selectedIds.length} pengguna ke kelas "${targetClassName}"?`)) {
+        return;
+      }
+      
+      // Create and submit form
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/admin/users/bulk-move-class';
+      
+      const userIdsInput = document.createElement('input');
+      userIdsInput.type = 'hidden';
+      userIdsInput.name = 'user_ids';
+      userIdsInput.value = JSON.stringify(selectedIds);
+      form.appendChild(userIdsInput);
+      
+      const classIdInput = document.createElement('input');
+      classIdInput.type = 'hidden';
+      classIdInput.name = 'class_id';
+      classIdInput.value = targetClassId === 'null' ? '' : targetClassId;
+      form.appendChild(classIdInput);
+      
+      document.body.appendChild(form);
+      form.submit();
+    };
+    
+    // Print selected cards functionality
+    window.printSelectedCards = function() {
+      const selectedIds = Array.from(userCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.getAttribute('data-user-id'));
+      
+      if (selectedIds.length === 0) {
+        alert('Pilih pengguna yang ingin dicetak kartunya terlebih dahulu.');
+        return;
+      }
+      
+      // Open print page with selected IDs
+      window.open(`/admin/users/print-cards?ids=${selectedIds.join(',')}`, '_blank');
+    };
+    
+    // Download selected excel functionality
+    window.downloadSelectedExcel = function() {
+      const selectedIds = Array.from(userCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.getAttribute('data-user-id'));
+      
+      if (selectedIds.length === 0) {
+        alert('Pilih pengguna yang ingin didownload terlebih dahulu.');
+        return;
+      }
+      
+      // Download excel with selected IDs
+      window.location.href = `/admin/users/download?ids=${selectedIds.join(',')}`;
+    };
+  })();
+
+  // Modal edit functionality
+  (function () {
+    const modal = document.getElementById('userModal');
+    const form = document.getElementById('userModalForm');
+    const btnSave = document.getElementById('um_save');
+    const elErr = document.getElementById('um_error');
+    const elOk = document.getElementById('um_success');
+
+    const elId = document.getElementById('um_id');
+    const elUsername = document.getElementById('um_username');
+    const elFullName = document.getElementById('um_full_name');
+    const elNoPeserta = document.getElementById('um_nomor_peserta');
+    const elRole = document.getElementById('um_role');
+    const elClassId = document.getElementById('um_class_id');
+    const elActive = document.getElementById('um_is_active');
+    const elNewPwd = document.getElementById('um_new_password');
+
+    function showModal() {
+      modal.classList.remove('hidden');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+    function hideModal() {
+      modal.classList.add('hidden');
+      modal.setAttribute('aria-hidden', 'true');
+      elErr.classList.add('hidden');
+      elOk.classList.add('hidden');
+      elErr.textContent = '';
+      elOk.textContent = '';
+      elNewPwd.value = '';
+    }
+    function setLoading(on) {
+      btnSave.disabled = on;
+      btnSave.textContent = on ? 'Menyimpan...' : 'Simpan';
+    }
+    function showError(msg) {
+      elOk.classList.add('hidden');
+      elErr.textContent = msg || 'Terjadi kesalahan.';
+      elErr.classList.remove('hidden');
+    }
+    function showSuccess(msg) {
+      elErr.classList.add('hidden');
+      elOk.textContent = msg || 'Berhasil.';
+      elOk.classList.remove('hidden');
+    }
+
+    async function openForUser(userId) {
+      setLoading(true);
+      try {
+        const r = await fetch(`/admin/users/${userId}/json`, { headers: { 'Accept': 'application/json' } });
+        const j = await r.json();
+        if (!r.ok || !j.ok) throw new Error(j && j.message ? j.message : 'Gagal memuat data pengguna.');
+
+        elId.value = j.user.id;
+        elUsername.value = j.user.username || '';
+        elFullName.value = j.user.full_name || '';
+        elNoPeserta.value = j.user.nomor_peserta || '';
+        elRole.value = j.user.role || 'STUDENT';
+        elClassId.value = (j.user.class_id === null || j.user.class_id === undefined) ? '' : String(j.user.class_id);
+        elActive.value = String(j.user.is_active ? 1 : 0);
+        showModal();
+      } catch (e) {
+        alert(e.message || 'Gagal memuat data pengguna.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    document.querySelectorAll('.btn-open-user-modal').forEach(btn => {
+      btn.addEventListener('click', () => openForUser(btn.getAttribute('data-user-id')));
+    });
+    modal.querySelectorAll('[data-close-user-modal]').forEach(el => el.addEventListener('click', hideModal));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.classList.contains('hidden')) hideModal();
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = elId.value;
+      setLoading(true);
+      try {
+        const payload = {
+          username: elUsername.value,
+          full_name: elFullName.value,
+          nomor_peserta: elNoPeserta.value,
+          role: elRole.value,
+          class_id: elClassId.value,
+          is_active: elActive.value,
+          new_password: elNewPwd.value
+        };
+        const r = await fetch(`/admin/users/${id}/ajax-update`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const j = await r.json();
+        if (!r.ok || !j.ok) throw new Error(j && j.message ? j.message : 'Gagal menyimpan perubahan.');
+
+        // Update row in table without reload
+        const row = document.getElementById(`user-row-${id}`);
+        if (row && j.user) {
+          row.querySelector('.user-username').textContent = j.user.username || '';
+          row.querySelector('.user-fullname').textContent = j.user.full_name || '';
+          row.querySelector('.user-role').innerHTML = `<span class="px-2 py-1 rounded-lg border border-slate-200">${j.user.role || ''}</span>`;
+          row.querySelector('.user-class').textContent = j.user.class_name || '-';
+          row.querySelector('.user-active').textContent = j.user.is_active ? 'Aktif' : 'Nonaktif';
+        }
+
+        showSuccess('Perubahan tersimpan.');
+        setTimeout(hideModal, 650);
+      } catch (err) {
+        showError(err.message || 'Gagal menyimpan perubahan.');
+      } finally {
+        setLoading(false);
+      }
+    });
+  })();
+</script>

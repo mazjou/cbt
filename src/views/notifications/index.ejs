@@ -1,0 +1,105 @@
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <div class="text-sm text-indigo-600 font-medium flex items-center gap-2">
+      <span>📢</span>
+      <span>Sistem Notifikasi</span>
+    </div>
+    <h1 class="mt-1 text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Kelola Notifikasi</h1>
+    <p class="mt-1 text-slate-600">Kirim peringatan atau pengumuman ke siswa</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/notifications/new" class="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+      ➕ Buat Notifikasi
+    </a>
+    <a href="/teacher" class="inline-flex items-center gap-2 px-4 py-3 bg-orange-100/80 backdrop-blur-sm hover:bg-orange-200/90 text-orange-800 font-bold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 rounded-xl">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Kembali
+    </a>
+  </div>
+</div>
+
+<% if (notifications.length === 0) { %>
+  <div class="rounded-2xl border-2 border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-12 text-center shadow-lg">
+    <div class="text-6xl mb-4">📭</div>
+    <h3 class="text-xl font-bold text-slate-700 mb-2">Belum Ada Notifikasi</h3>
+    <p class="text-slate-600 mb-6">Buat notifikasi pertama untuk mengirim peringatan ke siswa</p>
+    <a href="/notifications/new" class="inline-block px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-lg hover:shadow-xl transition-all">
+      ➕ Buat Notifikasi
+    </a>
+  </div>
+<% } else { %>
+  <div class="space-y-4">
+    <% notifications.forEach((notif, idx) => {
+      const colors = {
+        info: { border: 'border-blue-200', bg: 'from-blue-50 to-cyan-50', text: 'text-blue-900', badge: 'bg-blue-100 text-blue-700', icon: 'ℹ️' },
+        warning: { border: 'border-orange-200', bg: 'from-orange-50 to-amber-50', text: 'text-orange-900', badge: 'bg-orange-100 text-orange-700', icon: '⚠️' },
+        success: { border: 'border-green-200', bg: 'from-green-50 to-emerald-50', text: 'text-green-900', badge: 'bg-green-100 text-green-700', icon: '✅' },
+        error: { border: 'border-red-200', bg: 'from-red-50 to-rose-50', text: 'text-red-900', badge: 'bg-red-100 text-red-700', icon: '❌' }
+      };
+      const color = colors[notif.type] || colors.info;
+      
+      const targetText = notif.target_type === 'all' ? 'Semua Siswa' : 
+                         notif.target_type === 'class' ? `Kelas ID: ${notif.target_id}` :
+                         `Siswa ID: ${notif.target_id}`;
+    %>
+      <div class="rounded-2xl border-2 <%= color.border %> bg-gradient-to-br <%= color.bg %> p-6 shadow-lg">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex-1">
+            <div class="flex items-center gap-3 mb-3">
+              <span class="text-3xl"><%= color.icon %></span>
+              <div>
+                <h3 class="text-xl font-bold <%= color.text %>"><%= notif.title %></h3>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full <%= color.badge %> text-xs font-bold">
+                    <%= notif.type.toUpperCase() %>
+                  </span>
+                  <span class="text-xs text-slate-600">
+                    👤 <%= notif.sender_name %> • 
+                    🎯 <%= targetText %> •
+                    📖 <%= notif.read_count %> dibaca
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-white/70 rounded-xl p-4 mb-3">
+              <p class="text-slate-700 whitespace-pre-wrap"><%= notif.message %></p>
+            </div>
+            
+            <div class="flex items-center gap-2 text-xs text-slate-600">
+              <span>📅 <%= new Date(notif.created_at).toLocaleString('id-ID') %></span>
+              <% if (notif.expires_at) { %>
+                <span>• ⏰ Kadaluarsa: <%= new Date(notif.expires_at).toLocaleString('id-ID') %></span>
+              <% } %>
+              <% if (!notif.is_active) { %>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold">
+                  🔒 Nonaktif
+                </span>
+              <% } %>
+            </div>
+          </div>
+          
+          <div class="flex flex-col gap-2">
+            <form method="POST" action="/notifications/<%= notif.id %>/toggle" class="inline">
+              <button type="submit" class="w-full px-4 py-2 rounded-xl <%= notif.is_active ? 'bg-orange-100 hover:bg-orange-200 text-orange-700' : 'bg-green-100 hover:bg-green-200 text-green-700' %> font-bold text-sm transition-all">
+                <%= notif.is_active ? '🔒 Nonaktifkan' : '✅ Aktifkan' %>
+              </button>
+            </form>
+            
+            <a href="/notifications/<%= notif.id %>/edit" class="px-4 py-2 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold text-sm transition-all text-center">
+              ✏️ Edit
+            </a>
+            
+            <form method="POST" action="/notifications/<%= notif.id %>/delete" onsubmit="return confirm('Yakin ingin menghapus notifikasi ini?')">
+              <button type="submit" class="w-full px-4 py-2 rounded-xl bg-red-100 hover:bg-red-200 text-red-700 font-bold text-sm transition-all">
+                🗑️ Hapus
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+<% } %>

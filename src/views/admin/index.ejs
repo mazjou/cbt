@@ -1,0 +1,132 @@
+<div class="flex items-end justify-between">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Panel Admin</h1>
+    <p class="mt-1 text-slate-600">Kelola data master: kelas, mapel, pengguna, materi.</p>
+  </div>
+</div>
+
+<div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  <a href="/admin/classes" class="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-blue-600 font-medium">Master</div>
+    <div class="mt-1 text-xl font-semibold text-blue-900">Kelas</div>
+    <div class="mt-2 text-blue-700 text-sm">Tambah/hapus kelas & kode.</div>
+  </a>
+  <a href="/admin/subjects" class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-purple-600 font-medium">Master</div>
+    <div class="mt-1 text-xl font-semibold text-purple-900">Mata Pelajaran</div>
+    <div class="mt-2 text-purple-700 text-sm">Kelola mapel (kode & nama).</div>
+  </a>
+  <a href="/admin/users" class="rounded-2xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-green-600 font-medium">Manajemen</div>
+    <div class="mt-1 text-xl font-semibold text-green-900">Pengguna</div>
+    <div class="mt-2 text-green-700 text-sm">Admin, guru, siswa + reset password.</div>
+  </a>
+  <a href="/admin/teachers" class="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-orange-600 font-medium">Manajemen</div>
+    <div class="mt-1 text-xl font-semibold text-orange-900">Guru</div>
+    <div class="mt-2 text-orange-700 text-sm">Import masal guru + edit data guru.</div>
+  </a>
+  <a href="/admin/exams" class="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-red-600 font-medium">Manajemen</div>
+    <div class="mt-1 text-xl font-semibold text-red-900">Ujian</div>
+    <div class="mt-2 text-red-700 text-sm">Kelola semua ujian dari guru.</div>
+  </a>
+  <a href="/admin/materials" class="rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-cyan-600 font-medium">Manajemen</div>
+    <div class="mt-1 text-xl font-semibold text-cyan-900">Materi</div>
+    <div class="mt-2 text-cyan-700 text-sm">Kelola semua materi dari guru.</div>
+  </a>
+  <a href="/admin/assignments" class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-amber-600 font-medium">Manajemen</div>
+    <div class="mt-1 text-xl font-semibold text-amber-900">Tugas</div>
+    <div class="mt-2 text-amber-700 text-sm">Kelola semua tugas dari guru.</div>
+  </a>
+  <a href="/admin/question-bank" class="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-pink-600 font-medium">Manajemen</div>
+    <div class="mt-1 text-xl font-semibold text-pink-900">Bank Soal</div>
+    <div class="mt-2 text-pink-700 text-sm">Kelola semua bank soal dari guru.</div>
+  </a>
+  <a href="/admin/grades" class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-indigo-600 font-medium">Manajemen</div>
+    <div class="mt-1 text-xl font-semibold text-indigo-900">Nilai</div>
+    <div class="mt-2 text-indigo-700 text-sm">Kelola semua nilai ujian siswa.</div>
+  </a>
+  <a href="/admin/reports" class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-teal-600 font-medium">📊 Laporan</div>
+    <div class="mt-1 text-xl font-semibold text-teal-900">Rekap Penggunaan LMS</div>
+    <div class="mt-2 text-teal-700 text-sm">Statistik guru, siswa, kelas teraktif.</div>
+  </a>
+  <a href="/admin/failed-submissions" class="rounded-2xl border border-red-300 bg-gradient-to-br from-red-100 to-red-200 hover:from-red-200 hover:to-red-300 shadow-soft p-5 transition-all">
+    <div class="text-sm text-red-700 font-medium">🚨 Recovery</div>
+    <div class="mt-1 text-xl font-semibold text-red-900">Submission Gagal</div>
+    <div class="mt-2 text-red-800 text-sm">Pulihkan jawaban ujian yang gagal submit.</div>
+  </a>
+  <a href="/admin/monitoring" class="rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-slate-600 font-medium">🖥️ Sistem</div>
+    <div class="mt-1 text-xl font-semibold text-slate-900">Monitoring</div>
+    <div class="mt-2 text-slate-700 text-sm">CPU, RAM, database, uptime server.</div>
+  </a>
+  <button onclick="updateRankingData()" class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 shadow-soft p-5 transition-all text-left w-full">
+    <div class="text-sm text-emerald-600 font-medium">🔄 Update</div>
+    <div class="mt-1 text-xl font-semibold text-emerald-900">Perbarui Peringkat</div>
+    <div class="mt-2 text-emerald-700 text-sm">Refresh data aktivitas untuk peringkat terbaru.</div>
+  </button>
+</div>
+
+<script>
+async function updateRankingData() {
+  const button = event.target.closest('button');
+  const originalContent = button.innerHTML;
+  
+  // Show loading state
+  button.disabled = true;
+  button.innerHTML = `
+    <div class="text-sm text-emerald-600 font-medium">🔄 Update</div>
+    <div class="mt-1 text-xl font-semibold text-emerald-900">Memperbarui...</div>
+    <div class="mt-2 text-emerald-700 text-sm">Sedang refresh data aktivitas...</div>
+  `;
+  
+  try {
+    const response = await fetch('/admin/update-ranking', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      // Show success state
+      button.innerHTML = `
+        <div class="text-sm text-green-600 font-medium">✅ Berhasil</div>
+        <div class="mt-1 text-xl font-semibold text-green-900">Data Diperbarui</div>
+        <div class="mt-2 text-green-700 text-sm">Cache peringkat telah di-refresh.</div>
+      `;
+      
+      // Reset after 3 seconds
+      setTimeout(() => {
+        button.disabled = false;
+        button.innerHTML = originalContent;
+      }, 3000);
+    } else {
+      throw new Error(result.message || 'Gagal memperbarui data');
+    }
+  } catch (error) {
+    console.error('Error updating ranking:', error);
+    
+    // Show error state
+    button.innerHTML = `
+      <div class="text-sm text-red-600 font-medium">❌ Gagal</div>
+      <div class="mt-1 text-xl font-semibold text-red-900">Update Gagal</div>
+      <div class="mt-2 text-red-700 text-sm">${error.message}</div>
+    `;
+    
+    // Reset after 3 seconds
+    setTimeout(() => {
+      button.disabled = false;
+      button.innerHTML = originalContent;
+    }, 3000);
+  }
+}
+</script>

@@ -1,0 +1,361 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">📊 Rekap Penggunaan LMS</h1>
+    <p class="mt-1 text-slate-600">Laporan statistik aktivitas guru, siswa, dan kelas dalam sistem LMS untuk kepala sekolah.</p>
+    <p class="mt-1 text-sm text-amber-600 flex items-center gap-1">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>Data tidak realtime. Refresh halaman untuk melihat data terbaru.</span>
+    </p>
+  </div>
+  <div class="flex gap-2">
+    <button onclick="location.reload()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold transition-all shadow-md flex items-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+      </svg>
+      Refresh
+    </button>
+    <button onclick="exportReport()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all shadow-md flex items-center gap-2">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+      Export Excel
+    </button>
+    <a href="/principal" class="px-4 py-2 rounded-xl bg-gradient-to-r from-slate-400 to-slate-500 hover:from-slate-500 hover:to-slate-600 text-white font-medium transition-all shadow-md">
+      Kembali
+    </a>
+  </div>
+</div>
+
+<!-- Filter Periode -->
+<div class="mt-6 rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5">
+  <h2 class="text-lg font-bold text-indigo-900 mb-4 flex items-center gap-2">
+    <span>📅</span>
+    <span>Filter Periode</span>
+  </h2>
+  <form method="GET" action="/principal/reports" class="grid md:grid-cols-4 gap-3">
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Dari Tanggal</label>
+      <input type="date" name="start_date" value="<%= filters.start_date %>" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    </div>
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Sampai Tanggal</label>
+      <input type="date" name="end_date" value="<%= filters.end_date %>" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+    </div>
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Periode Cepat</label>
+      <select name="quick_period" onchange="setQuickPeriod(this.value)" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="">Pilih Periode</option>
+        <option value="7">7 Hari Terakhir</option>
+        <option value="30">30 Hari Terakhir</option>
+        <option value="90">3 Bulan Terakhir</option>
+        <option value="365">1 Tahun Terakhir</option>
+      </select>
+    </div>
+    <div class="flex items-end">
+      <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-2.5 transition-all shadow-md">
+        Filter
+      </button>
+    </div>
+  </form>
+</div>
+
+<!-- Summary Cards -->
+<div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="rounded-2xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-5 shadow-soft">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-sm text-green-600 font-medium">Total Ujian</div>
+        <div class="text-2xl font-bold text-green-900"><%= summary.total_exams %></div>
+      </div>
+      <div class="text-3xl">📝</div>
+    </div>
+    <div class="mt-2 text-xs text-green-700">Ujian yang dibuat dalam periode</div>
+  </div>
+
+  <div class="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5 shadow-soft">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-sm text-blue-600 font-medium">Total Materi</div>
+        <div class="text-2xl font-bold text-blue-900"><%= summary.total_materials %></div>
+      </div>
+      <div class="text-3xl">📚</div>
+    </div>
+    <div class="mt-2 text-xs text-blue-700">Materi yang dibuat dalam periode</div>
+  </div>
+
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5 shadow-soft">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-sm text-purple-600 font-medium">Total Tugas</div>
+        <div class="text-2xl font-bold text-purple-900"><%= summary.total_assignments %></div>
+      </div>
+      <div class="text-3xl">📋</div>
+    </div>
+    <div class="mt-2 text-xs text-purple-700">Tugas yang dibuat dalam periode</div>
+  </div>
+
+  <div class="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 p-5 shadow-soft">
+    <div class="flex items-center justify-between">
+      <div>
+        <div class="text-sm text-orange-600 font-medium">Partisipasi Siswa</div>
+        <div class="text-2xl font-bold text-orange-900"><%= summary.student_participation %>%</div>
+      </div>
+      <div class="text-3xl">👥</div>
+    </div>
+    <div class="mt-2 text-xs text-orange-700">Persentase siswa aktif</div>
+  </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="mt-6 grid lg:grid-cols-2 gap-6">
+  <!-- Guru Teraktif -->
+  <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 p-6 shadow-soft">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-teal-900 flex items-center gap-2">
+        <span>👨‍🏫</span>
+        <span>Guru Teraktif</span>
+      </h2>
+      <div class="text-xs text-teal-600">Top 10</div>
+    </div>
+    
+    <div class="space-y-3">
+      <% if (activeTeachers.length === 0) { %>
+        <div class="text-center py-8 text-teal-600">
+          <div class="text-4xl mb-2">📊</div>
+          <div>Belum ada data aktivitas guru</div>
+        </div>
+      <% } %>
+      <% activeTeachers.forEach((teacher, index) => { %>
+        <div class="flex items-center justify-between p-3 rounded-xl bg-white/70 border border-teal-200">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 text-white font-bold text-sm flex items-center justify-center">
+              <%= index + 1 %>
+            </div>
+            <div>
+              <div class="font-semibold text-teal-900"><%= teacher.full_name %></div>
+              <div class="text-xs text-teal-600">
+                <%= teacher.total_exams %> ujian • <%= teacher.total_materials %> materi • <%= teacher.total_assignments %> tugas
+              </div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-lg font-bold text-teal-800"><%= teacher.activity_score %></div>
+            <div class="text-xs text-teal-600">poin</div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <!-- Siswa Teraktif -->
+  <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 shadow-soft">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-indigo-900 flex items-center gap-2">
+        <span>👨‍🎓</span>
+        <span>Siswa Teraktif</span>
+      </h2>
+      <div class="text-xs text-indigo-600">Top 10</div>
+    </div>
+    
+    <div class="space-y-3">
+      <% if (activeStudents.length === 0) { %>
+        <div class="text-center py-8 text-indigo-600">
+          <div class="text-4xl mb-2">📊</div>
+          <div>Belum ada data aktivitas siswa</div>
+        </div>
+      <% } %>
+      <% activeStudents.forEach((student, index) => { %>
+        <div class="flex items-center justify-between p-3 rounded-xl bg-white/70 border border-indigo-200">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 text-white font-bold text-sm flex items-center justify-center">
+              <%= index + 1 %>
+            </div>
+            <div>
+              <div class="font-semibold text-indigo-900"><%= student.full_name %></div>
+              <div class="text-xs text-indigo-600">
+                <%= student.class_name || 'Tanpa Kelas' %> • <%= student.total_attempts %> ujian • <%= student.total_submissions %> tugas
+              </div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-lg font-bold text-indigo-800"><%= student.activity_score %></div>
+            <div class="text-xs text-indigo-600">poin</div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <!-- Kelas Teraktif -->
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-6 shadow-soft">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-purple-900 flex items-center gap-2">
+        <span>🏫</span>
+        <span>Kelas Teraktif</span>
+      </h2>
+      <div class="text-xs text-purple-600">Semua Kelas</div>
+    </div>
+    
+    <div class="space-y-3">
+      <% if (activeClasses.length === 0) { %>
+        <div class="text-center py-8 text-purple-600">
+          <div class="text-4xl mb-2">📊</div>
+          <div>Belum ada data aktivitas kelas</div>
+        </div>
+      <% } %>
+      <% activeClasses.forEach((classData, index) => { %>
+        <div class="flex items-center justify-between p-3 rounded-xl bg-white/70 border border-purple-200">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 text-white font-bold text-sm flex items-center justify-center">
+              <%= index + 1 %>
+            </div>
+            <div>
+              <div class="font-semibold text-purple-900"><%= classData.class_name %></div>
+              <div class="text-xs text-purple-600">
+                <%= classData.total_students %> siswa • 
+                <%= classData.total_exams %> ujian • 
+                <%= classData.total_assignments %> tugas • 
+                <%= classData.total_material_reads %> baca materi
+              </div>
+              <div class="text-xs text-purple-500 mt-1">
+                Total <%= classData.total_activities %> aktivitas • Rata-rata <%= classData.avg_score.toFixed(1) %>
+              </div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-lg font-bold text-purple-800"><%= classData.participation_rate %>%</div>
+            <div class="text-xs text-purple-600">partisipasi</div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+
+  <!-- Statistik Mata Pelajaran -->
+  <div class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 p-6 shadow-soft">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-bold text-amber-900 flex items-center gap-2">
+        <span>📖</span>
+        <span>Mata Pelajaran Populer</span>
+      </h2>
+      <div class="text-xs text-amber-600">Top 10</div>
+    </div>
+    
+    <div class="space-y-3">
+      <% if (popularSubjects.length === 0) { %>
+        <div class="text-center py-8 text-amber-600">
+          <div class="text-4xl mb-2">📊</div>
+          <div>Belum ada data mata pelajaran</div>
+        </div>
+      <% } %>
+      <% popularSubjects.forEach((subject, index) => { %>
+        <div class="flex items-center justify-between p-3 rounded-xl bg-white/70 border border-amber-200">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-white font-bold text-sm flex items-center justify-center">
+              <%= index + 1 %>
+            </div>
+            <div>
+              <div class="font-semibold text-amber-900"><%= subject.subject_name %></div>
+              <div class="text-xs text-amber-600">
+                <%= subject.total_exams %> ujian • <%= subject.total_materials %> materi • <%= subject.total_attempts %> percobaan
+              </div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-lg font-bold text-amber-800"><%= subject.avg_score.toFixed(1) %></div>
+            <div class="text-xs text-amber-600">rata-rata</div>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<!-- Detailed Statistics -->
+<div class="mt-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-6 shadow-soft">
+  <h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+    <span>📈</span>
+    <span>Statistik Detail</span>
+  </h2>
+  
+  <div class="grid md:grid-cols-3 gap-6">
+    <div class="space-y-4">
+      <h3 class="font-semibold text-slate-800">Aktivitas Ujian</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-slate-600">Total Ujian Dibuat:</span>
+          <span class="font-semibold"><%= summary.total_exams %></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-600">Total Percobaan:</span>
+          <span class="font-semibold"><%= summary.total_attempts %></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-600">Rata-rata Nilai:</span>
+          <span class="font-semibold"><%= summary.avg_score.toFixed(1) %></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-600">Tingkat Kelulusan:</span>
+          <span class="font-semibold"><%= summary.pass_rate %>%</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="space-y-4">
+      <h3 class="font-semibold text-slate-800">Aktivitas Materi</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-slate-600">Total Materi:</span>
+          <span class="font-semibold"><%= summary.total_materials %></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-600">Total Pembacaan:</span>
+          <span class="font-semibold"><%= summary.total_material_reads %></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-600">Rata-rata per Materi:</span>
+          <span class="font-semibold"><%= summary.avg_reads_per_material.toFixed(1) %></span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="space-y-4">
+      <h3 class="font-semibold text-slate-800">Aktivitas Tugas</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-slate-600">Total Tugas:</span>
+          <span class="font-semibold"><%= summary.total_assignments %></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-600">Total Pengumpulan:</span>
+          <span class="font-semibold"><%= summary.total_submissions %></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-600">Tingkat Pengumpulan:</span>
+          <span class="font-semibold"><%= summary.submission_rate %>%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setQuickPeriod(days) {
+  if (!days) return;
+  
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setDate(endDate.getDate() - parseInt(days));
+  
+  document.querySelector('input[name="start_date"]').value = startDate.toISOString().split('T')[0];
+  document.querySelector('input[name="end_date"]').value = endDate.toISOString().split('T')[0];
+}
+
+function exportReport() {
+  const params = new URLSearchParams(window.location.search);
+  params.set('export', 'excel');
+  window.location.href = '/principal/reports?' + params.toString();
+}
+</script>

@@ -1,0 +1,38 @@
+{
+  "appId": "id.sch.smkn1kras.lms",
+  "appName": "LMS SMKN 1 Kras",
+  "webDir": "src/public",
+  "server": {
+    "androidScheme": "https",
+    "hostname": "lms.smkn1kras.sch.id",
+    "url": "http://localhost:3000",
+    "cleartext": true
+  },
+  "android": {
+    "buildOptions": {
+      "keystorePath": "",
+      "keystorePassword": "",
+      "keystoreAlias": "",
+      "keystoreAliasPassword": ""
+    }
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#4F46E5",
+      "androidSplashResourceName": "splash",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false,
+      "androidSpinnerStyle": "large",
+      "spinnerColor": "#FFFFFF"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#4F46E5"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}

@@ -1,0 +1,288 @@
+<div class="max-w-3xl mx-auto">
+  <div class="mb-6">
+    <div class="text-sm text-indigo-600 font-medium flex items-center gap-2">
+      <span>✏️</span>
+      <span>Edit Notifikasi</span>
+    </div>
+    <h1 class="mt-1 text-3xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Edit Peringatan</h1>
+    <p class="mt-1 text-slate-600">Update notifikasi yang sudah dibuat</p>
+  </div>
+
+  <form method="POST" action="/notifications/<%= notification.id %>/edit" class="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6 shadow-lg">
+    <div class="space-y-5">
+      <!-- Judul -->
+      <div>
+        <label class="block text-sm font-bold text-indigo-900 mb-2">
+          📝 Judul Notifikasi <span class="text-red-500">*</span>
+        </label>
+        <input 
+          type="text" 
+          name="title" 
+          required
+          maxlength="255"
+          value="<%= notification.title %>"
+          placeholder="Contoh: Pengumuman Penting - Ujian Ditunda"
+          class="w-full px-4 py-3 border-2 border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+        />
+      </div>
+
+      <!-- Pesan -->
+      <div>
+        <label class="block text-sm font-bold text-indigo-900 mb-2">
+          💬 Pesan <span class="text-red-500">*</span>
+        </label>
+        <textarea 
+          name="message" 
+          required
+          rows="5"
+          placeholder="Tulis pesan lengkap di sini..."
+          class="w-full px-4 py-3 border-2 border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+        ><%= notification.message %></textarea>
+      </div>
+
+      <!-- Tipe -->
+      <div>
+        <label class="block text-sm font-bold text-indigo-900 mb-2">
+          🎨 Tipe Notifikasi <span class="text-red-500">*</span>
+        </label>
+        <select 
+          name="type" 
+          required
+          class="w-full px-4 py-3 border-2 border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+        >
+          <option value="info" <%= notification.type === 'info' ? 'selected' : '' %>>ℹ️ Info (Biru)</option>
+          <option value="warning" <%= notification.type === 'warning' ? 'selected' : '' %>>⚠️ Peringatan (Oranye)</option>
+          <option value="success" <%= notification.type === 'success' ? 'selected' : '' %>>✅ Sukses (Hijau)</option>
+          <option value="error" <%= notification.type === 'error' ? 'selected' : '' %>>❌ Error (Merah)</option>
+        </select>
+      </div>
+
+      <!-- Target -->
+      <div>
+        <label class="block text-sm font-bold text-indigo-900 mb-2">
+          🎯 Target Penerima <span class="text-red-500">*</span>
+        </label>
+        <select 
+          name="target_type" 
+          id="targetType"
+          required
+          class="w-full px-4 py-3 border-2 border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+        >
+          <option value="all" <%= notification.target_type === 'all' ? 'selected' : '' %>>👥 Semua Siswa</option>
+          <option value="class" <%= notification.target_type === 'class' ? 'selected' : '' %>>🏫 Kelas Tertentu</option>
+          <option value="student" <%= notification.target_type === 'student' ? 'selected' : '' %>>👤 Siswa Tertentu</option>
+        </select>
+      </div>
+
+      <!-- Target ID (conditional) -->
+      <div id="targetIdContainer" class="<%= notification.target_type === 'all' ? 'hidden' : '' %>">
+        <label class="block text-sm font-bold text-indigo-900 mb-2">
+          🔍 Pilih Target
+        </label>
+        
+        <!-- Hidden input for target_id -->
+        <input type="hidden" name="target_id" id="targetIdInput" value="<%= notification.target_id || '' %>" />
+        
+        <!-- Class selector -->
+        <select 
+          id="classSelector"
+          class="<%= notification.target_type === 'class' ? '' : 'hidden' %> w-full px-4 py-3 border-2 border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+        >
+          <option value="">-- Pilih Kelas --</option>
+          <% classes.forEach(c => { %>
+            <option value="<%= c.id %>" <%= notification.target_id == c.id ? 'selected' : '' %>><%= c.name %></option>
+          <% }) %>
+        </select>
+        
+        <!-- Student selector with class filter -->
+        <div id="studentSelectorContainer" class="<%= notification.target_type === 'student' ? '' : 'hidden' %>">
+          <!-- Filter by class -->
+          <select 
+            id="classFilter"
+            class="w-full px-4 py-3 border-2 border-purple-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-purple-50 mb-3"
+          >
+            <option value="">🏫 Semua Kelas</option>
+            <% classes.forEach(c => { %>
+              <option value="<%= c.id %>"><%= c.name %></option>
+            <% }) %>
+          </select>
+          
+          <!-- Student dropdown -->
+          <select 
+            id="studentSelector"
+            class="w-full px-4 py-3 border-2 border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+          >
+            <option value="">-- Pilih Siswa --</option>
+            <% students.forEach(s => { %>
+              <option value="<%= s.id %>" data-class="<%= s.class_id || '' %>" <%= notification.target_id == s.id ? 'selected' : '' %>>
+                <% if (s.full_name) { %>
+                  <%= s.full_name %> (<%= s.username %>) - <%= s.class_name || 'Tanpa Kelas' %>
+                <% } else { %>
+                  <%= s.username %> - <%= s.class_name || 'Tanpa Kelas' %>
+                <% } %>
+              </option>
+            <% }) %>
+          </select>
+          <p class="mt-2 text-xs text-red-600">⚠️ Wajib pilih siswa jika target "Siswa Tertentu"</p>
+        </div>
+      </div>
+
+      <!-- Expires -->
+      <div>
+        <label class="block text-sm font-bold text-indigo-900 mb-2">
+          ⏰ Kadaluarsa (Opsional)
+        </label>
+        <select 
+          name="expires_hours"
+          class="w-full px-4 py-3 border-2 border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+        >
+          <option value="">Tidak ada batas waktu</option>
+          <option value="1">1 jam</option>
+          <option value="3">3 jam</option>
+          <option value="6">6 jam</option>
+          <option value="12">12 jam</option>
+          <option value="24">1 hari</option>
+          <option value="72">3 hari</option>
+          <option value="168">1 minggu</option>
+        </select>
+        <p class="mt-2 text-xs text-indigo-700">💡 Notifikasi akan otomatis nonaktif setelah waktu ini</p>
+        <% if (notification.expires_at) { %>
+          <p class="mt-1 text-xs text-slate-600">Saat ini kadaluarsa: <%= new Date(notification.expires_at).toLocaleString('id-ID') %></p>
+        <% } %>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex gap-3 pt-4 border-t-2 border-indigo-200">
+        <button 
+          type="submit"
+          class="px-8 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+        >
+          💾 Simpan Perubahan
+        </button>
+        <a 
+          href="/notifications"
+          class="px-8 py-3 rounded-xl bg-gradient-to-r from-slate-400 to-slate-500 hover:from-slate-500 hover:to-slate-600 text-white font-bold transition-all"
+        >
+          ❌ Batal
+        </a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+  const targetType = document.getElementById('targetType');
+  const targetIdContainer = document.getElementById('targetIdContainer');
+  const targetIdInput = document.getElementById('targetIdInput');
+  const classSelector = document.getElementById('classSelector');
+  const studentSelectorContainer = document.getElementById('studentSelectorContainer');
+  const studentSelector = document.getElementById('studentSelector');
+  const classFilter = document.getElementById('classFilter');
+  const form = document.querySelector('form');
+  
+  // Store all student options ONCE at page load
+  let allStudentOptions = [];
+  
+  // Initialize student options array
+  function initStudentOptions() {
+    allStudentOptions = [];
+    const options = studentSelector.querySelectorAll('option');
+    options.forEach(option => {
+      if (option.value !== '') { // Skip placeholder
+        allStudentOptions.push({
+          value: option.value,
+          text: option.textContent,
+          classId: option.getAttribute('data-class')
+        });
+      }
+    });
+  }
+  
+  // Call init on page load
+  initStudentOptions();
+
+  targetType.addEventListener('change', function() {
+    const value = this.value;
+    
+    if (value === 'all') {
+      targetIdContainer.classList.add('hidden');
+      classSelector.classList.add('hidden');
+      studentSelectorContainer.classList.add('hidden');
+      targetIdInput.value = '';
+      classSelector.removeAttribute('required');
+      studentSelector.removeAttribute('required');
+    } else if (value === 'class') {
+      targetIdContainer.classList.remove('hidden');
+      classSelector.classList.remove('hidden');
+      studentSelectorContainer.classList.add('hidden');
+      classSelector.setAttribute('required', 'required');
+      studentSelector.removeAttribute('required');
+    } else if (value === 'student') {
+      targetIdContainer.classList.remove('hidden');
+      classSelector.classList.add('hidden');
+      studentSelectorContainer.classList.remove('hidden');
+      classSelector.removeAttribute('required');
+      studentSelector.setAttribute('required', 'required');
+    }
+  });
+  
+  // Update hidden input when class selector changes
+  classSelector.addEventListener('change', function() {
+    targetIdInput.value = this.value;
+  });
+  
+  // Update hidden input when student selector changes
+  studentSelector.addEventListener('change', function() {
+    targetIdInput.value = this.value;
+  });
+  
+  // Filter students by class
+  classFilter.addEventListener('change', function() {
+    const selectedClass = this.value;
+    const currentValue = studentSelector.value; // Save current selection
+    
+    // Clear ALL options first
+    studentSelector.innerHTML = '';
+    
+    // Add placeholder
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = '-- Pilih Siswa --';
+    studentSelector.appendChild(placeholder);
+    
+    // Filter and add options from stored array
+    allStudentOptions.forEach(student => {
+      if (selectedClass === '' || student.classId === selectedClass) {
+        const option = document.createElement('option');
+        option.value = student.value;
+        option.textContent = student.text;
+        option.setAttribute('data-class', student.classId);
+        if (student.value === currentValue) {
+          option.selected = true;
+        }
+        studentSelector.appendChild(option);
+      }
+    });
+  });
+  
+  // Form validation
+  form.addEventListener('submit', function(e) {
+    const targetTypeValue = targetType.value;
+    
+    if (targetTypeValue === 'class') {
+      if (!classSelector.value) {
+        e.preventDefault();
+        alert('⚠️ Silakan pilih kelas terlebih dahulu!');
+        classSelector.focus();
+        return false;
+      }
+    } else if (targetTypeValue === 'student') {
+      if (!studentSelector.value) {
+        e.preventDefault();
+        alert('⚠️ Silakan pilih siswa terlebih dahulu!');
+        studentSelector.focus();
+        return false;
+      }
+    }
+  });
+</script>

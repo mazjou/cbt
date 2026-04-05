@@ -1,0 +1,206 @@
+<div class="grid lg:grid-cols-2 gap-8 items-center">
+  <!-- Hero Section - Hidden on Mobile -->
+  <div class="space-y-6 hidden lg:block">
+    <div>
+      <h1 class="text-3xl sm:text-4xl font-semibold tracking-tight">Masuk ke <span class="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">LMS SMKN 1 Kras</span></h1>
+      <p class="mt-2 text-slate-600">Tampilan elegan, responsif, dan nyaman untuk ujian online SMK.</p>
+    </div>
+
+    <div class="space-y-4">
+      <div id="laporanLengkapCard" class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 p-5 shadow-soft cursor-pointer hover:shadow-lg transition-all transform hover:scale-[1.02]">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="text-3xl">📊</div>
+          <div>
+            <div class="font-semibold text-teal-900">Laporan Lengkap</div>
+            <div class="text-sm text-teal-700">Pantau perkembangan belajar</div>
+          </div>
+        </div>
+        
+        <!-- Activity Summary -->
+        <div id="activitySummary" class="space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-teal-600">🏆 Kelas Teraktif:</span>
+            <span id="topClass" class="font-medium text-teal-800">Memuat...</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-teal-600">⭐ Siswa Teraktif:</span>
+            <span id="topStudent" class="font-medium text-teal-800">Memuat...</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-teal-600">👨‍🏫 Guru Teraktif:</span>
+            <span id="topTeacher" class="font-medium text-teal-800">Memuat...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rounded-3xl border-2 border-indigo-200 bg-gradient-to-br from-white to-indigo-50 p-8 shadow-xl">
+    <div class="text-center mb-6">
+      <div class="inline-flex items-center justify-center mb-3">
+        <img src="/public/images/logo.png" alt="Logo SMKN 1 Kras" class="w-20 h-20 object-contain drop-shadow-lg" />
+      </div>
+      <h2 class="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Selamat Datang</h2>
+      <p class="text-sm text-slate-600 mt-1">Masuk 2 untuk melanjutkan</p>
+    </div>
+
+    <form action="/login" method="POST" class="space-y-4">
+      <div>
+        <label class="text-sm font-medium text-slate-700">Username</label>
+        <input name="username" required class="mt-1 w-full rounded-xl bg-white border-2 border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" placeholder="mis: admin" />
+      </div>
+      <div>
+        <label class="text-sm font-medium text-slate-700">Password</label>
+        <input type="password" name="password" required class="mt-1 w-full rounded-xl bg-white border-2 border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all" placeholder="••••••••" />
+      </div>
+      <button class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-3 shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]">
+        Masuk
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Activity Data Script -->
+<script>
+// Load activity data for Laporan Lengkap card
+async function loadActivityData() {
+  try {
+    const response = await fetch('/api/banner-data');
+    const result = await response.json();
+    
+    if (result.success) {
+      const { activeClasses, activeStudents, activeTeachers } = result.data;
+      
+      // Update top class
+      const topClassEl = document.getElementById('topClass');
+      if (activeClasses.length > 0) {
+        topClassEl.textContent = activeClasses[0];
+      } else {
+        topClassEl.textContent = 'Belum ada data';
+      }
+      
+      // Update top student
+      const topStudentEl = document.getElementById('topStudent');
+      if (activeStudents.length > 0) {
+        topStudentEl.textContent = `${activeStudents[0].name} (${activeStudents[0].class})`;
+      } else {
+        topStudentEl.textContent = 'Belum ada data';
+      }
+      
+      // Update top teacher
+      const topTeacherEl = document.getElementById('topTeacher');
+      if (activeTeachers.length > 0) {
+        topTeacherEl.textContent = activeTeachers[0];
+      } else {
+        topTeacherEl.textContent = 'Belum ada data';
+      }
+      
+      // Store full data for modal
+      window.activityData = { activeClasses, activeStudents, activeTeachers };
+    }
+  } catch (error) {
+    console.error('Failed to load activity data:', error);
+    document.getElementById('topClass').textContent = 'Error';
+    document.getElementById('topStudent').textContent = 'Error';
+    document.getElementById('topTeacher').textContent = 'Error';
+  }
+}
+
+// Show detailed activity modal
+function showActivityModal() {
+  if (!window.activityData) return;
+  
+  const { activeClasses, activeStudents, activeTeachers } = window.activityData;
+  
+  const modal = document.createElement('div');
+  modal.id = 'activityModal';
+  modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm';
+  modal.innerHTML = `
+    <div class="rounded-2xl border-2 border-teal-300 bg-gradient-to-br from-teal-50 to-teal-100 p-6 shadow-2xl max-w-2xl mx-4 max-h-[80vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="text-2xl font-bold text-teal-900 flex items-center gap-2">
+          📊 Laporan Aktivitas Mingguan
+        </h2>
+        <button onclick="closeActivityModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      <div class="space-y-6">
+        <!-- Top Classes -->
+        <div class="bg-white/70 rounded-xl p-4">
+          <h3 class="font-bold text-teal-800 mb-3 flex items-center gap-2">
+            🏆 Top 3 Kelas Teraktif
+          </h3>
+          <div class="space-y-2">
+            ${activeClasses.length > 0 ? activeClasses.map((className, index) => `
+              <div class="flex items-center justify-between p-2 bg-teal-100 rounded-lg">
+                <span class="font-medium text-teal-900">#${index + 1} ${className}</span>
+                <span class="text-xs text-teal-600">Kelas Aktif</span>
+              </div>
+            `).join('') : '<p class="text-teal-600 text-sm">Belum ada aktivitas kelas minggu ini</p>'}
+          </div>
+        </div>
+        
+        <!-- Top Students -->
+        <div class="bg-white/70 rounded-xl p-4">
+          <h3 class="font-bold text-emerald-800 mb-3 flex items-center gap-2">
+            ⭐ Top 3 Siswa Teraktif
+          </h3>
+          <div class="space-y-2">
+            ${activeStudents.length > 0 ? activeStudents.map((student, index) => `
+              <div class="flex items-center justify-between p-2 bg-emerald-100 rounded-lg">
+                <span class="font-medium text-emerald-900">#${index + 1} ${student.name}</span>
+                <span class="text-xs text-emerald-600">${student.class}</span>
+              </div>
+            `).join('') : '<p class="text-emerald-600 text-sm">Belum ada aktivitas siswa minggu ini</p>'}
+          </div>
+        </div>
+        
+        <!-- Top Teachers -->
+        <div class="bg-white/70 rounded-xl p-4">
+          <h3 class="font-bold text-sky-800 mb-3 flex items-center gap-2">
+            👨‍🏫 Top 3 Guru Teraktif
+          </h3>
+          <div class="space-y-2">
+            ${activeTeachers.length > 0 ? activeTeachers.map((teacherName, index) => `
+              <div class="flex items-center justify-between p-2 bg-sky-100 rounded-lg">
+                <span class="font-medium text-sky-900">#${index + 1} ${teacherName}</span>
+                <span class="text-xs text-sky-600">Guru Aktif</span>
+              </div>
+            `).join('') : '<p class="text-sky-600 text-sm">Belum ada aktivitas guru minggu ini</p>'}
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-6 text-center">
+        <button onclick="closeActivityModal()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+          ✓ Tutup
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+// Close activity modal
+function closeActivityModal() {
+  const modal = document.getElementById('activityModal');
+  if (modal) {
+    modal.remove();
+  }
+}
+
+// Add click handler to Laporan Lengkap card
+document.addEventListener('DOMContentLoaded', function() {
+  loadActivityData();
+  
+  const laporanCard = document.getElementById('laporanLengkapCard');
+  if (laporanCard) {
+    laporanCard.addEventListener('click', showActivityModal);
+  }
+});
+</script>

@@ -1,0 +1,48 @@
+node_modules/
+.env
+*.log
+logs/
+logs/*
+
+# Backup database (jangan commit)
+*.sql
+!sql/*.sql
+
+# Upload files (jangan commit file upload user)
+src/public/uploads/questions/*
+src/public/uploads/materials/*
+src/public/uploads/profiles/*
+src/public/uploads/assignments/*
+src/public/uploads/imports/*
+!src/public/uploads/questions/.gitkeep
+!src/public/uploads/materials/.gitkeep
+!src/public/uploads/profiles/.gitkeep
+!src/public/uploads/assignments/.gitkeep
+!src/public/uploads/imports/.gitkeep
+
+# File sementara
+*.bak
+*.bak.*
+src/server.js.bak*
+src/server1.js
+src/socket/index1.js
+src/db/pool1.js
+cookies.txt
+
+# File SQL sementara
+add-exam-display-options.sql
+create-submission-backup-table.sql
+fix-submission-backup-index.sql
+sekolah_db.sql
+
+# File test
+src/public/uploads/cek-lintas-node.txt
+src/public/uploads/final-app*.txt
+src/public/uploads/test-*.txt
+src/public/uploads/test-lb.txt
+
+# Ecosystem backup
+ecosystem.config1.js
+
+# Library offline (besar, install via npm)
+src/public/lib/katex/fonts/

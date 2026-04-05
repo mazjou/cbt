@@ -1,0 +1,126 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <div class="text-sm text-slate-500">Preview Import</div>
+    <h1 class="text-3xl font-semibold tracking-tight">Import Masal Siswa</h1>
+    <p class="mt-1 text-slate-600">Periksa data yang valid dan error sebelum commit.</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/admin/users/import" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Upload Ulang</a>
+    <a href="/admin/users" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Kembali</a>
+  </div>
+</div>
+
+<div class="mt-6 grid lg:grid-cols-3 gap-4">
+  <div class="rounded-2xl border border-slate-200 bg-slate-100 p-5">
+    <div class="text-lg font-semibold">Ringkasan</div>
+    <div class="mt-3 text-sm text-slate-700 space-y-1">
+      <div>Data valid: <b><%= (preview || []).length %></b></div>
+      <div>Error: <b class="text-rose-600"><%= (errors || []).length %></b></div>
+      <div class="text-xs text-slate-500">Insert/Update akan ditentukan berdasarkan username yang sudah ada.</div>
+    </div>
+
+    <div class="mt-4 flex flex-col gap-2">
+      <form action="/admin/users/import/commit" method="POST" onsubmit="return confirm('Commit import siswa?')">
+        <input type="hidden" name="importId" value="<%= importId %>" />
+        <button class="w-full rounded-xl bg-emerald-500 hover:bg-emerald-400 text-white font-semibold py-3" <%= (preview||[]).length ? '' : 'disabled' %>>Commit Import</button>
+      </form>
+
+      <% if ((errors || []).length) { %>
+        <a href="/admin/users/import/errors.csv" class="w-full text-center px-4 py-3 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm">Download Error (CSV)</a>
+      <% } %>
+    </div>
+
+    <div class="mt-4 text-xs text-slate-500">
+      Password akan diset ke <span class="font-mono">123456</span> jika kolom password kosong.
+      Untuk akun yang sudah ada, password <b>tidak berubah</b> kecuali kolom password diisi.
+    </div>
+  </div>
+
+  <div class="lg:col-span-2 space-y-4">
+    <div class="rounded-2xl border border-slate-200 bg-slate-100 p-5 overflow-x-auto">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-lg font-semibold">Data Valid</h2>
+        <div class="text-xs text-slate-500">Tampil max 200 baris (agar cepat)</div>
+      </div>
+      <table class="mt-4 w-full text-sm">
+        <thead class="text-slate-500">
+          <tr>
+            <th class="text-left py-2">#</th>
+            <th class="text-left py-2">Username</th>
+            <th class="text-left py-2">Nama</th>
+            <th class="text-left py-2">Kelas</th>
+            <th class="text-left py-2">Aksi</th>
+            <th class="text-left py-2">Password</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% (preview || []).slice(0,200).forEach(it => { %>
+            <tr class="border-t border-slate-200">
+              <td class="py-2 text-slate-500"><%= it.rowNo %></td>
+              <td class="py-2 font-mono"><%= it.username %></td>
+              <td class="py-2"><%= it.full_name %></td>
+              <td class="py-2 text-slate-600"><%= it.classText %></td>
+              <td class="py-2">
+                <% if (it.action === 'UPDATE') { %>
+                  <span class="px-2 py-1 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-200">UPDATE</span>
+                <% } else { %>
+                  <span class="px-2 py-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-200">INSERT</span>
+                <% } %>
+              </td>
+              <td class="py-2">
+                <% if (it.passwordProvided) { %>
+                  <span class="text-xs px-2 py-1 rounded-lg border border-slate-200">diisi</span>
+                <% } else { %>
+                  <span class="text-xs px-2 py-1 rounded-lg border border-slate-200 text-slate-500">default</span>
+                <% } %>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <% if ((preview || []).length > 200) { %>
+        <div class="mt-3 text-xs text-slate-500">Catatan: <%= (preview || []).length - 200 %> baris lain tidak ditampilkan, tapi tetap akan diproses saat commit.</div>
+      <% } %>
+    </div>
+
+    <% if ((errors || []).length) { %>
+      <div class="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-5 overflow-x-auto">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold text-rose-100">Error</h2>
+          <a href="/admin/users/import/errors.csv" class="px-3 py-1.5 rounded-lg border border-rose-500/30 hover:bg-rose-500/20 text-sm">Download CSV</a>
+        </div>
+        <table class="mt-4 w-full text-sm">
+          <thead class="text-rose-200/80">
+            <tr>
+              <th class="text-left py-2">Row</th>
+              <th class="text-left py-2">Username</th>
+              <th class="text-left py-2">Nama</th>
+              <th class="text-left py-2">Kelas</th>
+              <th class="text-left py-2">Alasan</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% (errors || []).slice(0,200).forEach(e => { %>
+              <tr class="border-t border-rose-500/20">
+                <td class="py-2"><%= e.rowNo %></td>
+                <td class="py-2 font-mono"><%= e.snapshot?.username || '-' %></td>
+                <td class="py-2"><%= e.snapshot?.full_name || '-' %></td>
+                <td class="py-2"><%= e.snapshot?.classText || '-' %></td>
+                <td class="py-2">
+                  <ul class="list-disc pl-5 space-y-1">
+                    <% (e.reasons || []).forEach(r => { %>
+                      <li><%= r %></li>
+                    <% }) %>
+                  </ul>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <% if ((errors || []).length > 200) { %>
+          <div class="mt-3 text-xs text-rose-200/70">Catatan: <%= (errors || []).length - 200 %> error lain tidak ditampilkan. Download CSV untuk lengkapnya.</div>
+        <% } %>
+      </div>
+    <% } %>
+  </div>
+</div>

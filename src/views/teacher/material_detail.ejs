@@ -1,0 +1,55 @@
+<div class="flex items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight"><%= material.title %></h1>
+    <p class="mt-1 text-slate-600"><%= material.subject_name %> • <%= material.class_name || 'Semua kelas' %> • <%= material.is_published ? 'Published' : 'Draft' %></p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/teacher/materials/<%= material.id %>/edit" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Edit</a>
+    <form action="/teacher/materials/<%= material.id %>/toggle-publish" method="POST">
+      <button class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Toggle Publish</button>
+    </form>
+    <a href="/teacher/materials" class="text-sm px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">Kembali</a>
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+  <% if (material.description) { %>
+    <div class="mb-4 text-slate-700"><%= material.description %></div>
+  <% } %>
+  
+  <% if (material.embed_type === 'YOUTUBE' && material.embed_url) { %>
+    <div class="mb-6">
+      <div class="aspect-video w-full rounded-2xl overflow-hidden border border-slate-200">
+        <iframe
+          class="w-full h-full"
+          src="<%= material.embed_url %>"
+          title="YouTube video"
+          frameborder="0"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+        ></iframe>
+      </div>
+      <% const ytId = String(material.embed_url).match(/\/embed\/([a-zA-Z0-9_-]{6,})/); const ytWatch = ytId ? `https://www.youtube.com/watch?v=${ytId[1]}` : null; %>
+      <div class="mt-2 text-xs text-slate-500">
+        Jika video tidak bisa diputar (mis. <span class="font-semibold">Error 153</span>), kemungkinan pemilik video menonaktifkan embed.
+        <% if (ytWatch) { %>
+          <a class="underline" href="<%= ytWatch %>" target="_blank" rel="noopener">Tonton di YouTube</a>.
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (material.embed_type === 'PDF' && material.embed_url) { %>
+    <div class="mb-6">
+      <div class="w-full rounded-2xl overflow-hidden border border-slate-200">
+        <iframe class="w-full" style="height: 70vh" src="<%= material.embed_url %>" title="PDF"></iframe>
+      </div>
+      <div class="mt-2 text-xs text-slate-500">Jika PDF tidak tampil, <a class="underline" href="<%= material.embed_url %>" target="_blank" rel="noopener">buka di tab baru</a>.</div>
+    </div>
+  <% } %>
+
+  <div class="prose max-w-none">
+    <%- material.content_html %>
+  </div>
+</div>

@@ -1,0 +1,86 @@
+===================================================
+TEMPLATE IMPORT SOAL DARI MICROSOFT WORD
+===================================================
+
+FORMAT DASAR (tanpa gambar):
+-----------------------------
+1. Apa fungsi CPU pada komputer?
+A. Menyimpan data
+B. Mengolah data
+C. Menampilkan data
+D. Mengirim data
+E. Mencetak data
+KUNCI: B
+NILAI: 1
+
+2. Manakah yang termasuk perangkat input?
+A. Monitor
+B. Printer
+C. Keyboard
+D. Speaker
+E. Proyektor
+KUNCI: C
+NILAI: 1
+
+
+FORMAT DENGAN GAMBAR SOAL:
+---------------------------
+Sisipkan gambar langsung di bawah nomor soal (sebelum opsi A).
+Sistem akan otomatis mendeteksi gambar yang ada di dalam DOCX.
+
+3. Perhatikan gambar berikut!
+[SISIPKAN GAMBAR DI SINI - Insert > Picture di Word]
+A. Pilihan A
+B. Pilihan B
+C. Pilihan C
+D. Pilihan D
+E. Pilihan E
+KUNCI: A
+NILAI: 2
+
+
+FORMAT DENGAN GAMBAR OPSI JAWABAN:
+------------------------------------
+Sisipkan gambar langsung di bawah teks opsi (atau opsi bisa kosong jika hanya gambar).
+
+4. Perhatikan gambar-gambar berikut, manakah yang benar?
+A. 
+[SISIPKAN GAMBAR OPSI A DI SINI]
+B. 
+[SISIPKAN GAMBAR OPSI B DI SINI]
+C. 
+[SISIPKAN GAMBAR OPSI C DI SINI]
+D. 
+[SISIPKAN GAMBAR OPSI D DI SINI]
+E. 
+[SISIPKAN GAMBAR OPSI E DI SINI]
+KUNCI: C
+NILAI: 3
+
+
+FORMAT CAMPURAN (teks + gambar):
+---------------------------------
+5. Diketahui f(x) = 2x + 3. Tentukan nilai f(2)!
+A. 5
+B. 6
+C. 7
+[SISIPKAN GAMBAR UNTUK OPSI C JIKA PERLU]
+D. 8
+E. 9
+KUNCI: C
+NILAI: 1
+
+
+===================================================
+ATURAN PENTING:
+===================================================
+1. Nomor soal diawali angka diikuti titik atau kurung: "1." atau "1)"
+2. Opsi diawali huruf A-E diikuti titik atau kurung: "A." atau "A)"
+3. Kunci jawaban: KUNCI: B (huruf kapital)
+4. Poin soal: NILAI: 2 (opsional, default 1)
+5. Gambar disisipkan langsung di dokumen Word (Insert > Picture)
+6. Gambar soal: letakkan setelah nomor soal, sebelum opsi A
+7. Gambar opsi: letakkan tepat setelah teks opsi tersebut
+8. Opsi boleh hanya berisi gambar (teks kosong)
+9. Setiap soal harus punya opsi A, B, C, D, E dan KUNCI
+===================================================

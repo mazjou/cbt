@@ -1,0 +1,217 @@
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-3xl font-bold text-indigo-900">Edit Bank Soal</h1>
+    <p class="mt-1 text-slate-600">Perbarui soal yang tersimpan di bank soal</p>
+  </div>
+  <a href="/teacher/question-bank" class="px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">
+    ← Kembali
+  </a>
+</div>
+
+<form action="/teacher/question-bank/<%= question.id %>?_method=PUT" method="POST" enctype="multipart/form-data" class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 space-y-4" id="bankQuestionForm">
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Mata Pelajaran *</label>
+      <select name="subject_id" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="">Pilih Mata Pelajaran</option>
+        <% subjects.forEach(s => { %>
+          <option value="<%= s.id %>" <%= question.subject_id == s.id ? 'selected' : '' %>><%= s.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Tingkat Kesulitan *</label>
+      <select name="difficulty" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="EASY" <%= question.difficulty === 'EASY' ? 'selected' : '' %>>Mudah</option>
+        <option value="MEDIUM" <%= question.difficulty === 'MEDIUM' ? 'selected' : '' %>>Sedang</option>
+        <option value="HARD" <%= question.difficulty === 'HARD' ? 'selected' : '' %>>Sulit</option>
+      </select>
+    </div>
+  </div>
+  
+  <div>
+    <label class="text-sm text-indigo-700 font-medium">Bab/Materi (opsional)</label>
+    <input type="text" name="chapter" value="<%= question.chapter || '' %>" placeholder="Contoh: Bab 1 - Trigonometri, Materi Persamaan Linear" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    <div class="mt-1 text-xs text-indigo-600">Isi dengan bab atau topik materi untuk memudahkan pencarian</div>
+  </div>
+  
+  <div>
+    <label class="text-sm text-indigo-700 font-medium">Pertanyaan *</label>
+    <div id="question_editor" contenteditable="true" class="mt-1 w-full min-h-[150px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 400px;"><%- question.question_text %></div>
+    <div class="mt-1 text-xs text-indigo-600">Tekan Ctrl+V untuk paste gambar dari clipboard</div>
+    <input type="hidden" name="question_text" id="question_text_input" required />
+  </div>
+  
+  <div>
+    <label class="text-sm text-indigo-700 font-medium">Gambar Soal (opsional)</label>
+    <% if (question.question_image) { %>
+      <div class="mb-2 p-3 bg-white rounded-xl border border-indigo-200">
+        <img src="<%= question.question_image %>" alt="Current" class="max-w-xs rounded-lg" />
+        <label class="mt-2 flex items-center gap-2 text-sm text-rose-600">
+          <input type="checkbox" name="remove_image" value="1" class="rounded" />
+          Hapus gambar ini
+        </label>
+      </div>
+    <% } %>
+    <input type="file" name="image" accept="image/*" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200" />
+    <div class="mt-1 text-xs text-indigo-600">Max 10MB</div>
+  </div>
+  
+  <div>
+    <label class="text-sm text-indigo-700 font-medium">PDF Soal (opsional)</label>
+    <% if (question.question_pdf) { %>
+      <div class="mb-2 p-3 bg-white rounded-xl border border-indigo-200">
+        <a href="<%= question.question_pdf %>" target="_blank" class="text-purple-600 hover:underline">📄 Lihat PDF saat ini</a>
+        <label class="mt-2 flex items-center gap-2 text-sm text-rose-600">
+          <input type="checkbox" name="remove_pdf" value="1" class="rounded" />
+          Hapus PDF ini
+        </label>
+      </div>
+    <% } %>
+    <input type="file" name="pdf" accept="application/pdf" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
+    <div class="mt-1 text-xs text-indigo-600">Max 10MB</div>
+  </div>
+  
+  <div class="grid md:grid-cols-2 gap-4">
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Poin *</label>
+      <input type="number" name="points" value="<%= question.points %>" min="1" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    </div>
+    
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Jawaban Benar *</label>
+      <select name="correct" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option <%= correct_label === 'A' ? 'selected' : '' %>>A</option>
+        <option <%= correct_label === 'B' ? 'selected' : '' %>>B</option>
+        <option <%= correct_label === 'C' ? 'selected' : '' %>>C</option>
+        <option <%= correct_label === 'D' ? 'selected' : '' %>>D</option>
+        <option <%= correct_label === 'E' ? 'selected' : '' %>>E</option>
+      </select>
+    </div>
+  </div>
+  
+  <div>
+    <label class="text-sm text-indigo-700 font-medium">Tags (opsional)</label>
+    <input type="text" name="tags" value="<%= question.tags || '' %>" placeholder="Contoh: trigonometri,sudut,sin-cos" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    <div class="mt-1 text-xs text-indigo-600">Pisahkan dengan koma untuk kategorisasi</div>
+  </div>
+  
+  <div class="space-y-3">
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Opsi A *</label>
+      <div id="option_a_editor" contenteditable="true" class="mt-1 w-full min-h-[80px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 300px;"><%- options.A || '' %></div>
+      <input type="hidden" name="a" id="option_a_input" required />
+    </div>
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Opsi B *</label>
+      <div id="option_b_editor" contenteditable="true" class="mt-1 w-full min-h-[80px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 300px;"><%- options.B || '' %></div>
+      <input type="hidden" name="b" id="option_b_input" required />
+    </div>
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Opsi C *</label>
+      <div id="option_c_editor" contenteditable="true" class="mt-1 w-full min-h-[80px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 300px;"><%- options.C || '' %></div>
+      <input type="hidden" name="c" id="option_c_input" required />
+    </div>
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Opsi D *</label>
+      <div id="option_d_editor" contenteditable="true" class="mt-1 w-full min-h-[80px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 300px;"><%- options.D || '' %></div>
+      <input type="hidden" name="d" id="option_d_input" required />
+    </div>
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Opsi E *</label>
+      <div id="option_e_editor" contenteditable="true" class="mt-1 w-full min-h-[80px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 300px;"><%- options.E || '' %></div>
+      <input type="hidden" name="e" id="option_e_input" required />
+    </div>
+  </div>
+  
+  <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-3 transition-all">
+    💾 Update Bank Soal
+  </button>
+</form>
+
+<script>
+  // Setup paste image handler
+  const editors = ['question_editor', 'option_a_editor', 'option_b_editor', 'option_c_editor', 'option_d_editor', 'option_e_editor'];
+  
+  editors.forEach(editorId => {
+    const editor = document.getElementById(editorId);
+    editor.addEventListener('paste', function(e) {
+      e.preventDefault();
+      const items = e.clipboardData.items;
+      let hasImage = false;
+      
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+          hasImage = true;
+          const blob = items[i].getAsFile();
+          const reader = new FileReader();
+          reader.onload = function(event) {
+            const img = document.createElement('img');
+            img.src = event.target.result;
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.margin = '10px 0';
+            img.style.borderRadius = '8px';
+            img.style.border = '2px solid #e0e7ff';
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+              const range = selection.getRangeAt(0);
+              range.deleteContents();
+              range.insertNode(img);
+              range.setStartAfter(img);
+              range.setEndAfter(img);
+              selection.removeAllRanges();
+              selection.addRange(range);
+            } else {
+              editor.appendChild(img);
+            }
+          };
+          reader.readAsDataURL(blob);
+        }
+      }
+      
+      if (!hasImage) {
+        const text = e.clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
+      }
+    });
+  });
+  
+  document.getElementById('bankQuestionForm').addEventListener('submit', function(e) {
+    document.getElementById('question_text_input').value = document.getElementById('question_editor').innerHTML;
+    document.getElementById('option_a_input').value = document.getElementById('option_a_editor').innerHTML;
+    document.getElementById('option_b_input').value = document.getElementById('option_b_editor').innerHTML;
+    document.getElementById('option_c_input').value = document.getElementById('option_c_editor').innerHTML;
+    document.getElementById('option_d_input').value = document.getElementById('option_d_editor').innerHTML;
+    document.getElementById('option_e_input').value = document.getElementById('option_e_editor').innerHTML;
+    
+    const fields = [
+      { id: 'question_editor', name: 'Pertanyaan' },
+      { id: 'option_a_editor', name: 'Opsi A' },
+      { id: 'option_b_editor', name: 'Opsi B' },
+      { id: 'option_c_editor', name: 'Opsi C' },
+      { id: 'option_d_editor', name: 'Opsi D' },
+      { id: 'option_e_editor', name: 'Opsi E' }
+    ];
+    
+    for (const field of fields) {
+      const editor = document.getElementById(field.id);
+      const text = editor.textContent.trim();
+      const images = editor.querySelectorAll('img');
+      if (text === '' && images.length === 0) {
+        e.preventDefault();
+        alert(`${field.name} tidak boleh kosong!`);
+        editor.focus();
+        return false;
+      }
+    }
+    return true;
+  });
+</script>
+
+<style>
+  [contenteditable] { outline: none; }
+  [contenteditable] img { cursor: pointer; transition: transform 0.2s; }
+  [contenteditable] img:hover { transform: scale(1.02); }
+</style>

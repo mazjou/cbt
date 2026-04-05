@@ -1,0 +1,152 @@
+<div class="flex items-start justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Dashboard Kepala Sekolah</h1>
+    <p class="mt-1 text-slate-600">Ringkasan aktivitas ujian & materi.</p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/principal/reports" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all text-sm font-medium shadow-md">
+      📊 Rekap LMS
+    </a>
+    <a href="/principal/exams" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+      Rekap Ujian
+    </a>
+    <a href="/principal/materials" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium">
+      Rekap Materi
+    </a>
+  </div>
+</div>
+
+<div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-6 gap-4">
+  <div class="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5 shadow-soft">
+    <div class="text-xs text-blue-700 font-medium">Total Siswa</div>
+    <div class="mt-1 text-2xl font-semibold text-blue-900"><%= summary.students %></div>
+  </div>
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5 shadow-soft">
+    <div class="text-xs text-purple-700 font-medium">Total Guru</div>
+    <div class="mt-1 text-2xl font-semibold text-purple-900"><%= summary.teachers %></div>
+  </div>
+  <div class="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 p-5 shadow-soft">
+    <div class="text-xs text-orange-700 font-medium">Total Ujian</div>
+    <div class="mt-1 text-2xl font-semibold text-orange-900"><%= summary.exams %></div>
+    <div class="text-xs text-orange-600 mt-1"><%= summary.exams_published %> published</div>
+  </div>
+  <div class="rounded-2xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 p-5 shadow-soft">
+    <div class="text-xs text-green-700 font-medium">Total Materi</div>
+    <div class="mt-1 text-2xl font-semibold text-green-900"><%= summary.materials %></div>
+    <div class="text-xs text-green-600 mt-1"><%= summary.materials_published %> published</div>
+  </div>
+  <div class="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100 p-5 shadow-soft">
+    <div class="text-xs text-pink-700 font-medium">Siswa Sudah Ujian</div>
+    <div class="mt-1 text-2xl font-semibold text-pink-900"><%= summary.students_done_any_exam %></div>
+    <% if (summary.students > 0) { %>
+      <div class="text-xs text-pink-600 mt-1">
+        <%= Math.round((summary.students_done_any_exam / summary.students) * 100) %>% dari total
+      </div>
+    <% } %>
+  </div>
+  <div class="rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100 p-5 shadow-soft">
+    <div class="text-xs text-cyan-700 font-medium">Siswa Baca Materi</div>
+    <div class="mt-1 text-2xl font-semibold text-cyan-900"><%= summary.students_read_any_material %></div>
+    <% if (summary.students > 0) { %>
+      <div class="text-xs text-cyan-600 mt-1">
+        <%= Math.round((summary.students_read_any_material / summary.students) * 100) %>% dari total
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<div class="mt-8 grid lg:grid-cols-2 gap-4">
+  <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5 shadow-soft overflow-x-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-indigo-900">Progress Ujian (10 terbaru)</h2>
+      <a href="/principal/exams" class="text-sm text-indigo-600 hover:text-indigo-700 font-medium">Lihat Semua →</a>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="text-indigo-700">
+        <tr>
+          <th class="text-left py-2">Ujian</th>
+          <th class="text-left py-2">Guru</th>
+          <th class="text-left py-2">Kelas</th>
+          <th class="text-right py-2">Soal</th>
+          <th class="text-right py-2">Selesai</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% examProgress.forEach(e => { %>
+          <tr class="border-t border-indigo-200">
+            <td class="py-2">
+              <div class="font-medium text-indigo-900"><%= e.title %></div>
+              <div class="text-xs text-indigo-600"><%= e.is_published ? 'Published' : 'Draft' %></div>
+            </td>
+            <td class="py-2 text-indigo-800"><%= e.teacher_name %></td>
+            <td class="py-2 text-indigo-700"><%= e.class_names || 'Semua Kelas' %></td>
+            <td class="py-2 text-right text-indigo-900"><%= e.question_count %></td>
+            <td class="py-2 text-right">
+              <span class="font-semibold text-indigo-900"><%= e.done_count %></span><span class="text-indigo-600">/<%= e.eligible_count %></span>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 p-5 shadow-soft overflow-x-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold text-teal-900">Progress Materi (10 terbaru)</h2>
+      <a href="/principal/materials" class="text-sm text-teal-600 hover:text-teal-700 font-medium">Lihat Semua →</a>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="text-teal-700">
+        <tr>
+          <th class="text-left py-2">Materi</th>
+          <th class="text-left py-2">Mapel</th>
+          <th class="text-left py-2">Guru</th>
+          <th class="text-left py-2">Kelas</th>
+          <th class="text-right py-2">Baca</th>
+          <th class="text-right py-2">Selesai</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% materialProgress.forEach(m => { %>
+          <tr class="border-t border-teal-200">
+            <td class="py-2">
+              <div class="font-medium text-teal-900"><%= m.title %></div>
+              <div class="text-xs text-teal-600"><%= m.is_published ? 'Published' : 'Draft' %></div>
+            </td>
+            <td class="py-2 text-teal-800"><%= m.subject_name %></td>
+            <td class="py-2 text-teal-800"><%= m.teacher_name %></td>
+            <td class="py-2 text-teal-700"><%= m.class_name || 'Semua' %></td>
+            <td class="py-2 text-right">
+              <span class="font-semibold text-teal-900"><%= m.read_count %></span><span class="text-teal-600">/<%= m.eligible_count %></span>
+            </td>
+            <td class="py-2 text-right">
+              <span class="font-semibold text-teal-900"><%= m.completed_count %></span><span class="text-teal-600">/<%= m.eligible_count %></span>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="mt-8 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 p-5 shadow-soft overflow-x-auto">
+  <h2 class="text-lg font-semibold text-amber-900">Aktivitas Guru</h2>
+  <table class="mt-4 w-full text-sm">
+    <thead class="text-amber-700">
+      <tr>
+        <th class="text-left py-2">Guru</th>
+        <th class="text-right py-2">Ujian dibuat</th>
+        <th class="text-right py-2">Materi dibuat</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% teacherActivity.forEach(t => { %>
+        <tr class="border-t border-amber-200">
+          <td class="py-2 font-medium text-amber-900"><%= t.full_name %></td>
+          <td class="py-2 text-right text-amber-900"><%= t.exams_count %></td>
+          <td class="py-2 text-right text-amber-900"><%= t.materials_count %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
