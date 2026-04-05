@@ -1,16 +1,17 @@
 #!/bin/bash
 # ============================================================
-# update.sh - Update aplikasi di VPS dari GitHub
+# update.sh - Update aplikasi CBT di VPS dari GitHub
 # Cara pakai: bash update.sh
 # Letakkan di VPS: /cbt/update.sh
 # ============================================================
 
 APP_DIR="/cbt"
-APP_NAME="lms-smkn1kras"
+APP_NAME="lms-smkn1kras"   # Sesuai nama di ecosystem.config.js
 BRANCH="main"
 LOG_FILE="/cbt/logs/update.log"
+DB_USER="lmsuser"
+DB_NAME="cbt_smk"
 
-# Warna
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
@@ -26,11 +27,11 @@ mkdir -p /cbt/logs
 
 echo ""
 echo "========================================"
-echo "  Update LMS - $(date '+%Y-%m-%d %H:%M:%S')"
+echo "  Update CBT - $(date '+%Y-%m-%d %H:%M:%S')"
 echo "========================================"
 echo "" | tee -a $LOG_FILE
 
-cd $APP_DIR || err "Folder $APP_DIR tidak ditemukan!"
+cd $APP_DIR || err "Folder $APP_DIR tidak ditemukan! Clone dulu: git clone https://github.com/mazjou/cbt.git /cbt"
 
 # ── 1. Cek koneksi internet ───────────────────────────────
 info "Cek koneksi ke GitHub..."
@@ -39,20 +40,19 @@ if ! curl -s --max-time 5 https://github.com > /dev/null; then
 fi
 log "Koneksi OK"
 
-# ── 2. Simpan versi sebelumnya ────────────────────────────
+# ── 2. Simpan versi sebelumnya (untuk rollback) ───────────
 PREV_COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 info "Versi sekarang: $PREV_COMMIT"
 
-# ── 3. Pull kode terbaru ──────────────────────────────────
-info "Pull kode terbaru dari GitHub..."
+# ── 3. Fetch update dari GitHub ───────────────────────────
+info "Cek update dari GitHub..."
 git fetch origin $BRANCH 2>&1 | tee -a $LOG_FILE
 
-# Cek apakah ada update
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/$BRANCH)
 
 if [ "$LOCAL" = "$REMOTE" ]; then
-  warn "Tidak ada update baru. Kode sudah terbaru."
+  warn "Tidak ada update baru. Kode sudah terbaru ($PREV_COMMIT)."
   echo ""
   exit 0
 fi
@@ -63,55 +63,70 @@ info "Perubahan yang akan diupdate:"
 git log --oneline HEAD..origin/$BRANCH
 echo ""
 
-# Reset dan pull (hindari conflict)
+# ── 4. Cek file apa yang berubah ─────────────────────────
+CHANGED_FILES=$(git diff HEAD..origin/$BRANCH --name-only 2>/dev/null)
+PKG_CHANGED=$(echo "$CHANGED_FILES" | grep "package.json" || true)
+SCHEMA_CHANGED=$(echo "$CHANGED_FILES" | grep "sql/schema_pg.sql" || true)
+INDEX_CHANGED=$(echo "$CHANGED_FILES" | grep "sql/add_indexes.sql" || true)
+
+# ── 5. Pull kode terbaru ──────────────────────────────────
 git reset --hard origin/$BRANCH 2>&1 | tee -a $LOG_FILE
-log "Kode diupdate ke versi terbaru"
-
 NEW_COMMIT=$(git rev-parse --short HEAD)
-info "Versi baru: $NEW_COMMIT"
+log "Kode diupdate: $PREV_COMMIT → $NEW_COMMIT"
 
-# ── 4. Cek package.json berubah ───────────────────────────
-PKGJSON_CHANGED=$(git diff $PREV_COMMIT HEAD --name-only 2>/dev/null | grep "package.json" || true)
-if [ -n "$PKGJSON_CHANGED" ]; then
-  info "package.json berubah, install dependency baru..."
+# ── 6. Install dependency jika package.json berubah ───────
+if [ -n "$PKG_CHANGED" ]; then
+  info "package.json berubah, install dependency..."
   npm install --production 2>&1 | tee -a $LOG_FILE
   log "npm install selesai"
 else
   log "package.json tidak berubah, skip npm install"
 fi
 
-# ── 5. Cek ada migrasi database ───────────────────────────
-MIGRATION_CHANGED=$(git diff $PREV_COMMIT HEAD --name-only 2>/dev/null | grep "sql/schema_pg.sql" || true)
-if [ -n "$MIGRATION_CHANGED" ]; then
-  warn "Schema database berubah!"
-  warn "Jalankan manual: node src/db/setup.js"
-  warn "ATAU: psql -U lmsuser -d cbt_smk -f sql/schema_pg.sql"
+# ── 7. Jalankan migrasi database jika schema berubah ──────
+if [ -n "$SCHEMA_CHANGED" ]; then
+  warn "Schema database berubah! Menjalankan migrasi..."
+  node src/db/setup.js 2>&1 | tee -a $LOG_FILE
+  log "Migrasi database selesai"
 fi
 
-# ── 6. Reload aplikasi (zero downtime) ───────────────────
+# ── 8. Update indexes jika berubah ────────────────────────
+if [ -n "$INDEX_CHANGED" ]; then
+  info "Indexes berubah, update indexes database..."
+  psql -U $DB_USER -d $DB_NAME -f sql/add_indexes.sql 2>&1 | tee -a $LOG_FILE
+  log "Indexes diupdate"
+fi
+
+# ── 9. Reload aplikasi (zero downtime) ────────────────────
 info "Reload aplikasi PM2..."
 if pm2 list | grep -q "$APP_NAME"; then
   pm2 reload $APP_NAME 2>&1 | tee -a $LOG_FILE
   log "Aplikasi di-reload (zero downtime)"
 else
-  warn "PM2 process tidak ditemukan. Jalankan manual:"
-  warn "pm2 start ecosystem.config.js --env production"
+  warn "PM2 process '$APP_NAME' tidak ditemukan."
+  info "Mencoba start aplikasi..."
+  pm2 start ecosystem.config.js --env production 2>&1 | tee -a $LOG_FILE
+  pm2 save
 fi
 
-# ── 7. Cek aplikasi berjalan normal ──────────────────────
+# ── 10. Verifikasi aplikasi berjalan ──────────────────────
 sleep 3
-info "Cek status aplikasi..."
-if pm2 list | grep -q "online"; then
+info "Verifikasi aplikasi..."
+if pm2 list | grep "$APP_NAME" | grep -q "online"; then
   log "Aplikasi berjalan normal ✅"
 else
-  err "Aplikasi tidak online! Cek log: pm2 logs $APP_NAME"
+  warn "Aplikasi tidak online! Mencoba rollback ke $PREV_COMMIT..."
+  git reset --hard $PREV_COMMIT 2>&1
+  pm2 reload $APP_NAME 2>&1
+  err "Update gagal! Sudah rollback ke $PREV_COMMIT. Cek log: pm2 logs $APP_NAME"
 fi
 
-# ── 8. Selesai ────────────────────────────────────────────
+# ── 11. Selesai ───────────────────────────────────────────
 echo ""
 echo "========================================"
 log "Update selesai: $PREV_COMMIT → $NEW_COMMIT"
 echo "========================================"
 echo ""
-info "Log tersimpan di: $LOG_FILE"
+info "Log: $LOG_FILE"
+info "Cek status: pm2 status"
 echo ""
