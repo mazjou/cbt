@@ -25,17 +25,17 @@
     /* Halaman A4 Portrait: 2 kolom × 4 baris = 8 kartu */
     .page{
       width:210mm;
-      min-height:297mm;
+      height:297mm;
       margin:0 auto 16px;
       background:white;
-      padding:6mm 6mm;
+      padding:5mm 5mm;
       display:grid;
       grid-template-columns:repeat(2,1fr);
       grid-template-rows:repeat(4,1fr);
-      gap:4mm;
+      gap:3mm;
     }
 
-    /* Kartu: ~95mm × 65mm */
+    /* Kartu: ~97mm × 66mm */
     .kartu{
       border:1.5px solid #1e3a8a;
       display:flex;
@@ -52,30 +52,28 @@
       border-bottom:1.5px solid #1e3a8a;
       background:#eff6ff;
       flex-shrink:0;
-      height:14mm;
+      height:12mm;
     }
     .k-logo{
-      width:14mm;flex-shrink:0;
+      width:12mm;flex-shrink:0;
       display:flex;align-items:center;justify-content:center;
-      border-right:1px solid #1e3a8a;padding:1.5mm;
+      border-right:1px solid #1e3a8a;padding:1mm;
     }
-    .k-logo img{width:10mm;height:10mm;object-fit:contain;}
+    .k-logo img{width:9mm;height:9mm;object-fit:contain;}
     .k-title{
       flex:1;display:flex;flex-direction:column;
       align-items:center;justify-content:center;
-      padding:1mm 2mm;text-align:center;
+      padding:0.5mm 1mm;text-align:center;
     }
-    .k-title .t1{font-size:7.5pt;font-weight:bold;text-transform:uppercase;color:#1e3a8a;letter-spacing:.3px;}
-    .k-title .t2{font-size:7pt;font-weight:bold;color:#1e3a8a;margin-top:1px;}
-    .k-title .t3{font-size:6.5pt;color:#374151;margin-top:1px;}
-    /* Panitia HORIZONTAL */
+    .k-title .t1{font-size:8pt;font-weight:bold;text-transform:uppercase;color:#1e3a8a;letter-spacing:.2px;}
+    .k-title .t2{font-size:7.5pt;font-weight:bold;color:#1e3a8a;margin-top:0.5px;}
+    .k-title .t3{font-size:6.5pt;color:#374151;margin-top:0.5px;}
     .k-panitia{
-      width:14mm;flex-shrink:0;
+      width:12mm;flex-shrink:0;
       border-left:1px solid #1e3a8a;
       display:flex;align-items:center;justify-content:center;
-      font-size:7pt;font-weight:bold;color:#1e3a8a;
+      font-size:6.5pt;font-weight:bold;color:#1e3a8a;
       text-align:center;padding:1mm;
-      /* HORIZONTAL - tidak pakai writing-mode */
     }
 
     /* ── BODY ── */
@@ -83,58 +81,57 @@
       flex:1;
       display:flex;
       flex-direction:column;
-      padding:2mm 3mm;
+      padding:1.5mm 2.5mm 1mm;
       overflow:hidden;
+      gap:1.5mm;
     }
 
     /* Baris atas: data full width */
-    .k-info{
-      width:100%;
-    }
+    .k-info{ width:100%; }
     .dt{width:100%;border-collapse:collapse;}
-    .dt td{font-size:7pt;padding:1mm 0;vertical-align:top;color:#111827;line-height:1.3;}
-    .dt .lb{width:22mm;color:#111827;white-space:nowrap;font-size:7pt;}
-    .dt .sp{width:5mm;text-align:left;padding-left:1mm;}
-    .dt .vl{font-weight:normal;font-size:7pt;}
-    .dt .mono{font-family:'Courier New',monospace;font-size:7pt;}
+    .dt td{font-size:8pt;padding:0.6mm 0;vertical-align:top;color:#111827;line-height:1.3;}
+    .dt .lb{width:22mm;color:#111827;white-space:nowrap;font-size:8pt;}
+    .dt .sp{width:4mm;text-align:left;padding-left:1mm;}
+    .dt .vl{font-weight:normal;font-size:8pt;}
+    .dt .mono{font-family:'Courier New',monospace;font-size:7.5pt;}
 
     /* Baris bawah: foto kiri | TTD tengah | QR kanan */
     .k-bottom{
       display:flex;
       align-items:flex-end;
-      gap:3mm;
-      margin-top:2mm;
-      flex:1;
+      gap:2mm;
     }
     .foto-box{
-      width:20mm;height:24mm;
+      width:17mm;height:20mm;
       border:1px solid #374151;
       display:flex;align-items:center;justify-content:center;
       background:#f9fafb;overflow:hidden;flex-shrink:0;
     }
     .foto-box img{width:100%;height:100%;object-fit:cover;}
-    .foto-ph{font-size:5.5pt;color:#9ca3af;text-align:center;line-height:1.4;}
+    .foto-ph{font-size:5pt;color:#9ca3af;text-align:center;line-height:1.3;}
 
     .ttd{
       flex:1;
-      font-size:6.5pt;color:#111827;line-height:1.6;
+      font-size:8pt;color:#111827;line-height:1.6;
+      display:flex;flex-direction:column;align-items:flex-start;justify-content:center;
+      text-align:left;
     }
-    .ttd .garis{border-bottom:1px solid #111827;width:28mm;margin:5mm 0 1mm;}
-    .ttd .tnama{font-weight:bold;font-size:7pt;}
-    .ttd .tnip{font-size:6pt;}
+    .ttd .garis{border-bottom:1px solid #111827;width:30mm;margin:3mm 0 0.5mm;}
+    .ttd .tnama{font-weight:bold;font-size:8pt;}
+    .ttd .tnip{font-size:7pt;}
 
     .qr-wrap{
-      width:18mm;height:18mm;
+      width:16mm;height:16mm;
       display:flex;align-items:center;justify-content:center;
       flex-shrink:0;
     }
-    .qr-label{font-size:4.5pt;color:#6b7280;text-align:center;margin-top:0.5mm;}
+    .qr-label{font-size:4pt;color:#6b7280;text-align:center;margin-top:0.5mm;}
 
     /* Footer */
     .k-foot{
       border-top:1px solid #e5e7eb;
-      padding:1mm 2mm;text-align:center;
-      font-size:5.5pt;color:#6b7280;background:#f9fafb;flex-shrink:0;
+      padding:0.8mm 2mm;text-align:center;
+      font-size:5pt;color:#6b7280;background:#f9fafb;flex-shrink:0;
     }
 
     /* ── PRINT ── */
@@ -142,8 +139,8 @@
       body{background:white;}
       .no-print{display:none;}
       .page{
-        margin:0;padding:6mm;
-        width:210mm;min-height:297mm;
+        margin:0;padding:5mm;
+        width:210mm;height:297mm;
         page-break-after:always;
       }
       .page:last-child{page-break-after:auto;}
@@ -232,8 +229,13 @@
         <!-- Foto -->
         <div>
           <div class="foto-box">
-            <%if(u.profile_photo){%>
-              <img src="<%=u.profile_photo%>" alt="Foto">
+            <%
+              // Validasi path foto - hanya tampilkan jika path valid (bukan URL eksternal/404)
+              const fotoSrc = u.profile_photo && u.profile_photo.startsWith('/public/') ? u.profile_photo : null;
+            %>
+            <%if(fotoSrc){%>
+              <img src="<%=fotoSrc%>" alt="Foto" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+              <div class="foto-ph" style="display:none;">📷<br>Foto<br>Peserta</div>
             <%}else{%>
               <div class="foto-ph">📷<br>Foto<br>Peserta</div>
             <%}%>
@@ -276,7 +278,7 @@
     %>
     try{new QRCode(document.getElementById('qr-<%=j%>'),{
       text:'<%-qrText.replace(/\\/g,"\\\\").replace(/'/g,"\\'")%>',
-      width:66,height:66,colorDark:'#000',colorLight:'#fff',
+      width:58,height:58,colorDark:'#000',colorLight:'#fff',
       correctLevel:QRCode.CorrectLevel.M
     });}catch(e){}
     <%}%>
