@@ -1,0 +1,139 @@
+<%
+const BULAN_NAMA = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const KATEGORI = { UMUM:'🗒️ Umum', MENGAJAR:'📚 Mengajar', RAPAT:'👥 Rapat', UJIAN:'📝 Ujian', PELATIHAN:'🎓 Pelatihan', LAINNYA:'📌 Lainnya' };
+const WARNA = { UMUM:'indigo', MENGAJAR:'blue', RAPAT:'amber', UJIAN:'red', PELATIHAN:'green', LAINNYA:'slate' };
+const prevBulan = bulan===1?12:bulan-1; const prevTahun = bulan===1?tahun-1:tahun;
+const nextBulan = bulan===12?1:bulan+1; const nextTahun = bulan===12?tahun+1:tahun;
+%>
+
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-indigo-900">📅 Agenda Guru</h1>
+    <p class="mt-1 text-sm text-slate-500">Pantau jadwal kegiatan semua guru</p>
+  </div>
+  <a href="/admin" class="px-4 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-medium text-sm">← Admin</a>
+</div>
+
+<%- include('../partials/flash') %>
+
+<!-- Filter -->
+<div class="rounded-2xl border border-slate-200 bg-white p-4 mb-5">
+  <form method="GET" action="/admin/agenda" class="flex flex-wrap gap-3 items-end">
+    <div>
+      <label class="text-xs text-slate-600 font-medium">Bulan</label>
+      <select name="bulan" class="mt-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <% for(let i=1;i<=12;i++) { %>
+          <option value="<%=i%>" <%=i===bulan?'selected':''%>><%=BULAN_NAMA[i]%></option>
+        <% } %>
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-slate-600 font-medium">Tahun</label>
+      <input name="tahun" type="number" value="<%=tahun%>" min="2020" max="2030"
+        class="mt-1 w-24 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    </div>
+    <div>
+      <label class="text-xs text-slate-600 font-medium">Guru</label>
+      <select name="teacher_id" class="mt-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="">Semua Guru</option>
+        <% teachers.forEach(t => { %>
+          <option value="<%=t.id%>" <%=String(teacher_id)===String(t.id)?'selected':''%>><%=t.full_name%></option>
+        <% }) %>
+      </select>
+    </div>
+    <button class="px-5 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white text-sm font-semibold">Filter</button>
+    <a href="/admin/agenda" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm">Reset</a>
+  </form>
+</div>
+
+<!-- Statistik -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+  <% const total = agendas.length;
+     const selesai = agendas.filter(a=>a.status==='SELESAI').length;
+     const hari_ini = agendas.filter(a=>new Date(a.agenda_date).toDateString()===new Date().toDateString()).length;
+     const mendatang = agendas.filter(a=>new Date(a.agenda_date)>new Date()).length;
+  %>
+  <div class="rounded-xl bg-indigo-50 border border-indigo-200 p-4 text-center">
+    <div class="text-2xl font-bold text-indigo-700"><%=total%></div>
+    <div class="text-xs text-indigo-600 mt-1">Total Agenda</div>
+  </div>
+  <div class="rounded-xl bg-green-50 border border-green-200 p-4 text-center">
+    <div class="text-2xl font-bold text-green-700"><%=selesai%></div>
+    <div class="text-xs text-green-600 mt-1">Selesai</div>
+  </div>
+  <div class="rounded-xl bg-amber-50 border border-amber-200 p-4 text-center">
+    <div class="text-2xl font-bold text-amber-700"><%=hari_ini%></div>
+    <div class="text-xs text-amber-600 mt-1">Hari Ini</div>
+  </div>
+  <div class="rounded-xl bg-blue-50 border border-blue-200 p-4 text-center">
+    <div class="text-2xl font-bold text-blue-700"><%=mendatang%></div>
+    <div class="text-xs text-blue-600 mt-1">Mendatang</div>
+  </div>
+</div>
+
+<!-- Daftar Agenda -->
+<div class="rounded-2xl border border-slate-200 bg-white p-5">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="font-bold text-slate-800">Agenda <%=BULAN_NAMA[bulan]%> <%=tahun%></h2>
+    <div class="flex gap-2">
+      <a href="/admin/agenda?bulan=<%=prevBulan%>&tahun=<%=prevTahun%>&teacher_id=<%=teacher_id%>"
+        class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-sm">← Prev</a>
+      <a href="/admin/agenda?bulan=<%=nextBulan%>&tahun=<%=nextTahun%>&teacher_id=<%=teacher_id%>"
+        class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-sm">Next →</a>
+    </div>
+  </div>
+
+  <% if (!agendas.length) { %>
+    <div class="text-center py-12 text-slate-400">
+      <div class="text-4xl mb-3">📭</div>
+      <div class="text-sm">Tidak ada agenda di periode ini</div>
+    </div>
+  <% } else { %>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 text-left text-xs text-slate-500 uppercase">
+            <th class="pb-3 pr-4">Tanggal</th>
+            <th class="pb-3 pr-4">Guru</th>
+            <th class="pb-3 pr-4">Kegiatan</th>
+            <th class="pb-3 pr-4">Waktu</th>
+            <th class="pb-3 pr-4">Kategori</th>
+            <th class="pb-3">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% agendas.forEach(a => {
+            const tgl = new Date(a.agenda_date);
+            const w = WARNA[a.category]||'slate';
+            const isToday = tgl.toDateString()===new Date().toDateString();
+          %>
+          <tr class="<%=isToday?'bg-indigo-50':''%>">
+            <td class="py-3 pr-4">
+              <div class="font-semibold <%=isToday?'text-indigo-700':'text-slate-700'%>">
+                <%=tgl.toLocaleDateString('id-ID',{day:'numeric',month:'short'})%>
+              </div>
+              <div class="text-xs text-slate-400"><%=tgl.toLocaleDateString('id-ID',{weekday:'long'})%></div>
+            </td>
+            <td class="py-3 pr-4 text-slate-700"><%=a.teacher_name%></td>
+            <td class="py-3 pr-4">
+              <div class="font-medium text-slate-800"><%=a.title%></div>
+              <% if(a.description) { %><div class="text-xs text-slate-500 truncate max-w-xs"><%=a.description%></div><% } %>
+            </td>
+            <td class="py-3 pr-4 text-slate-600 text-xs">
+              <% if(a.start_time) { %><%=a.start_time.slice(0,5)%><% if(a.end_time) { %> – <%=a.end_time.slice(0,5)%><% } %><% } else { %>-<% } %>
+            </td>
+            <td class="py-3 pr-4">
+              <span class="px-2 py-0.5 rounded-full text-xs bg-<%=w%>-100 text-<%=w%>-700"><%=KATEGORI[a.category]||a.category%></span>
+            </td>
+            <td class="py-3">
+              <span class="px-2 py-0.5 rounded-full text-xs <%=a.status==='SELESAI'?'bg-green-100 text-green-700':'bg-slate-100 text-slate-600'%>">
+                <%=a.status==='SELESAI'?'✓ Selesai':'Aktif'%>
+              </span>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% } %>
+</div>

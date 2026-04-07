@@ -3278,6 +3278,68 @@ router.delete('/assignments/:id', async (req, res) => {
 module.exports = router;
 
 
+// ===== AGENDA GURU =====
+router.get('/agenda', async (req, res) => {
+  const user = req.session.user;
+  const bulan = parseInt(req.query.bulan) || new Date().getMonth() + 1;
+  const tahun = parseInt(req.query.tahun) || new Date().getFullYear();
+  const [agendas] = await pool.query(
+    `SELECT * FROM agendas WHERE teacher_id=:tid
+     AND EXTRACT(MONTH FROM agenda_date)=:bulan AND EXTRACT(YEAR FROM agenda_date)=:tahun
+     ORDER BY agenda_date ASC, start_time ASC;`,
+    { tid: user.id, bulan, tahun }
+  );
+  const [upcoming] = await pool.query(
+    `SELECT * FROM agendas WHERE teacher_id=:tid
+     AND agenda_date >= CURRENT_DATE AND agenda_date <= CURRENT_DATE + 7
+     ORDER BY agenda_date ASC, start_time ASC LIMIT 5;`,
+    { tid: user.id }
+  );
+  res.render('teacher/agenda', { title: 'Agenda Saya', agendas, upcoming, bulan, tahun });
+});
+
+router.post('/agenda', async (req, res) => {
+  const user = req.session.user;
+  const { title, description, agenda_date, start_time, end_time, category } = req.body;
+  try {
+    await pool.query(
+      `INSERT INTO agendas (teacher_id, title, description, agenda_date, start_time, end_time, category)
+       VALUES (:tid,:title,:desc,:date,:start,:end,:cat);`,
+      { tid: user.id, title, desc: description||null, date: agenda_date,
+        start: start_time||null, end: end_time||null, cat: category||'UMUM' }
+    );
+    req.flash('success', 'Agenda ditambahkan.');
+  } catch(e) { console.error(e); req.flash('error', 'Gagal menambahkan agenda.'); }
+  res.redirect('/teacher/agenda');
+});
+
+router.post('/agenda/:id/edit', async (req, res) => {
+  const user = req.session.user;
+  const { title, description, agenda_date, start_time, end_time, category, status } = req.body;
+  try {
+    await pool.query(
+      `UPDATE agendas SET title=:title, description=:desc, agenda_date=:date,
+       start_time=:start, end_time=:end, category=:cat, status=:status
+       WHERE id=:id AND teacher_id=:tid;`,
+      { title, desc: description||null, date: agenda_date, start: start_time||null,
+        end: end_time||null, cat: category||'UMUM', status: status||'AKTIF',
+        id: req.params.id, tid: user.id }
+    );
+    req.flash('success', 'Agenda diperbarui.');
+  } catch(e) { console.error(e); req.flash('error', 'Gagal memperbarui agenda.'); }
+  res.redirect('/teacher/agenda');
+});
+
+router.post('/agenda/:id/delete', async (req, res) => {
+  const user = req.session.user;
+  try {
+    await pool.query(`DELETE FROM agendas WHERE id=:id AND teacher_id=:tid;`,
+      { id: req.params.id, tid: user.id });
+    req.flash('success', 'Agenda dihapus.');
+  } catch(e) { req.flash('error', 'Gagal menghapus.'); }
+  res.redirect('/teacher/agenda');
+});
+
 // Download Excel daftar nilai
 router.get('/grades/download', async (req, res) => {
   const user = req.session.user;

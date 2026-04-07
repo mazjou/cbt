@@ -2970,10 +2970,10 @@ router.get('/grades', async (req, res) => {
     params.status = status;
   }
   if (result && result === 'LULUS') {
-    where.push('a.status="SUBMITTED" AND a.score >= e.pass_score');
+    where.push("a.status='SUBMITTED' AND a.score >= e.pass_score");
   }
   if (result && result === 'TIDAK_LULUS') {
-    where.push('a.status="SUBMITTED" AND a.score < e.pass_score');
+    where.push("a.status='SUBMITTED' AND a.score < e.pass_score");
   }
   if (q) {
     where.push('(u.full_name LIKE :q OR u.username LIKE :q OR e.title LIKE :q)');
@@ -3950,5 +3950,24 @@ function formatUptime(sec) {
   if (h > 0) return `${h}j ${m}m`;
   return `${m}m ${s}d`;
 }
+
+// ===== AGENDA (ADMIN - lihat semua guru) =====
+router.get('/agenda', async (req, res) => {
+  const bulan = parseInt(req.query.bulan) || new Date().getMonth() + 1;
+  const tahun = parseInt(req.query.tahun) || new Date().getFullYear();
+  const teacher_id = req.query.teacher_id || '';
+
+  let q = `SELECT a.*, u.full_name AS teacher_name
+           FROM agendas a JOIN users u ON u.id=a.teacher_id
+           WHERE EXTRACT(MONTH FROM a.agenda_date)=:bulan AND EXTRACT(YEAR FROM a.agenda_date)=:tahun`;
+  const params = { bulan, tahun };
+  if (teacher_id) { q += ' AND a.teacher_id=:tid'; params.tid = teacher_id; }
+  q += ' ORDER BY a.agenda_date ASC, a.start_time ASC;';
+
+  const [agendas] = await pool.query(q, params);
+  const [teachers] = await pool.query(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
+
+  res.render('admin/agenda', { title: 'Agenda Guru', agendas, teachers, bulan, tahun, teacher_id });
+});
 
 module.exports = router;

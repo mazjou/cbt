@@ -125,6 +125,22 @@
         <%= pagination.total %> total
       </span>
     </div>
+
+    <!-- Tampil per halaman -->
+    <div class="flex items-center gap-3 mt-3">
+      <span class="text-sm text-slate-600 font-medium">Tampil:</span>
+      <select onchange="window.location.href=this.value"
+        class="rounded-xl border-2 border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer">
+        <% [10,25,50,100].forEach(n => { %>
+          <option value="?page=1&limit=<%=n%>&exam_id=<%=filters.exam_id%>&class_id=<%=filters.class_id%>&teacher_id=<%=filters.teacher_id%>&status=<%=filters.status%>&result=<%=filters.result%>&q=<%=filters.q%>"
+            <%=pagination.limit===n?'selected':''%>><%=n%></option>
+        <% }) %>
+      </select>
+      <span class="text-sm text-slate-600">data per halaman</span>
+      <span class="ml-auto text-sm text-slate-500">
+        Menampilkan <%= Math.min((pagination.page-1)*pagination.limit+1, pagination.total) %>–<%= Math.min(pagination.page*pagination.limit, pagination.total) %> dari <%= pagination.total %> data
+      </span>
+    </div>
   </div>
 
   <div class="overflow-x-auto">

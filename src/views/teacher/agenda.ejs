@@ -1,0 +1,248 @@
+<%
+const BULAN_NAMA = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const KATEGORI = { UMUM:'🗒️ Umum', MENGAJAR:'📚 Mengajar', RAPAT:'👥 Rapat', UJIAN:'📝 Ujian', PELATIHAN:'🎓 Pelatihan', LAINNYA:'📌 Lainnya' };
+const WARNA = { UMUM:'indigo', MENGAJAR:'blue', RAPAT:'amber', UJIAN:'red', PELATIHAN:'green', LAINNYA:'slate' };
+const prevBulan = bulan === 1 ? 12 : bulan - 1;
+const prevTahun = bulan === 1 ? tahun - 1 : tahun;
+const nextBulan = bulan === 12 ? 1 : bulan + 1;
+const nextTahun = bulan === 12 ? tahun + 1 : tahun;
+%>
+
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-indigo-900">📅 Agenda Saya</h1>
+    <p class="mt-1 text-sm text-slate-500">Kelola jadwal dan kegiatan harian Anda</p>
+  </div>
+  <a href="/teacher" class="px-4 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-medium text-sm">← Dashboard</a>
+</div>
+
+<%- include('../partials/flash') %>
+
+<div class="grid lg:grid-cols-3 gap-5">
+
+  <!-- Kolom Kiri: Form Tambah + Agenda Mendatang -->
+  <div class="space-y-4">
+
+    <!-- Form Tambah Agenda -->
+    <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5">
+      <h2 class="font-bold text-indigo-900 mb-4">➕ Tambah Agenda</h2>
+      <form action="/teacher/agenda" method="POST" class="space-y-3">
+        <div>
+          <label class="text-xs text-indigo-700 font-medium">Judul *</label>
+          <input name="title" required placeholder="Judul kegiatan"
+            class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs text-indigo-700 font-medium">Tanggal *</label>
+            <input name="agenda_date" type="date" required
+              value="<%= new Date().toISOString().split('T')[0] %>"
+              class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label class="text-xs text-indigo-700 font-medium">Kategori</label>
+            <select name="category" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <% Object.entries(KATEGORI).forEach(([k,v]) => { %>
+                <option value="<%=k%>"><%=v%></option>
+              <% }) %>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-xs text-indigo-700 font-medium">Jam Mulai</label>
+            <input name="start_time" type="time"
+              class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label class="text-xs text-indigo-700 font-medium">Jam Selesai</label>
+            <input name="end_time" type="time"
+              class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+        </div>
+        <div>
+          <label class="text-xs text-indigo-700 font-medium">Keterangan</label>
+          <textarea name="description" rows="2" placeholder="Keterangan tambahan (opsional)"
+            class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+        </div>
+        <button class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-2.5 text-sm transition-all">
+          Simpan Agenda
+        </button>
+      </form>
+    </div>
+
+    <!-- Agenda Mendatang -->
+    <div class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5">
+      <h2 class="font-bold text-emerald-900 mb-3">⏰ 7 Hari Ke Depan</h2>
+      <% if (!upcoming.length) { %>
+        <p class="text-sm text-slate-400 text-center py-3">Tidak ada agenda mendatang</p>
+      <% } else { %>
+        <div class="space-y-2">
+          <% upcoming.forEach(a => {
+            const tgl = new Date(a.agenda_date);
+            const w = WARNA[a.category] || 'slate';
+          %>
+          <div class="rounded-xl bg-white border border-<%=w%>-200 p-3">
+            <div class="flex items-start justify-between gap-2">
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-slate-800 truncate"><%=a.title%></div>
+                <div class="text-xs text-slate-500 mt-0.5">
+                  📅 <%=tgl.toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'})%>
+                  <% if(a.start_time) { %> • ⏰ <%=a.start_time.slice(0,5)%><% } %>
+                </div>
+              </div>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-<%=w%>-100 text-<%=w%>-700 shrink-0"><%=KATEGORI[a.category]||a.category%></span>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Kolom Kanan: Daftar Agenda Bulan Ini -->
+  <div class="lg:col-span-2">
+    <div class="rounded-2xl border border-slate-200 bg-white p-5">
+
+      <!-- Navigasi Bulan -->
+      <div class="flex items-center justify-between mb-5">
+        <a href="/teacher/agenda?bulan=<%=prevBulan%>&tahun=<%=prevTahun%>"
+          class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-sm font-medium">← Prev</a>
+        <h2 class="font-bold text-slate-800 text-lg"><%=BULAN_NAMA[bulan]%> <%=tahun%></h2>
+        <a href="/teacher/agenda?bulan=<%=nextBulan%>&tahun=<%=nextTahun%>"
+          class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 text-sm font-medium">Next →</a>
+      </div>
+
+      <% if (!agendas.length) { %>
+        <div class="text-center py-12 text-slate-400">
+          <div class="text-4xl mb-3">📭</div>
+          <div class="text-sm">Belum ada agenda di bulan ini</div>
+        </div>
+      <% } else { %>
+        <div class="space-y-3">
+          <% agendas.forEach(a => {
+            const tgl = new Date(a.agenda_date);
+            const w = WARNA[a.category] || 'slate';
+            const isToday = tgl.toDateString() === new Date().toDateString();
+            const isPast = tgl < new Date() && !isToday;
+          %>
+          <div class="rounded-xl border <%=isToday?'border-indigo-400 bg-indigo-50':isPast?'border-slate-200 bg-slate-50 opacity-75':'border-slate-200 bg-white'%> p-4">
+            <div class="flex items-start gap-3">
+
+              <!-- Tanggal -->
+              <div class="text-center w-12 shrink-0">
+                <div class="text-xs text-slate-500"><%=tgl.toLocaleDateString('id-ID',{weekday:'short'})%></div>
+                <div class="text-2xl font-bold <%=isToday?'text-indigo-600':'text-slate-700'%>"><%=tgl.getDate()%></div>
+                <% if(isToday) { %><div class="text-xs text-indigo-500 font-semibold">Hari ini</div><% } %>
+              </div>
+
+              <!-- Konten -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-semibold text-slate-800"><%=a.title%></span>
+                  <span class="text-xs px-2 py-0.5 rounded-full bg-<%=w%>-100 text-<%=w%>-700"><%=KATEGORI[a.category]||a.category%></span>
+                  <% if(a.status==='SELESAI') { %><span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">✓ Selesai</span><% } %>
+                </div>
+                <% if(a.start_time) { %>
+                  <div class="text-xs text-slate-500 mt-1">⏰ <%=a.start_time.slice(0,5)%><% if(a.end_time) { %> – <%=a.end_time.slice(0,5)%><% } %></div>
+                <% } %>
+                <% if(a.description) { %>
+                  <div class="text-sm text-slate-600 mt-1"><%=a.description%></div>
+                <% } %>
+              </div>
+
+              <!-- Aksi -->
+              <div class="flex gap-1 shrink-0">
+                <!-- Tandai Selesai -->
+                <% if(a.status !== 'SELESAI') { %>
+                <form action="/teacher/agenda/<%=a.id%>/edit" method="POST" class="inline">
+                  <input type="hidden" name="title" value="<%=a.title%>">
+                  <input type="hidden" name="agenda_date" value="<%=a.agenda_date.toISOString?a.agenda_date.toISOString().split('T')[0]:a.agenda_date%>">
+                  <input type="hidden" name="category" value="<%=a.category%>">
+                  <input type="hidden" name="status" value="SELESAI">
+                  <button type="submit" title="Tandai Selesai"
+                    class="p-1.5 rounded-lg bg-green-100 hover:bg-green-200 text-green-700 text-xs">✓</button>
+                </form>
+                <% } %>
+                <!-- Edit -->
+                <button onclick="editAgenda(<%=JSON.stringify(a)%>)" title="Edit"
+                  class="p-1.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs">✏️</button>
+                <!-- Hapus -->
+                <form action="/teacher/agenda/<%=a.id%>/delete" method="POST" class="inline"
+                      onsubmit="return confirm('Hapus agenda ini?')">
+                  <button type="submit" title="Hapus"
+                    class="p-1.5 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 text-xs">🗑️</button>
+                </form>
+              </div>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Edit Agenda -->
+<div id="editModal" class="fixed inset-0 z-50 hidden bg-black/40 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+    <h3 class="font-bold text-slate-800 mb-4">✏️ Edit Agenda</h3>
+    <form id="editForm" method="POST" class="space-y-3">
+      <input type="hidden" name="status" id="edit_status" value="AKTIF">
+      <div>
+        <label class="text-xs text-slate-600 font-medium">Judul *</label>
+        <input name="title" id="edit_title" required class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-xs text-slate-600 font-medium">Tanggal *</label>
+          <input name="agenda_date" id="edit_date" type="date" required class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-600 font-medium">Kategori</label>
+          <select name="category" id="edit_category" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <% Object.entries(KATEGORI).forEach(([k,v]) => { %>
+              <option value="<%=k%>"><%=v%></option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-xs text-slate-600 font-medium">Jam Mulai</label>
+          <input name="start_time" id="edit_start" type="time" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-600 font-medium">Jam Selesai</label>
+          <input name="end_time" id="edit_end" type="time" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-600 font-medium">Keterangan</label>
+        <textarea name="description" id="edit_desc" rows="2" class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="flex-1 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2.5 text-sm">Simpan</button>
+        <button type="button" onclick="document.getElementById('editModal').classList.add('hidden')"
+          class="px-4 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm">Batal</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function editAgenda(a) {
+  document.getElementById('editForm').action = '/teacher/agenda/' + a.id + '/edit';
+  document.getElementById('edit_title').value = a.title || '';
+  document.getElementById('edit_date').value = a.agenda_date ? a.agenda_date.toString().split('T')[0] : '';
+  document.getElementById('edit_category').value = a.category || 'UMUM';
+  document.getElementById('edit_start').value = a.start_time ? a.start_time.slice(0,5) : '';
+  document.getElementById('edit_end').value = a.end_time ? a.end_time.slice(0,5) : '';
+  document.getElementById('edit_desc').value = a.description || '';
+  document.getElementById('edit_status').value = a.status || 'AKTIF';
+  document.getElementById('editModal').classList.remove('hidden');
+}
+document.getElementById('editModal').addEventListener('click', function(e) {
+  if (e.target === this) this.classList.add('hidden');
+});
+</script>
