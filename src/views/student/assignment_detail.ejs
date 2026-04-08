@@ -81,16 +81,21 @@
       
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div class="bg-slate-50 rounded-lg p-4">
-          <div class="text-sm text-slate-600 mb-1">File yang Dikumpulkan</div>
+          <div class="text-sm text-slate-600 mb-2">Pengumpulan</div>
           <% if (submission.file_path) { %>
-            <a href="/public/uploads/assignments/<%= submission.file_path %>" target="_blank" class="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <%= submission.file_name || 'Download File' %>
+            <a href="/public/uploads/assignments/<%= submission.file_path %>" target="_blank"
+              class="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-2 text-sm">
+              📄 <%= submission.file_name || 'Download File' %>
             </a>
-          <% } else { %>
-            <span class="text-slate-400">Tidak ada file</span>
+          <% } %>
+          <% if (submission.link_url) { %>
+            <a href="<%= submission.link_url %>" target="_blank"
+              class="mt-1 text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-2 text-sm break-all">
+              🔗 <%= submission.link_url %>
+            </a>
+          <% } %>
+          <% if (!submission.file_path && !submission.link_url) { %>
+            <span class="text-slate-400 text-sm">Tidak ada file/link</span>
           <% } %>
         </div>
         
@@ -152,105 +157,99 @@
     <% } else { %>
       <form method="POST" action="/student/assignments/<%= assignment.id %>/submit" enctype="multipart/form-data" id="submitForm">
         <div class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">
-              Upload File <span class="text-red-500">*</span>
-            </label>
-            
-            <!-- File Input (Hidden) -->
-            <input 
-              type="file" 
-              name="file" 
-              id="fileInput"
-              accept="*/*"
-              class="hidden"
-            />
-            
-            <!-- Custom Upload Area -->
-            <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-green-500 transition-colors">
+
+          <!-- Tab pilihan: Upload File atau Link -->
+          <div class="flex rounded-xl border border-slate-200 overflow-hidden">
+            <button type="button" id="tab-file" onclick="switchTab('file')"
+              class="flex-1 py-2.5 text-sm font-semibold bg-indigo-500 text-white transition-all">
+              📁 Upload File
+            </button>
+            <button type="button" id="tab-link" onclick="switchTab('link')"
+              class="flex-1 py-2.5 text-sm font-semibold bg-white text-slate-600 hover:bg-slate-50 transition-all">
+              🔗 Tempel Link
+            </button>
+          </div>
+
+          <!-- Panel Upload File -->
+          <div id="panel-file">
+            <label class="block text-sm font-medium text-slate-700 mb-2">File Tugas</label>
+            <input type="file" name="file" id="fileInput" accept="*/*" class="hidden" />
+            <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors">
               <div id="uploadArea">
-                <svg class="mx-auto h-12 w-12 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="mx-auto h-10 w-10 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
-                <div class="flex flex-col sm:flex-row gap-2 justify-center items-center">
-                  <button 
-                    type="button"
-                    onclick="document.getElementById('fileInput').click()"
-                    class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
-                  >
+                <div class="flex flex-col sm:flex-row gap-2 justify-center">
+                  <button type="button" onclick="document.getElementById('fileInput').click()"
+                    class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-all">
                     📁 Pilih File
                   </button>
-                  <button 
-                    type="button"
-                    onclick="openCamera()"
-                    class="px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-medium rounded-lg transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105"
-                  >
+                  <button type="button" onclick="openCamera()"
+                    class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-lg transition-all">
                     📷 Ambil Foto
                   </button>
                 </div>
                 <p class="mt-2 text-xs text-slate-500">Maksimal 50MB. Foto akan otomatis dikompress.</p>
               </div>
-              
-              <!-- Preview Area -->
               <div id="previewArea" class="hidden">
                 <div class="relative inline-block">
-                  <img id="imagePreview" class="max-w-full max-h-64 rounded-lg shadow-md" />
-                  <button 
-                    type="button"
-                    onclick="clearFile()"
-                    class="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-all"
-                  >
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                  <img id="imagePreview" class="max-w-full max-h-48 rounded-lg shadow-md" />
+                  <button type="button" onclick="clearFile()"
+                    class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1">✕</button>
                 </div>
                 <p id="fileName" class="mt-2 text-sm font-medium text-slate-700"></p>
                 <p id="fileSize" class="text-xs text-slate-500"></p>
               </div>
             </div>
           </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-2">
-              Catatan (Opsional)
-            </label>
-            <textarea 
-              name="notes" 
-              rows="4"
-              class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-              placeholder="Tambahkan catatan jika diperlukan..."
-            ><%= isSubmitted && submission.notes ? submission.notes : '' %></textarea>
-          </div>
-          
-          <% if (isOverdue && assignment.allow_late_submission) { %>
-            <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <div class="flex items-center gap-2 text-orange-800">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span class="font-semibold">Perhatian: Anda mengumpulkan setelah deadline.</span>
+
+          <!-- Panel Link -->
+          <div id="panel-link" class="hidden">
+            <label class="block text-sm font-medium text-slate-700 mb-2">Link Tugas</label>
+            <input type="url" name="link_url" id="linkInput"
+              placeholder="https://drive.google.com/... atau https://youtube.com/..."
+              class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <div class="mt-2 flex flex-wrap gap-2">
+              <span class="text-xs text-slate-500">Contoh link yang diterima:</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">Google Drive</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-red-100 text-red-700">YouTube</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">Google Docs</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">Canva</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">Link lainnya</span>
+            </div>
+            <!-- Preview link -->
+            <div id="link-preview" class="hidden mt-3 rounded-xl border border-indigo-200 bg-indigo-50 p-3">
+              <div class="flex items-center gap-2">
+                <span id="link-icon" class="text-xl">🔗</span>
+                <div class="flex-1 min-w-0">
+                  <div id="link-type" class="text-xs font-semibold text-indigo-700"></div>
+                  <div id="link-url-display" class="text-xs text-slate-500 truncate"></div>
+                </div>
+                <a id="link-open" href="#" target="_blank"
+                  class="text-xs px-2 py-1 rounded-lg bg-indigo-500 text-white hover:bg-indigo-600">Buka</a>
               </div>
             </div>
+          </div>
+
+          <!-- Catatan -->
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-2">Catatan (Opsional)</label>
+            <textarea name="notes" rows="3"
+              class="w-full px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm resize-none"
+              placeholder="Tambahkan catatan jika diperlukan..."><%= isSubmitted && submission.notes ? submission.notes : '' %></textarea>
+          </div>
+
+          <% if (isOverdue && assignment.allow_late_submission) { %>
+            <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-800">
+              ⚠️ Anda mengumpulkan setelah deadline.
+            </div>
           <% } %>
-          
-          <div class="flex gap-3 pt-4 border-t border-slate-200">
-            <button 
-              type="submit"
-              id="submitBtn"
-              class="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-lg shadow-lg transition-all"
-            >
+
+          <div class="flex gap-3 pt-3 border-t border-slate-200">
+            <button type="submit" id="submitBtn"
+              class="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-semibold rounded-xl shadow-lg transition-all">
               <%= isSubmitted ? 'Perbarui Pengumpulan' : 'Kumpulkan Tugas' %>
             </button>
-            <% if (isSubmitted) { %>
-              <button 
-                type="button"
-                onclick="document.getElementById('uploadForm').classList.add('hidden'); document.querySelector('.border-slate-200.mt-4').classList.remove('hidden');"
-                class="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold rounded-lg transition-colors"
-              >
-                Batal
-              </button>
-            <% } %>
           </div>
         </div>
       </form>
@@ -295,14 +294,179 @@
 <script>
 let cameraStream = null;
 let capturedFile = null;
+let activeTab = 'file';
 
-// File input change handler
+// Tab switch
+function switchTab(tab) {
+  activeTab = tab;
+  const tabFile = document.getElementById('tab-file');
+  const tabLink = document.getElementById('tab-link');
+  const panelFile = document.getElementById('panel-file');
+  const panelLink = document.getElementById('panel-link');
+
+  if (tab === 'file') {
+    tabFile.className = 'flex-1 py-2.5 text-sm font-semibold bg-indigo-500 text-white transition-all';
+    tabLink.className = 'flex-1 py-2.5 text-sm font-semibold bg-white text-slate-600 hover:bg-slate-50 transition-all';
+    panelFile.classList.remove('hidden');
+    panelLink.classList.add('hidden');
+    document.getElementById('linkInput').value = '';
+  } else {
+    tabLink.className = 'flex-1 py-2.5 text-sm font-semibold bg-indigo-500 text-white transition-all';
+    tabFile.className = 'flex-1 py-2.5 text-sm font-semibold bg-white text-slate-600 hover:bg-slate-50 transition-all';
+    panelLink.classList.remove('hidden');
+    panelFile.classList.add('hidden');
+  }
+}
+
+// Preview link otomatis
+document.getElementById('linkInput').addEventListener('input', function() {
+  const url = this.value.trim();
+  const preview = document.getElementById('link-preview');
+  if (!url) { preview.classList.add('hidden'); return; }
+
+  let icon = '🔗', type = 'Link';
+  if (/youtube\.com|youtu\.be/i.test(url))       { icon = '▶️'; type = 'YouTube Video'; }
+  else if (/drive\.google\.com/i.test(url))       { icon = '📁'; type = 'Google Drive'; }
+  else if (/docs\.google\.com/i.test(url))        { icon = '📄'; type = 'Google Docs/Sheets/Slides'; }
+  else if (/canva\.com/i.test(url))               { icon = '🎨'; type = 'Canva'; }
+  else if (/instagram\.com/i.test(url))           { icon = '📸'; type = 'Instagram'; }
+  else if (/tiktok\.com/i.test(url))              { icon = '🎵'; type = 'TikTok'; }
+  else if (/vimeo\.com/i.test(url))               { icon = '🎬'; type = 'Vimeo'; }
+
+  document.getElementById('link-icon').textContent = icon;
+  document.getElementById('link-type').textContent = type;
+  document.getElementById('link-url-display').textContent = url;
+  document.getElementById('link-open').href = url;
+  preview.classList.remove('hidden');
+});
+
+// File input change
 document.getElementById('fileInput').addEventListener('change', function(e) {
   const file = e.target.files[0];
-  if (file) {
-    handleFile(file);
+  if (file) handleFile(file);
+});
+
+async function handleFile(file) {
+  if (file.type.startsWith('image/')) {
+    const compressed = await compressImage(file);
+    capturedFile = compressed;
+    showPreview(compressed);
+  } else {
+    capturedFile = file;
+    showFileInfo(file);
+  }
+}
+
+async function compressImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height, max = 1920;
+        if (w > max || h > max) {
+          if (w > h) { h = (h/w)*max; w = max; } else { w = (w/h)*max; h = max; }
+        }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => resolve(new File([blob], file.name, { type:'image/jpeg' })), 'image/jpeg', 0.85);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function showPreview(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('imagePreview').src = e.target.result;
+    document.getElementById('imagePreview').classList.remove('hidden');
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('fileSize').textContent = formatFileSize(file.size) + ' (terkompress)';
+    document.getElementById('uploadArea').classList.add('hidden');
+    document.getElementById('previewArea').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+}
+
+function showFileInfo(file) {
+  document.getElementById('fileName').textContent = '📄 ' + file.name;
+  document.getElementById('fileSize').textContent = formatFileSize(file.size);
+  document.getElementById('imagePreview').classList.add('hidden');
+  document.getElementById('uploadArea').classList.add('hidden');
+  document.getElementById('previewArea').classList.remove('hidden');
+}
+
+function clearFile() {
+  capturedFile = null;
+  document.getElementById('fileInput').value = '';
+  document.getElementById('uploadArea').classList.remove('hidden');
+  document.getElementById('previewArea').classList.add('hidden');
+  document.getElementById('imagePreview').classList.remove('hidden');
+}
+
+function formatFileSize(b) {
+  if (!b) return '0 B';
+  const k = 1024, s = ['B','KB','MB','GB'], i = Math.floor(Math.log(b)/Math.log(k));
+  return (b/Math.pow(k,i)).toFixed(1) + ' ' + s[i];
+}
+
+// Kamera
+async function openCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'environment' } });
+    document.getElementById('cameraVideo').srcObject = cameraStream;
+    document.getElementById('cameraModal').classList.remove('hidden');
+  } catch(e) { alert('Tidak dapat mengakses kamera.'); }
+}
+function closeCamera() {
+  if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
+  document.getElementById('cameraModal').classList.add('hidden');
+}
+async function capturePhoto() {
+  const video = document.getElementById('cameraVideo');
+  const canvas = document.getElementById('cameraCanvas');
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  canvas.toBlob(async blob => {
+    const file = new File([blob], `foto_${Date.now()}.jpg`, { type:'image/jpeg' });
+    capturedFile = await compressImage(file);
+    showPreview(capturedFile);
+    closeCamera();
+  }, 'image/jpeg', 0.85);
+}
+
+// Submit form
+document.getElementById('submitForm').addEventListener('submit', function(e) {
+  const linkUrl = document.getElementById('linkInput').value.trim();
+
+  if (activeTab === 'link') {
+    // Validasi link
+    if (!linkUrl) { e.preventDefault(); alert('Masukkan link tugas terlebih dahulu.'); return; }
+    try { new URL(linkUrl); } catch(_) { e.preventDefault(); alert('Link tidak valid. Pastikan diawali https://'); return; }
+    // Biarkan form submit normal dengan link_url
+    return;
+  }
+
+  // Tab file
+  if (capturedFile) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    formData.delete('file');
+    formData.append('file', capturedFile);
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = 'Mengunggah...';
+    fetch(this.action, { method:'POST', body: formData })
+      .then(r => { if(r.ok || r.redirected) window.location.href = r.url || window.location.href; else throw new Error(); })
+      .catch(() => { alert('Gagal mengunggah.'); btn.disabled=false; btn.textContent='Kumpulkan Tugas'; });
+  } else if (!document.getElementById('fileInput').files[0]) {
+    e.preventDefault();
+    alert('Pilih file atau masukkan link tugas terlebih dahulu.');
   }
 });
+</script>
 
 // Handle file (compress if image)
 async function handleFile(file) {

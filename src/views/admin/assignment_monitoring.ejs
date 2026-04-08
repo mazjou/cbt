@@ -1,0 +1,127 @@
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-indigo-900">📊 Pemantauan Tugas</h1>
+    <p class="mt-1 text-sm text-slate-500">Pantau pengumpulan tugas semua siswa</p>
+  </div>
+  <a href="/admin/assignments" class="px-4 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-medium text-sm">← Tugas</a>
+</div>
+
+<%- include('../partials/flash') %>
+
+<!-- Filter -->
+<div class="rounded-2xl border border-slate-200 bg-white p-4 mb-5">
+  <form method="GET" action="/admin/assignments/monitoring" class="flex flex-wrap gap-3 items-end">
+    <div class="flex-1 min-w-48">
+      <label class="text-xs text-slate-600 font-medium">Pilih Tugas *</label>
+      <select name="assignment_id" onchange="this.form.submit()"
+        class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="">-- Pilih Tugas --</option>
+        <% allAssignments.forEach(a => { %>
+          <option value="<%=a.id%>" <%=filters.assignment_id==a.id?'selected':''%>><%=a.title%> (<%=a.teacher_name%>)</option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-slate-600 font-medium">Kelas</label>
+      <select name="class_id" onchange="this.form.submit()"
+        class="mt-1 rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="">Semua Kelas</option>
+        <% classes.forEach(c => { %>
+          <option value="<%=c.id%>" <%=filters.class_id==c.id?'selected':''%>><%=c.name%></option>
+        <% }) %>
+      </select>
+    </div>
+  </form>
+</div>
+
+<% if (filters.assignment_id) { %>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+  <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 text-center">
+    <div class="text-2xl font-bold text-slate-700"><%=stats.total%></div>
+    <div class="text-xs text-slate-500 mt-1">Total Siswa</div>
+  </div>
+  <div class="rounded-xl bg-green-50 border border-green-200 p-4 text-center">
+    <div class="text-2xl font-bold text-green-700"><%=stats.submitted%></div>
+    <div class="text-xs text-green-600 mt-1">Sudah Kumpul</div>
+  </div>
+  <div class="rounded-xl bg-red-50 border border-red-200 p-4 text-center">
+    <div class="text-2xl font-bold text-red-600"><%=stats.notSubmitted%></div>
+    <div class="text-xs text-red-500 mt-1">Belum Kumpul</div>
+  </div>
+  <div class="rounded-xl bg-blue-50 border border-blue-200 p-4 text-center">
+    <div class="text-2xl font-bold text-blue-700"><%=stats.graded%></div>
+    <div class="text-xs text-blue-600 mt-1">Sudah Dinilai</div>
+  </div>
+</div>
+
+<% if (stats.total > 0) { %>
+<div class="rounded-2xl border border-slate-200 bg-white p-4 mb-5">
+  <div class="flex justify-between text-xs text-slate-500 mb-1">
+    <span>Progress Pengumpulan</span>
+    <span><%=stats.submitted%>/<%=stats.total%> (<%=Math.round(stats.submitted/stats.total*100)%>%)</span>
+  </div>
+  <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+    <div class="h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"
+      style="width:<%=Math.round(stats.submitted/stats.total*100)%>%"></div>
+  </div>
+</div>
+<% } %>
+
+<div class="rounded-2xl border border-slate-200 bg-white overflow-hidden">
+  <div class="p-4 border-b border-slate-200">
+    <h2 class="font-bold text-slate-800">Daftar Siswa</h2>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-slate-200 bg-slate-50 text-xs text-slate-500 uppercase">
+          <th class="text-left px-4 py-3">Siswa</th>
+          <th class="text-left px-4 py-3">Kelas</th>
+          <th class="text-left px-4 py-3">Status</th>
+          <th class="text-left px-4 py-3">Pengumpulan</th>
+          <th class="text-left px-4 py-3">Waktu</th>
+          <th class="text-left px-4 py-3">Nilai</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% submissions.forEach(s => { %>
+        <tr class="<%=s.submission_id?'':'bg-red-50/30'%> hover:bg-slate-50">
+          <td class="px-4 py-3">
+            <div class="font-medium text-slate-800"><%=s.student_name%></div>
+            <div class="text-xs text-slate-400"><%=s.username%></div>
+          </td>
+          <td class="px-4 py-3 text-slate-600 text-xs"><%=s.class_name||'-'%></td>
+          <td class="px-4 py-3">
+            <span class="px-2 py-0.5 rounded-full text-xs <%=s.submission_id?'bg-green-100 text-green-700':'bg-red-100 text-red-600'%> font-semibold">
+              <%=s.submission_id?'✓ Sudah':'✗ Belum'%>
+            </span>
+          </td>
+          <td class="px-4 py-3">
+            <% if (s.file_path) { %>
+              <a href="/public/uploads/assignments/<%=s.file_path.split('/').pop()%>" target="_blank"
+                class="text-blue-600 text-xs">📄 <%=s.file_name||'File'%></a>
+            <% } %>
+            <% if (s.link_url) { %>
+              <a href="<%=s.link_url%>" target="_blank" class="text-indigo-600 text-xs block mt-0.5">🔗 Link</a>
+            <% } %>
+          </td>
+          <td class="px-4 py-3 text-xs text-slate-500">
+            <%=s.submitted_at?new Date(s.submitted_at).toLocaleDateString('id-ID',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'-'%>
+          </td>
+          <td class="px-4 py-3 text-xs">
+            <% if (s.score!==null) { %><span class="font-bold text-green-700"><%=s.score%></span>
+            <% } else if (s.submission_id) { %><span class="text-amber-600">Belum dinilai</span>
+            <% } else { %><span class="text-slate-400">-</span><% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+<% } else { %>
+<div class="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-400">
+  <div class="text-4xl mb-3">📋</div>
+  <div>Pilih tugas untuk melihat pemantauan</div>
+</div>
+<% } %>

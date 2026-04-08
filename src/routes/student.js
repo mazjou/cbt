@@ -684,86 +684,64 @@ router.post('/assignments/:id/submit', uploadAssignments.single('file'), async (
   try {
     const user = req.session.user;
     const assignmentId = req.params.id;
-    const { notes } = req.body;
+    const { notes, link_url } = req.body;
     const file = req.file;
-    
-    // Check if assignment exists and is available
+    const linkUrl = String(link_url || '').trim() || null;
+
+    // Validasi: harus ada file ATAU link
+    if (!file && !linkUrl) {
+      req.flash('error', 'Pilih file atau masukkan link tugas terlebih dahulu.');
+      return res.redirect(`/student/assignments/${assignmentId}`);
+    }
+
     const [[assignment]] = await pool.query(
-      `SELECT * FROM assignments 
-       WHERE id = :id 
-         AND is_published = true
-         AND (class_id IS NULL OR class_id = :classId);`,
+      `SELECT * FROM assignments WHERE id=:id AND is_published=true
+       AND (class_id IS NULL OR class_id=:classId);`,
       { id: assignmentId, classId: user.class_id || 0 }
     );
-    
     if (!assignment) {
       if (file) fs.unlinkSync(file.path);
       req.flash('error', 'Tugas tidak ditemukan atau tidak tersedia');
       return res.redirect('/student/assignments');
     }
-    
-    // Check deadline
+
     const now = new Date();
     if (assignment.due_date && new Date(assignment.due_date) < now && !assignment.allow_late_submission) {
       if (file) fs.unlinkSync(file.path);
       req.flash('error', 'Deadline sudah lewat dan pengumpulan terlambat tidak diizinkan');
       return res.redirect(`/student/assignments/${assignmentId}`);
     }
-    
-    // Check if already submitted
+
     const [[existing]] = await pool.query(
-      `SELECT id FROM assignment_submissions 
-       WHERE assignment_id = :assignmentId AND student_id = :studentId;`,
-      { assignmentId, studentId: user.id }
+      `SELECT id FROM assignment_submissions WHERE assignment_id=:aid AND student_id=:sid;`,
+      { aid: assignmentId, sid: user.id }
     );
-    
+
     if (existing) {
-      // Update existing submission
       await pool.query(
-        `UPDATE assignment_submissions 
-         SET file_path = :filePath,
-             file_name = :fileName,
-             notes = :notes,
-             submitted_at = NOW(),
-             score = NULL,
-             feedback = NULL,
-             graded_at = NULL,
-             graded_by = NULL
-         WHERE assignment_id = :assignmentId AND student_id = :studentId;`,
-        {
-          filePath: file ? file.filename : null,
-          fileName: file ? file.originalname : null,
-          notes: notes || null,
-          assignmentId,
-          studentId: user.id
-        }
+        `UPDATE assignment_submissions
+         SET file_path=:fp, file_name=:fn, link_url=:lu, notes=:notes,
+             submitted_at=NOW(), score=NULL, feedback=NULL, graded_at=NULL, graded_by=NULL
+         WHERE assignment_id=:aid AND student_id=:sid;`,
+        { fp: file?file.filename:null, fn: file?file.originalname:null,
+          lu: linkUrl, notes: notes||null, aid: assignmentId, sid: user.id }
       );
       req.flash('success', 'Tugas berhasil diperbarui');
     } else {
-      // Create new submission
       await pool.query(
-        `INSERT INTO assignment_submissions 
-         (assignment_id, student_id, file_path, file_name, notes, submitted_at)
-         VALUES (:assignmentId, :studentId, :filePath, :fileName, :notes, NOW());`,
-        {
-          assignmentId,
-          studentId: user.id,
-          filePath: file ? file.filename : null,
-          fileName: file ? file.originalname : null,
-          notes: notes || null
-        }
+        `INSERT INTO assignment_submissions (assignment_id, student_id, file_path, file_name, link_url, notes, submitted_at)
+         VALUES (:aid, :sid, :fp, :fn, :lu, :notes, NOW());`,
+        { aid: assignmentId, sid: user.id,
+          fp: file?file.filename:null, fn: file?file.originalname:null,
+          lu: linkUrl, notes: notes||null }
       );
       req.flash('success', 'Tugas berhasil dikumpulkan');
     }
-    
+
     res.redirect(`/student/assignments/${assignmentId}`);
   } catch (err) {
     console.error('Error submitting assignment:', err);
-    if (req.file) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (_) {}
-    }
+    if (req.file) { try { fs.unlinkSync(req.file.path); } catch(_) {} }
     req.flash('error', 'Gagal mengumpulkan tugas');
     res.redirect(`/student/assignments/${req.params.id}`);
   }

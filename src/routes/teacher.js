@@ -2735,6 +2735,48 @@ const uploadAssignments = multer({
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
 
+// ===== PEMANTAUAN TUGAS GURU =====
+router.get('/assignments/monitoring', async (req, res) => {
+  const user = req.session.user;
+  const assignment_id = req.query.assignment_id || '';
+  const class_id = req.query.class_id || '';
+
+  const [myAssignments] = await pool.query(
+    `SELECT a.id, a.title FROM assignments a WHERE a.teacher_id=:tid ORDER BY a.created_at DESC;`,
+    { tid: user.id }
+  );
+  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC;`);
+
+  let submissions = [];
+  if (assignment_id) {
+    [submissions] = await pool.query(
+      `SELECT u.id AS student_id, u.full_name AS student_name, u.username,
+              c.name AS class_name,
+              sub.id AS submission_id, sub.file_path, sub.file_name,
+              sub.link_url, sub.notes, sub.submitted_at, sub.score, sub.feedback
+       FROM users u
+       INNER JOIN assignment_classes ac ON ac.class_id=u.class_id AND ac.assignment_id=:aid
+       LEFT JOIN classes c ON c.id=u.class_id
+       LEFT JOIN assignment_submissions sub ON sub.assignment_id=:aid AND sub.student_id=u.id
+       WHERE u.role='STUDENT' AND u.is_active=true
+         ${class_id ? 'AND u.class_id=:cid' : ''}
+       ORDER BY c.name ASC, u.full_name ASC;`,
+      { aid: assignment_id, ...(class_id ? { cid: class_id } : {}) }
+    );
+  }
+
+  const total = submissions.length;
+  const submitted = submissions.filter(s => s.submission_id).length;
+  const graded = submissions.filter(s => s.score !== null).length;
+
+  res.render('teacher/assignment_monitoring', {
+    title: 'Pemantauan Tugas',
+    myAssignments, classes, submissions,
+    filters: { assignment_id, class_id },
+    stats: { total, submitted, notSubmitted: total - submitted, graded }
+  });
+});
+
 // List assignments
 router.get('/assignments', async (req, res) => {
   try {

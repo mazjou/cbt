@@ -141,7 +141,13 @@
                     </svg>
                     <%= sub.file_name || 'Download' %>
                   </a>
-                <% } else { %>
+                <% } %>
+                <% if (sub.link_url) { %>
+                  <a href="<%= sub.link_url %>" target="_blank" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium flex items-center gap-1 mt-1">
+                    🔗 Buka Link
+                  </a>
+                <% } %>
+                <% if (!sub.file_path && !sub.link_url) { %><span class="text-slate-400 text-sm">-</span><% } %>
                   <span class="text-slate-400 text-sm">-</span>
                 <% } %>
               </td>

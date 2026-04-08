@@ -3156,6 +3156,52 @@ router.post('/attempts/:id/reset', async (req, res) => {
 
 // ===== ASSIGNMENTS MANAGEMENT =====
 
+// ===== PEMANTAUAN TUGAS ADMIN =====
+router.get('/assignments/monitoring', async (req, res) => {
+  const assignment_id = req.query.assignment_id || '';
+  const class_id = req.query.class_id || '';
+  const teacher_id = req.query.teacher_id || '';
+
+  const [allAssignments] = await pool.query(
+    `SELECT a.id, a.title, u.full_name AS teacher_name
+     FROM assignments a JOIN users u ON u.id=a.teacher_id
+     ORDER BY a.created_at DESC;`
+  );
+  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC;`);
+  const [teachers] = await pool.query(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
+
+  let submissions = [];
+  if (assignment_id) {
+    [submissions] = await pool.query(
+      `SELECT u.id AS student_id, u.full_name AS student_name, u.username,
+              c.name AS class_name, t.full_name AS teacher_name,
+              sub.id AS submission_id, sub.file_path, sub.file_name,
+              sub.link_url, sub.notes, sub.submitted_at, sub.score, sub.feedback
+       FROM users u
+       INNER JOIN assignment_classes ac ON ac.class_id=u.class_id AND ac.assignment_id=:aid
+       LEFT JOIN classes c ON c.id=u.class_id
+       LEFT JOIN assignments a ON a.id=:aid
+       LEFT JOIN users t ON t.id=a.teacher_id
+       LEFT JOIN assignment_submissions sub ON sub.assignment_id=:aid AND sub.student_id=u.id
+       WHERE u.role='STUDENT' AND u.is_active=true
+         ${class_id ? 'AND u.class_id=:cid' : ''}
+       ORDER BY c.name ASC, u.full_name ASC;`,
+      { aid: assignment_id, ...(class_id ? { cid: class_id } : {}) }
+    );
+  }
+
+  const total = submissions.length;
+  const submitted = submissions.filter(s => s.submission_id).length;
+  const graded = submissions.filter(s => s.score !== null).length;
+
+  res.render('admin/assignment_monitoring', {
+    title: 'Pemantauan Tugas',
+    allAssignments, classes, teachers, submissions,
+    filters: { assignment_id, class_id, teacher_id },
+    stats: { total, submitted, notSubmitted: total - submitted, graded }
+  });
+});
+
 // GET Admin Assignments List
 router.get('/assignments', async (req, res) => {
   try {
