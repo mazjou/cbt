@@ -266,6 +266,15 @@
         <a href="/teacher/exams/<%= exam.id %>" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
           ➕ Tambah Soal
         </a>
+        <a href="/teacher/exams/<%= exam.id %>/import" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+          📥 Import Soal
+        </a>
+        <a href="/teacher/exams/<%= exam.id %>/questions/upload-images" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+          🖼️ Upload Gambar
+        </a>
+        <a href="/admin/grades?exam_id=<%= exam.id %>" class="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+          📊 Lihat Nilai
+        </a>
       </div>
     </div>
   </div>

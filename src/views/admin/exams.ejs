@@ -352,7 +352,7 @@
               </td>
               <td class="px-4 py-4">
                 <div class="space-y-1">
-                  <!-- Baris 1: Detail & Edit -->
+                  <!-- Baris 1: Detail & Edit & Nilai -->
                   <div class="flex items-center gap-1">
                     <button 
                       onclick="viewExamDetail(<%= exam.id %>)"
@@ -361,6 +361,13 @@
                     >
                       Detail
                     </button>
+                    <a 
+                      href="/admin/grades?exam_id=<%= exam.id %>"
+                      class="px-2 py-1 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-xs font-semibold rounded-md shadow-sm transform hover:scale-105 transition-all"
+                      title="Lihat Nilai"
+                    >
+                      📊 Nilai
+                    </a>
                     <a 
                       href="/admin/exams/<%= exam.id %>/edit"
                       class="px-2 py-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs font-semibold rounded-md shadow-sm transform hover:scale-105 transition-all"
