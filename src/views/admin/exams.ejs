@@ -370,23 +370,8 @@
                       Edit
                     </a>
                   </div>
-                  <!-- Baris 2: Import, Upload, Publish, Delete -->
+                  <!-- Baris 2: Publish & Delete -->
                   <div class="flex items-center gap-1">
-                    <a href="/admin/exams/<%= exam.id %>/import"
-                      class="px-2 py-1 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white text-xs font-semibold rounded-md shadow-sm transform hover:scale-105 transition-all"
-                      title="Import Soal">
-                      📥 Import
-                    </a>
-                    <a href="/teacher/exams/<%= exam.id %>/questions/export"
-                      class="px-2 py-1 bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white text-xs font-semibold rounded-md shadow-sm transform hover:scale-105 transition-all"
-                      title="Export Soal ke Excel">
-                      📤 Export
-                    </a>
-                    <a href="/admin/exams/<%= exam.id %>/questions/upload-images"
-                      class="px-2 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-semibold rounded-md shadow-sm transform hover:scale-105 transition-all"
-                      title="Upload Gambar Soal">
-                      🖼️ Gambar
-                    </a>
                   <div class="flex items-center gap-1">
                     <form method="POST" action="/admin/exams/<%= exam.id %>/toggle-publish" class="inline">
                       <% if (exam.is_published) { %>
