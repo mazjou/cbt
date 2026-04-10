@@ -266,6 +266,11 @@ router.get('/attempts/:id', async (req, res) => {
   const user = req.session.user;
   const attemptId = req.params.id;
 
+  // Validasi: attemptId harus angka
+  if (!/^\d+$/.test(String(attemptId))) {
+    return res.status(404).render('error', { title: 'Tidak ditemukan', message: 'Attempt tidak ditemukan.', user });
+  }
+
   const [[attempt]] = await pool.query(
     `SELECT a.*, e.title, e.description, e.duration_minutes, e.pass_score, e.shuffle_options
      FROM attempts a
@@ -319,16 +324,27 @@ router.get('/attempts/:id', async (req, res) => {
     }
   }
 
-  const questions = rows.map((r, idx) => ({
-    no: idx + 1,
-    id: r.question_id,
-    text: r.question_text,
-    image: r.question_image,
-    pdf: r.question_pdf,
-    points: r.points,
-    chosen_option_id: r.chosen_option_id,
-    options: optionsMap[r.question_id] || []
-  }));
+  const questions = rows.map((r, idx) => {
+    // Normalisasi path gambar: jika hanya nama file, tambahkan path lengkap
+    const normalizeImg = (img) => {
+      if (!img) return null;
+      const v = String(img).trim();
+      if (!v) return null;
+      if (/^https?:\/\//i.test(v)) return v;           // URL eksternal
+      if (v.startsWith('/public/')) return v;           // Sudah path lengkap
+      return `/public/uploads/questions/${v}`;          // Hanya nama file → tambah path
+    };
+    return {
+      no: idx + 1,
+      id: r.question_id,
+      text: r.question_text,
+      image: normalizeImg(r.question_image),
+      pdf: r.question_pdf,
+      points: r.points,
+      chosen_option_id: r.chosen_option_id,
+      options: optionsMap[r.question_id] || []
+    };
+  });
 
   res.render('student/attempt_take', { title: 'Mengerjakan Ujian', attempt, questions });
 });
