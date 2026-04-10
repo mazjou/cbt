@@ -3321,9 +3321,8 @@ router.get('/exams/:id/questions/export', async (req, res) => {
     if (!exam) { req.flash('error', 'Ujian tidak ditemukan.'); return res.redirect('/teacher/exams'); }
 
     const [questions] = await pool.query(
-      `SELECT q.id, q.question_text, q.question_image, q.points,
-              q.question_pdf
-       FROM questions q WHERE q.exam_id=:eid ORDER BY q.id ASC;`,
+      `SELECT q.id, q.question_text, q.question_image, q.points FROM questions q
+       WHERE q.exam_id=:eid ORDER BY q.id ASC;`,
       { eid: examId }
     );
 
@@ -3335,23 +3334,30 @@ router.get('/exams/:id/questions/export', async (req, res) => {
       { eid: examId }
     );
 
-    // Buat map opsi per soal
+    // Map opsi per soal
     const optMap = {};
     for (const o of options) {
       if (!optMap[o.question_id]) optMap[o.question_id] = {};
-      optMap[o.question_id][o.option_label] = { text: o.option_text, image: o.option_image, correct: o.is_correct };
+      optMap[o.question_id][o.option_label] = {
+        text: o.option_text || '',
+        image: o.option_image ? path.basename(o.option_image) : '',
+        correct: o.is_correct
+      };
     }
 
-    // Buat data Excel
-    const rows = questions.map((q, i) => {
+    // Helper: ambil nama file dari path
+    const basename = (p) => p ? path.basename(p) : '';
+
+    // Buat data dengan header SAMA PERSIS dengan template import
+    const rows = questions.map((q) => {
       const opts = optMap[q.id] || {};
       const correct = Object.entries(opts).find(([,v]) => v.correct)?.[0] || '';
-      // Strip HTML tags dari question_text
-      const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').trim();
+      // Strip HTML tags dari question_text agar bisa diimport ulang
+      const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g,' ').trim();
+
       return {
-        'No': i + 1,
         'question_text': qText,
-        'image': q.question_image ? q.question_image.split('/').pop() : '',
+        'image': basename(q.question_image),
         'points': q.points || 1,
         'correct': correct,
         'A': opts['A']?.text || '',
@@ -3359,25 +3365,58 @@ router.get('/exams/:id/questions/export', async (req, res) => {
         'C': opts['C']?.text || '',
         'D': opts['D']?.text || '',
         'E': opts['E']?.text || '',
-        'image_a': opts['A']?.image ? opts['A'].image.split('/').pop() : '',
-        'image_b': opts['B']?.image ? opts['B'].image.split('/').pop() : '',
-        'image_c': opts['C']?.image ? opts['C'].image.split('/').pop() : '',
-        'image_d': opts['D']?.image ? opts['D'].image.split('/').pop() : '',
-        'image_e': opts['E']?.image ? opts['E'].image.split('/').pop() : '',
+        'image_a': opts['A']?.image || '',
+        'image_b': opts['B']?.image || '',
+        'image_c': opts['C']?.image || '',
+        'image_d': opts['D']?.image || '',
+        'image_e': opts['E']?.image || '',
       };
     });
 
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(rows);
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      header: ['question_text','image','points','correct','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e']
+    });
     ws['!cols'] = [
-      {wch:5},{wch:50},{wch:20},{wch:8},{wch:8},
-      {wch:30},{wch:30},{wch:30},{wch:30},{wch:30},
-      {wch:15},{wch:15},{wch:15},{wch:15},{wch:15}
+      {wch:60}, // question_text
+      {wch:20}, // image
+      {wch:8},  // points
+      {wch:8},  // correct
+      {wch:35}, // A
+      {wch:35}, // B
+      {wch:35}, // C
+      {wch:35}, // D
+      {wch:35}, // E
+      {wch:15}, // image_a
+      {wch:15}, // image_b
+      {wch:15}, // image_c
+      {wch:15}, // image_d
+      {wch:15}, // image_e
     ];
+
+    // Tambah sheet Panduan
+    const panduan = [
+      ['PANDUAN IMPORT SOAL'],[''],
+      ['Kolom','Keterangan'],
+      ['question_text','Teks soal'],
+      ['image','Nama file gambar soal (kosong jika tidak ada)'],
+      ['points','Poin soal'],
+      ['correct','Kunci jawaban: A/B/C/D/E'],
+      ['A-E','Teks opsi jawaban'],
+      ['image_a-e','Nama file gambar opsi (kosong jika tidak ada)'],
+      [''],['Catatan:'],
+      ['- File ini hasil export dari sistem, bisa langsung diimport ulang'],
+      ['- Jika ada gambar, upload gambar via menu Upload Gambar Soal'],
+    ];
+    const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
+    wsPanduan['!cols'] = [{wch:15},{wch:55}];
+
     XLSX.utils.book_append_sheet(wb, ws, 'Soal');
+    XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
 
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    const filename = `soal_${exam.title.replace(/[^a-zA-Z0-9]/g,'_')}_${Date.now()}.xlsx`;
+    const safeName = exam.title.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'_').slice(0,50);
+    const filename = `soal_${safeName}_${Date.now()}.xlsx`;
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buffer);
