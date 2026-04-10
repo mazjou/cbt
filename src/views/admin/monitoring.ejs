@@ -39,7 +39,7 @@
         </div>
         <div class="flex items-center gap-2 p-2 rounded-lg bg-white border border-amber-100">
           <span id="chk-active">⏳</span>
-          <span>Tidak ada ujian berlangsung</span>
+          <span>Ujian berlangsung: <span id="chk-active-count" class="font-semibold">-</span> siswa</span>
         </div>
       </div>
       <div id="readiness-msg" class="mt-3 text-sm font-semibold text-amber-700">Memuat status...</div>
@@ -492,6 +492,8 @@ async function fetchData() {
     chk('chk-cpu', cpuPct < 70, cpuPct < 85);
     chk('chk-conn', db.active < 20, db.active < 25);
     chk('chk-active', st.activeAttempts === 0, st.activeAttempts < 10);
+    const chkActiveCount = document.getElementById('chk-active-count');
+    if (chkActiveCount) chkActiveCount.textContent = st.activeAttempts;
     // Redis: dari data server
     const redisOk = d.redisConnected === true;
     document.getElementById('chk-redis').textContent = redisOk ? '✅' : '⚠️';

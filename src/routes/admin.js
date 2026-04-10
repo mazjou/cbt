@@ -4067,25 +4067,27 @@ router.get('/monitoring/data', async (req, res) => {
     } catch(_) {}
 
     // Statistik data + siswa yang sedang ujian
-    let stats = {};
+    let stats = { users: 0, exams: 0, attempts: 0, activeAttempts: 0 };
     let activeExams = [];
+    
+    // Stats dasar
     try {
-      const [[users]]   = await pool.query(`SELECT COUNT(*) AS c FROM users`);
-      const [[exams]]   = await pool.query(`SELECT COUNT(*) AS c FROM exams`);
-      const [[attempts]]= await pool.query(`SELECT COUNT(*) AS c FROM attempts`);
-      // Gunakan subquery untuk hindari ambiguitas
-      const [activeRows2] = await pool.query(
-        `SELECT COUNT(*) AS c FROM attempts WHERE UPPER(TRIM(status)) = 'IN_PROGRESS'`
-      );
-      const activeCount = Number(activeRows2?.[0]?.c || 0);
+      const [r1] = await pool.query(`SELECT COUNT(*) AS c FROM users`);
+      const [r2] = await pool.query(`SELECT COUNT(*) AS c FROM exams`);
+      const [r3] = await pool.query(`SELECT COUNT(*) AS c FROM attempts`);
+      const [r4] = await pool.query(`SELECT COUNT(*) AS c FROM attempts WHERE status = 'IN_PROGRESS'`);
       stats = {
-        users:    Number(users.c),
-        exams:    Number(exams.c),
-        attempts: Number(attempts.c),
-        activeAttempts: activeCount
+        users:         Number(r1[0]?.c || 0),
+        exams:         Number(r2[0]?.c || 0),
+        attempts:      Number(r3[0]?.c || 0),
+        activeAttempts: Number(r4[0]?.c || 0)
       };
+    } catch(e1) {
+      console.error('Monitoring stats error:', e1.message);
+    }
 
-      // Detail siswa yang sedang ujian
+    // Detail siswa yang sedang ujian
+    try {
       const [activeRows] = await pool.query(`
         SELECT
           a.id AS attempt_id,
@@ -4104,18 +4106,18 @@ router.get('/monitoring/data', async (req, res) => {
         ORDER BY a.started_at ASC
         LIMIT 50
       `);
-      activeExams = activeRows.map(r => ({
-        attempt_id: r.attempt_id,
-        student_name: r.student_name,
-        username: r.username,
-        class_name: r.class_name || '-',
-        exam_title: r.exam_title,
-        elapsed_minutes: Number(r.elapsed_minutes) || 0,
+      activeExams = (activeRows || []).map(r => ({
+        attempt_id:       r.attempt_id,
+        student_name:     r.student_name,
+        username:         r.username,
+        class_name:       r.class_name || '-',
+        exam_title:       r.exam_title,
+        elapsed_minutes:  Number(r.elapsed_minutes) || 0,
         duration_minutes: Number(r.duration_minutes) || 0,
         remaining_minutes: Math.max(0, Number(r.duration_minutes) - (Number(r.elapsed_minutes) || 0))
       }));
-    } catch(statsErr) {
-      console.error('Monitoring stats error:', statsErr.message);
+    } catch(e2) {
+      console.error('Monitoring activeExams error:', e2.message);
     }
 
     res.json({
