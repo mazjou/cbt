@@ -412,7 +412,7 @@ router.post('/materials/:id/toggle-publish', async (req, res) => {
     const wasPublished = material.is_published === 1;
 
     await pool.query(
-      `UPDATE materials SET is_published = IF(is_published=true,0,1)
+      `UPDATE materials SET is_published = NOT is_published
        WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid);`,
       { id: req.params.id, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
     );
@@ -707,9 +707,9 @@ router.post('/exams/:id/toggle-publish', async (req, res) => {
       return res.redirect('/teacher/exams');
     }
 
-    const wasPublished = exam.is_published === 1;
+    const wasPublished = exam.is_published === true;
 
-    await pool.query(`UPDATE exams SET is_published = IF(is_published=true,0,1) WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid);`, {
+    await pool.query(`UPDATE exams SET is_published = NOT is_published WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid);`, {
       id: req.params.id,
       tid: user.id
     });

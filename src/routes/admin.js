@@ -2410,7 +2410,7 @@ router.get('/exams/:id/json', async (req, res) => {
 router.post('/exams/:id/toggle-publish', async (req, res) => {
   try {
     await pool.query(
-      `UPDATE exams SET is_published = IF(is_published=true,0,1) WHERE id=:id;`,
+      `UPDATE exams SET is_published = NOT is_published WHERE id=:id;`,
       { id: req.params.id }
     );
     req.flash('success', 'Status publikasi ujian diperbarui.');
@@ -2945,7 +2945,7 @@ router.get('/materials/:id/json', async (req, res) => {
 router.post('/materials/:id/toggle-publish', async (req, res) => {
   try {
     await pool.query(
-      `UPDATE materials SET is_published = IF(is_published=true,0,1) WHERE id=:id;`,
+      `UPDATE materials SET is_published = NOT is_published WHERE id=:id;`,
       { id: req.params.id }
     );
     req.flash('success', 'Status publikasi materi diperbarui.');
