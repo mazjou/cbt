@@ -180,12 +180,30 @@ function buildImportPreview(rows, filesImages = []) {
     if (!v) return null;
     if (/^https?:\/\//i.test(v)) return v;
     const base = path.basename(v);
+    if (!base) return null;
+
+    // 1. Cek dari file yang baru diupload bersamaan (originalname cocok)
     const hit = uploaded.find(u => u.originalname === base) ||
                 uploaded.find(u => u.originalname.replace(/\s+/g,'_') === base);
     if (hit) return `/public/uploads/questions/${path.basename(hit.filename)}`;
-    const abs = path.join(uploadDir, base);
-    if (fs.existsSync(abs)) return `/public/uploads/questions/${base}`;
-    // Simpan nama file, akan diupload belakangan
+
+    // 2. Cek file yang sudah ada di server dengan nama persis
+    const absExact = path.join(uploadDir, base);
+    if (fs.existsSync(absExact)) return `/public/uploads/questions/${base}`;
+
+    // 3. Cek file yang sudah ada di server dengan prefix timestamp (misal: 1712345678_nama.jpg)
+    // Ini terjadi ketika export → nama asli disimpan di Excel → import ulang
+    try {
+      const files = fs.readdirSync(uploadDir);
+      // Cari file yang namanya diakhiri dengan "_base" (timestamp_base)
+      const matched = files.find(f => {
+        const withoutTs = f.replace(/^\d{10,13}_/, '');
+        return withoutTs === base;
+      });
+      if (matched) return `/public/uploads/questions/${matched}`;
+    } catch (_) {}
+
+    // 4. Simpan nama file saja, akan diupload belakangan via upload-images
     return base;
   }
 
@@ -1506,8 +1524,12 @@ router.post('/exams/:id/questions/upload-images',
       // Buat map: originalname → path tersimpan
       const fileMap = {};
       for (const f of uploadedFiles) {
-        fileMap[f.originalname.trim()] = `/public/uploads/questions/${f.filename}`;
-        fileMap[f.originalname.trim().replace(/\.[^.]+$/, '')] = `/public/uploads/questions/${f.filename}`;
+        const orig = f.originalname.trim();
+        const stored = `/public/uploads/questions/${f.filename}`;
+        fileMap[orig] = stored;
+        fileMap[orig.replace(/\.[^.]+$/, '')] = stored;
+        // Juga map tanpa spasi
+        fileMap[orig.replace(/\s+/g,'_')] = stored;
       }
 
       // Ambil semua soal ujian ini
@@ -3340,24 +3362,57 @@ router.get('/exams/:id/questions/export', async (req, res) => {
       if (!optMap[o.question_id]) optMap[o.question_id] = {};
       optMap[o.question_id][o.option_label] = {
         text: o.option_text || '',
-        image: o.option_image ? path.basename(o.option_image) : '',
+        image: o.option_image || '',
         correct: o.is_correct
       };
     }
 
-    // Helper: ambil nama file dari path, atau kembalikan URL jika http
+    // Helper: ambil nama file asli (tanpa prefix timestamp) dari path tersimpan
+    // File tersimpan: "1712345678_nama_asli.jpg" → kembalikan "nama_asli.jpg"
+    // Jika URL eksternal, kembalikan URL utuh
     const getImageRef = (p) => {
       if (!p) return '';
-      if (/^https?:\/\//i.test(p)) return p; // URL eksternal tetap utuh
-      return path.basename(p); // nama file saja
+      const v = String(p).trim();
+      if (!v) return '';
+      if (/^https?:\/\//i.test(v)) return v; // URL eksternal tetap utuh
+      const base = path.basename(v);
+      // Hapus prefix timestamp: "1712345678_" di awal nama file
+      const withoutTs = base.replace(/^\d{10,13}_/, '');
+      return withoutTs || base;
+    };
+
+    // Kumpulkan semua gambar yang dipakai (untuk sheet Daftar Gambar)
+    // imgList: [['Nama File (untuk Excel)', 'URL Download', 'Dipakai di']]
+    const imgList = [['Nama File (isi di Excel)', 'URL Download Gambar', 'Dipakai di']];
+    const imgSeen = new Set();
+
+    const addImg = (storedPath, usedIn) => {
+      if (!storedPath) return;
+      const v = String(storedPath).trim();
+      if (!v || /^https?:\/\//i.test(v)) return;
+      const base = path.basename(v);
+      if (!imgSeen.has(base)) {
+        imgSeen.add(base);
+        const displayName = base.replace(/^\d{10,13}_/, '');
+        const downloadUrl = `https://psaj.smkn1kras.sch.id/public/uploads/questions/${base}`;
+        imgList.push([displayName, downloadUrl, usedIn]);
+      }
     };
 
     // Buat data dengan header SAMA PERSIS dengan template import
-    const rows = questions.map((q) => {
+    const rows = questions.map((q, idx) => {
       const opts = optMap[q.id] || {};
       const correct = Object.entries(opts).find(([,v]) => v.correct)?.[0] || '';
       // Strip HTML tags dari question_text agar bisa diimport ulang
       const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g,' ').trim();
+
+      // Kumpulkan gambar untuk sheet Daftar Gambar
+      if (q.question_image) addImg(q.question_image, `Soal no.${idx+1}`);
+      if (opts['A']?.image) addImg(opts['A'].image, `Soal no.${idx+1} opsi A`);
+      if (opts['B']?.image) addImg(opts['B'].image, `Soal no.${idx+1} opsi B`);
+      if (opts['C']?.image) addImg(opts['C'].image, `Soal no.${idx+1} opsi C`);
+      if (opts['D']?.image) addImg(opts['D'].image, `Soal no.${idx+1} opsi D`);
+      if (opts['E']?.image) addImg(opts['E'].image, `Soal no.${idx+1} opsi E`);
 
       return {
         'question_text': qText,
@@ -3383,7 +3438,7 @@ router.get('/exams/:id/questions/export', async (req, res) => {
     });
     ws['!cols'] = [
       {wch:60}, // question_text
-      {wch:20}, // image
+      {wch:25}, // image
       {wch:8},  // points
       {wch:8},  // correct
       {wch:35}, // A
@@ -3391,34 +3446,45 @@ router.get('/exams/:id/questions/export', async (req, res) => {
       {wch:35}, // C
       {wch:35}, // D
       {wch:35}, // E
-      {wch:15}, // image_a
-      {wch:15}, // image_b
-      {wch:15}, // image_c
-      {wch:15}, // image_d
-      {wch:15}, // image_e
+      {wch:25}, // image_a
+      {wch:25}, // image_b
+      {wch:25}, // image_c
+      {wch:25}, // image_d
+      {wch:25}, // image_e
     ];
 
     const panduan = [
       ['PANDUAN IMPORT SOAL'],[''],
       ['Kolom','Keterangan'],
-      ['question_text','Teks soal'],
-      ['image','Nama file gambar soal'],
-      ['points','Poin soal'],
-      ['correct','Kunci jawaban: A/B/C/D/E'],
-      ['A-E','Teks opsi jawaban'],
-      ['image_a-e','Nama file gambar opsi'],
+      ['question_text','Teks soal (wajib)'],
+      ['image','Nama file gambar soal (opsional, contoh: gambar1.jpg)'],
+      ['points','Poin soal (default: 1)'],
+      ['correct','Kunci jawaban: A/B/C/D/E (wajib)'],
+      ['A','Teks opsi A (wajib)'],
+      ['B','Teks opsi B (wajib)'],
+      ['C','Teks opsi C (wajib)'],
+      ['D','Teks opsi D (wajib)'],
+      ['E','Teks opsi E (wajib)'],
+      ['image_a','Nama file gambar opsi A (opsional)'],
+      ['image_b','Nama file gambar opsi B (opsional)'],
+      ['image_c','Nama file gambar opsi C (opsional)'],
+      ['image_d','Nama file gambar opsi D (opsional)'],
+      ['image_e','Nama file gambar opsi E (opsional)'],
       [''],['Catatan:'],
-      ['- Bisa langsung diimport ulang ke ujian lain'],
+      ['- File ini bisa langsung diimport ulang ke ujian lain tanpa perlu edit'],
+      ['- Kolom gambar berisi nama file asli (tanpa prefix timestamp)'],
       ['- Lihat sheet "Daftar Gambar" untuk download gambar yang dibutuhkan'],
-      ['- Upload gambar via menu Upload Gambar Soal setelah import'],
+      ['- Upload gambar via menu "Upload Gambar Soal" sebelum/sesudah import'],
+      ['- Saat upload gambar, gunakan nama file yang sama dengan yang ada di kolom image'],
     ];
     const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
-    wsPanduan['!cols'] = [{wch:15},{wch:60}];
+    wsPanduan['!cols'] = [{wch:15},{wch:70}];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Soal');
+    // Tambahkan sheet Daftar Gambar jika ada gambar
     if (imgList.length > 1) {
       const wsImg = XLSX.utils.aoa_to_sheet(imgList);
-      wsImg['!cols'] = [{wch:35},{wch:70},{wch:20}];
+      wsImg['!cols'] = [{wch:35},{wch:70},{wch:25}];
       XLSX.utils.book_append_sheet(wb, wsImg, 'Daftar Gambar');
     }
     XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
