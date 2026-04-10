@@ -1484,7 +1484,7 @@ router.get('/exams/:id/questions/upload-images', async (req, res) => {
 });
 
 router.post('/exams/:id/questions/upload-images',
-  upload.fields([{ name: 'images', maxCount: 100 }]),
+  upload.any(),
   async (req, res) => {
     const user = req.session.user;
     const examId = req.params.id;
@@ -1495,7 +1495,7 @@ router.post('/exams/:id/questions/upload-images',
       );
       if (!exam) { req.flash('error', 'Akses ditolak.'); return res.redirect('/teacher/exams'); }
 
-      const uploadedFiles = req.files?.images || [];
+      const uploadedFiles = (req.files || []).filter(f => f.fieldname === 'images' || f.mimetype.startsWith('image/'));
       if (!uploadedFiles.length) {
         req.flash('error', 'Tidak ada file gambar yang diupload.');
         return res.redirect(`/teacher/exams/${examId}/questions/upload-images`);
