@@ -689,59 +689,6 @@ router.post('/exams', async (req, res) => {
   }
   res.redirect('/teacher/exams');
 });
-    show_score_to_student,
-    show_review_to_student
-  } = req.body;
-
-  try {
-    // Insert exam
-    const [result] = await pool.query(
-      `INSERT INTO exams
-        (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published)
-       VALUES
-        (:subject_id,:teacher_id,:title,:description,NULL,:start_at,:end_at,:duration_minutes,:pass_score,:max_attempts,:shuffle_questions,:shuffle_options,:access_code,:show_score_to_student,:show_review_to_student,:is_published);`,
-      {
-        subject_id,
-        teacher_id: user.id,
-        title,
-        description: description || null,
-        start_at: start_at || null,
-        end_at: end_at || null,
-        duration_minutes: Number(duration_minutes || 60),
-        pass_score: Number(pass_score || 75),
-        max_attempts: Number(max_attempts || 1),
-        shuffle_questions: shuffle_questions ? true : false,
-        shuffle_options: shuffle_options ? true : false,
-        access_code: access_code || null,
-        show_score_to_student: show_score_to_student ? true : false,
-        show_review_to_student: show_review_to_student ? true : false,
-        is_published: false
-      }
-    );
-
-    const examId = result.insertId;
-
-    // Insert exam_classes if class_ids provided
-    if (class_ids && class_ids.length > 0) {
-      const classIdsArray = Array.isArray(class_ids) ? class_ids : [class_ids];
-      
-      for (const classId of classIdsArray) {
-        if (classId) {
-          await pool.query(
-            `INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`,
-            { exam_id: examId, class_id: classId }
-          );
-        }
-      }
-    }
-
-    req.flash('success', 'Ujian dibuat. Silakan tambahkan soal.');
-  } catch (e) {
-    console.error(e);
-    req.flash('error', 'Gagal membuat ujian: ' + e.message);
-  }
-  res.redirect('/teacher/exams');
-});
 
 router.post('/exams/:id/toggle-publish', async (req, res) => {
   const user = req.session.user;
