@@ -2458,37 +2458,22 @@ router.get('/exams/new', async (req, res) => {
 // POST Create New Exam
 router.post('/exams', async (req, res) => {
   const {
-    subject_id,
-    teacher_id,
-    title,
-    description,
-    class_ids,
-    start_at,
-    end_at,
-    duration_minutes,
-    pass_score,
-    max_attempts,
-    shuffle_questions,
-    shuffle_options,
-    access_code,
-    show_score_to_student,
-    show_review_to_student
+    subject_id, teacher_id, title, description, class_ids,
+    start_at, end_at, duration_minutes, pass_score, max_attempts,
+    shuffle_questions, shuffle_options, access_code,
+    show_score_to_student, show_review_to_student, max_questions
   } = req.body;
 
   try {
-    // Insert exam
     const [result] = await pool.query(
       `INSERT INTO exams
-        (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published)
+        (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published, max_questions)
        VALUES
-        (:subject_id,:teacher_id,:title,:description,NULL,:start_at,:end_at,:duration_minutes,:pass_score,:max_attempts,:shuffle_questions,:shuffle_options,:access_code,:show_score_to_student,:show_review_to_student,:is_published);`,
+        (:subject_id,:teacher_id,:title,:description,NULL,:start_at,:end_at,:duration_minutes,:pass_score,:max_attempts,:shuffle_questions,:shuffle_options,:access_code,:show_score_to_student,:show_review_to_student,:is_published,:max_questions);`,
       {
-        subject_id,
-        teacher_id,
-        title,
+        subject_id, teacher_id, title,
         description: description || null,
-        start_at: start_at || null,
-        end_at: end_at || null,
+        start_at: start_at || null, end_at: end_at || null,
         duration_minutes: Number(duration_minutes || 60),
         pass_score: Number(pass_score || 75),
         max_attempts: Number(max_attempts || 1),
@@ -2497,7 +2482,8 @@ router.post('/exams', async (req, res) => {
         access_code: access_code || null,
         show_score_to_student: show_score_to_student ? true : false,
         show_review_to_student: show_review_to_student ? true : false,
-        is_published: false
+        is_published: false,
+        max_questions: max_questions ? Number(max_questions) : null
       }
     );
 
@@ -2571,50 +2557,26 @@ router.get('/exams/:id/edit', async (req, res) => {
 router.put('/exams/:id', async (req, res) => {
   const examId = req.params.id;
   const {
-    subject_id,
-    teacher_id,
-    title,
-    description,
-    class_ids,
-    start_at,
-    end_at,
-    duration_minutes,
-    pass_score,
-    max_attempts,
-    shuffle_questions,
-    shuffle_options,
-    access_code,
-    show_score_to_student,
-    show_review_to_student
+    subject_id, teacher_id, title, description, class_ids,
+    start_at, end_at, duration_minutes, pass_score, max_attempts,
+    shuffle_questions, shuffle_options, access_code,
+    show_score_to_student, show_review_to_student, max_questions
   } = req.body;
 
   try {
-    // Update exam
     await pool.query(
       `UPDATE exams SET
-        subject_id=:subject_id,
-        teacher_id=:teacher_id,
-        title=:title,
-        description=:description,
-        start_at=:start_at,
-        end_at=:end_at,
-        duration_minutes=:duration_minutes,
-        pass_score=:pass_score,
-        max_attempts=:max_attempts,
-        shuffle_questions=:shuffle_questions,
-        shuffle_options=:shuffle_options,
-        access_code=:access_code,
-        show_score_to_student=:show_score_to_student,
-        show_review_to_student=:show_review_to_student
+        subject_id=:subject_id, teacher_id=:teacher_id, title=:title, description=:description,
+        start_at=:start_at, end_at=:end_at, duration_minutes=:duration_minutes,
+        pass_score=:pass_score, max_attempts=:max_attempts,
+        shuffle_questions=:shuffle_questions, shuffle_options=:shuffle_options,
+        access_code=:access_code, show_score_to_student=:show_score_to_student,
+        show_review_to_student=:show_review_to_student, max_questions=:max_questions
        WHERE id=:id;`,
       {
-        id: examId,
-        subject_id,
-        teacher_id,
-        title,
+        id: examId, subject_id, teacher_id, title,
         description: description || null,
-        start_at: start_at || null,
-        end_at: end_at || null,
+        start_at: start_at || null, end_at: end_at || null,
         duration_minutes: Number(duration_minutes || 60),
         pass_score: Number(pass_score || 75),
         max_attempts: Number(max_attempts || 1),
@@ -2622,7 +2584,8 @@ router.put('/exams/:id', async (req, res) => {
         shuffle_options: shuffle_options ? true : false,
         access_code: access_code || null,
         show_score_to_student: show_score_to_student ? true : false,
-        show_review_to_student: show_review_to_student ? true : false
+        show_review_to_student: show_review_to_student ? true : false,
+        max_questions: max_questions ? Number(max_questions) : null
       }
     );
 
