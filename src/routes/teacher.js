@@ -23,11 +23,12 @@ function teacherFilter(user) {
 }
 
 // Upload config (gambar soal & import)
-const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'questions');
+const UPLOAD_ROOT = process.env.UPLOAD_ROOT || path.join(__dirname, '..', 'public', 'uploads');
+const uploadDir = path.join(UPLOAD_ROOT, 'questions');
 fs.mkdirSync(uploadDir, { recursive: true });
 
 // Upload config untuk materi (DOCX -> HTML + gambar)
-const materialsDir = path.join(__dirname, '..', 'public', 'uploads', 'materials');
+const materialsDir = path.join(UPLOAD_ROOT, 'materials');
 const materialsTmpDir = path.join(materialsDir, 'tmp');
 fs.mkdirSync(materialsDir, { recursive: true });
 fs.mkdirSync(materialsTmpDir, { recursive: true });
