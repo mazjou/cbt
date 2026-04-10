@@ -26,9 +26,10 @@
           Deskripsi / Instruksi
         </label>
         <textarea 
+          id="sn_description"
           name="description" 
           rows="5"
-          class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+          class="w-full px-4 py-2 border border-slate-300 rounded-lg"
           placeholder="Jelaskan instruksi tugas, format file yang diharapkan, dll..."
         ></textarea>
       </div>
@@ -182,5 +183,48 @@ document.querySelector('form').addEventListener('submit', function(e) {
     alert('Pilih minimal 1 kelas untuk tugas ini!');
     return false;
   }
+});
+</script>
+
+<!-- Summernote -->
+<link rel="stylesheet" href="/public/lib/katex/katex.min.css">
+<link rel="stylesheet" href="/public/lib/summernote/summernote-lite.min.css">
+<style>
+  .note-editor.note-frame { border-radius: 10px !important; border: 2px solid #86efac !important; }
+  .note-toolbar { background: #f0fdf4 !important; border-bottom: 1px solid #86efac !important; border-radius: 8px 8px 0 0 !important; }
+</style>
+<script src="/public/lib/jquery/jquery.min.js"></script>
+<script>var $sn = jQuery.noConflict(true); window.$ = window.jQuery = $sn;</script>
+<script src="/public/lib/katex/katex.min.js"></script>
+<script src="/public/lib/summernote/summernote-lite.min.js"></script>
+<script src="/public/lib/summernote/summernote-math.js"></script>
+<script>
+$('#sn_description').summernote({
+  height: 200,
+  placeholder: 'Ketik instruksi tugas... Klik ∑ untuk rumus matematika',
+  toolbar: [
+    ['style', ['bold', 'italic', 'underline', 'clear']],
+    ['font', ['strikethrough', 'superscript', 'subscript']],
+    ['fontsize', ['fontsize']],
+    ['color', ['color']],
+    ['para', ['ul', 'ol', 'paragraph']],
+    ['insert', ['picture', 'link', 'math']],
+    ['view', ['fullscreen', 'codeview']]
+  ],
+  callbacks: {
+    onImageUpload: function(files) {
+      for (var i = 0; i < files.length; i++) {
+        var reader = new FileReader();
+        reader.onload = (function(ed) {
+          return function(e) {
+            var img = $('<img>').attr('src', e.target.result).css({ maxWidth: '100%', borderRadius: '8px' });
+            $(ed).summernote('insertNode', img[0]);
+          };
+        })(this);
+        reader.readAsDataURL(files[i]);
+      }
+    }
+  },
+  plugins: ['math']
 });
 </script>
