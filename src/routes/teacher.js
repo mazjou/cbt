@@ -3345,8 +3345,12 @@ router.get('/exams/:id/questions/export', async (req, res) => {
       };
     }
 
-    // Helper: ambil nama file dari path
-    const basename = (p) => p ? path.basename(p) : '';
+    // Helper: ambil nama file dari path, atau kembalikan URL jika http
+    const getImageRef = (p) => {
+      if (!p) return '';
+      if (/^https?:\/\//i.test(p)) return p; // URL eksternal tetap utuh
+      return path.basename(p); // nama file saja
+    };
 
     // Buat data dengan header SAMA PERSIS dengan template import
     const rows = questions.map((q) => {
@@ -3357,7 +3361,7 @@ router.get('/exams/:id/questions/export', async (req, res) => {
 
       return {
         'question_text': qText,
-        'image': basename(q.question_image),
+        'image': getImageRef(q.question_image),
         'points': q.points || 1,
         'correct': correct,
         'A': opts['A']?.text || '',
@@ -3365,11 +3369,11 @@ router.get('/exams/:id/questions/export', async (req, res) => {
         'C': opts['C']?.text || '',
         'D': opts['D']?.text || '',
         'E': opts['E']?.text || '',
-        'image_a': opts['A']?.image || '',
-        'image_b': opts['B']?.image || '',
-        'image_c': opts['C']?.image || '',
-        'image_d': opts['D']?.image || '',
-        'image_e': opts['E']?.image || '',
+        'image_a': getImageRef(opts['A']?.image),
+        'image_b': getImageRef(opts['B']?.image),
+        'image_c': getImageRef(opts['C']?.image),
+        'image_d': getImageRef(opts['D']?.image),
+        'image_e': getImageRef(opts['E']?.image),
       };
     });
 
@@ -3394,24 +3398,29 @@ router.get('/exams/:id/questions/export', async (req, res) => {
       {wch:15}, // image_e
     ];
 
-    // Tambah sheet Panduan
     const panduan = [
       ['PANDUAN IMPORT SOAL'],[''],
       ['Kolom','Keterangan'],
       ['question_text','Teks soal'],
-      ['image','Nama file gambar soal (kosong jika tidak ada)'],
+      ['image','Nama file gambar soal'],
       ['points','Poin soal'],
       ['correct','Kunci jawaban: A/B/C/D/E'],
       ['A-E','Teks opsi jawaban'],
-      ['image_a-e','Nama file gambar opsi (kosong jika tidak ada)'],
+      ['image_a-e','Nama file gambar opsi'],
       [''],['Catatan:'],
-      ['- File ini hasil export dari sistem, bisa langsung diimport ulang'],
-      ['- Jika ada gambar, upload gambar via menu Upload Gambar Soal'],
+      ['- Bisa langsung diimport ulang ke ujian lain'],
+      ['- Lihat sheet "Daftar Gambar" untuk download gambar yang dibutuhkan'],
+      ['- Upload gambar via menu Upload Gambar Soal setelah import'],
     ];
     const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
-    wsPanduan['!cols'] = [{wch:15},{wch:55}];
+    wsPanduan['!cols'] = [{wch:15},{wch:60}];
 
     XLSX.utils.book_append_sheet(wb, ws, 'Soal');
+    if (imgList.length > 1) {
+      const wsImg = XLSX.utils.aoa_to_sheet(imgList);
+      wsImg['!cols'] = [{wch:35},{wch:70},{wch:20}];
+      XLSX.utils.book_append_sheet(wb, wsImg, 'Daftar Gambar');
+    }
     XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
 
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
