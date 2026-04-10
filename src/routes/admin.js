@@ -3006,6 +3006,48 @@ router.post('/materials/bulk-delete', async (req, res) => {
   res.redirect('/admin/materials');
 });
 
+// ===== VIOLATIONS - SISWA TERKUNCI =====
+router.get('/violations/locked', async (req, res) => {
+  try {
+    const [locked] = await pool.query(
+      `SELECT a.id AS attempt_id, a.unlock_token, a.locked_at, a.unlock_count,
+              u.full_name AS student_name, u.username,
+              c.name AS class_name,
+              e.title AS exam_title, e.id AS exam_id,
+              COUNT(av.id) AS violation_count
+       FROM attempts a
+       JOIN users u ON u.id = a.student_id
+       JOIN exams e ON e.id = a.exam_id
+       LEFT JOIN classes c ON c.id = u.class_id
+       LEFT JOIN attempt_violations av ON av.attempt_id = a.id
+       WHERE a.is_locked = true AND a.status = 'IN_PROGRESS'
+       GROUP BY a.id, u.full_name, u.username, c.name, e.title, e.id
+       ORDER BY a.locked_at DESC;`
+    );
+    res.render('teacher/violations_locked', { title: 'Siswa Terkunci', locked });
+  } catch(e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat data.');
+    res.redirect('/admin');
+  }
+});
+
+router.post('/violations/unlock/:attemptId', async (req, res) => {
+  const { attemptId } = req.params;
+  try {
+    const [[attempt]] = await pool.query(
+      `SELECT id FROM attempts WHERE id=:aid AND is_locked=true LIMIT 1;`,
+      { aid: attemptId }
+    );
+    if (!attempt) return res.json({ ok: false, message: 'Attempt tidak ditemukan.' });
+    const token = Math.random().toString(36).substring(2, 8).toUpperCase();
+    await pool.query(`UPDATE attempts SET unlock_token=:token WHERE id=:aid;`, { token, aid: attemptId });
+    return res.json({ ok: true, token });
+  } catch(e) {
+    return res.json({ ok: false, message: e.message });
+  }
+});
+
 // ===== GRADES (NILAI) =====
 router.get('/grades', async (req, res) => {
   const exam_id = (req.query.exam_id || '').trim();

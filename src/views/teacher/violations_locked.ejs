@@ -97,8 +97,10 @@ async function generateToken(attemptId) {
   const origText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳...';
+  // Deteksi apakah di admin atau teacher dari URL
+  const base = window.location.pathname.startsWith('/admin') ? '/admin' : '/teacher';
   try {
-    const r = await fetch(`/teacher/violations/unlock/${attemptId}`, { method: 'POST' });
+    const r = await fetch(`${base}/violations/unlock/${attemptId}`, { method: 'POST' });
     const d = await r.json();
     if (d.ok) {
       const el = document.getElementById(`token-${attemptId}`);
