@@ -4195,7 +4195,49 @@ router.post('/monitoring/restart', async (req, res) => {
   });
 });
 
-function formatUptime(sec) {
+// ── Backup Database ───────────────────────────────────────────────────────────
+router.get('/monitoring/backup-db', async (req, res) => {
+  const { exec } = require('child_process');
+  const path = require('path');
+
+  if (process.platform === 'win32') {
+    return res.status(400).json({ ok: false, message: 'Backup hanya tersedia di Linux/VPS.' });
+  }
+
+  const dbHost     = process.env.DB_HOST     || 'localhost';
+  const dbPort     = process.env.DB_PORT     || '5432';
+  const dbUser     = process.env.DB_USER     || 'lmsuser';
+  const dbPassword = process.env.DB_PASSWORD || '';
+  const dbName     = process.env.DB_NAME     || 'cbt_smk';
+
+  const timestamp  = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const filename   = `backup_${dbName}_${timestamp}.sql`;
+  const backupPath = `/tmp/${filename}`;
+
+  const cmd = `PGPASSWORD="${dbPassword}" pg_dump -h ${dbHost} -p ${dbPort} -U ${dbUser} -d ${dbName} --no-owner --no-acl -f "${backupPath}"`;
+
+  exec(cmd, { timeout: 120000 }, (err) => {
+    if (err) {
+      console.error('Backup DB error:', err.message);
+      return res.status(500).json({ ok: false, message: 'Gagal backup database: ' + err.message });
+    }
+
+    // Stream file ke browser lalu hapus
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+
+    const fs = require('fs');
+    const stream = fs.createReadStream(backupPath);
+    stream.pipe(res);
+    stream.on('end', () => {
+      try { fs.unlinkSync(backupPath); } catch (_) {}
+    });
+    stream.on('error', (e) => {
+      console.error('Stream error:', e.message);
+      try { fs.unlinkSync(backupPath); } catch (_) {}
+    });
+  });
+});
   sec = Math.floor(sec);
   const d = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
