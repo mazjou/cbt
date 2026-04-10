@@ -3307,6 +3307,87 @@ router.post('/agenda/:id/delete', async (req, res) => {
   res.redirect('/teacher/agenda');
 });
 
+// ===== EXPORT SOAL KE EXCEL =====
+router.get('/exams/:id/questions/export', async (req, res) => {
+  const user = req.session.user;
+  const examId = req.params.id;
+  try {
+    const [[exam]] = await pool.query(
+      `SELECT e.id, e.title, s.name AS subject_name FROM exams e
+       JOIN subjects s ON s.id=e.subject_id
+       WHERE e.id=:id AND (:isAdmin=1 OR e.teacher_id=:tid) LIMIT 1;`,
+      { id: examId, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
+    );
+    if (!exam) { req.flash('error', 'Ujian tidak ditemukan.'); return res.redirect('/teacher/exams'); }
+
+    const [questions] = await pool.query(
+      `SELECT q.id, q.question_text, q.question_image, q.points,
+              q.question_pdf
+       FROM questions q WHERE q.exam_id=:eid ORDER BY q.id ASC;`,
+      { eid: examId }
+    );
+
+    const [options] = await pool.query(
+      `SELECT o.question_id, o.option_label, o.option_text, o.option_image, o.is_correct
+       FROM options o
+       JOIN questions q ON q.id=o.question_id
+       WHERE q.exam_id=:eid ORDER BY o.question_id ASC, o.option_label ASC;`,
+      { eid: examId }
+    );
+
+    // Buat map opsi per soal
+    const optMap = {};
+    for (const o of options) {
+      if (!optMap[o.question_id]) optMap[o.question_id] = {};
+      optMap[o.question_id][o.option_label] = { text: o.option_text, image: o.option_image, correct: o.is_correct };
+    }
+
+    // Buat data Excel
+    const rows = questions.map((q, i) => {
+      const opts = optMap[q.id] || {};
+      const correct = Object.entries(opts).find(([,v]) => v.correct)?.[0] || '';
+      // Strip HTML tags dari question_text
+      const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').trim();
+      return {
+        'No': i + 1,
+        'question_text': qText,
+        'image': q.question_image ? q.question_image.split('/').pop() : '',
+        'points': q.points || 1,
+        'correct': correct,
+        'A': opts['A']?.text || '',
+        'B': opts['B']?.text || '',
+        'C': opts['C']?.text || '',
+        'D': opts['D']?.text || '',
+        'E': opts['E']?.text || '',
+        'image_a': opts['A']?.image ? opts['A'].image.split('/').pop() : '',
+        'image_b': opts['B']?.image ? opts['B'].image.split('/').pop() : '',
+        'image_c': opts['C']?.image ? opts['C'].image.split('/').pop() : '',
+        'image_d': opts['D']?.image ? opts['D'].image.split('/').pop() : '',
+        'image_e': opts['E']?.image ? opts['E'].image.split('/').pop() : '',
+      };
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws['!cols'] = [
+      {wch:5},{wch:50},{wch:20},{wch:8},{wch:8},
+      {wch:30},{wch:30},{wch:30},{wch:30},{wch:30},
+      {wch:15},{wch:15},{wch:15},{wch:15},{wch:15}
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Soal');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const filename = `soal_${exam.title.replace(/[^a-zA-Z0-9]/g,'_')}_${Date.now()}.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch(e) {
+    console.error(e);
+    req.flash('error', 'Gagal export soal: ' + e.message);
+    res.redirect(`/teacher/exams/${examId}`);
+  }
+});
+
 // Download Excel daftar nilai
 router.get('/grades/download', async (req, res) => {
   const user = req.session.user;
