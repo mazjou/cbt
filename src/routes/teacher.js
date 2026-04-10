@@ -1355,7 +1355,8 @@ router.post(
 
       const [[exam]] = await pool.query(`SELECT id, title FROM exams WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid) LIMIT 1;`, {
         id: examId,
-        tid: user.id
+        tid: user.id,
+        isAdmin: user.role === 'ADMIN' ? 1 : 0
       });
 
       return res.render('teacher/question_import_preview', {
