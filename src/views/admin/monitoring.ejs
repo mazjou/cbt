@@ -344,7 +344,7 @@
       <h2 class="font-bold text-slate-800">Siswa Sedang Ujian</h2>
       <span id="active-count-badge" class="ml-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-bold">0</span>
     </div>
-    <span class="text-xs text-slate-400">Auto-refresh setiap 5 detik</span>
+    <span class="text-xs text-slate-400">Auto-refresh setiap 30 detik</span>
   </div>
   <div id="active-exams-empty" class="text-center py-8 text-slate-400 text-sm">
     Tidak ada siswa yang sedang ujian
@@ -353,16 +353,17 @@
     <table class="min-w-full text-sm">
       <thead>
         <tr class="border-b border-slate-200">
-          <th class="text-left py-2 px-3 text-xs font-semibold text-slate-500 uppercase">Siswa</th>
-          <th class="text-left py-2 px-3 text-xs font-semibold text-slate-500 uppercase">Kelas</th>
           <th class="text-left py-2 px-3 text-xs font-semibold text-slate-500 uppercase">Ujian</th>
-          <th class="text-center py-2 px-3 text-xs font-semibold text-slate-500 uppercase">Berjalan</th>
-          <th class="text-center py-2 px-3 text-xs font-semibold text-slate-500 uppercase">Sisa Waktu</th>
+          <th class="text-center py-2 px-3 text-xs font-semibold text-slate-500 uppercase">Siswa Aktif</th>
+          <th class="text-center py-2 px-3 text-xs font-semibold text-slate-500 uppercase">Durasi</th>
+          <th class="text-center py-2 px-3 text-xs font-semibold text-slate-500 uppercase">Sudah Berjalan</th>
+          <th class="text-center py-2 px-3 text-xs font-semibold text-slate-500 uppercase">Sisa Waktu Min</th>
           <th class="text-center py-2 px-3 text-xs font-semibold text-slate-500 uppercase">Progress</th>
         </tr>
       </thead>
       <tbody id="active-exams-tbody"></tbody>
     </table>
+    <p class="mt-2 text-xs text-slate-400 text-right">* Menampilkan ringkasan per ujian. Refresh setiap 30 detik.</p>
   </div>
 </div>
 
@@ -546,12 +547,13 @@ async function fetchData() {
     document.getElementById('disk-total').textContent = fmtMb(stor.total);
     document.getElementById('disk-uploads').textContent = stor.uploadSize || '-';
 
-    // Tabel siswa sedang ujian
+    // Tabel siswa sedang ujian - ringkasan per ujian
     const activeExams = d.activeExams || [];
+    const totalActive = d.stats?.activeAttempts || 0;
     const badge = document.getElementById('active-count-badge');
-    badge.textContent = activeExams.length;
+    badge.textContent = totalActive;
     badge.className = 'ml-1 px-2 py-0.5 rounded-full text-xs font-bold ' +
-      (activeExams.length > 0 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500');
+      (totalActive > 0 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500');
 
     if (activeExams.length === 0) {
       document.getElementById('active-exams-empty').classList.remove('hidden');
@@ -561,21 +563,21 @@ async function fetchData() {
       document.getElementById('active-exams-table').classList.remove('hidden');
       const tbody = document.getElementById('active-exams-tbody');
       tbody.innerHTML = activeExams.map(a => {
-        const elapsed = a.elapsed_minutes || 0;
         const duration = a.duration_minutes || 0;
+        const maxElapsed = a.max_elapsed || 0;
         const remaining = a.remaining_minutes || 0;
-        const progress = duration > 0 ? Math.min(Math.round(elapsed / duration * 100), 100) : 0;
+        const progress = duration > 0 ? Math.min(Math.round(maxElapsed / duration * 100), 100) : 0;
         const progressColor = remaining <= 5 ? 'bg-red-500' : remaining <= 15 ? 'bg-amber-500' : 'bg-green-500';
-        const remainingText = remaining <= 0 ? '<span class="text-red-600 font-bold">Habis</span>'
+        const remainingText = remaining <= 0
+          ? '<span class="text-red-600 font-bold">Habis</span>'
           : `<span class="${remaining <= 5 ? 'text-red-600 font-bold' : remaining <= 15 ? 'text-amber-600 font-semibold' : 'text-green-700'}">${remaining} mnt</span>`;
         return `<tr class="border-b border-slate-100 hover:bg-slate-50">
-          <td class="py-2 px-3">
-            <div class="font-semibold text-slate-800 text-sm">${a.student_name}</div>
-            <div class="text-xs text-slate-400">${a.username}</div>
+          <td class="py-2 px-3 font-semibold text-slate-800 text-sm">${a.exam_title}</td>
+          <td class="py-2 px-3 text-center">
+            <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-green-100 text-green-700 font-bold text-lg">${a.student_count}</span>
           </td>
-          <td class="py-2 px-3 text-sm text-slate-600">${a.class_name}</td>
-          <td class="py-2 px-3 text-sm text-slate-700 max-w-xs truncate" title="${a.exam_title}">${a.exam_title}</td>
-          <td class="py-2 px-3 text-center text-sm text-slate-600">${elapsed} mnt</td>
+          <td class="py-2 px-3 text-center text-sm text-slate-600">${duration} mnt</td>
+          <td class="py-2 px-3 text-center text-sm text-slate-600">${a.min_elapsed}–${maxElapsed} mnt</td>
           <td class="py-2 px-3 text-center">${remainingText}</td>
           <td class="py-2 px-3 text-center">
             <div class="flex items-center gap-2">

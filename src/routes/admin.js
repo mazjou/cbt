@@ -4086,35 +4086,31 @@ router.get('/monitoring/data', async (req, res) => {
       console.error('Monitoring stats error:', e1.message);
     }
 
-    // Detail siswa yang sedang ujian
+    // Detail siswa yang sedang ujian - ringkasan per ujian (lebih ringan)
     try {
       const [activeRows] = await pool.query(`
         SELECT
-          a.id AS attempt_id,
-          u.full_name AS student_name,
-          u.username,
-          c.name AS class_name,
+          e.id AS exam_id,
           e.title AS exam_title,
-          a.started_at,
           e.duration_minutes,
-          FLOOR(EXTRACT(EPOCH FROM (now() - a.started_at))/60)::int AS elapsed_minutes
+          COUNT(a.id) AS student_count,
+          MIN(FLOOR(EXTRACT(EPOCH FROM (now() - a.started_at))/60))::int AS min_elapsed,
+          MAX(FLOOR(EXTRACT(EPOCH FROM (now() - a.started_at))/60))::int AS max_elapsed
         FROM attempts a
-        JOIN users u ON u.id = a.student_id
         JOIN exams e ON e.id = a.exam_id
-        LEFT JOIN classes c ON c.id = u.class_id
         WHERE a.status = 'IN_PROGRESS'
-        ORDER BY a.started_at ASC
-        LIMIT 50
+        GROUP BY e.id, e.title, e.duration_minutes
+        ORDER BY student_count DESC
+        LIMIT 20
       `);
       activeExams = (activeRows || []).map(r => ({
-        attempt_id:       r.attempt_id,
-        student_name:     r.student_name,
-        username:         r.username,
-        class_name:       r.class_name || '-',
+        exam_id:          r.exam_id,
         exam_title:       r.exam_title,
-        elapsed_minutes:  Number(r.elapsed_minutes) || 0,
+        student_count:    Number(r.student_count) || 0,
         duration_minutes: Number(r.duration_minutes) || 0,
-        remaining_minutes: Math.max(0, Number(r.duration_minutes) - (Number(r.elapsed_minutes) || 0))
+        min_elapsed:      Number(r.min_elapsed) || 0,
+        max_elapsed:      Number(r.max_elapsed) || 0,
+        remaining_minutes: Math.max(0, Number(r.duration_minutes) - (Number(r.max_elapsed) || 0))
       }));
     } catch(e2) {
       console.error('Monitoring activeExams error:', e2.message);
