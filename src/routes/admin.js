@@ -4238,6 +4238,8 @@ router.get('/monitoring/backup-db', async (req, res) => {
     });
   });
 });
+
+function formatUptime(sec) {
   sec = Math.floor(sec);
   const d = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
