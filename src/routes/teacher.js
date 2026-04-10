@@ -1081,33 +1081,27 @@ router.get('/exams/:id', async (req, res) => {
   res.render('teacher/exam_detail', { title: `Ujian: ${exam.title}`, exam, questions });
 });
 
-router.post('/exams/:id/questions', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }, { name: 'file', maxCount: 1 }]), async (req, res) => {
+router.post('/exams/:id/questions', upload.any(), async (req, res) => {
   const user = req.session.user;
   const { question_text, points, a, b, c, d, e, correct } = req.body;
   const examId = req.params.id;
 
-  // Validate required fields
   if (!question_text || !a || !b || !c || !d || !e || !correct) {
-    console.error('Missing required fields:', { question_text: !!question_text, a: !!a, b: !!b, c: !!c, d: !!d, e: !!e, correct: !!correct });
     req.flash('error', 'Semua field harus diisi (pertanyaan dan 5 opsi jawaban).');
     return res.redirect(`/teacher/exams/${examId}`);
   }
 
-  // verify ownership
   const [[ok]] = await pool.query(`SELECT id FROM exams WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid);`, { id: examId, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 });
-  if (!ok) {
-    req.flash('error', 'Akses ditolak.');
-    return res.redirect('/teacher/exams');
-  }
+  if (!ok) { req.flash('error', 'Akses ditolak.'); return res.redirect('/teacher/exams'); }
 
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    
-    // Handle file uploads
-    const imageFile = req.files && req.files.image ? req.files.image[0] : null;
-    const pdfFile = req.files && req.files.pdf ? req.files.pdf[0] : null;
-    
+
+    const files = req.files || [];
+    const imageFile = files.find(f => f.fieldname === 'image');
+    const pdfFile = files.find(f => f.fieldname === 'pdf');
+
     const [qRes] = await conn.query(
       `INSERT INTO questions (exam_id, question_text, question_image, question_pdf, points)
        VALUES (:exam_id,:question_text,:question_image,:question_pdf,:points);`,
@@ -1121,24 +1115,10 @@ router.post('/exams/:id/questions', upload.fields([{ name: 'image', maxCount: 1 
     );
     const questionId = qRes.insertId;
 
-    const options = [
-      { label: 'A', text: a },
-      { label: 'B', text: b },
-      { label: 'C', text: c },
-      { label: 'D', text: d },
-      { label: 'E', text: e }
-    ];
-
-    for (const opt of options) {
+    for (const [lbl, txt] of [['A',a],['B',b],['C',c],['D',d],['E',e]]) {
       await conn.query(
-        `INSERT INTO options (question_id, option_label, option_text, is_correct)
-         VALUES (:qid,:lbl,:txt,:isc);`,
-        {
-          qid: questionId,
-          lbl: opt.label,
-          txt: opt.text,
-          isc: opt.label === String(correct).toUpperCase() ? 1 : 0
-        }
+        `INSERT INTO options (question_id, option_label, option_text, is_correct) VALUES (:qid,:lbl,:txt,:isc);`,
+        { qid: questionId, lbl, txt, isc: lbl === String(correct).toUpperCase() ? 1 : 0 }
       );
     }
 
@@ -1147,11 +1127,10 @@ router.post('/exams/:id/questions', upload.fields([{ name: 'image', maxCount: 1 
   } catch (e) {
     await conn.rollback();
     console.error('Error adding question:', e);
-    req.flash('error', 'Gagal menambahkan soal. Error: ' + e.message);
+    req.flash('error', 'Gagal menambahkan soal: ' + e.message);
   } finally {
     conn.release();
   }
-
   res.redirect(`/teacher/exams/${examId}`);
 });
 

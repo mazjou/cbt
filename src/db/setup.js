@@ -45,6 +45,13 @@ async function main() {
     `ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS link_url VARCHAR(500) NULL`,
     `ALTER TABLE attempts ADD COLUMN IF NOT EXISTS submission_status VARCHAR(20) NULL DEFAULT 'PENDING'`,
     `ALTER TABLE questions ADD COLUMN IF NOT EXISTS question_pdf VARCHAR(255) NULL`,
+    // Notifications columns
+    `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS sender_id INT NULL REFERENCES users(id) ON DELETE SET NULL`,
+    `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS sender_role VARCHAR(20) NULL`,
+    `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_type VARCHAR(20) NOT NULL DEFAULT 'all'`,
+    `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_id INT NULL`,
+    `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`,
+    `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP NULL`,
     `CREATE UNIQUE INDEX IF NOT EXISTS uq_users_nomor_peserta ON users(nomor_peserta) WHERE nomor_peserta IS NOT NULL`,
     `CREATE TABLE IF NOT EXISTS agendas (
       id SERIAL PRIMARY KEY, teacher_id INT NOT NULL, title VARCHAR(200) NOT NULL,
