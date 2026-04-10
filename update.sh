@@ -33,6 +33,25 @@ echo "" | tee -a $LOG_FILE
 
 cd $APP_DIR || err "Folder $APP_DIR tidak ditemukan! Clone dulu: git clone https://github.com/mazjou/cbt.git /cbt"
 
+# ── 0. Cek .env ada, jika tidak copy dari .env.example ───────────────────────
+if [ ! -f "$APP_DIR/.env" ]; then
+  if [ -f "$APP_DIR/.env.example" ]; then
+    cp "$APP_DIR/.env.example" "$APP_DIR/.env"
+    warn ".env tidak ditemukan! Sudah dicopy dari .env.example"
+    warn "WAJIB edit /cbt/.env sebelum lanjut: nano /cbt/.env"
+    echo ""
+    echo "  Nilai yang WAJIB diisi:"
+    echo "  - DB_PASSWORD"
+    echo "  - REDIS_PASSWORD"
+    echo "  - SESSION_SECRET"
+    echo "  - APP_URL / CLIENT_URL"
+    echo ""
+    err "Hentikan setup. Edit .env dulu lalu jalankan ulang update.sh"
+  else
+    err ".env dan .env.example tidak ditemukan!"
+  fi
+fi
+
 # ── 1. Cek koneksi internet ───────────────────────────────
 info "Cek koneksi ke GitHub..."
 if ! curl -s --max-time 5 https://github.com > /dev/null; then
