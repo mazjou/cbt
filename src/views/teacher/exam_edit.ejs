@@ -131,17 +131,14 @@
     </div>
 
     <!-- Maksimal soal -->
-    <div class="mt-4 p-4 rounded-xl border border-amber-200 bg-white">
-      <label class="text-sm font-semibold text-amber-800 flex items-center gap-2 mb-2">
-        🎯 Maksimal Soal Ditampilkan
-      </label>
-      <div class="flex items-center gap-3">
-        <input type="number" name="max_questions" min="1"
-          value="<%= exam.max_questions || '' %>"
-          placeholder="Kosong = tampilkan semua"
-          class="w-48 rounded-xl border border-amber-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
-        <span class="text-xs text-slate-500">Soal akan dipilih secara acak dari total soal yang ada</span>
-      </div>
+    <div class="mt-4 flex items-center gap-3 p-3 rounded-xl border border-amber-200 bg-white">
+      <span class="text-base">🎯</span>
+      <label class="text-sm font-semibold text-amber-800 whitespace-nowrap">Maks Soal:</label>
+      <input type="number" name="max_questions" min="1"
+        value="<%= exam.max_questions || '' %>"
+        placeholder="Semua"
+        class="w-24 rounded-lg border border-amber-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+      <span class="text-xs text-slate-400">Kosong = tampilkan semua soal. Contoh: 40 dari 70 soal</span>
     </div>
   </div>
 
