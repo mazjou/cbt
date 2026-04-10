@@ -36,12 +36,48 @@ async function main() {
   await conn.query(schemaSql);
   console.log('✓ Schema berhasil dijalankan');
 
+  // Migrasi kolom yang mungkin belum ada (untuk database lama)
+  const migrations = [
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS plain_password VARCHAR(100) NULL`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS nomor_peserta VARCHAR(30) NULL`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo VARCHAR(255) NULL`,
+    `ALTER TABLE options ADD COLUMN IF NOT EXISTS option_image VARCHAR(255) NULL`,
+    `ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS link_url VARCHAR(500) NULL`,
+    `ALTER TABLE attempts ADD COLUMN IF NOT EXISTS submission_status VARCHAR(20) NULL DEFAULT 'PENDING'`,
+    `ALTER TABLE questions ADD COLUMN IF NOT EXISTS question_pdf VARCHAR(255) NULL`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS uq_users_nomor_peserta ON users(nomor_peserta) WHERE nomor_peserta IS NOT NULL`,
+    `CREATE TABLE IF NOT EXISTS agendas (
+      id SERIAL PRIMARY KEY, teacher_id INT NOT NULL, title VARCHAR(200) NOT NULL,
+      description TEXT NULL, agenda_date DATE NOT NULL, start_time TIME NULL,
+      end_time TIME NULL, category VARCHAR(50) NOT NULL DEFAULT 'UMUM',
+      status VARCHAR(20) NOT NULL DEFAULT 'AKTIF',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NULL,
+      CONSTRAINT fk_agenda_teacher FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_agenda_teacher ON agendas(teacher_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_agenda_date ON agendas(agenda_date)`,
+    `CREATE TABLE IF NOT EXISTS submission_backups (
+      id SERIAL PRIMARY KEY, attempt_id INT NOT NULL, student_id INT NOT NULL,
+      exam_id INT NOT NULL, backup_data JSONB NULL, status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (attempt_id)
+    )`,
+  ];
+  for (const sql of migrations) {
+    try { await conn.query(sql); } catch(e) { /* abaikan jika sudah ada */ }
+  }
+  console.log('✓ Migrasi kolom selesai');
+
   // Tambahkan indexes untuk performa
   const indexSqlPath = path.join(__dirname, '..', '..', 'sql', 'add_indexes.sql');
   if (fs.existsSync(indexSqlPath)) {
-    const indexSql = fs.readFileSync(indexSqlPath, 'utf8');
-    await conn.query(indexSql);
-    console.log('✓ Indexes berhasil dibuat');
+    try {
+      const indexSql = fs.readFileSync(indexSqlPath, 'utf8');
+      await conn.query(indexSql);
+      console.log('✓ Indexes berhasil dibuat');
+    } catch(e) {
+      console.log('⚠️ Beberapa index sudah ada, dilanjutkan...');
+    }
   }
 
   // Seed data default
