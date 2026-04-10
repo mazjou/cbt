@@ -58,7 +58,7 @@ router.get('/materials/:id', async (req, res) => {
     await pool.query(
       `INSERT INTO material_reads (material_id, student_id, first_opened_at, last_opened_at)
        VALUES (:mid,:sid,NOW(),NOW())
-       ON DUPLICATE KEY UPDATE last_opened_at=NOW();`,
+       ON CONFLICT (material_id, student_id) DO UPDATE SET last_opened_at=NOW()`,
       { mid: materialId, sid: user.id }
     );
   } catch (e) {
@@ -88,7 +88,7 @@ router.post('/materials/:id/complete', async (req, res) => {
     await pool.query(
       `INSERT INTO material_reads (material_id, student_id, first_opened_at, last_opened_at, completed_at)
        VALUES (:mid,:sid,NOW(),NOW(),NOW())
-       ON DUPLICATE KEY UPDATE last_opened_at=NOW(), completed_at=IF(completed_at IS NULL, NOW(), completed_at);`,
+       ON CONFLICT (material_id, student_id) DO UPDATE SET last_opened_at=NOW(), completed_at=CASE WHEN material_reads.completed_at IS NULL THEN NOW() ELSE material_reads.completed_at END`,
       { mid: materialId, sid: user.id }
     );
     req.flash('success', 'Materi ditandai selesai.');
@@ -470,7 +470,7 @@ router.post('/attempts/:id/submit', async (req, res) => {
           await pool.query(
             `INSERT INTO submission_backups (attempt_id, student_id, exam_id, backup_data, status)
              VALUES (:aid, :sid, :eid, :data, 'ACTIVE')
-             ON DUPLICATE KEY UPDATE backup_data = :data`,
+             ON CONFLICT (attempt_id) DO UPDATE SET backup_data=EXCLUDED.backup_data, status='ACTIVE'`,
             {
               aid: attemptId,
               sid: user.id,

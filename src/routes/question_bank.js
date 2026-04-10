@@ -317,7 +317,7 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
       await conn.query(
         `INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct)
          VALUES (:bid, :lbl, :txt, :isc)
-         ON DUPLICATE KEY UPDATE option_text = VALUES(option_text), is_correct = VALUES(is_correct);`,
+         ON CONFLICT (question_bank_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, is_correct=EXCLUDED.is_correct`,
         {
           bid: req.params.id,
           lbl,
