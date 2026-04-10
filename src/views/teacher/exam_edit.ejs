@@ -129,6 +129,20 @@
         <span class="text-sm font-medium text-amber-900">Acak Opsi Jawaban</span>
       </label>
     </div>
+
+    <!-- Maksimal soal -->
+    <div class="mt-4 p-4 rounded-xl border border-amber-200 bg-white">
+      <label class="text-sm font-semibold text-amber-800 flex items-center gap-2 mb-2">
+        🎯 Maksimal Soal Ditampilkan
+      </label>
+      <div class="flex items-center gap-3">
+        <input type="number" name="max_questions" min="1"
+          value="<%= exam.max_questions || '' %>"
+          placeholder="Kosong = tampilkan semua"
+          class="w-48 rounded-xl border border-amber-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+        <span class="text-xs text-slate-500">Soal akan dipilih secara acak dari total soal yang ada</span>
+      </div>
+    </div>
   </div>
 
   <!-- Display Options -->

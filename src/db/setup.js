@@ -45,6 +45,7 @@ async function main() {
     `ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS link_url VARCHAR(500) NULL`,
     `ALTER TABLE attempts ADD COLUMN IF NOT EXISTS submission_status VARCHAR(20) NULL DEFAULT 'PENDING'`,
     `ALTER TABLE questions ADD COLUMN IF NOT EXISTS question_pdf VARCHAR(255) NULL`,
+    `ALTER TABLE exams ADD COLUMN IF NOT EXISTS max_questions INT NULL`,
     // Notifications columns
     `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS sender_id INT NULL REFERENCES users(id) ON DELETE SET NULL`,
     `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS sender_role VARCHAR(20) NULL`,

@@ -646,18 +646,49 @@ router.get('/exams/new', async (req, res) => {
 router.post('/exams', async (req, res) => {
   const user = req.session.user;
   const {
-    subject_id,
-    title,
-    description,
-    class_ids, // Changed from class_id to class_ids (array)
-    start_at,
-    end_at,
-    duration_minutes,
-    pass_score,
-    max_attempts,
-    shuffle_questions,
-    shuffle_options,
-    access_code,
+    subject_id, title, description, class_ids,
+    start_at, end_at, duration_minutes, pass_score, max_attempts,
+    shuffle_questions, shuffle_options, access_code,
+    show_score_to_student, show_review_to_student, max_questions
+  } = req.body;
+
+  try {
+    const [result] = await pool.query(
+      `INSERT INTO exams
+        (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published, max_questions)
+       VALUES
+        (:subject_id,:teacher_id,:title,:description,NULL,:start_at,:end_at,:duration_minutes,:pass_score,:max_attempts,:shuffle_questions,:shuffle_options,:access_code,:show_score_to_student,:show_review_to_student,:is_published,:max_questions);`,
+      {
+        subject_id, teacher_id: user.id, title,
+        description: description || null,
+        start_at: start_at || null, end_at: end_at || null,
+        duration_minutes: Number(duration_minutes || 60),
+        pass_score: Number(pass_score || 75),
+        max_attempts: Number(max_attempts || 1),
+        shuffle_questions: shuffle_questions ? true : false,
+        shuffle_options: shuffle_options ? true : false,
+        access_code: access_code || null,
+        show_score_to_student: show_score_to_student ? true : false,
+        show_review_to_student: show_review_to_student ? true : false,
+        is_published: false,
+        max_questions: max_questions ? Number(max_questions) : null
+      }
+    );
+
+    const examId = result.insertId;
+    if (class_ids && class_ids.length > 0) {
+      const classIdsArray = Array.isArray(class_ids) ? class_ids : [class_ids];
+      for (const classId of classIdsArray) {
+        if (classId) await pool.query(`INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`, { exam_id: examId, class_id: classId });
+      }
+    }
+    req.flash('success', 'Ujian dibuat. Silakan tambahkan soal.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal membuat ujian: ' + e.message);
+  }
+  res.redirect('/teacher/exams');
+});
     show_score_to_student,
     show_review_to_student
   } = req.body;
@@ -830,58 +861,32 @@ router.put('/exams/:id', async (req, res) => {
   const user = req.session.user;
   const examId = req.params.id;
   const {
-    subject_id,
-    title,
-    description,
-    class_ids,
-    start_at,
-    end_at,
-    duration_minutes,
-    pass_score,
-    max_attempts,
-    shuffle_questions,
-    shuffle_options,
-    access_code,
-    show_score_to_student,
-    show_review_to_student
+    subject_id, title, description, class_ids,
+    start_at, end_at, duration_minutes, pass_score, max_attempts,
+    shuffle_questions, shuffle_options, access_code,
+    show_score_to_student, show_review_to_student, max_questions
   } = req.body;
 
   try {
-    // Verify ownership
     const [[exam]] = await pool.query(
       `SELECT id FROM exams WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid) LIMIT 1;`,
       { id: examId, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
     );
+    if (!exam) { req.flash('error', 'Ujian tidak ditemukan.'); return res.redirect('/teacher/exams'); }
 
-    if (!exam) {
-      req.flash('error', 'Ujian tidak ditemukan.');
-      return res.redirect('/teacher/exams');
-    }
-
-    // Update exam
     await pool.query(
       `UPDATE exams SET
-        subject_id=:subject_id,
-        title=:title,
-        description=:description,
-        start_at=:start_at,
-        end_at=:end_at,
-        duration_minutes=:duration_minutes,
-        pass_score=:pass_score,
-        max_attempts=:max_attempts,
-        shuffle_questions=:shuffle_questions,
-        shuffle_options=:shuffle_options,
-        access_code=:access_code,
-        show_score_to_student=:show_score_to_student,
-        show_review_to_student=:show_review_to_student
+        subject_id=:subject_id, title=:title, description=:description,
+        start_at=:start_at, end_at=:end_at, duration_minutes=:duration_minutes,
+        pass_score=:pass_score, max_attempts=:max_attempts,
+        shuffle_questions=:shuffle_questions, shuffle_options=:shuffle_options,
+        access_code=:access_code, show_score_to_student=:show_score_to_student,
+        show_review_to_student=:show_review_to_student, max_questions=:max_questions
        WHERE id=:id;`,
       {
-        id: examId,
-        subject_id,
-        title,
+        id: examId, subject_id, title,
         description: description || null,
-        start_at: start_at || null,
-        end_at: end_at || null,
+        start_at: start_at || null, end_at: end_at || null,
         duration_minutes: Number(duration_minutes || 60),
         pass_score: Number(pass_score || 75),
         max_attempts: Number(max_attempts || 1),
@@ -889,25 +894,16 @@ router.put('/exams/:id', async (req, res) => {
         shuffle_options: shuffle_options ? true : false,
         access_code: access_code || null,
         show_score_to_student: show_score_to_student ? true : false,
-        show_review_to_student: show_review_to_student ? true : false
+        show_review_to_student: show_review_to_student ? true : false,
+        max_questions: max_questions ? Number(max_questions) : null
       }
     );
 
-    // Update exam_classes
-    // First, delete existing class associations
     await pool.query(`DELETE FROM exam_classes WHERE exam_id=:exam_id;`, { exam_id: examId });
-
-    // Then insert new ones
     if (class_ids && class_ids.length > 0) {
-      const classIdsArray = Array.isArray(class_ids) ? class_ids : [class_ids];
-      
-      for (const classId of classIdsArray) {
-        if (classId) {
-          await pool.query(
-            `INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`,
-            { exam_id: examId, class_id: classId }
-          );
-        }
+      const arr = Array.isArray(class_ids) ? class_ids : [class_ids];
+      for (const cid of arr) {
+        if (cid) await pool.query(`INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`, { exam_id: examId, class_id: cid });
       }
     }
 

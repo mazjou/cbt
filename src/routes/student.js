@@ -232,21 +232,25 @@ router.post('/exams/:id/start', async (req, res) => {
     );
     const attemptId = aRes.insertId;
 
-    console.log(`[START EXAM] Attempt created: ${attemptId}`);
-
-    const [qRows] = await conn.query(
-      `SELECT id FROM questions WHERE exam_id=:eid ORDER BY ${exam.shuffle_questions ? 'RAND()' : 'id ASC'};`,
+    // Ambil soal - acak jika diset
+    let [qRows] = await conn.query(
+      `SELECT id FROM questions WHERE exam_id=:eid ORDER BY ${exam.shuffle_questions ? 'RANDOM()' : 'id ASC'};`,
       { eid: examId }
     );
-    
-    console.log(`[START EXAM] Questions found: ${qRows.length}`);
-    
+
+    // Batasi jumlah soal jika max_questions diset
+    if (exam.max_questions && exam.max_questions > 0 && qRows.length > exam.max_questions) {
+      // Sudah teracak (RANDOM()), ambil sejumlah max_questions saja
+      qRows = qRows.slice(0, exam.max_questions);
+    }
+
+    console.log(`[START EXAM] Questions: ${qRows.length}${exam.max_questions ? ` (max: ${exam.max_questions})` : ''}`);
+
     for (const q of qRows) {
       await conn.query(`INSERT INTO attempt_answers (attempt_id, question_id) VALUES (:aid,:qid);`, { aid: attemptId, qid: q.id });
     }
 
     await conn.commit();
-    console.log(`[START EXAM] Success! Redirecting to attempt ${attemptId}`);
     return res.redirect(`/student/attempts/${attemptId}`);
   } catch (e) {
     await conn.rollback();
