@@ -3986,6 +3986,7 @@ router.get('/monitoring/data', async (req, res) => {
     res.json({
       ok: true,
       timestamp: new Date().toISOString(),
+      redisConnected: req.app.locals.isRedisConnected === true,
       server: {
         hostname: os.hostname(),
         platform: os.platform(),

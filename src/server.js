@@ -59,6 +59,12 @@ app.use(expressLayouts);
 app.set('layout', 'layout');
 app.locals.pool = pool;
 
+// Expose isRedisConnected ke app.locals agar bisa diakses dari routes
+Object.defineProperty(app.locals, 'isRedisConnected', {
+  get: () => isRedisConnected,
+  enumerable: true
+});
+
 function getClientIp(req) {
   const xRealIp = req.headers['x-real-ip'];
   const xForwardedFor = req.headers['x-forwarded-for'];
