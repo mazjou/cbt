@@ -4073,12 +4073,16 @@ router.get('/monitoring/data', async (req, res) => {
       const [[users]]   = await pool.query(`SELECT COUNT(*) AS c FROM users`);
       const [[exams]]   = await pool.query(`SELECT COUNT(*) AS c FROM exams`);
       const [[attempts]]= await pool.query(`SELECT COUNT(*) AS c FROM attempts`);
-      const [[active]]  = await pool.query(`SELECT COUNT(*) AS c FROM attempts WHERE status='IN_PROGRESS'`);
+      // Gunakan subquery untuk hindari ambiguitas
+      const [activeRows2] = await pool.query(
+        `SELECT COUNT(*) AS c FROM attempts WHERE UPPER(TRIM(status)) = 'IN_PROGRESS'`
+      );
+      const activeCount = Number(activeRows2?.[0]?.c || 0);
       stats = {
         users:    Number(users.c),
         exams:    Number(exams.c),
         attempts: Number(attempts.c),
-        activeAttempts: Number(active.c)
+        activeAttempts: activeCount
       };
 
       // Detail siswa yang sedang ujian
@@ -4110,7 +4114,9 @@ router.get('/monitoring/data', async (req, res) => {
         duration_minutes: Number(r.duration_minutes) || 0,
         remaining_minutes: Math.max(0, Number(r.duration_minutes) - (Number(r.elapsed_minutes) || 0))
       }));
-    } catch(_) {}
+    } catch(statsErr) {
+      console.error('Monitoring stats error:', statsErr.message);
+    }
 
     res.json({
       ok: true,
