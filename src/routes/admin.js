@@ -2082,6 +2082,102 @@ router.post('/users/bulk-reset-password', async (req, res) => {
   res.redirect('/admin/users');
 });
 
+// ===== IMPORT UPDATE PASSWORD DARI EXCEL =====
+router.get('/users/import-password', (req, res) => {
+  res.render('admin/users_import_password', { title: 'Import Update Password' });
+});
+
+router.post('/users/import-password/preview', uploadImport.single('file'), async (req, res) => {
+  const file = req.file;
+  if (!file) {
+    req.flash('error', 'File belum dipilih.');
+    return res.redirect('/admin/users/import-password');
+  }
+  try {
+    const wb = XLSX.readFile(file.path, { cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    try { fs.unlinkSync(file.path); } catch(_) {}
+
+    if (!rows.length) {
+      req.flash('error', 'File kosong.');
+      return res.redirect('/admin/users/import-password');
+    }
+
+    const preview = [], errors = [];
+    for (const [idx, row] of rows.entries()) {
+      const rowNo = idx + 2;
+      const username = String(pickRowValue(row, ['username','user','nis']) || '').trim();
+      const password = String(pickRowValue(row, ['password_baru','password','pwd','pass']) || '').trim();
+
+      if (!username) { errors.push({ rowNo, reason: 'Username kosong' }); continue; }
+      if (!password || password.length < 4) { errors.push({ rowNo, reason: `Password terlalu pendek (min 4 karakter): "${username}"` }); continue; }
+
+      preview.push({ rowNo, username, password });
+    }
+
+    // Cek username yang ada di DB
+    if (preview.length) {
+      const usernames = preview.map(p => p.username);
+      const ph = usernames.map((_,i) => `$${i+1}`).join(',');
+      const [existing] = await pool.query(`SELECT username FROM users WHERE username IN (${ph})`, usernames);
+      const existSet = new Set(existing.map(u => u.username));
+
+      for (const p of preview) {
+        p.exists = existSet.has(p.username);
+        if (!p.exists) errors.push({ rowNo: p.rowNo, reason: `Username tidak ditemukan: "${p.username}"` });
+      }
+    }
+
+    const validPreview = preview.filter(p => p.exists);
+    const importId = require('nanoid').nanoid(12);
+    req.session.passwordImportPreview = { importId, preview: validPreview, errors, createdAt: Date.now() };
+
+    res.render('admin/users_import_password_preview', {
+      title: 'Preview Import Password',
+      importId, preview: validPreview, errors
+    });
+  } catch(e) {
+    console.error(e);
+    try { fs.unlinkSync(file.path); } catch(_) {}
+    req.flash('error', 'Gagal membaca file: ' + e.message);
+    res.redirect('/admin/users/import-password');
+  }
+});
+
+router.post('/users/import-password/commit', async (req, res) => {
+  const { importId } = req.body;
+  const sess = req.session.passwordImportPreview;
+  if (!sess || sess.importId !== importId) {
+    req.flash('error', 'Sesi preview tidak valid. Upload ulang.');
+    return res.redirect('/admin/users/import-password');
+  }
+  const items = sess.preview || [];
+  if (!items.length) {
+    req.flash('error', 'Tidak ada data valid.');
+    return res.redirect('/admin/users/import-password');
+  }
+
+  let updated = 0, failed = 0;
+  for (const it of items) {
+    try {
+      const hash = await bcrypt.hash(it.password, 10);
+      await pool.query(
+        `UPDATE users SET password_hash=:h, plain_password=:p WHERE username=:u`,
+        { h: hash, p: it.password, u: it.username }
+      );
+      updated++;
+    } catch(e) {
+      console.error('Update password error:', e.message);
+      failed++;
+    }
+  }
+
+  req.session.passwordImportPreview = null;
+  req.flash('success', `Password berhasil diupdate: ${updated} pengguna.${failed ? ` Gagal: ${failed}.` : ''}`);
+  res.redirect('/admin/users');
+});
+
 // Bulk move class users
 router.post('/users/bulk-move-class', async (req, res) => {
   let user_ids = req.body.user_ids;
