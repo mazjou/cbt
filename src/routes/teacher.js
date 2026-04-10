@@ -1081,7 +1081,7 @@ router.get('/exams/:id', async (req, res) => {
   res.render('teacher/exam_detail', { title: `Ujian: ${exam.title}`, exam, questions });
 });
 
-router.post('/exams/:id/questions', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
+router.post('/exams/:id/questions', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }, { name: 'file', maxCount: 1 }]), async (req, res) => {
   const user = req.session.user;
   const { question_text, points, a, b, c, d, e, correct } = req.body;
   const examId = req.params.id;
@@ -1916,7 +1916,7 @@ router.get('/questions/:id/edit', async (req, res) => {
   });
 });
 
-router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
+router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }, { name: 'file', maxCount: 1 }]), async (req, res) => {
   const user = req.session.user;
   const qId = req.params.id;
   const { question_text, points, a, b, c, d, e, correct, remove_image, remove_pdf } = req.body;
