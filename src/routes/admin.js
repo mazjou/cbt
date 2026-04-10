@@ -3031,6 +3031,81 @@ router.get('/grades', async (req, res) => {
   });
 });
 
+// Detail attempt untuk admin
+router.get('/attempts/:id/detail', async (req, res) => {
+  const attemptId = req.params.id;
+  try {
+    const [[attempt]] = await pool.query(
+      `SELECT a.*, e.title AS exam_title, e.pass_score, e.id AS exam_id,
+              u.full_name AS student_name, u.username,
+              s.name AS subject_name, t.full_name AS teacher_name,
+              c.name AS class_name
+       FROM attempts a
+       JOIN exams e ON e.id=a.exam_id
+       JOIN users u ON u.id=a.student_id
+       JOIN subjects s ON s.id=e.subject_id
+       JOIN users t ON t.id=e.teacher_id
+       LEFT JOIN classes c ON c.id=u.class_id
+       WHERE a.id=:id LIMIT 1;`,
+      { id: attemptId }
+    );
+    if (!attempt) { req.flash('error','Attempt tidak ditemukan.'); return res.redirect('/admin/grades'); }
+
+    // Ambil jawaban + opsi
+    const [ans] = await pool.query(
+      `SELECT aa.question_id, aa.option_id AS chosen_option_id, aa.is_correct,
+              q.question_text, q.question_image, q.points
+       FROM attempt_answers aa
+       JOIN questions q ON q.id=aa.question_id
+       WHERE aa.attempt_id=:aid ORDER BY aa.id ASC;`,
+      { aid: attemptId }
+    );
+
+    const qids = ans.map(a => a.question_id);
+    let optionsMap = {};
+    if (qids.length) {
+      const ph = qids.map((_,i) => `$${i+1}`).join(',');
+      const [opts] = await pool.query(
+        `SELECT id, question_id, option_label, option_text, is_correct FROM options WHERE question_id IN (${ph}) ORDER BY question_id ASC, option_label ASC;`,
+        qids
+      );
+      for (const o of opts) {
+        if (!optionsMap[o.question_id]) optionsMap[o.question_id] = [];
+        optionsMap[o.question_id].push(o);
+      }
+    }
+
+    const answers = ans.map(a => {
+      const opts = optionsMap[a.question_id] || [];
+      const correct = opts.find(o => o.is_correct === true || o.is_correct === 1) || null;
+      return { ...a, options: opts, correct_option_id: correct ? correct.id : null };
+    });
+
+    // Log pelanggaran anti-cheat
+    let violations = [];
+    try {
+      const [vrows] = await pool.query(
+        `SELECT violation_type, details, created_at FROM attempt_violations WHERE attempt_id=:aid ORDER BY id ASC LIMIT 300;`,
+        { aid: attemptId }
+      );
+      violations = vrows || [];
+    } catch(_) {}
+
+    res.render('admin/attempt_detail', {
+      title: 'Detail Nilai',
+      attempt,
+      exam: { id: attempt.exam_id, title: attempt.exam_title, pass_score: attempt.pass_score },
+      student: { full_name: attempt.student_name, username: attempt.username, class_name: attempt.class_name },
+      answers,
+      violations
+    });
+  } catch(e) {
+    console.error(e);
+    req.flash('error','Gagal memuat detail: ' + e.message);
+    res.redirect('/admin/grades');
+  }
+});
+
 // Bulk reset nilai untuk admin
 router.post('/attempts/bulk-reset', async (req, res) => {
   // Debug logging

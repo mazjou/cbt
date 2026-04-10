@@ -73,7 +73,8 @@
           <div class="flex items-start justify-between gap-3">
             <div>
               <div class="text-xs text-slate-500">Soal <%= idx+1 %> • <%= a.points %> poin</div>
-              <div class="mt-1 text-slate-900"><%= a.question_text %></div>
+              <!-- Render HTML agar rumus KaTeX tampil -->
+              <div class="mt-1 text-slate-900 prose prose-sm max-w-none"><%- a.question_text %></div>
               <% if (a.question_image) { %>
                 <img src="<%= a.question_image %>" alt="gambar_soal" class="mt-3 max-h-64 rounded-xl border border-slate-200" />
               <% } %>

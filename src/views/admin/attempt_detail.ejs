@@ -1,0 +1,161 @@
+<!-- KaTeX untuk render rumus -->
+<link rel="stylesheet" href="/public/lib/katex/katex.min.css">
+
+<div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+  <div>
+    <div class="text-sm text-slate-500">Detail Nilai (Admin)</div>
+    <h1 class="text-3xl font-semibold tracking-tight"><%= exam.title %></h1>
+    <p class="mt-1 text-slate-600">
+      <span class="text-slate-900 font-medium"><%= student.full_name %></span>
+      • <%= student.username %>
+      <% if(student.class_name) { %> • <%= student.class_name %><% } %>
+    </p>
+  </div>
+  <div class="flex gap-2">
+    <a href="/admin/grades" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">← Kembali</a>
+    <a href="/admin/exams/<%= exam.id %>" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100">Ke Ujian</a>
+  </div>
+</div>
+
+<div class="mt-6 grid lg:grid-cols-3 gap-4">
+
+  <!-- Kolom Kiri: Ringkasan + Log Anti-Kecurangan -->
+  <div class="rounded-2xl border border-slate-200 bg-slate-100 p-5">
+    <div class="text-sm text-slate-500">Ringkasan</div>
+    <div class="mt-3 space-y-1 text-sm text-slate-600">
+      <div>Status: <span class="text-slate-900 font-medium"><%= attempt.status %></span></div>
+      <div>Nilai: <span class="text-slate-900 font-medium"><%= attempt.score %></span></div>
+      <div>Total Poin: <span class="text-slate-900 font-medium"><%= attempt.total_points %></span></div>
+      <div>Benar: <span class="text-slate-900 font-medium"><%= attempt.correct_count %></span></div>
+      <div>Salah: <span class="text-slate-900 font-medium"><%= attempt.wrong_count %></span></div>
+      <div>Passing: <span class="text-slate-900 font-medium"><%= exam.pass_score %></span></div>
+      <div>Pelanggaran: <span class="text-slate-900 font-medium"><%= (violations||[]).length %></span></div>
+    </div>
+
+    <div class="mt-4">
+      <% if(attempt.status === 'SUBMITTED') { %>
+        <div class="inline-flex items-center gap-2 px-3 py-2 rounded-xl <%= attempt.score >= exam.pass_score ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-700' : 'bg-rose-500/15 border border-rose-500/30 text-rose-700' %>">
+          <span class="h-2 w-2 rounded-full <%= attempt.score >= exam.pass_score ? 'bg-emerald-400' : 'bg-rose-400' %>"></span>
+          <span class="text-sm font-semibold"><%= attempt.score >= exam.pass_score ? 'LULUS' : 'TIDAK LULUS' %></span>
+        </div>
+      <% } else { %>
+        <div class="text-sm text-slate-500">Attempt belum disubmit.</div>
+      <% } %>
+    </div>
+
+    <!-- Log Anti-Kecurangan -->
+    <% if(violations && violations.length) { %>
+      <div class="mt-5">
+        <div class="text-sm font-semibold">Log Anti-Kecurangan</div>
+        <div class="mt-2 max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-xs text-slate-500 border-b border-slate-200">
+                <th class="px-3 py-2">Waktu</th>
+                <th class="px-3 py-2">Jenis</th>
+                <th class="px-3 py-2">Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% violations.forEach(v => { %>
+                <tr class="border-b border-slate-100">
+                  <td class="px-3 py-2 whitespace-nowrap text-slate-600 text-xs"><%= new Date(v.created_at).toLocaleString('id-ID') %></td>
+                  <td class="px-3 py-2 text-slate-900 font-medium text-xs">
+                    <%
+                      const vLabel = {
+                        'blur':'Pindah Tab/Aplikasi',
+                        'visibilitychange':'Pindah Tab/Aplikasi',
+                        'fullscreenchange':'Keluar Fullscreen',
+                        'contextmenu':'Klik Kanan',
+                        'copy':'Copy Teks',
+                        'paste':'Paste Teks',
+                        'cut':'Cut Teks'
+                      };
+                    %>
+                    <%= vLabel[v.violation_type] || v.violation_type %>
+                  </td>
+                  <td class="px-3 py-2 text-slate-600 text-xs"><%= v.details || '-' %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-2 text-xs text-slate-500">Catatan: ini pencegahan dasar berbasis browser (tidak 100% bisa mencegah semua kecurangan).</div>
+      </div>
+    <% } else { %>
+      <div class="mt-4 text-xs text-slate-400">Tidak ada log pelanggaran.</div>
+    <% } %>
+
+    <!-- Tombol Reset -->
+    <div class="mt-5 pt-4 border-t border-slate-200">
+      <form action="/admin/attempts/<%= attempt.id %>/reset" method="POST"
+            onsubmit="return confirm('Reset nilai <%= student.full_name %>? Siswa dapat mengulang ujian.')">
+        <button class="w-full px-4 py-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 font-semibold text-sm transition-all">
+          🗑️ Reset Nilai
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Kolom Kanan: Review Jawaban -->
+  <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-slate-100 p-5">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold">Review Jawaban</h2>
+      <div class="text-sm text-slate-500"><%= answers.length %> soal</div>
+    </div>
+
+    <div class="space-y-4">
+      <% answers.forEach((a, idx) => { %>
+        <div class="rounded-xl border border-slate-200 bg-white p-4">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <div class="text-xs text-slate-500">Soal <%= idx+1 %> • <%= a.points %> poin</div>
+              <div class="mt-1 text-slate-900 prose prose-sm max-w-none"><%- a.question_text %></div>
+              <% if(a.question_image) { %>
+                <img src="<%= a.question_image %>" class="mt-3 max-h-48 rounded-xl border border-slate-200" />
+              <% } %>
+            </div>
+            <div class="text-xs px-2 py-1 rounded-lg shrink-0 <%= a.is_correct ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-rose-100 text-rose-700 border border-rose-200' %>">
+              <%= a.is_correct ? '✓ BENAR' : '✗ SALAH' %>
+            </div>
+          </div>
+
+          <div class="mt-3 grid sm:grid-cols-2 gap-2">
+            <% a.options.forEach(opt => { %>
+              <div class="rounded-xl border px-3 py-2 text-sm
+                <%= opt.id === a.correct_option_id ? 'bg-emerald-50 border-emerald-300' : '' %>
+                <%= opt.id === a.chosen_option_id && opt.id !== a.correct_option_id ? 'bg-rose-50 border-rose-300' : '' %>
+                <%= opt.id !== a.correct_option_id && opt.id !== a.chosen_option_id ? 'border-slate-200' : '' %>
+              ">
+                <div class="flex items-start gap-2">
+                  <span class="font-mono text-xs text-slate-500 shrink-0"><%= opt.option_label %>.</span>
+                  <span class="text-slate-900"><%= opt.option_text %></span>
+                </div>
+                <div class="mt-1 text-xs">
+                  <% if(opt.id === a.correct_option_id) { %><span class="text-emerald-600 font-semibold">✓ Kunci</span><% } %>
+                  <% if(opt.id === a.chosen_option_id) { %>
+                    <span class="<%= opt.id === a.correct_option_id ? 'text-emerald-600' : 'text-rose-600' %> font-semibold ml-1">
+                      <%= opt.id === a.correct_option_id ? '• ' : '' %>Dipilih siswa
+                    </span>
+                  <% } %>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  </div>
+</div>
+
+<script src="/public/lib/katex/katex.min.js"></script>
+<script>
+document.querySelectorAll('.math-formula[data-latex]').forEach(function(el) {
+  try {
+    el.innerHTML = katex.renderToString(el.getAttribute('data-latex'), {
+      throwOnError: false,
+      displayMode: el.getAttribute('data-mode') === 'block'
+    });
+  } catch(e) {}
+});
+</script>

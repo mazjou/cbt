@@ -234,11 +234,17 @@
               <%= r.started_at ? new Date(r.started_at).toLocaleString('id-ID') : '-' %>
             </td>
             <td class="py-3 px-2 text-right">
-              <form action="/admin/attempts/<%= r.id %>/reset" method="POST" class="inline" onsubmit="return confirm('Reset nilai <%= r.student_name %> untuk ujian <%= r.exam_title %>? Siswa dapat mengulang ujian.')">
-                <button class="bg-gradient-to-r from-rose-100 to-rose-200 hover:from-rose-200 hover:to-rose-300 text-rose-800 font-semibold py-1.5 px-3 rounded-lg text-xs transition-all">
-                  🗑️ Reset
-                </button>
-              </form>
+              <div class="flex gap-1 justify-end">
+                <a href="/admin/attempts/<%= r.id %>/detail"
+                  class="bg-gradient-to-r from-blue-100 to-blue-200 hover:from-blue-200 hover:to-blue-300 text-blue-800 font-semibold py-1.5 px-3 rounded-lg text-xs transition-all">
+                  🔍 Detail
+                </a>
+                <form action="/admin/attempts/<%= r.id %>/reset" method="POST" class="inline" onsubmit="return confirm('Reset nilai <%= r.student_name %>?')">
+                  <button class="bg-gradient-to-r from-rose-100 to-rose-200 hover:from-rose-200 hover:to-rose-300 text-rose-800 font-semibold py-1.5 px-3 rounded-lg text-xs transition-all">
+                    🗑️ Reset
+                  </button>
+                </form>
+              </div>
             </td>
           </tr>
         <% }); %>
