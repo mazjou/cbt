@@ -2715,6 +2715,20 @@ router.get('/exams/:id', async (req, res) => {
   }
 });
 
+// Route admin untuk tambah soal, import, upload gambar - redirect ke teacher routes
+router.get('/exams/:id/questions/new', (req, res) => {
+  res.redirect(`/teacher/exams/${req.params.id}`);
+});
+router.get('/exams/:id/import', (req, res) => {
+  res.redirect(`/teacher/exams/${req.params.id}/import`);
+});
+router.get('/exams/:id/questions/upload-images', (req, res) => {
+  res.redirect(`/teacher/exams/${req.params.id}/questions/upload-images`);
+});
+router.get('/questions/:id/edit', (req, res) => {
+  res.redirect(`/teacher/questions/${req.params.id}/edit`);
+});
+
 // Bulk delete exams
 router.post('/exams/bulk-delete', async (req, res) => {
   let exam_ids = req.body.exam_ids;

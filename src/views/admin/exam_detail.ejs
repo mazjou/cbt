@@ -262,14 +262,14 @@
         </div>
         <h2 class="text-lg font-bold text-slate-800">Daftar Soal (<%= questions.length %>)</h2>
       </div>
-      <div class="flex gap-2">
-        <a href="/teacher/exams/<%= exam.id %>" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+      <div class="flex gap-2 flex-wrap">
+        <a href="/admin/exams/<%= exam.id %>/questions/new" class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
           ➕ Tambah Soal
         </a>
-        <a href="/teacher/exams/<%= exam.id %>/import" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+        <a href="/admin/exams/<%= exam.id %>/import" class="px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
           📥 Import Soal
         </a>
-        <a href="/teacher/exams/<%= exam.id %>/questions/upload-images" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+        <a href="/admin/exams/<%= exam.id %>/questions/upload-images" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
           🖼️ Upload Gambar
         </a>
         <a href="/admin/grades?exam_id=<%= exam.id %>" class="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white text-sm font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
@@ -290,7 +290,7 @@
           </div>
           <p class="text-slate-500 font-medium">Belum ada soal</p>
           <p class="text-slate-400 text-sm">Tambahkan soal untuk ujian ini</p>
-          <a href="/teacher/exams/<%= exam.id %>" class="mt-3 px-6 py-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+          <a href="/admin/exams/<%= exam.id %>/questions/new" class="mt-3 px-6 py-2 bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
             Tambah Soal Pertama
           </a>
         </div>
@@ -347,7 +347,7 @@
               </td>
               <td class="px-4 py-4">
                 <div class="flex items-center gap-2">
-                  <a href="/teacher/questions/<%= question.id %>/edit" class="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
+                  <a href="/admin/questions/<%= question.id %>/edit" class="px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white text-xs font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all">
                     Edit
                   </a>
                   <form method="POST" action="/teacher/questions/<%= question.id %>?_method=DELETE" class="inline" onsubmit="return confirm('Yakin ingin menghapus soal ini?');">
