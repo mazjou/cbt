@@ -385,9 +385,9 @@ async function fetchData() {
     chk('chk-cpu', cpuPct < 70, cpuPct < 85);
     chk('chk-conn', db.active < 20, db.active < 25);
     chk('chk-active', st.activeAttempts === 0, st.activeAttempts < 10);
-    // Redis: cek dari status bar
-    const redisOk = false; // tidak bisa cek dari sini, tampilkan warning
-    document.getElementById('chk-redis').textContent = '⚠️';
+    // Redis: dari data server
+    const redisOk = d.redisConnected === true;
+    document.getElementById('chk-redis').textContent = redisOk ? '✅' : '⚠️';
 
     const allOk = s.nodeRss < 300 && cpuPct < 70 && db.active < 20;
     const msg = document.getElementById('readiness-msg');
