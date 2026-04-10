@@ -3979,8 +3979,9 @@ router.get('/monitoring', async (req, res) => {
 router.get('/monitoring/data', async (req, res) => {
   try {
     const os = require('os');
+    const { execSync } = require('child_process');
 
-    // CPU usage (snapshot 1 detik)
+    // CPU usage (snapshot 500ms)
     const cpuStart = os.cpus();
     await new Promise(r => setTimeout(r, 500));
     const cpuEnd = os.cpus();
@@ -3995,17 +3996,42 @@ router.get('/monitoring/data', async (req, res) => {
     });
     const cpuUsage = totalTick > 0 ? Math.round((1 - totalIdle / totalTick) * 100) : 0;
 
-    // RAM sistem (untuk info) + RAM proses Node.js (yang relevan)
+    // RAM sistem
     const totalMem = os.totalmem();
     const freeMem  = os.freemem();
     const usedMem  = totalMem - freeMem;
     const mem = process.memoryUsage();
-    const nodeRss  = Math.round(mem.rss / 1024 / 1024);       // RAM proses Node.js
-    const nodeHeap = Math.round(mem.heapUsed / 1024 / 1024);  // Heap terpakai
+    const nodeRss  = Math.round(mem.rss / 1024 / 1024);
+    const nodeHeap = Math.round(mem.heapUsed / 1024 / 1024);
 
     // Uptime
     const uptimeSec = os.uptime();
     const uptimeApp = process.uptime();
+
+    // Storage (disk usage) - pakai df di Linux
+    let storage = { total: 0, used: 0, free: 0, percent: 0, uploadSize: '-' };
+    try {
+      if (process.platform !== 'win32') {
+        const dfOut = execSync("df -BM / | tail -1").toString().trim();
+        // Format: /dev/vda1  20480M  8192M  12288M  40% /
+        const parts = dfOut.split(/\s+/);
+        const total = parseInt(parts[1]) || 0;
+        const used  = parseInt(parts[2]) || 0;
+        const free  = parseInt(parts[3]) || 0;
+        const pct   = parseInt(parts[4]) || 0;
+        storage = { total, used, free, percent: pct };
+
+        // Ukuran folder uploads
+        try {
+          const UPLOAD_ROOT = process.env.UPLOAD_ROOT || require('path').join(__dirname, '..', 'public', 'uploads');
+          const duOut = execSync(`du -sm "${UPLOAD_ROOT}" 2>/dev/null || echo "0"`).toString().trim();
+          const sizeMb = parseInt(duOut.split('\t')[0]) || 0;
+          storage.uploadSize = sizeMb >= 1024
+            ? (sizeMb / 1024).toFixed(1) + ' GB'
+            : sizeMb + ' MB';
+        } catch(_) { storage.uploadSize = '-'; }
+      }
+    } catch(_) {}
 
     // DB stats
     let dbStats = { active: 0, total: 0, uptime: '-' };
@@ -4016,7 +4042,6 @@ router.get('/monitoring/data', async (req, res) => {
         FROM pg_stat_activity
         WHERE datname = current_database()
       `);
-      // Konversi interval ke string yang readable
       const [u] = await pool.query(`
         SELECT
           EXTRACT(DAY FROM (now() - pg_postmaster_start_time()))::int AS days,
@@ -4041,8 +4066,9 @@ router.get('/monitoring/data', async (req, res) => {
       dbSize = s[0]?.size || '-';
     } catch(_) {}
 
-    // Statistik data
+    // Statistik data + siswa yang sedang ujian
     let stats = {};
+    let activeExams = [];
     try {
       const [[users]]   = await pool.query(`SELECT COUNT(*) AS c FROM users`);
       const [[exams]]   = await pool.query(`SELECT COUNT(*) AS c FROM exams`);
@@ -4054,6 +4080,36 @@ router.get('/monitoring/data', async (req, res) => {
         attempts: Number(attempts.c),
         activeAttempts: Number(active.c)
       };
+
+      // Detail siswa yang sedang ujian
+      const [activeRows] = await pool.query(`
+        SELECT
+          a.id AS attempt_id,
+          u.full_name AS student_name,
+          u.username,
+          c.name AS class_name,
+          e.title AS exam_title,
+          a.started_at,
+          e.duration_minutes,
+          FLOOR(EXTRACT(EPOCH FROM (now() - a.started_at))/60)::int AS elapsed_minutes
+        FROM attempts a
+        JOIN users u ON u.id = a.student_id
+        JOIN exams e ON e.id = a.exam_id
+        LEFT JOIN classes c ON c.id = u.class_id
+        WHERE a.status = 'IN_PROGRESS'
+        ORDER BY a.started_at ASC
+        LIMIT 50
+      `);
+      activeExams = activeRows.map(r => ({
+        attempt_id: r.attempt_id,
+        student_name: r.student_name,
+        username: r.username,
+        class_name: r.class_name || '-',
+        exam_title: r.exam_title,
+        elapsed_minutes: Number(r.elapsed_minutes) || 0,
+        duration_minutes: Number(r.duration_minutes) || 0,
+        remaining_minutes: Math.max(0, Number(r.duration_minutes) - (Number(r.elapsed_minutes) || 0))
+      }));
     } catch(_) {}
 
     res.json({
@@ -4068,12 +4124,10 @@ router.get('/monitoring/data', async (req, res) => {
         cpuModel: os.cpus()[0]?.model || '-',
         cpuCores: os.cpus().length,
         cpuUsage,
-        // RAM sistem (info saja)
         totalMem: Math.round(totalMem / 1024 / 1024),
         usedMem:  Math.round(usedMem  / 1024 / 1024),
         freeMem:  Math.round(freeMem  / 1024 / 1024),
         memPercent: Math.round((usedMem / totalMem) * 100),
-        // RAM proses Node.js (yang ditampilkan di bar)
         nodeRss,
         nodeHeap,
         uptimeOs:  uptimeSec,
@@ -4083,9 +4137,11 @@ router.get('/monitoring/data', async (req, res) => {
         heapUsed:  nodeHeap,
         heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
       },
+      storage,
       db: { ...dbStats },
       dbSize,
-      stats
+      stats,
+      activeExams
     });
   } catch (e) {
     res.json({ ok: false, error: e.message });
