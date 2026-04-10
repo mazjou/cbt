@@ -1082,13 +1082,15 @@ router.get('/exams/:id/import', async (req, res) => {
   const user = req.session.user;
   const [[exam]] = await pool.query(`SELECT id, title FROM exams WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid) LIMIT 1;`, {
     id: req.params.id,
-    tid: user.id
+    tid: user.id,
+    isAdmin: user.role === 'ADMIN' ? 1 : 0
   });
   if (!exam) {
     req.flash('error', 'Ujian tidak ditemukan.');
-    return res.redirect('/teacher/exams');
+    return res.redirect(user.role === 'ADMIN' ? '/admin/exams' : '/teacher/exams');
   }
-  res.render('teacher/question_import', { title: 'Import Soal', exam });
+  const backUrl = user.role === 'ADMIN' ? `/admin/exams/${exam.id}` : `/teacher/exams/${exam.id}`;
+  res.render('teacher/question_import', { title: 'Import Soal', exam, backUrl });
 });
 
 // Import soal dari Microsoft Word (.docx) dengan format baku
