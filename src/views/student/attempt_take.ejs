@@ -35,6 +35,36 @@
 
 <!-- Anti-cheat bar -->
 <div id="antiCheatBar" class="rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 px-5 py-4 mb-6 shadow-md">
+
+<!-- Layar Kunci Pelanggaran -->
+<div id="lockScreen" class="hidden fixed inset-0 z-50 bg-red-900 bg-opacity-95 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center">
+    <div class="text-6xl mb-4">🔒</div>
+    <h2 class="text-2xl font-bold text-red-700 mb-2">Ujian Terkunci</h2>
+    <p class="text-slate-600 text-sm mb-1">Layar dikunci karena terlalu banyak pelanggaran.</p>
+    <p id="lockViolationInfo" class="text-red-600 font-semibold text-sm mb-6"></p>
+    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-left">
+      <div class="text-sm font-semibold text-amber-800 mb-1">Cara membuka kunci:</div>
+      <ol class="text-xs text-amber-700 space-y-1 list-decimal list-inside">
+        <li>Hubungi guru/pengawas ujian</li>
+        <li>Minta token unlock dari guru</li>
+        <li>Masukkan token di bawah ini</li>
+      </ol>
+    </div>
+    <div class="flex gap-2 mb-4">
+      <input id="unlockTokenInput" type="text" maxlength="6"
+        placeholder="Masukkan token (6 karakter)"
+        class="flex-1 rounded-xl border-2 border-slate-300 px-4 py-3 text-center text-lg font-mono font-bold tracking-widest uppercase focus:outline-none focus:border-indigo-500"
+        oninput="this.value=this.value.toUpperCase()" />
+      <button onclick="submitUnlockToken()"
+        class="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold transition-all">
+        Buka
+      </button>
+    </div>
+    <div id="unlockMsg" class="text-sm font-medium hidden"></div>
+    <div class="mt-4 text-xs text-slate-400">Jawaban kamu tersimpan dan tidak hilang.</div>
+  </div>
+</div>
   <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <div class="flex items-start gap-3">
       <span class="text-3xl">🔒</span>
@@ -500,6 +530,62 @@
     box._t = setTimeout(() => { box.style.opacity = '0'; }, 3000);
   }
 
+  function showLockScreen(count, max) {
+    anti.locked = true;
+    const ls = document.getElementById('lockScreen');
+    if (ls) {
+      ls.classList.remove('hidden');
+      const info = document.getElementById('lockViolationInfo');
+      if (info) info.textContent = `Pelanggaran: ${count}/${max}`;
+    }
+    // Keluar fullscreen agar siswa bisa minta token ke guru
+    try {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } catch(_) {}
+  }
+
+  async function submitUnlockToken() {
+    const input = document.getElementById('unlockTokenInput');
+    const msg = document.getElementById('unlockMsg');
+    const token = (input?.value || '').trim().toUpperCase();
+    if (!token || token.length < 4) {
+      msg.textContent = 'Masukkan token yang diberikan guru.';
+      msg.className = 'text-sm font-medium text-red-600';
+      msg.classList.remove('hidden');
+      return;
+    }
+    msg.textContent = '⏳ Memverifikasi...';
+    msg.className = 'text-sm font-medium text-slate-500';
+    msg.classList.remove('hidden');
+    try {
+      const r = await fetch(`/student/attempts/${anti.attemptId}/unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      const d = await r.json();
+      if (d.ok) {
+        msg.textContent = '✅ ' + d.message;
+        msg.className = 'text-sm font-medium text-green-600';
+        anti.locked = false;
+        setTimeout(() => {
+          document.getElementById('lockScreen').classList.add('hidden');
+          input.value = '';
+          msg.classList.add('hidden');
+        }, 1500);
+      } else {
+        msg.textContent = '❌ ' + d.message;
+        msg.className = 'text-sm font-medium text-red-600';
+        input.value = '';
+        input.focus();
+      }
+    } catch(e) {
+      msg.textContent = '❌ Gagal: ' + e.message;
+      msg.className = 'text-sm font-medium text-red-600';
+    }
+  }
+
   async function reportViolation(type, details) {
     if (anti.locked) return;
     const key = type + '::' + (details || '');
@@ -520,10 +606,8 @@
 
       if (j.locked) {
         anti.locked = true;
-        toast(`Attempt dikunci karena terlalu banyak pelanggaran (${count}/${max}). Jawaban akan dikumpulkan.`);
-        setTimeout(() => {
-          window.location.href = `/student/attempts/${anti.attemptId}/result`;
-        }, 1200);
+        // Tampilkan layar kunci — JANGAN redirect/submit
+        showLockScreen(count, max);
         return;
       }
       toast(`${type}. Pelanggaran tercatat (${count}/${max}).`);

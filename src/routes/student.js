@@ -6,8 +6,8 @@ const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 const router = express.Router();
 router.use(requireRole('STUDENT'));
 
-// Anti-cheat: jumlah pelanggaran maksimal sebelum attempt dikunci & otomatis disubmit.
-const MAX_VIOLATIONS = Number(process.env.ANTI_CHEAT_MAX_VIOLATIONS || 3);
+// Anti-cheat: jumlah pelanggaran maksimal sebelum attempt dikunci (per ujian, default 3)
+// Nilai ini sekarang diambil dari kolom max_violations di tabel exams
 
 function toMySqlDatetime(d) {
   const pad = (n) => String(n).padStart(2, '0');
@@ -386,48 +386,97 @@ router.post('/attempts/:id/answer', async (req, res) => {
 router.post('/attempts/:id/violation', async (req, res) => {
   const user = req.session.user;
   const attemptId = req.params.id;
+  if (!/^\d+$/.test(String(attemptId))) return res.status(404).json({ ok: false });
+
   const type = String(req.body?.type || '').slice(0, 50);
   const details = req.body?.details ? String(req.body.details).slice(0, 255) : null;
-
   if (!type) return res.status(400).json({ ok: false, message: 'type wajib' });
 
   const [[attempt]] = await pool.query(
-    `SELECT id, status FROM attempts WHERE id=:aid AND student_id=:sid LIMIT 1;`,
+    `SELECT a.id, a.status, a.is_locked, a.student_id, a.exam_id,
+            COALESCE(e.max_violations, 3) AS max_violations
+     FROM attempts a
+     JOIN exams e ON e.id = a.exam_id
+     WHERE a.id=:aid AND a.student_id=:sid LIMIT 1;`,
     { aid: attemptId, sid: user.id }
   );
   if (!attempt) return res.status(404).json({ ok: false, message: 'Attempt tidak ditemukan' });
 
-  // Tetap boleh mencatat meski sudah submit, tapi tidak perlu lock/auto-submit.
+  // Jika sudah terkunci, kembalikan status terkunci
+  if (attempt.is_locked) {
+    return res.json({ ok: true, logged: false, locked: true, needToken: true });
+  }
+
+  // Catat pelanggaran
   try {
     await pool.query(
       `INSERT INTO attempt_violations (attempt_id, violation_type, details) VALUES (:aid, :t, :d);`,
       { aid: attemptId, t: type, d: details }
     );
   } catch (e) {
-    // Jika tabel belum ada (belum migrate), jangan memblok siswa.
     console.error('Anti-cheat log insert failed:', e?.message || e);
-    return res.json({ ok: true, logged: false, max: MAX_VIOLATIONS, count: null, locked: false });
+    return res.json({ ok: true, logged: false, max: 3, count: null, locked: false });
   }
 
-  // Jika masih in progress, cek apakah sudah melewati batas.
   if (attempt.status === 'IN_PROGRESS') {
-    const [[cnt]] = await pool.query(
+    const [cntRows] = await pool.query(
       `SELECT COUNT(*) AS c FROM attempt_violations WHERE attempt_id=:aid;`,
       { aid: attemptId }
     );
-    const count = Number(cnt?.c || 0);
-    if (count >= MAX_VIOLATIONS) {
-      try {
-        await finalizeAttemptWithBackup(attemptId, attempt.student_id, attempt.exam_id);
-      } catch (e) {
-        console.error('Finalize after violations failed:', e);
-      }
-      return res.json({ ok: true, logged: true, max: MAX_VIOLATIONS, count, locked: true });
+    const count = Number(cntRows?.[0]?.c || 0);
+    const maxV = Number(attempt.max_violations || 3);
+
+    if (count >= maxV) {
+      // KUNCI layar — JANGAN auto-submit, jawaban tetap tersimpan
+      const token = Math.random().toString(36).substring(2, 8).toUpperCase();
+      await pool.query(
+        `UPDATE attempts SET is_locked=true, unlock_token=:token, locked_at=now()
+         WHERE id=:aid;`,
+        { token, aid: attemptId }
+      );
+      return res.json({ ok: true, logged: true, max: maxV, count, locked: true, needToken: true });
     }
-    return res.json({ ok: true, logged: true, max: MAX_VIOLATIONS, count, locked: false });
+    return res.json({ ok: true, logged: true, max: maxV, count, locked: false });
   }
 
-  return res.json({ ok: true, logged: true, max: MAX_VIOLATIONS, count: null, locked: false });
+  return res.json({ ok: true, logged: true, locked: false });
+});
+
+// Cek status kunci attempt (polling dari siswa)
+router.get('/attempts/:id/lock-status', async (req, res) => {
+  const user = req.session.user;
+  const attemptId = req.params.id;
+  if (!/^\d+$/.test(String(attemptId))) return res.status(404).json({ ok: false });
+  const [[attempt]] = await pool.query(
+    `SELECT id, status, is_locked FROM attempts WHERE id=:aid AND student_id=:sid LIMIT 1;`,
+    { aid: attemptId, sid: user.id }
+  );
+  if (!attempt) return res.status(404).json({ ok: false });
+  return res.json({ ok: true, locked: attempt.is_locked === true, status: attempt.status });
+});
+
+// Siswa submit token unlock
+router.post('/attempts/:id/unlock', async (req, res) => {
+  const user = req.session.user;
+  const attemptId = req.params.id;
+  if (!/^\d+$/.test(String(attemptId))) return res.status(404).json({ ok: false });
+  const { token } = req.body || {};
+  if (!token) return res.json({ ok: false, message: 'Token kosong.' });
+  const [[attempt]] = await pool.query(
+    `SELECT id, status, is_locked, unlock_token FROM attempts
+     WHERE id=:aid AND student_id=:sid LIMIT 1;`,
+    { aid: attemptId, sid: user.id }
+  );
+  if (!attempt) return res.status(404).json({ ok: false });
+  if (!attempt.is_locked) return res.json({ ok: true, message: 'Tidak terkunci.' });
+  if (String(attempt.unlock_token || '').toUpperCase() !== String(token || '').toUpperCase()) {
+    return res.json({ ok: false, message: 'Token salah. Minta token ke guru/admin.' });
+  }
+  await pool.query(
+    `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1 WHERE id=:aid;`,
+    { aid: attemptId }
+  );
+  return res.json({ ok: true, message: 'Kunci dibuka. Silakan lanjutkan ujian.' });
 });
 
 router.post('/attempts/:id/submit', async (req, res) => {

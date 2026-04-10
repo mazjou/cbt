@@ -667,15 +667,15 @@ router.post('/exams', async (req, res) => {
     subject_id, title, description, class_ids,
     start_at, end_at, duration_minutes, pass_score, max_attempts,
     shuffle_questions, shuffle_options, access_code,
-    show_score_to_student, show_review_to_student, max_questions
+    show_score_to_student, show_review_to_student, max_questions, max_violations
   } = req.body;
 
   try {
     const [result] = await pool.query(
       `INSERT INTO exams
-        (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published, max_questions)
+        (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published, max_questions, max_violations)
        VALUES
-        (:subject_id,:teacher_id,:title,:description,NULL,:start_at,:end_at,:duration_minutes,:pass_score,:max_attempts,:shuffle_questions,:shuffle_options,:access_code,:show_score_to_student,:show_review_to_student,:is_published,:max_questions);`,
+        (:subject_id,:teacher_id,:title,:description,NULL,:start_at,:end_at,:duration_minutes,:pass_score,:max_attempts,:shuffle_questions,:shuffle_options,:access_code,:show_score_to_student,:show_review_to_student,:is_published,:max_questions,:max_violations);`,
       {
         subject_id, teacher_id: user.id, title,
         description: description || null,
@@ -689,7 +689,8 @@ router.post('/exams', async (req, res) => {
         show_score_to_student: show_score_to_student ? true : false,
         show_review_to_student: show_review_to_student ? true : false,
         is_published: false,
-        max_questions: max_questions ? Number(max_questions) : null
+        max_questions: max_questions ? Number(max_questions) : null,
+        max_violations: max_violations ? Number(max_violations) : 3
       }
     );
 
@@ -829,7 +830,7 @@ router.put('/exams/:id', async (req, res) => {
     subject_id, title, description, class_ids,
     start_at, end_at, duration_minutes, pass_score, max_attempts,
     shuffle_questions, shuffle_options, access_code,
-    show_score_to_student, show_review_to_student, max_questions
+    show_score_to_student, show_review_to_student, max_questions, max_violations
   } = req.body;
 
   try {
@@ -846,7 +847,8 @@ router.put('/exams/:id', async (req, res) => {
         pass_score=:pass_score, max_attempts=:max_attempts,
         shuffle_questions=:shuffle_questions, shuffle_options=:shuffle_options,
         access_code=:access_code, show_score_to_student=:show_score_to_student,
-        show_review_to_student=:show_review_to_student, max_questions=:max_questions
+        show_review_to_student=:show_review_to_student, max_questions=:max_questions,
+        max_violations=:max_violations
        WHERE id=:id;`,
       {
         id: examId, subject_id, title,
@@ -860,7 +862,8 @@ router.put('/exams/:id', async (req, res) => {
         access_code: access_code || null,
         show_score_to_student: show_score_to_student ? true : false,
         show_review_to_student: show_review_to_student ? true : false,
-        max_questions: max_questions ? Number(max_questions) : null
+        max_questions: max_questions ? Number(max_questions) : null,
+        max_violations: max_violations ? Number(max_violations) : 3
       }
     );
 
@@ -2157,6 +2160,61 @@ router.post('/attempts/bulk-reset', async (req, res) => {
   }
   
   res.redirect('/teacher/grades');
+});
+
+// ===== UNLOCK TOKEN - Lihat siswa terkunci & generate token =====
+router.get('/violations/locked', async (req, res) => {
+  const user = req.session.user;
+  try {
+    const [locked] = await pool.query(
+      `SELECT a.id AS attempt_id, a.unlock_token, a.locked_at, a.unlock_count,
+              u.full_name AS student_name, u.username,
+              c.name AS class_name,
+              e.title AS exam_title, e.id AS exam_id,
+              COUNT(av.id) AS violation_count
+       FROM attempts a
+       JOIN users u ON u.id = a.student_id
+       JOIN exams e ON e.id = a.exam_id
+       LEFT JOIN classes c ON c.id = u.class_id
+       LEFT JOIN attempt_violations av ON av.attempt_id = a.id
+       WHERE a.is_locked = true AND a.status = 'IN_PROGRESS'
+         AND (:isAdmin=1 OR e.teacher_id=:tid)
+       GROUP BY a.id, u.full_name, u.username, c.name, e.title, e.id
+       ORDER BY a.locked_at DESC;`,
+      { tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
+    );
+    res.render('teacher/violations_locked', { title: 'Siswa Terkunci', locked });
+  } catch(e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat data.');
+    res.redirect('/teacher/grades');
+  }
+});
+
+// Generate token baru untuk attempt terkunci
+router.post('/violations/unlock/:attemptId', async (req, res) => {
+  const user = req.session.user;
+  const { attemptId } = req.params;
+  try {
+    const [[attempt]] = await pool.query(
+      `SELECT a.id FROM attempts a
+       JOIN exams e ON e.id = a.exam_id
+       WHERE a.id=:aid AND a.is_locked=true
+         AND (:isAdmin=1 OR e.teacher_id=:tid) LIMIT 1;`,
+      { aid: attemptId, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
+    );
+    if (!attempt) return res.json({ ok: false, message: 'Attempt tidak ditemukan.' });
+
+    const token = Math.random().toString(36).substring(2, 8).toUpperCase();
+    await pool.query(
+      `UPDATE attempts SET unlock_token=:token WHERE id=:aid;`,
+      { token, aid: attemptId }
+    );
+    return res.json({ ok: true, token });
+  } catch(e) {
+    console.error(e);
+    return res.json({ ok: false, message: e.message });
+  }
 });
 
 // Daftar nilai: attempts for teacher's exams (filterable)
