@@ -606,6 +606,149 @@ PGPASSWORD="GantiPasswordIni!" psql -h 127.0.0.1 -U lmsuser -d cbt_smk < backup_
 
 ---
 
+## Backup & Restore Database
+
+### Cara 1: Download via Halaman Monitoring (Termudah)
+
+1. Login sebagai Admin
+2. Buka menu **Monitoring** → `/admin/monitoring`
+3. Klik tombol **"⬇️ Download Backup DB"**
+4. File SQL otomatis terdownload ke komputer kamu
+5. Simpan file di tempat aman (Google Drive, flashdisk, dll)
+
+> File backup bernama: `backup_cbt_smk_YYYY-MM-DDTHH-MM-SS.sql`
+
+---
+
+### Cara 2: Backup Manual via Terminal VPS
+
+```bash
+# Backup lengkap (semua tabel + data)
+PGPASSWORD="GantiPasswordIni!" pg_dump \
+  -h 127.0.0.1 \
+  -U lmsuser \
+  -d cbt_smk \
+  --no-owner \
+  --no-acl \
+  -f /cbt/backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Verifikasi file backup berhasil dibuat
+ls -lh /cbt/backup_*.sql
+```
+
+### Backup Otomatis Setiap Hari (Cron Job)
+
+```bash
+# Buka crontab
+crontab -e
+
+# Tambahkan baris ini (backup setiap hari jam 02:00 dini hari)
+0 2 * * * PGPASSWORD="GantiPasswordIni!" pg_dump -h 127.0.0.1 -U lmsuser -d cbt_smk --no-owner --no-acl -f /cbt/backup/backup_$(date +\%Y\%m\%d).sql
+
+# Buat folder backup
+mkdir -p /cbt/backup
+```
+
+Hapus backup lama otomatis (simpan 7 hari terakhir):
+```bash
+# Tambahkan juga di crontab (hapus backup > 7 hari)
+0 3 * * * find /cbt/backup -name "backup_*.sql" -mtime +7 -delete
+```
+
+---
+
+### Restore Database
+
+> **PERHATIAN:** Restore akan **menimpa semua data** yang ada. Pastikan sudah backup data terbaru sebelum restore.
+
+#### Restore ke Server yang Sama
+
+```bash
+# 1. Stop aplikasi dulu (opsional tapi disarankan)
+pm2 stop lms-smkn1kras
+
+# 2. Restore database
+PGPASSWORD="GantiPasswordIni!" psql \
+  -h 127.0.0.1 \
+  -U lmsuser \
+  -d cbt_smk \
+  -f /path/ke/backup_cbt_smk_20260410.sql
+
+# 3. Start aplikasi kembali
+pm2 start lms-smkn1kras
+```
+
+#### Restore ke Server Baru (Pindah Server)
+
+```bash
+# ── Di SERVER LAMA ──────────────────────────────────────
+# 1. Download backup via monitoring ATAU buat manual:
+PGPASSWORD="GantiPasswordIni!" pg_dump \
+  -h 127.0.0.1 -U lmsuser -d cbt_smk \
+  --no-owner --no-acl \
+  -f /tmp/backup_pindah_$(date +%Y%m%d).sql
+
+# 2. Copy file backup ke server baru
+scp /tmp/backup_pindah_*.sql root@IP_SERVER_BARU:/tmp/
+
+# ── Di SERVER BARU ──────────────────────────────────────
+# 3. Pastikan PostgreSQL sudah terinstall dan database sudah dibuat
+#    (ikuti langkah di bagian "Setup PostgreSQL" di atas)
+
+# 4. Restore data
+PGPASSWORD="GantiPasswordIni!" psql \
+  -h 127.0.0.1 \
+  -U lmsuser \
+  -d cbt_smk \
+  -f /tmp/backup_pindah_20260410.sql
+
+# 5. Verifikasi data berhasil masuk
+PGPASSWORD="GantiPasswordIni!" psql -h 127.0.0.1 -U lmsuser -d cbt_smk \
+  -c "SELECT COUNT(*) FROM users; SELECT COUNT(*) FROM exams; SELECT COUNT(*) FROM attempts;"
+
+# 6. Copy folder uploads (gambar soal) dari server lama
+#    Di SERVER LAMA:
+scp -r /cbt/src/public/uploads root@IP_SERVER_BARU:/cbt/src/public/
+
+# 7. Start aplikasi
+pm2 start /cbt/ecosystem.config.js --env production
+pm2 save
+```
+
+#### Restore dari File yang Didownload via Browser
+
+```bash
+# 1. Upload file SQL ke VPS via SCP (dari laptop/komputer)
+scp backup_cbt_smk_2026-04-10T14-00-00.sql root@IP_SERVER:/tmp/
+
+# 2. Restore
+PGPASSWORD="GantiPasswordIni!" psql \
+  -h 127.0.0.1 \
+  -U lmsuser \
+  -d cbt_smk \
+  -f /tmp/backup_cbt_smk_2026-04-10T14-00-00.sql
+
+# 3. Verifikasi
+PGPASSWORD="GantiPasswordIni!" psql -h 127.0.0.1 -U lmsuser -d cbt_smk \
+  -c "\dt" -c "SELECT COUNT(*) AS total_users FROM users;"
+```
+
+---
+
+### Checklist Pindah Server
+
+- [ ] Download backup DB via monitoring atau `pg_dump`
+- [ ] Copy folder `/cbt/src/public/uploads/` (gambar soal)
+- [ ] Simpan file `.env` (berisi semua konfigurasi)
+- [ ] Deploy ke server baru: `bash /cbt/setup-server.sh`
+- [ ] Restore database
+- [ ] Copy folder uploads
+- [ ] Edit `.env` sesuai konfigurasi server baru
+- [ ] `pm2 reload lms-smkn1kras`
+- [ ] Test login dan cek data
+
+---
+
 ## Informasi Kontak & Repository
 
 - **GitHub:** https://github.com/mazjou/cbt
