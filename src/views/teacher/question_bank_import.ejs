@@ -1,0 +1,76 @@
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <h1 class="text-3xl font-bold text-indigo-900">📥 Import Bank Soal</h1>
+    <p class="mt-1 text-slate-600">Upload file Excel untuk menambahkan soal ke bank soal secara massal.</p>
+  </div>
+  <a href="/teacher/question-bank" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 font-medium">← Kembali</a>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-6">
+  <!-- Panduan -->
+  <div class="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-6 shadow-sm">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="text-2xl">📋</span>
+      <h2 class="text-xl font-semibold text-blue-900">Format & Panduan</h2>
+    </div>
+    <ul class="text-sm text-blue-800 space-y-3">
+      <li class="flex items-start gap-2">
+        <span class="text-blue-500 font-bold mt-0.5">1.</span>
+        <span>Download template atau gunakan file hasil export bank soal.</span>
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="text-blue-500 font-bold mt-0.5">2.</span>
+        <div>
+          Kolom wajib:
+          <code class="block mt-1 px-2 py-1 rounded bg-white text-blue-900 text-xs">question_text, points, correct, A, B, C, D, E</code>
+        </div>
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="text-blue-500 font-bold mt-0.5">3.</span>
+        <div>
+          Kolom opsional:
+          <code class="block mt-1 px-2 py-1 rounded bg-white text-blue-900 text-xs">image, image_a–e, difficulty, subject, chapter, tags</code>
+        </div>
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="text-blue-500 font-bold mt-0.5">4.</span>
+        <span>Kolom <code class="px-1 rounded bg-white">subject</code> isi dengan kode atau nama mapel. Jika kosong, pilih mapel default saat commit.</span>
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="text-blue-500 font-bold mt-0.5">5.</span>
+        <span>Kolom <code class="px-1 rounded bg-white">difficulty</code>: EASY / MEDIUM / HARD (default: MEDIUM).</span>
+      </li>
+    </ul>
+    <div class="mt-5">
+      <a href="/public/templates/question_import_template.xlsx"
+        class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-800 font-semibold text-sm transition-all">
+        📥 Download Template XLSX
+      </a>
+    </div>
+  </div>
+
+  <!-- Form Upload -->
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-6 shadow-sm">
+    <div class="flex items-center gap-2 mb-4">
+      <span class="text-2xl">📤</span>
+      <h2 class="text-xl font-semibold text-purple-900">Upload File</h2>
+    </div>
+    <form action="/teacher/question-bank/import/preview" method="POST" enctype="multipart/form-data" class="space-y-4">
+      <div>
+        <label class="text-sm font-semibold text-purple-800 mb-1 block">File Excel (.xlsx)</label>
+        <input type="file" name="file" accept=".xlsx,.csv" required
+          class="w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400" />
+      </div>
+      <div>
+        <label class="text-sm font-semibold text-purple-800 mb-1 block">Gambar soal (opsional, bisa multiple)</label>
+        <input type="file" name="images" accept="image/*" multiple
+          class="w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400" />
+        <p class="text-xs text-purple-600 mt-1">Nama file harus sama dengan kolom <code>image</code> di Excel.</p>
+      </div>
+      <button type="submit"
+        class="w-full rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 shadow-lg transition-all transform hover:scale-[1.02]">
+        ✨ Preview & Validasi
+      </button>
+    </form>
+  </div>
+</div>

@@ -3571,6 +3571,81 @@ router.post('/assignments/bulk-delete', async (req, res) => {
 
 // ===== QUESTION BANK MANAGEMENT =====
 
+// GET Admin Question Bank Export
+router.get('/question-bank/export', async (req, res) => {
+  const XLSX = require('xlsx');
+  const path = require('path');
+  try {
+    const [questions] = await pool.query(`
+      SELECT qb.id, qb.question_text, qb.question_image, qb.points, qb.difficulty, qb.tags, qb.chapter,
+             s.name AS subject_name, s.code AS subject_code,
+             u.full_name AS teacher_name
+      FROM question_bank qb
+      JOIN subjects s ON s.id = qb.subject_id
+      JOIN users u ON u.id = qb.teacher_id
+      ORDER BY u.full_name ASC, s.name ASC, qb.id ASC;`
+    );
+    if (!questions.length) {
+      req.flash('error', 'Tidak ada soal untuk diekspor.');
+      return res.redirect('/admin/question-bank');
+    }
+    const ids = questions.map(q => q.id);
+    const ph = ids.map((_, i) => `:id${i}`).join(',');
+    const pObj = {}; ids.forEach((id, i) => { pObj[`id${i}`] = id; });
+    const [options] = await pool.query(
+      `SELECT question_bank_id, option_label, option_text, option_image, is_correct
+       FROM question_bank_options WHERE question_bank_id IN (${ph})
+       ORDER BY question_bank_id ASC, option_label ASC;`, pObj
+    );
+    const optMap = {};
+    for (const o of options) {
+      if (!optMap[o.question_bank_id]) optMap[o.question_bank_id] = {};
+      optMap[o.question_bank_id][o.option_label] = { text: o.option_text || '', image: o.option_image || '', correct: o.is_correct };
+    }
+    const getImageRef = (p) => {
+      if (!p) return '';
+      const v = String(p).trim();
+      if (/^https?:\/\//i.test(v)) return v;
+      return path.basename(v).replace(/^\d{10,13}_/, '') || '';
+    };
+    const rows = questions.map((q) => {
+      const opts = optMap[q.id] || {};
+      const correct = Object.entries(opts).find(([, v]) => v.correct)?.[0] || '';
+      const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+      return {
+        'question_text': qText,
+        'image': getImageRef(q.question_image),
+        'points': q.points || 1,
+        'correct': correct,
+        'A': opts['A']?.text || '', 'B': opts['B']?.text || '',
+        'C': opts['C']?.text || '', 'D': opts['D']?.text || '', 'E': opts['E']?.text || '',
+        'image_a': getImageRef(opts['A']?.image), 'image_b': getImageRef(opts['B']?.image),
+        'image_c': getImageRef(opts['C']?.image), 'image_d': getImageRef(opts['D']?.image),
+        'image_e': getImageRef(opts['E']?.image),
+        'difficulty': q.difficulty || 'MEDIUM',
+        'subject': q.subject_code || q.subject_name || '',
+        'chapter': q.chapter || '',
+        'tags': q.tags || '',
+        'guru': q.teacher_name || ''
+      };
+    });
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(rows, {
+      header: ['question_text','image','points','correct','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e','difficulty','subject','chapter','tags','guru']
+    });
+    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:8},{wch:35},{wch:35},{wch:35},{wch:35},{wch:35},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Soal');
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', `attachment; filename="bank_soal_semua_${Date.now()}.xlsx"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal export: ' + e.message);
+    res.redirect('/admin/question-bank');
+  }
+});
+
 // GET Admin Question Bank List
 router.get('/question-bank', async (req, res) => {
   try {
