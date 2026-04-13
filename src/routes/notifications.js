@@ -82,7 +82,7 @@ router.post('/new', requireTeacherOrAdmin, async (req, res) => {
        VALUES (:title, :message, :type, :sender_id, :sender_role, :target_type, :target_id, true, :expires_at)`,
       {
         title, message,
-        type: type || 'info',
+        type: type || 'GENERAL',
         sender_id: user.id,
         sender_role: user.role,
         target_type: target_type || 'all',
@@ -142,7 +142,7 @@ router.post('/:id/edit', requireTeacherOrAdmin, async (req, res) => {
     await pool.query(
       `UPDATE notifications SET title=:title, message=:message, type=:type,
        target_type=:target_type, target_id=:target_id, expires_at=:expires_at WHERE id=:id`,
-      { title, message, type: type || 'info', target_type: target_type || 'all', target_id: finalTargetId, expires_at: expiresAt, id: req.params.id }
+      { title, message, type: type || 'GENERAL', target_type: target_type || 'all', target_id: finalTargetId, expires_at: expiresAt, id: req.params.id }
     );
     req.flash('success', 'Notifikasi berhasil diupdate');
     res.redirect('/notifications');
