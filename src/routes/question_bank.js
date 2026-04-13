@@ -3,9 +3,12 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const XLSX = require('xlsx');
-const { nanoid } = require('nanoid');
+const crypto = require('crypto');
 const pool = require('../db/pool');
 const { requireRole } = require('../middleware/auth');
+
+// Helper pengganti nanoid (CommonJS compatible)
+const nanoid = (size = 12) => crypto.randomBytes(size).toString('base64url').slice(0, size);
 
 const router = express.Router();
 router.use(requireRole('TEACHER'));
