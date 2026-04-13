@@ -4313,4 +4313,73 @@ router.get('/agenda', async (req, res) => {
   res.render('admin/agenda', { title: 'Agenda Guru', agendas, teachers, bulan, tahun, teacher_id });
 });
 
+// ===== NOTIFIKASI GURU - PANTAU SEMUA NOTIF =====
+router.get('/notifications', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  const type = (req.query.type || '').trim();
+  const page = parseInt(req.query.page) || 1;
+  const limit = 20;
+  const offset = (page - 1) * limit;
+
+  try {
+    let where = 'WHERE 1=1';
+    const params = {};
+
+    if (q) {
+      where += ' AND (n.title LIKE :q OR n.message LIKE :q OR u.full_name LIKE :q OR u.username LIKE :q)';
+      params.q = `%${q}%`;
+    }
+    if (type) {
+      where += ' AND n.type = :type';
+      params.type = type;
+    }
+
+    const [notifications] = await pool.query(
+      `SELECT n.*,
+              u.full_name AS sender_name, u.username AS sender_username,
+              c.name AS target_class_name,
+              (SELECT COUNT(*) FROM notification_reads nr WHERE nr.notification_id = n.id) AS read_count
+       FROM notifications n
+       LEFT JOIN users u ON u.id = n.sender_id
+       LEFT JOIN classes c ON c.id = n.target_id AND n.target_type = 'class'
+       ${where}
+       ORDER BY n.created_at DESC
+       LIMIT :limit OFFSET :offset`,
+      { ...params, limit, offset }
+    );
+
+    const [[{ total }]] = await pool.query(
+      `SELECT COUNT(*) AS total FROM notifications n
+       LEFT JOIN users u ON u.id = n.sender_id
+       ${where}`,
+      params
+    );
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.render('admin/notifications', {
+      title: 'Pantau Notifikasi Guru',
+      notifications,
+      q, type,
+      page, totalPages, total
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat data notifikasi.');
+    res.redirect('/admin');
+  }
+});
+
+// Hapus notifikasi (admin)
+router.post('/notifications/:id/delete', async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM notifications WHERE id = :id`, { id: req.params.id });
+    req.flash('success', 'Notifikasi dihapus.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menghapus notifikasi.');
+  }
+  res.redirect('/admin/notifications');
+});
+
 module.exports = router;

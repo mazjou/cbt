@@ -1,0 +1,168 @@
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">🔔 Pantau Notifikasi Guru</h1>
+    <p class="text-sm text-slate-500 mt-1">Semua notifikasi yang dikirim guru ke siswa. Total: <strong><%= total %></strong> notifikasi.</p>
+  </div>
+  <a href="/admin" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">← Kembali</a>
+</div>
+
+<!-- Filter -->
+<form method="GET" action="/admin/notifications" class="mb-6 flex flex-wrap gap-3 items-end">
+  <div class="flex-1 min-w-48">
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Cari</label>
+    <input type="text" name="q" value="<%= q %>"
+      placeholder="Judul, pesan, nama guru..."
+      class="w-full rounded-xl border border-slate-300 px-4 py-2 text-sm focus:outline-none focus:border-indigo-400" />
+  </div>
+  <div>
+    <label class="block text-xs font-semibold text-slate-500 mb-1">Tipe</label>
+    <select name="type" class="rounded-xl border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-indigo-400">
+      <option value="">Semua Tipe</option>
+      <option value="info" <%= type==='info' ? 'selected' : '' %>>Info</option>
+      <option value="warning" <%= type==='warning' ? 'selected' : '' %>>Warning</option>
+      <option value="success" <%= type==='success' ? 'selected' : '' %>>Success</option>
+      <option value="error" <%= type==='error' ? 'selected' : '' %>>Error</option>
+      <option value="EXAM" <%= type==='EXAM' ? 'selected' : '' %>>Ujian</option>
+      <option value="MATERIAL" <%= type==='MATERIAL' ? 'selected' : '' %>>Materi</option>
+      <option value="ASSIGNMENT" <%= type==='ASSIGNMENT' ? 'selected' : '' %>>Tugas</option>
+      <option value="GENERAL" <%= type==='GENERAL' ? 'selected' : '' %>>Umum</option>
+    </select>
+  </div>
+  <button type="submit" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-all">
+    🔍 Filter
+  </button>
+  <% if (q || type) { %>
+    <a href="/admin/notifications" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">Reset</a>
+  <% } %>
+</form>
+
+<% if (!notifications || notifications.length === 0) { %>
+  <div class="rounded-2xl border border-slate-200 bg-slate-50 p-12 text-center">
+    <div class="text-4xl mb-3">📭</div>
+    <div class="font-semibold text-slate-700">Tidak ada notifikasi ditemukan</div>
+    <div class="text-sm text-slate-500 mt-1">Belum ada notifikasi yang dikirim guru.</div>
+  </div>
+<% } else { %>
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-50 border-b border-slate-200">
+          <tr>
+            <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Judul & Pesan</th>
+            <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Pengirim</th>
+            <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Tipe</th>
+            <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Target</th>
+            <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
+            <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Dibaca</th>
+            <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Waktu</th>
+            <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Aksi</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          <% notifications.forEach(n => {
+            const typeColors = {
+              info: 'bg-blue-100 text-blue-700',
+              warning: 'bg-amber-100 text-amber-700',
+              success: 'bg-green-100 text-green-700',
+              error: 'bg-red-100 text-red-700',
+              EXAM: 'bg-purple-100 text-purple-700',
+              MATERIAL: 'bg-cyan-100 text-cyan-700',
+              ASSIGNMENT: 'bg-orange-100 text-orange-700',
+              GENERAL: 'bg-slate-100 text-slate-700',
+              LIVE_CLASS: 'bg-pink-100 text-pink-700'
+            };
+            const typeLabels = {
+              info: 'Info', warning: 'Warning', success: 'Sukses', error: 'Error',
+              EXAM: 'Ujian', MATERIAL: 'Materi', ASSIGNMENT: 'Tugas',
+              GENERAL: 'Umum', LIVE_CLASS: 'Live Class'
+            };
+            const isExpired = n.expires_at && new Date(n.expires_at) < new Date();
+            const isActive = n.is_active && !isExpired;
+          %>
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="py-3 px-4 max-w-xs">
+              <div class="font-semibold text-slate-800 truncate" title="<%= n.title %>"><%= n.title %></div>
+              <div class="text-xs text-slate-500 mt-0.5 line-clamp-2 max-w-xs"><%= n.message %></div>
+            </td>
+            <td class="py-3 px-4">
+              <% if (n.sender_name) { %>
+                <div class="font-medium text-slate-700"><%= n.sender_name %></div>
+                <div class="text-xs text-slate-400"><%= n.sender_username %></div>
+                <div class="text-xs text-indigo-500"><%= n.sender_role || '' %></div>
+              <% } else { %>
+                <span class="text-xs text-slate-400 italic">Sistem</span>
+              <% } %>
+            </td>
+            <td class="py-3 px-4 text-center">
+              <span class="inline-block px-2 py-0.5 rounded-full text-xs font-semibold <%= typeColors[n.type] || 'bg-slate-100 text-slate-600' %>">
+                <%= typeLabels[n.type] || n.type || '-' %>
+              </span>
+            </td>
+            <td class="py-3 px-4 text-center text-xs text-slate-600">
+              <% if (n.target_type === 'all') { %>
+                <span class="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">Semua</span>
+              <% } else if (n.target_type === 'class') { %>
+                <span class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 font-medium">
+                  Kelas: <%= n.target_class_name || n.target_id %>
+                </span>
+              <% } else if (n.target_type === 'student') { %>
+                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium">Siswa #<%= n.target_id %></span>
+              <% } else { %>
+                <span class="text-slate-400">-</span>
+              <% } %>
+            </td>
+            <td class="py-3 px-4 text-center">
+              <% if (isExpired) { %>
+                <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-xs font-medium">Kadaluarsa</span>
+              <% } else if (isActive) { %>
+                <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-medium">Aktif</span>
+              <% } else { %>
+                <span class="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-xs font-medium">Nonaktif</span>
+              <% } %>
+            </td>
+            <td class="py-3 px-4 text-center">
+              <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-indigo-50 text-indigo-700 font-bold text-sm">
+                <%= n.read_count %>
+              </span>
+            </td>
+            <td class="py-3 px-4 text-center text-xs text-slate-500 whitespace-nowrap">
+              <%= new Date(n.created_at).toLocaleString('id-ID', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) %>
+              <% if (n.expires_at) { %>
+                <div class="text-xs text-amber-500 mt-0.5">Exp: <%= new Date(n.expires_at).toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %></div>
+              <% } %>
+            </td>
+            <td class="py-3 px-4 text-center">
+              <form method="POST" action="/admin/notifications/<%= n.id %>/delete"
+                onsubmit="return confirm('Hapus notifikasi ini?')">
+                <button type="submit"
+                  class="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold border border-red-200 transition-all">
+                  🗑 Hapus
+                </button>
+              </form>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <% if (totalPages > 1) { %>
+    <div class="mt-5 flex items-center justify-between">
+      <div class="text-sm text-slate-500">
+        Halaman <%= page %> dari <%= totalPages %> (<%= total %> total)
+      </div>
+      <div class="flex gap-2">
+        <% if (page > 1) { %>
+          <a href="?page=<%= page-1 %>&q=<%= encodeURIComponent(q) %>&type=<%= encodeURIComponent(type) %>"
+            class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">← Sebelumnya</a>
+        <% } %>
+        <% if (page < totalPages) { %>
+          <a href="?page=<%= page+1 %>&q=<%= encodeURIComponent(q) %>&type=<%= encodeURIComponent(type) %>"
+            class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">Berikutnya →</a>
+        <% } %>
+      </div>
+    </div>
+  <% } %>
+<% } %>
