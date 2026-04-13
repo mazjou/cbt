@@ -3040,9 +3040,11 @@ router.post('/violations/unlock/:attemptId', async (req, res) => {
       { aid: attemptId }
     );
     if (!attempt) return res.json({ ok: false, message: 'Attempt tidak ditemukan.' });
-    const token = Math.random().toString(36).substring(2, 8).toUpperCase();
-    await pool.query(`UPDATE attempts SET unlock_token=:token WHERE id=:aid;`, { token, aid: attemptId });
-    return res.json({ ok: true, token });
+    await pool.query(
+      `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1 WHERE id=:aid;`,
+      { aid: attemptId }
+    );
+    return res.json({ ok: true });
   } catch(e) {
     return res.json({ ok: false, message: e.message });
   }
