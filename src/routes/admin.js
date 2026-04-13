@@ -3792,11 +3792,13 @@ router.get('/failed-submissions', async (req, res) => {
       return res.redirect('/admin');
     }
 
+    // 1. Attempt dengan submission_status = FAILED
     const [failedAttempts] = await pool.query(`
       SELECT a.id, a.exam_id, a.student_id, a.status, a.submission_status,
              a.started_at, a.finished_at,
              u.full_name as student_name, u.username as student_username,
-             e.title as exam_title, s.name as subject_name,
+             e.title as exam_title, e.duration_minutes,
+             s.name as subject_name,
              sb.id as backup_id, sb.created_at as backup_created
       FROM attempts a
       JOIN users u ON u.id = a.student_id
@@ -3807,16 +3809,76 @@ router.get('/failed-submissions', async (req, res) => {
       ORDER BY a.started_at DESC
     `);
 
+    // 2. Attempt IN_PROGRESS yang sudah melebihi waktu + 3 menit grace period
+    const [expiredAttempts] = await pool.query(`
+      SELECT a.id, a.exam_id, a.student_id, a.status,
+             a.started_at, a.finished_at,
+             u.full_name as student_name, u.username as student_username,
+             e.title as exam_title, e.duration_minutes, e.end_at as exam_end_at,
+             s.name as subject_name,
+             FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) AS minutes_elapsed
+      FROM attempts a
+      JOIN users u ON u.id = a.student_id
+      JOIN exams e ON e.id = a.exam_id
+      JOIN subjects s ON s.id = e.subject_id
+      WHERE a.status = 'IN_PROGRESS'
+        AND (
+          FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) > (e.duration_minutes + 3)
+          OR (e.end_at IS NOT NULL AND NOW() > (e.end_at + INTERVAL '3 minutes'))
+        )
+      ORDER BY a.started_at ASC
+    `);
+
     res.render('admin/failed_submissions', {
-      title: 'Submission Gagal',
+      title: 'Recovery Submission',
       user: req.session.user,
-      failedAttempts: failedAttempts || []
+      failedAttempts: failedAttempts || [],
+      expiredAttempts: expiredAttempts || []
     });
   } catch (error) {
     console.error('Error in failed-submissions route:', error);
-    req.flash('error', 'Gagal memuat data submission yang gagal: ' + error.message);
+    req.flash('error', 'Gagal memuat data: ' + error.message);
     res.redirect('/admin');
   }
+});
+
+// Force submit attempt IN_PROGRESS yang sudah expired (admin)
+router.post('/failed-submissions/:id/force-submit', async (req, res) => {
+  const attemptId = req.params.id;
+  try {
+    const [[attempt]] = await pool.query(
+      `SELECT a.id, a.student_id, a.exam_id, a.status,
+              e.duration_minutes,
+              FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) AS minutes_elapsed
+       FROM attempts a JOIN exams e ON e.id = a.exam_id
+       WHERE a.id = :aid AND a.status = 'IN_PROGRESS' LIMIT 1;`,
+      { aid: attemptId }
+    );
+    if (!attempt) {
+      req.flash('error', 'Attempt tidak ditemukan atau sudah disubmit.');
+      return res.redirect('/admin/failed-submissions');
+    }
+    const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
+    await finalizeAttemptWithBackup(attempt.id, attempt.student_id, attempt.exam_id);
+    req.flash('success', `Attempt #${attemptId} berhasil disubmit paksa.`);
+  } catch (error) {
+    console.error('Force submit failed:', error);
+    req.flash('error', 'Gagal force submit: ' + error.message);
+  }
+  res.redirect('/admin/failed-submissions');
+});
+
+// Force submit MASSAL semua expired IN_PROGRESS
+router.post('/failed-submissions/force-submit-all', async (req, res) => {
+  try {
+    const { autoSubmitAllExpired } = require('../middleware/auto-submit');
+    const result = await autoSubmitAllExpired();
+    req.flash('success', `Berhasil submit ${result.processed} dari ${result.total} attempt yang expired.`);
+  } catch (error) {
+    console.error('Force submit all failed:', error);
+    req.flash('error', 'Gagal: ' + error.message);
+  }
+  res.redirect('/admin/failed-submissions');
 });
 
 // Recover Failed Submission

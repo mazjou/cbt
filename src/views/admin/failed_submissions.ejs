@@ -1,91 +1,172 @@
-<div class="container mx-auto px-4 py-6">
-  <div class="bg-white rounded-lg shadow-md p-6">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">Submission Gagal</h1>
-      <a href="/admin" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
-        Kembali ke Dashboard
-      </a>
-    </div>
+<div class="flex items-center justify-between mb-6">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">🚨 Recovery Submission</h1>
+    <p class="text-sm text-slate-500 mt-1">Pulihkan jawaban siswa yang gagal submit, dan force-submit ujian yang sudah melebihi waktu.</p>
+  </div>
+  <div class="flex gap-2">
+    <% if (expiredAttempts && expiredAttempts.length > 0) { %>
+      <form method="POST" action="/admin/failed-submissions/force-submit-all"
+        onsubmit="return confirm('Submit paksa SEMUA <%= expiredAttempts.length %> attempt yang expired?')">
+        <button type="submit"
+          class="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-semibold text-sm shadow-md transition-all">
+          ⚡ Submit Semua Expired (<%= expiredAttempts.length %>)
+        </button>
+      </form>
+    <% } %>
+    <a href="/admin" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">← Kembali</a>
+  </div>
+</div>
 
-    <% if (failedAttempts.length === 0) { %>
-      <div class="text-center py-8">
-        <div class="text-gray-500 text-lg">Tidak ada submission yang gagal</div>
-        <p class="text-gray-400 mt-2">Semua submission ujian berhasil diproses</p>
-      </div>
-    <% } else { %>
+<!-- ===== SECTION 1: IN_PROGRESS EXPIRED ===== -->
+<div class="mb-8">
+  <div class="flex items-center gap-3 mb-3">
+    <span class="text-lg font-bold text-orange-700">⏰ Ujian Melebihi Waktu (IN_PROGRESS)</span>
+    <span class="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-bold"><%= (expiredAttempts || []).length %></span>
+    <span class="text-xs text-slate-400">Grace period 3 menit sudah lewat</span>
+  </div>
+
+  <% if (!expiredAttempts || expiredAttempts.length === 0) { %>
+    <div class="rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
+      <div class="text-2xl mb-1">✅</div>
+      <div class="text-sm font-semibold text-green-700">Tidak ada ujian yang melebihi waktu</div>
+    </div>
+  <% } else { %>
+    <div class="rounded-2xl border border-orange-200 bg-white shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
-        <table class="min-w-full bg-white border border-gray-200">
-          <thead class="bg-gray-50">
+        <table class="min-w-full text-sm">
+          <thead class="bg-orange-50 border-b border-orange-200">
             <tr>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Siswa</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ujian</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waktu</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Backup</th>
-              <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Siswa</th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Ujian</th>
+              <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Durasi</th>
+              <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Sudah Berjalan</th>
+              <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Mulai</th>
+              <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Aksi</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <% failedAttempts.forEach(attempt => { %>
-              <tr class="hover:bg-gray-50">
-                <td class="px-4 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-gray-900"><%= attempt.student_name %></div>
-                  <div class="text-sm text-gray-500">@<%= attempt.student_username %></div>
-                </td>
-                <td class="px-4 py-4">
-                  <div class="text-sm font-medium text-gray-900"><%= attempt.exam_title %></div>
-                  <div class="text-sm text-gray-500"><%= attempt.subject_name %></div>
-                </td>
-                <td class="px-4 py-4 whitespace-nowrap">
-                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
-                    FAILED
-                  </span>
-                </td>
-                <td class="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                  <div>Mulai: <%= new Date(attempt.started_at).toLocaleString('id-ID') %></div>
-                  <% if (attempt.finished_at) { %>
-                    <div>Selesai: <%= new Date(attempt.finished_at).toLocaleString('id-ID') %></div>
-                  <% } %>
-                </td>
-                <td class="px-4 py-4 whitespace-nowrap">
-                  <% if (attempt.backup_id) { %>
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      Ada Backup
-                    </span>
-                    <div class="text-xs text-gray-500 mt-1">
-                      <%= new Date(attempt.backup_created).toLocaleString('id-ID') %>
-                    </div>
-                  <% } else { %>
-                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                      Tidak Ada
-                    </span>
-                  <% } %>
-                </td>
-                <td class="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                  <div class="flex flex-col space-y-2">
-                    <% if (attempt.backup_id) { %>
-                      <form method="POST" action="/admin/failed-submissions/<%= attempt.id %>/recover" class="inline">
-                        <button type="submit" 
-                                class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-xs"
-                                onclick="return confirm('Yakin ingin memulihkan submission ini?')">
-                          Pulihkan
-                        </button>
-                      </form>
-                    <% } %>
-                    <form method="POST" action="/admin/failed-submissions/<%= attempt.id %>/retry" class="inline">
-                      <button type="submit" 
-                              class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs"
-                              onclick="return confirm('Yakin ingin coba ulang submission ini?')">
-                        Coba Ulang
-                      </button>
-                    </form>
-                  </div>
-                </td>
-              </tr>
-            <% }) %>
+          <tbody class="divide-y divide-orange-50">
+            <% (expiredAttempts || []).forEach(function(a) {
+              const overBy = Math.max(0, Number(a.minutes_elapsed) - Number(a.duration_minutes));
+            %>
+            <tr id="expired-row-<%= a.id %>" class="hover:bg-orange-50 transition-colors">
+              <td class="py-3 px-4">
+                <div class="font-semibold text-slate-800"><%= a.student_name %></div>
+                <div class="text-xs text-slate-400"><%= a.student_username %></div>
+              </td>
+              <td class="py-3 px-4">
+                <div class="font-medium text-slate-700 max-w-xs truncate"><%= a.exam_title %></div>
+                <div class="text-xs text-slate-400"><%= a.subject_name %></div>
+              </td>
+              <td class="py-3 px-4 text-center text-sm text-slate-600"><%= a.duration_minutes %> menit</td>
+              <td class="py-3 px-4 text-center">
+                <span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold">
+                  <%= a.minutes_elapsed %> menit
+                </span>
+                <div class="text-xs text-red-500 mt-0.5">+<%= overBy %> menit lewat</div>
+              </td>
+              <td class="py-3 px-4 text-center text-xs text-slate-500 whitespace-nowrap">
+                <%= new Date(a.started_at).toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <form method="POST" action="/admin/failed-submissions/<%= a.id %>/force-submit"
+                  onsubmit="return confirm('Submit paksa jawaban <%= a.student_name %>?')">
+                  <button type="submit"
+                    class="px-4 py-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold transition-all">
+                    ⚡ Submit Sekarang
+                  </button>
+                </form>
+              </td>
+            </tr>
+            <% }); %>
           </tbody>
         </table>
       </div>
-    <% } %>
+    </div>
+  <% } %>
+</div>
+
+<!-- ===== SECTION 2: SUBMISSION FAILED ===== -->
+<div>
+  <div class="flex items-center gap-3 mb-3">
+    <span class="text-lg font-bold text-red-700">❌ Submission Gagal (FAILED)</span>
+    <span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold"><%= (failedAttempts || []).length %></span>
   </div>
+
+  <% if (!failedAttempts || failedAttempts.length === 0) { %>
+    <div class="rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
+      <div class="text-2xl mb-1">✅</div>
+      <div class="text-sm font-semibold text-green-700">Tidak ada submission yang gagal</div>
+    </div>
+  <% } else { %>
+    <div class="rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-red-50 border-b border-red-200">
+            <tr>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Siswa</th>
+              <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Ujian</th>
+              <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
+              <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Backup</th>
+              <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Waktu</th>
+              <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-red-50">
+            <% (failedAttempts || []).forEach(function(attempt) { %>
+            <tr class="hover:bg-red-50 transition-colors">
+              <td class="py-3 px-4">
+                <div class="font-semibold text-slate-800"><%= attempt.student_name %></div>
+                <div class="text-xs text-slate-400">@<%= attempt.student_username %></div>
+              </td>
+              <td class="py-3 px-4">
+                <div class="font-medium text-slate-700 max-w-xs truncate"><%= attempt.exam_title %></div>
+                <div class="text-xs text-slate-400"><%= attempt.subject_name %></div>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold">FAILED</span>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <% if (attempt.backup_id) { %>
+                  <span class="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">✓ Ada</span>
+                  <div class="text-xs text-slate-400 mt-0.5">
+                    <%= new Date(attempt.backup_created).toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %>
+                  </div>
+                <% } else { %>
+                  <span class="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-xs">Tidak ada</span>
+                <% } %>
+              </td>
+              <td class="py-3 px-4 text-center text-xs text-slate-500 whitespace-nowrap">
+                <%= new Date(attempt.started_at).toLocaleString('id-ID', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) %>
+              </td>
+              <td class="py-3 px-4 text-center">
+                <div class="flex flex-col gap-1.5 items-center">
+                  <% if (attempt.backup_id) { %>
+                    <form method="POST" action="/admin/failed-submissions/<%= attempt.id %>/recover"
+                      onsubmit="return confirm('Pulihkan submission ini?')">
+                      <button type="submit"
+                        class="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold transition-all whitespace-nowrap">
+                        🔄 Pulihkan
+                      </button>
+                    </form>
+                  <% } %>
+                  <form method="POST" action="/admin/failed-submissions/<%= attempt.id %>/retry"
+                    onsubmit="return confirm('Coba ulang submission ini?')">
+                    <button type="submit"
+                      class="px-4 py-1.5 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-xs font-semibold transition-all whitespace-nowrap">
+                      ↩ Coba Ulang
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  <% } %>
+</div>
+
+<div class="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+  💡 <strong>Cara kerja:</strong> Sistem otomatis submit setiap 5 menit via cron job. Halaman ini untuk penanganan manual jika ada yang terlewat. Grace period 3 menit diberikan sebelum attempt muncul di sini.
 </div>
