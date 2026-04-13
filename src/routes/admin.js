@@ -449,34 +449,19 @@ router.get('/classes', async (req, res) => {
 // Download classes as Excel
 router.get('/classes/download', async (req, res) => {
   try {
-    const [classes] = await pool.query(`SELECT id, code, name, created_at FROM classes ORDER BY id DESC;`);
+    const [classes] = await pool.query(`SELECT code, name FROM classes ORDER BY name ASC;`);
     
-    // Format data for Excel
     const data = classes.map(c => ({
-      'ID': c.id,
-      'Kode': c.code,
-      'Nama': c.name,
-      'Dibuat': new Date(c.created_at).toLocaleString('id-ID')
+      'code': c.code,
+      'name': c.name
     }));
     
-    // Create workbook
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
-    
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 8 },  // ID
-      { wch: 15 }, // Kode
-      { wch: 30 }, // Nama
-      { wch: 20 }  // Dibuat
-    ];
-    
+    ws['!cols'] = [{ wch: 20 }, { wch: 40 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Kelas');
     
-    // Generate buffer
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    
-    // Send file
     res.setHeader('Content-Disposition', `attachment; filename="data_kelas_${Date.now()}.xlsx"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buffer);
@@ -777,34 +762,19 @@ router.get('/subjects', async (req, res) => {
 // Download subjects as Excel
 router.get('/subjects/download', async (req, res) => {
   try {
-    const [subjects] = await pool.query(`SELECT id, code, name, created_at FROM subjects ORDER BY id DESC;`);
+    const [subjects] = await pool.query(`SELECT code, name FROM subjects ORDER BY name ASC;`);
     
-    // Format data for Excel
     const data = subjects.map(s => ({
-      'ID': s.id,
-      'Kode': s.code,
-      'Nama': s.name,
-      'Dibuat': new Date(s.created_at).toLocaleString('id-ID')
+      'code': s.code,
+      'name': s.name
     }));
     
-    // Create workbook
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
-    
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 8 },  // ID
-      { wch: 15 }, // Kode
-      { wch: 40 }, // Nama
-      { wch: 20 }  // Dibuat
-    ];
-    
+    ws['!cols'] = [{ wch: 20 }, { wch: 50 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Mata Pelajaran');
     
-    // Generate buffer
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    
-    // Send file
     res.setHeader('Content-Disposition', `attachment; filename="data_mata_pelajaran_${Date.now()}.xlsx"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buffer);
@@ -1002,40 +972,21 @@ router.get('/teachers', async (req, res) => {
 router.get('/teachers/download', async (req, res) => {
   try {
     const [teachers] = await pool.query(
-      `SELECT id, username, full_name, is_active, created_at
-       FROM users
-       WHERE role='TEACHER'
-       ORDER BY id DESC;`
+      `SELECT username, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`
     );
     
-    // Format data for Excel
     const data = teachers.map(t => ({
-      'ID': t.id,
-      'Username': t.username,
-      'Nama Lengkap': t.full_name,
-      'Status': t.is_active ? 'Aktif' : 'Nonaktif',
-      'Dibuat': new Date(t.created_at).toLocaleString('id-ID')
+      'username': t.username,
+      'full_name': t.full_name,
+      'password': ''  // kosong — isi jika ingin reset password saat import ulang
     }));
     
-    // Create workbook
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
-    
-    // Set column widths
-    ws['!cols'] = [
-      { wch: 8 },  // ID
-      { wch: 20 }, // Username
-      { wch: 30 }, // Nama Lengkap
-      { wch: 12 }, // Status
-      { wch: 20 }  // Dibuat
-    ];
-    
+    ws['!cols'] = [{ wch: 30 }, { wch: 40 }, { wch: 20 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Guru');
     
-    // Generate buffer
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    
-    // Send file
     res.setHeader('Content-Disposition', `attachment; filename="data_guru_${Date.now()}.xlsx"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buffer);
@@ -1471,20 +1422,22 @@ router.get('/users/download', async (req, res) => {
   try {
     // Support filter by IDs (bulk download)
     const { ids } = req.query;
-    let query = `SELECT u.id, u.username, u.full_name, u.role, u.is_active, c.name AS class_name, u.created_at
-       FROM users u
-       LEFT JOIN classes c ON c.id=u.class_id`;
+    let query = `SELECT u.username, u.full_name, u.plain_password AS password,
+                        c.name AS class_name, u.nomor_peserta
+                 FROM users u
+                 LEFT JOIN classes c ON c.id=u.class_id
+                 WHERE u.role='STUDENT'`;
     
     const params = [];
     if (ids) {
       const idArray = ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
       if (idArray.length > 0) {
-        query += ` WHERE u.id IN (${idArray.map(() => '?').join(',')})`;
+        query += ` AND u.id IN (${idArray.map(() => '?').join(',')})`;
         params.push(...idArray);
       }
     }
     
-    query += ` ORDER BY u.id DESC`;
+    query += ` ORDER BY c.name ASC, u.full_name ASC`;
     
     const [users] = await pool.query(query, params);
     
@@ -1493,39 +1446,27 @@ router.get('/users/download', async (req, res) => {
       return res.redirect('/admin/users');
     }
     
-    // Format data for Excel - header sesuai dengan template import
     const data = users.map(u => ({
       'username': u.username,
       'full_name': u.full_name,
-      'password': '',  // Kosong - isi jika ingin ganti password saat import ulang
+      'password': u.password || '',
       'class': u.class_name || '',
-      'nomor_peserta': u.nomor_peserta || '',
-      'Role': u.role,
-      'Status': u.is_active ? 'Aktif' : 'Nonaktif'
+      'nomor_peserta': u.nomor_peserta || ''
     }));
     
-    // Create workbook
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
-    
-    // Set column widths
     ws['!cols'] = [
-      { wch: 30 }, // username
-      { wch: 30 }, // full_name
+      { wch: 25 }, // username
+      { wch: 35 }, // full_name
       { wch: 20 }, // password
-      { wch: 15 }, // class
-      { wch: 15 }, // nomor_peserta
-      { wch: 12 }, // Role
-      { wch: 10 }  // Status
+      { wch: 20 }, // class
+      { wch: 20 }  // nomor_peserta
     ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Siswa');
     
-    XLSX.utils.book_append_sheet(wb, ws, 'Pengguna');
-    
-    // Generate buffer
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    
-    // Send file
-    const filename = ids ? `data_pengguna_terpilih_${Date.now()}.xlsx` : `data_pengguna_${Date.now()}.xlsx`;
+    const filename = ids ? `data_siswa_terpilih_${Date.now()}.xlsx` : `data_siswa_${Date.now()}.xlsx`;
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buffer);
