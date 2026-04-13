@@ -676,6 +676,7 @@ router.post('/import/commit', async (req, res) => {
 });
 
 // POST /question-bank/:id/use-in-exam/:examId
+router.post('/:id/use-in-exam/:examId', async (req, res) => {
   const user = req.session.user;
   const bankId = req.params.id;
   const examId = req.params.examId;
