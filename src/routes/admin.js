@@ -4313,7 +4313,7 @@ router.get('/agenda', async (req, res) => {
   res.render('admin/agenda', { title: 'Agenda Guru', agendas, teachers, bulan, tahun, teacher_id });
 });
 
-// ===== NOTIFIKASI GURU - PANTAU SEMUA NOTIF =====
+// ===== NOTIFIKASI GURU - REKAP PER GURU =====
 router.get('/notifications', async (req, res) => {
   const q = (req.query.q || '').trim();
   const type = (req.query.type || '').trim();
@@ -4322,36 +4322,60 @@ router.get('/notifications', async (req, res) => {
   const offset = (page - 1) * limit;
 
   try {
-    let where = 'WHERE 1=1';
+    // Rekap unik: GROUP BY title + sender + type + DATE(created_at)
+    // Karena sistem insert 1 baris per siswa, kita deduplikasi
+    let having = 'HAVING 1=1';
     const params = {};
 
     if (q) {
-      where += ' AND (n.title LIKE :q OR n.message LIKE :q OR u.full_name LIKE :q OR u.username LIKE :q)';
+      having += ' AND (title LIKE :q OR sender_name LIKE :q OR sender_username LIKE :q)';
       params.q = `%${q}%`;
     }
     if (type) {
-      where += ' AND n.type = :type';
+      having += ' AND notif_type = :type';
       params.type = type;
     }
 
     const [notifications] = await pool.query(
-      `SELECT n.*,
-              u.full_name AS sender_name, u.username AS sender_username,
-              c.name AS target_class_name,
-              (SELECT COUNT(*) FROM notification_reads nr WHERE nr.notification_id = n.id) AS read_count
+      `SELECT
+         MIN(n.id) AS id,
+         n.title,
+         n.message,
+         n.type AS notif_type,
+         n.target_type,
+         n.target_id,
+         n.is_active,
+         n.expires_at,
+         n.sender_id,
+         u.full_name AS sender_name,
+         u.username AS sender_username,
+         u.role AS sender_role,
+         c.name AS target_class_name,
+         COUNT(n.id) AS total_sent,
+         SUM(CASE WHEN nr.id IS NOT NULL THEN 1 ELSE 0 END) AS read_count,
+         MIN(n.created_at) AS created_at
        FROM notifications n
        LEFT JOIN users u ON u.id = n.sender_id
        LEFT JOIN classes c ON c.id = n.target_id AND n.target_type = 'class'
-       ${where}
-       ORDER BY n.created_at DESC
+       LEFT JOIN notification_reads nr ON nr.notification_id = n.id
+       GROUP BY n.title, n.message, n.type, n.sender_id, n.target_type, n.target_id, DATE(n.created_at),
+                u.full_name, u.username, u.role, c.name, n.is_active, n.expires_at
+       ${having}
+       ORDER BY created_at DESC
        LIMIT :limit OFFSET :offset`,
       { ...params, limit, offset }
     );
 
     const [[{ total }]] = await pool.query(
-      `SELECT COUNT(*) AS total FROM notifications n
-       LEFT JOIN users u ON u.id = n.sender_id
-       ${where}`,
+      `SELECT COUNT(*) AS total FROM (
+         SELECT n.title, n.sender_id, n.type, n.target_type, n.target_id, DATE(n.created_at),
+                u.full_name AS sender_name, u.username AS sender_username
+         FROM notifications n
+         LEFT JOIN users u ON u.id = n.sender_id
+         GROUP BY n.title, n.message, n.type, n.sender_id, n.target_type, n.target_id, DATE(n.created_at),
+                  u.full_name, u.username
+         ${having.replace('sender_name', 'u.full_name').replace('sender_username', 'u.username').replace('notif_type', 'n.type')}
+       ) sub`,
       params
     );
 
@@ -4370,10 +4394,31 @@ router.get('/notifications', async (req, res) => {
   }
 });
 
-// Hapus notifikasi (admin)
+// Hapus semua notifikasi dengan title+sender+tanggal yang sama (hapus duplikat sekaligus)
 router.post('/notifications/:id/delete', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM notifications WHERE id = :id`, { id: req.params.id });
+    // Ambil data notif dulu untuk hapus semua yang sama
+    const [[notif]] = await pool.query(
+      `SELECT title, message, sender_id, type, target_type, target_id, DATE(created_at) AS tgl
+       FROM notifications WHERE id = :id LIMIT 1`,
+      { id: req.params.id }
+    );
+    if (notif) {
+      await pool.query(
+        `DELETE FROM notifications
+         WHERE title = :title AND message = :message
+           AND COALESCE(sender_id, 0) = COALESCE(:sender_id, 0)
+           AND type = :type AND target_type = :target_type
+           AND COALESCE(target_id, 0) = COALESCE(:target_id, 0)
+           AND DATE(created_at) = :tgl`,
+        {
+          title: notif.title, message: notif.message,
+          sender_id: notif.sender_id, type: notif.type,
+          target_type: notif.target_type, target_id: notif.target_id,
+          tgl: notif.tgl
+        }
+      );
+    }
     req.flash('success', 'Notifikasi dihapus.');
   } catch (e) {
     console.error(e);
