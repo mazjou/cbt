@@ -1,7 +1,7 @@
 <div class="flex items-center justify-between mb-6">
   <div>
     <h1 class="text-2xl font-bold text-slate-900">🔒 Siswa Terkunci</h1>
-    <p class="text-sm text-slate-500 mt-1">Siswa yang layarnya terkunci karena pelanggaran. Klik Setujui untuk membuka kunci siswa.</p>
+    <p class="text-sm text-slate-500 mt-1">Siswa yang layarnya terkunci karena pelanggaran.</p>
   </div>
   <a href="/teacher/grades" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">← Kembali</a>
 </div>
@@ -13,16 +13,37 @@
     <div class="text-sm text-green-600 mt-1">Semua siswa dapat mengerjakan ujian dengan normal</div>
   </div>
 <% } else { %>
+
+  <!-- Toolbar massal -->
+  <div id="bulkToolbar" class="hidden mb-4 flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-5 py-3">
+    <span id="selectedCount" class="text-sm font-semibold text-indigo-700">0 dipilih</span>
+    <button onclick="approveBulk()"
+      class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold transition-all shadow-sm">
+      ✅ Setujui Semua yang Dipilih
+    </button>
+    <button onclick="clearSelection()"
+      class="px-4 py-2 rounded-xl border border-slate-300 hover:bg-slate-100 text-sm font-medium text-slate-600 transition-all">
+      Batal Pilih
+    </button>
+  </div>
+
   <div class="rounded-2xl border border-red-200 bg-white shadow-sm overflow-hidden">
-    <div class="bg-red-50 px-5 py-3 border-b border-red-200 flex items-center gap-2">
+    <div class="bg-red-50 px-5 py-3 border-b border-red-200 flex items-center gap-3">
+      <!-- Checkbox pilih semua -->
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" id="checkAll" onchange="toggleAll(this)"
+          class="w-4 h-4 rounded border-slate-300 text-indigo-600 cursor-pointer" />
+        <span class="text-xs font-semibold text-red-700">Pilih Semua</span>
+      </label>
       <span class="text-red-600 font-bold text-lg"><%= locked.length %></span>
       <span class="text-sm text-red-700 font-medium">siswa terkunci</span>
-      <span class="ml-auto text-xs text-slate-400">Halaman auto-refresh setiap 15 detik</span>
+      <span class="ml-auto text-xs text-slate-400">Auto-refresh 15 detik</span>
     </div>
     <div class="overflow-x-auto">
       <table class="min-w-full text-sm">
         <thead class="bg-slate-50 border-b border-slate-200">
           <tr>
+            <th class="py-3 px-4 w-10"></th>
             <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Siswa</th>
             <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Kelas</th>
             <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Ujian</th>
@@ -32,9 +53,13 @@
             <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Aksi</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-slate-100">
+        <tbody class="divide-y divide-slate-100" id="lockedTableBody">
           <% locked.forEach(row => { %>
           <tr id="row-<%= row.attempt_id %>" class="hover:bg-red-50 transition-colors">
+            <td class="py-3 px-4 text-center">
+              <input type="checkbox" class="rowCheck w-4 h-4 rounded border-slate-300 text-indigo-600 cursor-pointer"
+                value="<%= row.attempt_id %>" onchange="updateBulkToolbar()" />
+            </td>
             <td class="py-3 px-4">
               <div class="font-semibold text-slate-800"><%= row.student_name %></div>
               <div class="text-xs text-slate-400"><%= row.username %></div>
@@ -46,19 +71,19 @@
                 <%= row.violation_count %>
               </span>
             </td>
-            <td class="py-3 px-4 text-center text-xs text-slate-500">
+            <td class="py-3 px-4 text-center text-xs text-slate-500 whitespace-nowrap">
               <%= row.locked_at ? new Date(row.locked_at).toLocaleString('id-ID') : '-' %>
             </td>
             <td class="py-3 px-4 text-center text-xs text-slate-500">
               <% if (row.unlock_count > 0) { %>
-                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold"><%= row.unlock_count %>x dibuka</span>
+                <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold"><%= row.unlock_count %>x</span>
               <% } else { %>
-                <span class="text-slate-400">Belum pernah</span>
+                <span class="text-slate-400">-</span>
               <% } %>
             </td>
             <td class="py-3 px-4 text-center">
-              <button onclick="approveUnlock(<%= row.attempt_id %>, this)"
-                class="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold transition-all">
+              <button onclick="approveSingle(<%= row.attempt_id %>, this)"
+                class="px-4 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold transition-all whitespace-nowrap">
                 ✅ Setujui
               </button>
             </td>
@@ -68,35 +93,56 @@
       </table>
     </div>
   </div>
+
+  <div class="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+    💡 Centang siswa yang ingin dibuka kuncinya lalu klik <strong>Setujui Semua yang Dipilih</strong>, atau klik <strong>Setujui</strong> per baris. Layar siswa terbuka otomatis.
+  </div>
 <% } %>
 
-<div class="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
-  <div class="font-semibold text-blue-900 mb-2">Cara Membuka Kunci Siswa:</div>
-  <ol class="text-sm text-blue-800 space-y-1 list-decimal list-inside">
-    <li>Lihat siswa yang terkunci di tabel di atas</li>
-    <li>Klik tombol <strong>Setujui</strong> pada baris siswa yang ingin dibuka kuncinya</li>
-    <li>Layar siswa otomatis terbuka dan siswa bisa melanjutkan ujian tanpa perlu memasukkan token</li>
-  </ol>
-  <div class="mt-3 text-xs text-blue-600">
-    Halaman ini auto-refresh setiap 15 detik.
-  </div>
-</div>
-
 <script>
-async function approveUnlock(attemptId, btn) {
-  if (!confirm('Setujui siswa ini untuk melanjutkan ujian?')) return;
+const base = window.location.pathname.startsWith('/admin') ? '/admin' : '/teacher';
+
+function updateBulkToolbar() {
+  const checked = document.querySelectorAll('.rowCheck:checked');
+  const toolbar = document.getElementById('bulkToolbar');
+  const countEl = document.getElementById('selectedCount');
+  const checkAll = document.getElementById('checkAll');
+  const total = document.querySelectorAll('.rowCheck').length;
+
+  countEl.textContent = checked.length + ' dipilih';
+  toolbar.classList.toggle('hidden', checked.length === 0);
+  checkAll.indeterminate = checked.length > 0 && checked.length < total;
+  checkAll.checked = checked.length === total;
+}
+
+function toggleAll(cb) {
+  document.querySelectorAll('.rowCheck').forEach(c => c.checked = cb.checked);
+  updateBulkToolbar();
+}
+
+function clearSelection() {
+  document.querySelectorAll('.rowCheck').forEach(c => c.checked = false);
+  document.getElementById('checkAll').checked = false;
+  updateBulkToolbar();
+}
+
+function markRowDone(attemptId) {
+  const row = document.getElementById(`row-${attemptId}`);
+  if (row) {
+    row.innerHTML = `<td colspan="8" class="py-3 px-4 text-center text-emerald-700 font-semibold bg-emerald-50 text-sm">✅ Disetujui — siswa dapat melanjutkan ujian</td>`;
+  }
+}
+
+async function approveSingle(attemptId, btn) {
   const origText = btn.textContent;
   btn.disabled = true;
   btn.textContent = '⏳...';
-  const base = window.location.pathname.startsWith('/admin') ? '/admin' : '/teacher';
   try {
     const r = await fetch(`${base}/violations/unlock/${attemptId}`, { method: 'POST' });
     const d = await r.json();
     if (d.ok) {
-      const row = document.getElementById(`row-${attemptId}`);
-      if (row) {
-        row.innerHTML = `<td colspan="7" class="py-4 px-4 text-center text-emerald-700 font-semibold bg-emerald-50">✅ Siswa telah disetujui dan dapat melanjutkan ujian</td>`;
-      }
+      markRowDone(attemptId);
+      updateBulkToolbar();
     } else {
       alert('Gagal: ' + d.message);
       btn.disabled = false;
@@ -109,6 +155,45 @@ async function approveUnlock(attemptId, btn) {
   }
 }
 
-// Auto-refresh setiap 15 detik
-setTimeout(() => location.reload(), 15000);
+async function approveBulk() {
+  const checked = document.querySelectorAll('.rowCheck:checked');
+  if (!checked.length) return;
+  if (!confirm(`Setujui ${checked.length} siswa untuk melanjutkan ujian?`)) return;
+
+  const ids = Array.from(checked).map(c => c.value);
+
+  // Disable semua tombol
+  checked.forEach(c => {
+    const row = document.getElementById(`row-${c.value}`);
+    if (row) {
+      const btn = row.querySelector('button');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+    }
+  });
+
+  try {
+    const r = await fetch(`${base}/violations/unlock-bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attempt_ids: ids })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      ids.forEach(id => markRowDone(id));
+      clearSelection();
+    } else {
+      alert('Gagal: ' + d.message);
+      location.reload();
+    }
+  } catch(e) {
+    alert('Error: ' + e.message);
+    location.reload();
+  }
+}
+
+// Auto-refresh setiap 15 detik (hanya jika tidak ada yang dipilih)
+setTimeout(() => {
+  const checked = document.querySelectorAll('.rowCheck:checked');
+  if (!checked.length) location.reload();
+}, 15000);
 </script>

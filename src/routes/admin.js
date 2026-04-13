@@ -3050,6 +3050,27 @@ router.post('/violations/unlock/:attemptId', async (req, res) => {
   }
 });
 
+// Setujui massal - buka kunci banyak siswa sekaligus (admin)
+router.post('/violations/unlock-bulk', async (req, res) => {
+  let ids = req.body.attempt_ids || [];
+  if (!Array.isArray(ids)) ids = [ids];
+  ids = ids.map(Number).filter(Boolean);
+  if (!ids.length) return res.json({ ok: false, message: 'Tidak ada siswa dipilih.' });
+  try {
+    const placeholders = ids.map((_, i) => `:id${i}`).join(',');
+    const paramObj = {};
+    ids.forEach((id, i) => { paramObj[`id${i}`] = id; });
+    await pool.query(
+      `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1
+       WHERE id IN (${placeholders}) AND is_locked=true;`,
+      paramObj
+    );
+    return res.json({ ok: true, count: ids.length });
+  } catch(e) {
+    return res.json({ ok: false, message: e.message });
+  }
+});
+
 // ===== GRADES (NILAI) =====
 router.get('/grades', async (req, res) => {
   const exam_id = (req.query.exam_id || '').trim();

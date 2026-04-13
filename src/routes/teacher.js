@@ -2216,6 +2216,43 @@ router.post('/violations/unlock/:attemptId', async (req, res) => {
   }
 });
 
+// Setujui massal - buka kunci banyak siswa sekaligus
+router.post('/violations/unlock-bulk', async (req, res) => {
+  const user = req.session.user;
+  let ids = req.body.attempt_ids || [];
+  if (!Array.isArray(ids)) ids = [ids];
+  ids = ids.map(Number).filter(Boolean);
+  if (!ids.length) return res.json({ ok: false, message: 'Tidak ada siswa dipilih.' });
+  try {
+    // Validasi: hanya attempt yang boleh diakses guru ini
+    const placeholders = ids.map((_, i) => `:id${i}`).join(',');
+    const paramObj = { tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 };
+    ids.forEach((id, i) => { paramObj[`id${i}`] = id; });
+    const [valid] = await pool.query(
+      `SELECT a.id FROM attempts a
+       JOIN exams e ON e.id = a.exam_id
+       WHERE a.id IN (${placeholders}) AND a.is_locked=true
+         AND (:isAdmin=1 OR e.teacher_id=:tid);`,
+      paramObj
+    );
+    const validIds = valid.map(r => r.id);
+    if (!validIds.length) return res.json({ ok: false, message: 'Tidak ada attempt valid.' });
+
+    const ph2 = validIds.map((_, i) => `:vid${i}`).join(',');
+    const p2 = {};
+    validIds.forEach((id, i) => { p2[`vid${i}`] = id; });
+    await pool.query(
+      `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1
+       WHERE id IN (${ph2});`,
+      p2
+    );
+    return res.json({ ok: true, count: validIds.length });
+  } catch(e) {
+    console.error(e);
+    return res.json({ ok: false, message: e.message });
+  }
+});
+
 // Daftar nilai: attempts for teacher's exams (filterable)
 router.get('/grades', async (req, res) => {
   const user = req.session.user;
