@@ -170,6 +170,10 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', m
 
 // GET /question-bank/:id - Detail bank soal
 router.get('/:id', async (req, res) => {
+  // Tolak jika bukan angka — biarkan route lain menangani
+  if (!/^\d+$/.test(req.params.id)) {
+    return res.status(404).render('error', { message: 'Halaman tidak ditemukan', status: 404 });
+  }
   const user = req.session.user;
   
   try {
@@ -217,6 +221,7 @@ router.get('/:id', async (req, res) => {
 
 // GET /question-bank/:id/edit - Form edit bank soal
 router.get('/:id/edit', async (req, res) => {
+  if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   
   try {
@@ -264,6 +269,7 @@ router.get('/:id/edit', async (req, res) => {
 
 // PUT /question-bank/:id - Update bank soal
 router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
+  if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, remove_image, remove_pdf } = req.body;
   
@@ -354,6 +360,7 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
 
 // DELETE /question-bank/:id - Hapus bank soal
 router.delete('/:id', async (req, res) => {
+  if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   
   try {
