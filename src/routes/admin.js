@@ -972,13 +972,14 @@ router.get('/teachers', async (req, res) => {
 router.get('/teachers/download', async (req, res) => {
   try {
     const [teachers] = await pool.query(
-      `SELECT username, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`
+      `SELECT username, full_name, plain_password FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`
     );
     
     const data = teachers.map(t => ({
       'username': t.username,
       'full_name': t.full_name,
-      'password': ''  // kosong — isi jika ingin reset password saat import ulang
+      // Gunakan plain_password jika ada, fallback ke username (default saat import)
+      'password': t.plain_password || t.username
     }));
     
     const wb = XLSX.utils.book_new();
