@@ -132,6 +132,68 @@ router.get('/import', async (req, res) => {
   res.render('teacher/question_bank_import', { title: 'Import Bank Soal', subjects });
 });
 
+// ===== UPLOAD GAMBAR SOAL BANK (belakangan) =====
+router.get('/upload-images', async (req, res) => {
+  try {
+    const user = req.session.user;
+    const [questions] = await pool.query(
+      `SELECT qb.id, qb.question_text, qb.question_image,
+              s.name AS subject_name
+       FROM question_bank qb
+       JOIN subjects s ON s.id = qb.subject_id
+       WHERE qb.teacher_id = :tid
+       ORDER BY qb.id DESC LIMIT 200;`,
+      { tid: user.id }
+    );
+    res.render('teacher/question_bank_upload_images', { title: 'Upload Gambar Bank Soal', questions });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat halaman.');
+    res.redirect('/teacher/question-bank');
+  }
+});
+
+router.post('/upload-images', uploadImport.any(), async (req, res) => {
+  const user = req.session.user;
+  try {
+    const uploadedFiles = (req.files || []).filter(function(f) { return f.mimetype.startsWith('image/'); });
+    if (!uploadedFiles.length) {
+      req.flash('error', 'Tidak ada file gambar yang diupload.');
+      return res.redirect('/teacher/question-bank/upload-images');
+    }
+    const fileMap = {};
+    for (const f of uploadedFiles) {
+      const orig = f.originalname.trim();
+      const stored = '/public/uploads/questions/' + f.filename;
+      fileMap[orig] = stored;
+      fileMap[orig.replace(/\s+/g,'_')] = stored;
+      fileMap[orig.replace(/\.[^.]+$/, '')] = stored;
+    }
+    const [questions] = await pool.query(
+      'SELECT id, question_image FROM question_bank WHERE teacher_id = :tid;',
+      { tid: user.id }
+    );
+    let updated = 0;
+    for (const q of questions) {
+      const imgVal = (q.question_image || '').trim();
+      if (imgVal && !imgVal.startsWith('http') && !imgVal.startsWith('/public/')) {
+        const base = path.basename(imgVal);
+        const matched = fileMap[base] || fileMap[base.replace(/\.[^.]+$/, '')] || null;
+        if (matched) {
+          await pool.query('UPDATE question_bank SET question_image = :img WHERE id = :id;', { img: matched, id: q.id });
+          updated++;
+        }
+      }
+    }
+    req.flash('success', 'Berhasil mengupdate ' + updated + ' gambar soal.');
+    res.redirect('/teacher/question-bank/upload-images');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal upload gambar: ' + e.message);
+    res.redirect('/teacher/question-bank/upload-images');
+  }
+});
+
 // ===== IMPORT PREVIEW =====
 router.post('/import/preview',
   uploadImport.fields([{ name: 'file', maxCount: 1 }, { name: 'images', maxCount: 200 }]),

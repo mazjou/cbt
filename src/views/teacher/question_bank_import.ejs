@@ -1,76 +1,124 @@
-<div class="flex items-center justify-between gap-4 mb-6">
+<div class="flex items-center justify-between gap-4">
   <div>
-    <h1 class="text-3xl font-bold text-indigo-900">📥 Import Bank Soal</h1>
-    <p class="mt-1 text-slate-600">Upload file Excel untuk menambahkan soal ke bank soal secara massal.</p>
+    <div class="text-sm text-slate-500">Bank Soal</div>
+    <h1 class="text-3xl font-semibold tracking-tight">Import Bank Soal</h1>
+    <p class="mt-2 text-slate-600">Upload file Excel (.xlsx) atau CSV untuk menambahkan soal ke bank soal secara massal.</p>
+    <p class="mt-1 text-sm text-indigo-600 font-medium">💡 Rekomendasi: Gunakan template XLSX untuk kemudahan editing</p>
   </div>
-  <a href="/teacher/question-bank" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 font-medium">← Kembali</a>
+  <a href="/teacher/question-bank" class="px-4 py-2 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 text-indigo-800 font-medium transition-all">← Kembali</a>
 </div>
 
-<div class="grid lg:grid-cols-2 gap-6">
-  <!-- Panduan -->
-  <div class="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-6 shadow-sm">
+<div class="mt-6 grid lg:grid-cols-2 gap-4">
+  <!-- Card Langkah & Format -->
+  <div class="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-6 shadow-soft">
     <div class="flex items-center gap-2 mb-4">
       <span class="text-2xl">📋</span>
-      <h2 class="text-xl font-semibold text-blue-900">Format & Panduan</h2>
+      <h2 class="text-xl font-semibold text-blue-900">Langkah & Format</h2>
     </div>
+
     <ul class="text-sm text-blue-800 space-y-3">
       <li class="flex items-start gap-2">
-        <span class="text-blue-500 font-bold mt-0.5">1.</span>
-        <span>Download template atau gunakan file hasil export bank soal.</span>
+        <span class="text-blue-600 mt-0.5">1.</span>
+        <span>Download template XLSX (Excel), lalu isi datanya dengan mudah.</span>
       </li>
       <li class="flex items-start gap-2">
-        <span class="text-blue-500 font-bold mt-0.5">2.</span>
+        <span class="text-blue-600 mt-0.5">2.</span>
         <div>
-          Kolom wajib:
-          <code class="block mt-1 px-2 py-1 rounded bg-white text-blue-900 text-xs">question_text, points, correct, A, B, C, D, E</code>
+          <div>Kolom wajib:</div>
+          <code class="px-2 py-1 rounded bg-white text-blue-900 text-xs">question_text, points, correct, A, B, C, D, E</code>
         </div>
       </li>
       <li class="flex items-start gap-2">
-        <span class="text-blue-500 font-bold mt-0.5">3.</span>
+        <span class="text-blue-600 mt-0.5">3.</span>
         <div>
-          Kolom opsional:
-          <code class="block mt-1 px-2 py-1 rounded bg-white text-blue-900 text-xs">image, image_a–e, difficulty, subject, chapter, tags</code>
+          <div>Kolom opsional:</div>
+          <code class="px-2 py-1 rounded bg-white text-blue-900 text-xs">image, difficulty, subject, chapter, tags</code>
         </div>
       </li>
       <li class="flex items-start gap-2">
-        <span class="text-blue-500 font-bold mt-0.5">4.</span>
-        <span>Kolom <code class="px-1 rounded bg-white">subject</code> isi dengan kode atau nama mapel. Jika kosong, pilih mapel default saat commit.</span>
+        <span class="text-blue-600 mt-0.5">4.</span>
+        <span>Kolom <code class="px-1 rounded bg-white">subject</code> isi kode/nama mapel. Jika kosong, pilih mapel default saat commit.</span>
       </li>
       <li class="flex items-start gap-2">
-        <span class="text-blue-500 font-bold mt-0.5">5.</span>
-        <span>Kolom <code class="px-1 rounded bg-white">difficulty</code>: EASY / MEDIUM / HARD (default: MEDIUM).</span>
+        <span class="text-blue-600 mt-0.5">5.</span>
+        <div>
+          <div>Kunci jawaban: isi huruf</div>
+          <code class="px-2 py-1 rounded bg-white text-blue-900 text-xs">A / B / C / D / E</code>
+        </div>
+      </li>
+      <li class="flex items-start gap-2">
+        <span class="text-blue-600 mt-0.5">6.</span>
+        <span>Upload file XLSX/CSV yang sudah diisi, lalu klik Preview & Validasi.</span>
       </li>
     </ul>
-    <div class="mt-5">
+
+    <div class="mt-6 flex gap-2">
       <a href="/public/templates/question_import_template.xlsx"
-        class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-800 font-semibold text-sm transition-all">
+        class="flex-1 px-4 py-3 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-800 font-semibold text-sm text-center transition-all">
         📥 Download Template XLSX
       </a>
+      <a href="/public/templates/import_template.csv"
+        class="flex-1 px-4 py-3 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200 text-teal-800 font-semibold text-sm text-center transition-all">
+        📥 Download Template CSV
+      </a>
+    </div>
+
+    <div class="mt-4 flex gap-2">
+      <a href="/teacher/question-bank"
+        class="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold text-sm text-center transition-all">
+        📚 Lihat Bank Soal
+      </a>
+      <a href="/teacher/question-bank/upload-images"
+        class="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold text-sm text-center transition-all">
+        🖼️ Upload Gambar Soal
+      </a>
+    </div>
+
+    <div class="mt-4 p-3 rounded-xl bg-blue-100 border border-blue-200">
+      <div class="text-xs text-blue-700">
+        💡 <span class="font-semibold">Tip:</span> Template XLSX sudah dilengkapi dengan sheet Panduan. Buka di Microsoft Excel atau Google Sheets untuk hasil terbaik.
+      </div>
     </div>
   </div>
 
-  <!-- Form Upload -->
-  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-6 shadow-sm">
+  <!-- Card Upload Import -->
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-6 shadow-soft">
     <div class="flex items-center gap-2 mb-4">
       <span class="text-2xl">📤</span>
-      <h2 class="text-xl font-semibold text-purple-900">Upload File</h2>
+      <h2 class="text-xl font-semibold text-purple-900">Upload Import</h2>
     </div>
+
     <form action="/teacher/question-bank/import/preview" method="POST" enctype="multipart/form-data" class="space-y-4">
       <div>
-        <label class="text-sm font-semibold text-purple-800 mb-1 block">File Excel (.xlsx)</label>
-        <input type="file" name="file" accept=".xlsx,.csv" required
-          class="w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400" />
+        <label class="text-sm text-purple-700 font-medium flex items-center gap-2">
+          <span>📄</span>
+          <span>File Excel/CSV</span>
+        </label>
+        <input type="file" name="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required
+          class="mt-2 w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500" />
       </div>
+
       <div>
-        <label class="text-sm font-semibold text-purple-800 mb-1 block">Gambar soal (opsional, bisa multiple)</label>
+        <label class="text-sm text-purple-700 font-medium flex items-center gap-2">
+          <span>🖼️</span>
+          <span>Gambar (opsional, multiple)</span>
+        </label>
         <input type="file" name="images" accept="image/*" multiple
-          class="w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-400" />
-        <p class="text-xs text-purple-600 mt-1">Nama file harus sama dengan kolom <code>image</code> di Excel.</p>
+          class="mt-2 w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-500" />
+        <div class="mt-2 p-2 rounded-lg bg-purple-100 text-xs text-purple-700">
+          Nama file harus sama dengan kolom <code class="px-1 py-0.5 rounded bg-white">image</code> di template
+        </div>
       </div>
-      <button type="submit"
-        class="w-full rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 shadow-lg transition-all transform hover:scale-[1.02]">
+
+      <button class="w-full rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold py-3 shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02]">
         ✨ Preview & Validasi
       </button>
     </form>
+
+    <div class="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+      <div class="text-xs text-amber-700">
+        ⚡ <span class="font-semibold">Performa:</span> Jika file besar, pecah menjadi beberapa file (per 100–200 soal) untuk proses yang lebih stabil.
+      </div>
+    </div>
   </div>
 </div>

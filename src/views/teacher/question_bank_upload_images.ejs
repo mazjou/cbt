@@ -1,0 +1,103 @@
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <div class="text-sm text-slate-500">Bank Soal</div>
+    <h1 class="text-2xl font-bold text-indigo-900">Upload Gambar Bank Soal</h1>
+    <p class="mt-1 text-sm text-slate-600">Upload gambar untuk soal di bank soal. Nama file harus cocok dengan kolom <code class="px-1 py-0.5 bg-slate-100 rounded text-xs">image</code> di Excel.</p>
+  </div>
+  <a href="/teacher/question-bank/import" class="px-4 py-2 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 font-medium text-sm">← Import</a>
+</div>
+
+<div class="grid lg:grid-cols-2 gap-6">
+  <!-- Form Upload -->
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-6">
+    <h2 class="text-lg font-semibold text-purple-900 mb-4">📤 Upload Gambar Soal</h2>
+
+    <form action="/teacher/question-bank/upload-images" method="POST" enctype="multipart/form-data" class="space-y-4">
+      <div>
+        <label class="text-sm text-purple-700 font-medium">Pilih File Gambar (bisa multiple)</label>
+        <input type="file" name="images" accept="image/*" multiple required
+          class="mt-2 w-full rounded-xl bg-white border-2 border-purple-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
+        <div id="fileList" class="mt-2 text-xs text-purple-600 flex flex-wrap gap-1"></div>
+      </div>
+
+      <div class="rounded-xl bg-white border border-purple-200 p-4 text-sm text-purple-800 space-y-2">
+        <div class="font-semibold">📋 Cara pencocokan gambar:</div>
+        <div class="text-xs text-purple-700 mt-1">Nama file gambar harus sama persis dengan nilai di kolom <code>image</code> pada file Excel yang diimport.</div>
+        <div class="text-xs text-purple-600 mt-1">Contoh: jika kolom <code>image</code> berisi <code>soal1.jpg</code>, maka upload file bernama <code>soal1.jpg</code>.</div>
+      </div>
+
+      <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-semibold py-3 transition-all">
+        🚀 Upload & Pasangkan Gambar
+      </button>
+    </form>
+  </div>
+
+  <!-- Status Gambar -->
+  <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6">
+    <h2 class="text-lg font-semibold text-indigo-900 mb-1">📝 Status Gambar Soal</h2>
+    <p class="text-xs text-indigo-600 mb-3">Total: <%= questions.length %> soal (100 terbaru)</p>
+
+    <%
+      let totalWithImg = 0, totalPending = 0;
+      questions.forEach(function(q) {
+        if (q.question_image && q.question_image.startsWith('/public/')) totalWithImg++;
+        else if (q.question_image) totalPending++;
+      });
+    %>
+
+    <div class="grid grid-cols-2 gap-2 mb-4">
+      <div class="rounded-xl bg-green-50 border border-green-200 p-3 text-center">
+        <div class="text-xl font-bold text-green-700"><%= totalWithImg %></div>
+        <div class="text-xs text-green-600">Soal bergambar</div>
+      </div>
+      <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 text-center">
+        <div class="text-xl font-bold text-amber-700"><%= totalPending %></div>
+        <div class="text-xs text-amber-600">Menunggu upload</div>
+      </div>
+    </div>
+
+    <div class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+      <% questions.forEach(function(q, i) {
+        const qImgOk = q.question_image && q.question_image.startsWith('/public/');
+        const qImgPending = q.question_image && !q.question_image.startsWith('/public/') && !q.question_image.startsWith('http');
+      %>
+      <div class="rounded-xl bg-white border <%= qImgOk ? 'border-green-200' : qImgPending ? 'border-amber-200' : 'border-slate-200' %> p-3">
+        <div class="flex items-start gap-2">
+          <span class="text-xs font-mono text-slate-400 mt-0.5 w-5 shrink-0"><%= i+1 %></span>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs text-slate-500 mb-0.5"><%= q.subject_name %></div>
+            <div class="text-xs text-slate-700 truncate"><%= q.question_text ? q.question_text.replace(/<[^>]+>/g,'').slice(0,60) : '(soal tanpa teks)' %>...</div>
+            <div class="mt-1 flex items-center gap-1">
+              <% if (qImgOk) { %>
+                <span class="text-xs text-green-600">✓ gambar ada</span>
+                <img src="<%= q.question_image %>" class="h-6 w-6 object-cover rounded border border-green-200" />
+              <% } else if (qImgPending) { %>
+                <span class="text-xs text-amber-600">⏳ menunggu: <code class="bg-amber-50 px-0.5 rounded"><%= q.question_image %></code></span>
+              <% } else { %>
+                <span class="text-xs text-slate-400">— tidak ada gambar</span>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+</div>
+
+<div class="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 flex items-center justify-between gap-4">
+  <div class="text-sm text-blue-800">
+    💡 Upload gambar bisa dilakukan kapan saja setelah import soal selesai.
+  </div>
+  <a href="/teacher/question-bank/import" class="shrink-0 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium">← Import Soal</a>
+</div>
+
+<script>
+  document.querySelector('input[name="images"]').addEventListener('change', function() {
+    const files = Array.from(this.files);
+    const el = document.getElementById('fileList');
+    el.innerHTML = files.map(function(f) {
+      return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs">🖼️ ' + f.name + '</span>';
+    }).join('');
+  });
+</script>
