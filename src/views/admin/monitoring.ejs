@@ -79,7 +79,7 @@
           <span class="text-xl">🐘</span>
           <div>
             <div class="font-semibold text-emerald-900 text-sm">PostgreSQL</div>
-            <div class="text-xs text-emerald-600">Restart database server</div>
+            <div class="text-xs text-emerald-600" id="db-host-label">Restart database server</div>
           </div>
         </div>
         <button onclick="restartService('postgresql', this)"
@@ -93,7 +93,7 @@
           <span class="text-xl">⚡</span>
           <div>
             <div class="font-semibold text-red-900 text-sm">Redis</div>
-            <div class="text-xs text-red-600">Restart session store</div>
+            <div class="text-xs text-red-600" id="redis-host-label">Restart session store</div>
           </div>
         </div>
         <button onclick="restartService('redis', this)"
@@ -495,6 +495,19 @@ async function fetchData() {
     document.getElementById('status-bar').className = 'mb-4 rounded-xl px-4 py-2 text-sm font-medium bg-green-50 border border-green-200 text-green-700';
     document.getElementById('status-bar').textContent = '✅ Server Online — ' + new Date(d.timestamp).toLocaleString('id-ID');
     document.getElementById('last-update').textContent = 'Update: ' + new Date().toLocaleTimeString('id-ID');
+
+    // Tampilkan info host service
+    const isLocal = (h) => !h || h === 'localhost' || h === '127.0.0.1';
+    if (d.serviceHosts) {
+      const dbLabel = document.getElementById('db-host-label');
+      const redisLabel = document.getElementById('redis-host-label');
+      if (dbLabel) dbLabel.textContent = isLocal(d.serviceHosts.db)
+        ? 'Server lokal'
+        : '🌐 Remote: ' + d.serviceHosts.db;
+      if (redisLabel) redisLabel.textContent = isLocal(d.serviceHosts.redis)
+        ? 'Server lokal'
+        : '🌐 Remote: ' + d.serviceHosts.redis;
+    }
 
     // CPU
     const cpuPct = s.cpuUsage;

@@ -4264,6 +4264,10 @@ router.get('/monitoring/data', async (req, res) => {
       ok: true,
       timestamp: new Date().toISOString(),
       redisConnected: req.app.locals.isRedisConnected === true,
+      serviceHosts: {
+        db:    process.env.DB_HOST    || 'localhost',
+        redis: process.env.REDIS_HOST || 'localhost',
+      },
       server: {
         hostname: os.hostname(),
         platform: os.platform(),
@@ -4302,23 +4306,46 @@ router.post('/monitoring/restart', async (req, res) => {
   const { exec } = require('child_process');
   const IS_WIN = process.platform === 'win32';
 
-  const commands = {
-    app: IS_WIN
-      ? null  // Di Windows tidak bisa restart PM2 dari dalam app
-      : 'pm2 reload all',
-    postgresql: IS_WIN
-      ? 'net stop postgresql-x64-17 && net start postgresql-x64-17'
-      : 'systemctl restart postgresql',
-    redis: IS_WIN
-      ? null
-      : 'systemctl restart redis-server',
-  };
+  // Deteksi apakah service ada di server terpisah (bukan localhost)
+  const dbHost    = process.env.DB_HOST    || 'localhost';
+  const redisHost = process.env.REDIS_HOST || 'localhost';
+  const isLocalhost = (h) => !h || h === 'localhost' || h === '127.0.0.1';
 
-  if (!commands[service]) {
-    return res.json({ ok: false, message: `Service "${service}" tidak didukung atau tidak tersedia di platform ini.` });
+  const dbIsRemote    = !isLocalhost(dbHost);
+  const redisIsRemote = !isLocalhost(redisHost);
+
+  // SSH key path (opsional, set di .env)
+  const sshKey     = process.env.SSH_KEY_PATH || '/root/.ssh/id_rsa';
+  const sshUser    = process.env.SSH_USER     || 'root';
+  const sshOptions = `-o StrictHostKeyChecking=no -o ConnectTimeout=10 -i ${sshKey}`;
+
+  let cmd = null;
+  let info = null;
+
+  if (service === 'app') {
+    if (IS_WIN) return res.json({ ok: false, message: 'Reload app tidak tersedia di Windows.' });
+    cmd = 'pm2 reload all';
+  } else if (service === 'postgresql') {
+    if (IS_WIN) return res.json({ ok: false, message: 'Restart PostgreSQL tidak tersedia di Windows.' });
+    if (dbIsRemote) {
+      // Coba SSH ke server database
+      cmd = `ssh ${sshOptions} ${sshUser}@${dbHost} "systemctl restart postgresql"`;
+      info = `via SSH ke ${dbHost}`;
+    } else {
+      cmd = 'systemctl restart postgresql';
+    }
+  } else if (service === 'redis') {
+    if (IS_WIN) return res.json({ ok: false, message: 'Restart Redis tidak tersedia di Windows.' });
+    if (redisIsRemote) {
+      // Coba SSH ke server Redis
+      cmd = `ssh ${sshOptions} ${sshUser}@${redisHost} "systemctl restart redis-server || systemctl restart redis"`;
+      info = `via SSH ke ${redisHost}`;
+    } else {
+      cmd = 'systemctl restart redis-server || systemctl restart redis';
+    }
+  } else {
+    return res.json({ ok: false, message: `Service "${service}" tidak dikenal.` });
   }
-
-  const cmd = commands[service];
 
   // Untuk restart app, lakukan setelah response dikirim
   if (service === 'app') {
@@ -4331,11 +4358,20 @@ router.post('/monitoring/restart', async (req, res) => {
     return;
   }
 
-  exec(cmd, { timeout: 15000 }, (err, stdout, stderr) => {
+  exec(cmd, { timeout: 20000 }, (err, stdout, stderr) => {
     if (err) {
+      // Jika SSH gagal, berikan pesan informatif
+      const isSSHError = err.message.includes('ssh') || err.message.includes('Connection') || err.message.includes('Permission');
+      if (isSSHError && info) {
+        return res.json({
+          ok: false,
+          message: `Gagal SSH ${info}. Pastikan SSH key sudah dikonfigurasi di .env (SSH_KEY_PATH, SSH_USER). Error: ${err.message}`
+        });
+      }
       return res.json({ ok: false, message: `Gagal restart ${service}: ${err.message}` });
     }
-    res.json({ ok: true, message: `${service} berhasil di-restart.` });
+    const msg = info ? `${service} berhasil di-restart ${info}.` : `${service} berhasil di-restart.`;
+    res.json({ ok: true, message: msg });
   });
 });
 
