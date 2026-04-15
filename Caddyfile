@@ -27,8 +27,8 @@ liveclass.tam.web.id {
         # Timeout settings
         transport http {
             dial_timeout 10s
-            response_header_timeout 30s
-            read_timeout 60s
+            response_header_timeout 120s
+            read_timeout 120s
         }
     }
     

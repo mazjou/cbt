@@ -1782,44 +1782,56 @@ router.post('/users/import/commit', async (req, res) => {
     return res.redirect('/admin/users/import');
   }
 
+  // Hash semua password secara paralel (jauh lebih cepat dari loop sequential)
+  const BCRYPT_ROUNDS = 8; // turunkan dari 10 ke 8 untuk import massal (masih aman)
+  const prepared = await Promise.all(
+    items.map(async (it) => {
+      const pwd = String(it.password || '').trim();
+      const plainPwd = pwd || it.username;
+      const password_hash = await bcrypt.hash(plainPwd, BCRYPT_ROUNDS);
+      return { ...it, plainPwd, password_hash, setPassword: pwd ? 1 : 0 };
+    })
+  );
+
   const conn = await pool.getConnection();
   let inserted = 0;
   let updated = 0;
 
   try {
     await conn.beginTransaction();
-    for (const it of items) {
-      const pwd = String(it.password || '').trim();
-      const setPassword = pwd ? 1 : 0;
-      const plainPwd = pwd || it.username; // password asli untuk kartu
-      const password_hash = await bcrypt.hash(plainPwd, 10);
+
+    // Bulk insert dalam batch 100 baris sekaligus
+    const BATCH_SIZE = 100;
+    for (let i = 0; i < prepared.length; i += BATCH_SIZE) {
+      const batch = prepared.slice(i, i + BATCH_SIZE);
+
+      const valuePlaceholders = batch.map(() => '(?,?,\'STUDENT\',?,?,true,?,?)').join(',');
+      const flatValues = batch.flatMap((it) => [
+        it.username, it.full_name, it.class_id || null,
+        it.password_hash, it.nomor_peserta || null, it.plainPwd
+      ]);
 
       await conn.query(
         `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active, nomor_peserta, plain_password)
-         VALUES (:username,:full_name,'STUDENT',:class_id,:password_hash,true,:nomor_peserta,:plain_password)
+         VALUES ${valuePlaceholders}
          ON CONFLICT (username) DO UPDATE SET
            full_name=EXCLUDED.full_name,
            role='STUDENT',
            class_id=EXCLUDED.class_id,
            is_active=true,
            nomor_peserta=COALESCE(EXCLUDED.nomor_peserta, users.nomor_peserta),
-           plain_password=CASE WHEN :setPassword=1 THEN EXCLUDED.plain_password ELSE users.plain_password END,
-           password_hash=CASE WHEN :setPassword=1 THEN EXCLUDED.password_hash ELSE users.password_hash END;
-        `,
-        {
-          username: it.username,
-          full_name: it.full_name,
-          class_id: it.class_id || null,
-          password_hash,
-          nomor_peserta: it.nomor_peserta || null,
-          plain_password: plainPwd,
-          setPassword
-        }
+           plain_password=EXCLUDED.plain_password,
+           password_hash=EXCLUDED.password_hash`,
+        flatValues
       );
+    }
 
+    // Hitung insert vs update berdasarkan data preview
+    for (const it of prepared) {
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;
     }
+
     await conn.commit();
   } catch (e) {
     await conn.rollback();
