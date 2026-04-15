@@ -1789,7 +1789,7 @@ router.post('/users/import/commit', async (req, res) => {
       const pwd = String(it.password || '').trim();
       const plainPwd = pwd || it.username;
       const password_hash = await bcrypt.hash(plainPwd, BCRYPT_ROUNDS);
-      return { ...it, plainPwd, password_hash, setPassword: pwd ? 1 : 0 };
+      return { ...it, plainPwd, password_hash };
     })
   );
 
@@ -1800,33 +1800,31 @@ router.post('/users/import/commit', async (req, res) => {
   try {
     await conn.beginTransaction();
 
-    // Bulk insert dalam batch 100 baris sekaligus
-    const BATCH_SIZE = 100;
-    for (let i = 0; i < prepared.length; i += BATCH_SIZE) {
-      const batch = prepared.slice(i, i + BATCH_SIZE);
+    // Bulk insert menggunakan unnest — 1 query untuk semua baris (sangat cepat)
+    const usernames  = prepared.map(it => it.username);
+    const fullNames  = prepared.map(it => it.full_name);
+    const classIds   = prepared.map(it => it.class_id ? String(it.class_id) : null);
+    const hashes     = prepared.map(it => it.password_hash);
+    const nomorList  = prepared.map(it => it.nomor_peserta || null);
+    const plainPwds  = prepared.map(it => it.plainPwd);
 
-      const valuePlaceholders = batch.map(() => '(?,?,\'STUDENT\',?,?,true,?,?)').join(',');
-      const flatValues = batch.flatMap((it) => [
-        it.username, it.full_name, it.class_id || null,
-        it.password_hash, it.nomor_peserta || null, it.plainPwd
-      ]);
+    // rawQuery: bypass converter, langsung PostgreSQL native
+    await conn.rawQuery(
+      `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active, nomor_peserta, plain_password)
+       SELECT u, fn, 'STUDENT', ci::int, ph, true, np, pp
+       FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[])
+         AS t(u, fn, ci, ph, np, pp)
+       ON CONFLICT (username) DO UPDATE SET
+         full_name      = EXCLUDED.full_name,
+         role           = 'STUDENT',
+         class_id       = EXCLUDED.class_id,
+         is_active      = true,
+         nomor_peserta  = COALESCE(EXCLUDED.nomor_peserta, users.nomor_peserta),
+         plain_password = EXCLUDED.plain_password,
+         password_hash  = EXCLUDED.password_hash`,
+      [usernames, fullNames, classIds, hashes, nomorList, plainPwds]
+    );
 
-      await conn.query(
-        `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active, nomor_peserta, plain_password)
-         VALUES ${valuePlaceholders}
-         ON CONFLICT (username) DO UPDATE SET
-           full_name=EXCLUDED.full_name,
-           role='STUDENT',
-           class_id=EXCLUDED.class_id,
-           is_active=true,
-           nomor_peserta=COALESCE(EXCLUDED.nomor_peserta, users.nomor_peserta),
-           plain_password=EXCLUDED.plain_password,
-           password_hash=EXCLUDED.password_hash`,
-        flatValues
-      );
-    }
-
-    // Hitung insert vs update berdasarkan data preview
     for (const it of prepared) {
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;

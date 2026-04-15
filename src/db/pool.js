@@ -20,8 +20,8 @@ const pgPool = new Pool({
   min: 5,                          // Selalu siapkan 5 koneksi
   idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS || 30000),
   connectionTimeoutMillis: 5000,   // Gagal cepat jika DB penuh
-  statement_timeout: 30000,        // Query max 30 detik
-  query_timeout: 30000,
+  statement_timeout: 120000,       // Query max 120 detik (untuk bulk import)
+  query_timeout: 120000,
 });
 
 pgPool.on('error', (err) => {
@@ -197,6 +197,17 @@ const pool = {
         } catch (err) {
           console.error('Transaction query error:', err.message);
           console.error('SQL:', text);
+          throw err;
+        }
+      },
+      // rawQuery: bypass semua converter, langsung ke pg (untuk unnest/bulk insert)
+      async rawQuery(sql, values) {
+        try {
+          const result = await client.query(sql, values);
+          return pgResultToMysql2(result);
+        } catch (err) {
+          console.error('Raw query error:', err.message);
+          console.error('SQL:', sql);
           throw err;
         }
       },

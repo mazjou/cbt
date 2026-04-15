@@ -13,7 +13,7 @@
 # Main application
 liveclass.tam.web.id {
     # Reverse proxy ke aplikasi Node.js
-    reverse_proxy localhost:3000 {
+    reverse_proxy 10.10.102.110:3000 {
         # Forward headers untuk mendapatkan IP asli client
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-For {remote_host}
