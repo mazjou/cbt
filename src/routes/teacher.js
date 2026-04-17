@@ -1428,34 +1428,54 @@ router.post('/exams/:id/questions/import/commit', async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    for (const r of rows) {
-      const [qRes] = await conn.query(
-        `INSERT INTO questions (exam_id, question_text, question_image, points)
-         VALUES (:exam_id,:question_text,:question_image,:points);`,
-        {
-          exam_id: examId,
-          question_text: r.question_text,
-          question_image: r.question_image || null,
-          points: Math.round(Number(r.points || 1) || 1)
-        }
-      );
-      const qid = qRes.insertId;
-      const opts = [
-        { label: 'A', text: r.options?.A, img: r.option_images?.A || null },
-        { label: 'B', text: r.options?.B, img: r.option_images?.B || null },
-        { label: 'C', text: r.options?.C, img: r.option_images?.C || null },
-        { label: 'D', text: r.options?.D, img: r.option_images?.D || null },
-        { label: 'E', text: r.options?.E, img: r.option_images?.E || null }
-      ];
-      for (const opt of opts) {
-        await conn.query(
-          `INSERT INTO options (question_id, option_label, option_text, option_image, is_correct)
-           VALUES (:qid,:lbl,:txt,:img,:isc);`,
-          { qid, lbl: opt.label, txt: opt.text || '', img: opt.img, isc: opt.label === r.correct ? 1 : 0 }
-        );
+
+    // Bulk insert questions sekaligus, ambil id yang di-generate
+    const qExamIds   = rows.map(() => String(examId));
+    const qTexts     = rows.map(r => r.question_text);
+    const qImages    = rows.map(r => r.question_image || null);
+    const qPoints    = rows.map(r => Math.round(Number(r.points || 1) || 1));
+
+    const [qRes] = await conn.rawQuery(
+      `INSERT INTO questions (exam_id, question_text, question_image, points)
+       SELECT ei::int, qt, qi, pt::int
+       FROM unnest($1::text[], $2::text[], $3::text[], $4::text[])
+         AS t(ei, qt, qi, pt)
+       RETURNING id`,
+      [qExamIds, qTexts, qImages, qPoints.map(String)]
+    );
+
+    const questionIds = qRes.map(r => r.id);
+    inserted = questionIds.length;
+
+    // Siapkan semua opsi dari semua soal
+    const LABELS = ['A', 'B', 'C', 'D', 'E'];
+    const oQids   = [];
+    const oLabels = [];
+    const oTexts  = [];
+    const oImages = [];
+    const oCorrect = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      const qid = String(questionIds[i]);
+      for (const label of LABELS) {
+        oQids.push(qid);
+        oLabels.push(label);
+        oTexts.push(String(r.options?.[label] || ''));
+        oImages.push(r.option_images?.[label] || null);
+        oCorrect.push(label === r.correct ? 'true' : 'false');
       }
-      inserted += 1;
     }
+
+    // Bulk insert semua opsi sekaligus
+    await conn.rawQuery(
+      `INSERT INTO options (question_id, option_label, option_text, option_image, is_correct)
+       SELECT qi::int, ol, ot, oi, ic::boolean
+       FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[])
+         AS t(qi, ol, ot, oi, ic)`,
+      [oQids, oLabels, oTexts, oImages, oCorrect]
+    );
+
     await conn.commit();
   } catch (e) {
     await conn.rollback();
