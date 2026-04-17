@@ -1436,7 +1436,7 @@ router.post('/exams/:id/questions/import/commit', async (req, res) => {
           exam_id: examId,
           question_text: r.question_text,
           question_image: r.question_image || null,
-          points: Number(r.points || 1) || 1
+          points: Math.round(Number(r.points || 1) || 1)
         }
       );
       const qid = qRes.insertId;
