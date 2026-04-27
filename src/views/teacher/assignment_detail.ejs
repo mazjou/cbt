@@ -40,7 +40,7 @@
   <% if (assignment.description) { %>
     <div class="mt-6 pt-6 border-t border-slate-200">
       <div class="text-sm text-slate-600 mb-2">Deskripsi / Instruksi:</div>
-      <div class="text-slate-900 whitespace-pre-wrap"><%= assignment.description %></div>
+      <div class="text-slate-900 prose prose-sm max-w-none"><%- assignment.description %></div>
     </div>
   <% } %>
   
