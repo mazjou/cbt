@@ -44,7 +44,8 @@
             </div>
             
             <% if (assignment.description) { %>
-              <p class="text-slate-600 mb-3"><%= assignment.description.substring(0, 150) %><%= assignment.description.length > 150 ? '...' : '' %></p>
+              <% const plainDesc = assignment.description.replace(/<[^>]*>/g, '').trim(); %>
+              <p class="text-slate-600 mb-3"><%= plainDesc.substring(0, 150) %><%= plainDesc.length > 150 ? '...' : '' %></p>
             <% } %>
             
             <div class="flex flex-wrap gap-4 text-sm text-slate-600">

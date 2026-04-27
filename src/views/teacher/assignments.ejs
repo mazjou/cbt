@@ -164,8 +164,9 @@
               <td class="px-4 py-4">
                 <div class="font-semibold text-slate-900"><%= assignment.title %></div>
                 <% if (assignment.description) { %>
+                  <% const plainDesc = assignment.description.replace(/<[^>]*>/g, '').trim(); %>
                   <div class="text-sm text-slate-600 mt-1 line-clamp-2">
-                    <%= assignment.description.substring(0, 80) %><%= assignment.description.length > 80 ? '...' : '' %>
+                    <%= plainDesc.substring(0, 80) %><%= plainDesc.length > 80 ? '...' : '' %>
                   </div>
                 <% } %>
                 <div class="flex items-center gap-2 mt-2">
