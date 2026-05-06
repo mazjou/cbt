@@ -1148,6 +1148,17 @@ router.delete('/teachers/:id', async (req, res) => {
   res.redirect('/admin/teachers');
 });
 
+router.post('/teachers/:id/delete', async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM users WHERE id=:id AND role='TEACHER';`, { id: req.params.id });
+    req.flash('success', 'Guru berhasil dihapus.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menghapus guru.');
+  }
+  res.redirect('/admin/teachers');
+});
+
 router.get('/teachers/import', async (req, res) => {
   res.render('admin/teachers_import', { title: 'Import Masal Guru' });
 });
