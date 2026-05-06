@@ -56,9 +56,12 @@
               <div class="flex justify-end gap-2 flex-wrap">
                 <button type="button" data-teacher-id="<%= t.id %>" class="btn-open-teacher-modal px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100">Edit</button>
 
-                <form action="/admin/teachers/<%= t.id %>/toggle" method="POST">
-                  <button class="px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100">Toggle</button>
-                </form>
+                <button type="button"
+                  onclick="toggleTeacher(<%= t.id %>, this)"
+                  data-active="<%= t.is_active ? '1' : '0' %>"
+                  class="px-3 py-1.5 rounded-lg text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 <%= t.is_active ? 'bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500' : 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600' %>">
+                  <%= t.is_active ? '🔒 Nonaktifkan' : '✅ Aktifkan' %>
+                </button>
 
                 <form action="/admin/teachers/<%= t.id %>/reset" method="POST" class="flex gap-2">
                   <input name="new_password" placeholder="reset pwd" class="w-32 rounded-lg bg-white border border-slate-200 px-2 py-1" />
@@ -66,7 +69,7 @@
                 </form>
 
                 <form action="/admin/teachers/<%= t.id %>?_method=DELETE" method="POST" onsubmit="return confirm('Hapus guru?')">
-                  <button class="px-3 py-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-100">Hapus</button>
+                  <button class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md">🗑️ Hapus</button>
                 </form>
               </div>
             </td>
@@ -207,4 +210,38 @@
     }
   });
 })();
+
+async function toggleTeacher(teacherId, btn) {
+  btn.disabled = true;
+  btn.style.opacity = '0.6';
+  try {
+    const res = await fetch(`/admin/teachers/${teacherId}/toggle`, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    const data = await res.json();
+    if (data.success) {
+      const isActive = data.is_active;
+      btn.setAttribute('data-active', isActive ? '1' : '0');
+      btn.textContent = isActive ? '🔒 Nonaktifkan' : '✅ Aktifkan';
+      btn.className = `px-3 py-1.5 rounded-lg text-white font-medium transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105 ${
+        isActive
+          ? 'bg-gradient-to-r from-yellow-400 to-orange-400 hover:from-yellow-500 hover:to-orange-500'
+          : 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-500 hover:to-emerald-600'
+      }`;
+      const row = btn.closest('tr');
+      if (row) {
+        const statusCell = row.querySelector('.teacher-active');
+        if (statusCell) statusCell.textContent = isActive ? 'Aktif' : 'Nonaktif';
+      }
+    } else {
+      alert(data.message || 'Gagal mengubah status.');
+    }
+  } catch (e) {
+    alert('Terjadi kesalahan. Coba lagi.');
+  } finally {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
+}
 </script>

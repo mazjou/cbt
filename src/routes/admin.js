@@ -1068,14 +1068,16 @@ router.post('/teachers/:id/ajax-update', async (req, res) => {
   const { username, full_name, is_active, new_password } = req.body || {};
   try {
     const setPassword = new_password && String(new_password).trim().length > 0 ? 1 : 0;
-    const password_hash = setPassword ? await bcrypt.hash(String(new_password).trim(), 10) : null;
+    const plainPwd = setPassword ? String(new_password).trim() : null;
+    const password_hash = setPassword ? await bcrypt.hash(plainPwd, 10) : null;
 
     await pool.query(
       `UPDATE users
        SET username=:username,
            full_name=:full_name,
            is_active=:is_active,
-           password_hash=IF(:setPassword=1, :password_hash, password_hash)
+           password_hash=CASE WHEN :setPassword=1 THEN :password_hash ELSE password_hash END,
+           plain_password=CASE WHEN :setPassword=1 THEN :plain_password ELSE plain_password END
        WHERE id=:id AND role='TEACHER';`,
       {
         id: req.params.id,
@@ -1083,7 +1085,8 @@ router.post('/teachers/:id/ajax-update', async (req, res) => {
         full_name: String(full_name || '').trim(),
         is_active: String(is_active) === '1' || is_active === true,
         setPassword,
-        password_hash
+        password_hash,
+        plain_password: plainPwd
       }
     );
 
@@ -1107,11 +1110,12 @@ router.post('/teachers/:id/ajax-update', async (req, res) => {
 
 router.post('/teachers/:id/reset', async (req, res) => {
   try {
-    const password_hash = await bcrypt.hash(req.body.new_password || '123456', 10);
-    await pool.query(`UPDATE users SET password_hash=:ph WHERE id=:id AND role='TEACHER';`, {
-      ph: password_hash,
-      id: req.params.id
-    });
+    const plain = String(req.body.new_password || '123456').trim();
+    const password_hash = await bcrypt.hash(plain, 10);
+    await pool.query(
+      `UPDATE users SET password_hash=:ph, plain_password=:plain WHERE id=:id AND role='TEACHER';`,
+      { ph: password_hash, plain, id: req.params.id }
+    );
     req.flash('success', 'Password guru direset.');
   } catch (e) {
     console.error(e);
@@ -1122,16 +1126,15 @@ router.post('/teachers/:id/reset', async (req, res) => {
 
 router.post('/teachers/:id/toggle', async (req, res) => {
   try {
-    await pool.query(
-      `UPDATE users SET is_active = IF(is_active=true,0,1) WHERE id=:id AND role='TEACHER';`,
+    const [[user]] = await pool.query(
+      `UPDATE users SET is_active = NOT is_active WHERE id=:id AND role='TEACHER' RETURNING id, is_active;`,
       { id: req.params.id }
     );
-    req.flash('success', 'Status guru diperbarui.');
+    return res.json({ success: true, is_active: user.is_active });
   } catch (e) {
     console.error(e);
-    req.flash('error', 'Gagal memperbarui status.');
+    return res.json({ success: false, message: 'Gagal memperbarui status.' });
   }
-  res.redirect('/admin/teachers');
 });
 
 router.delete('/teachers/:id', async (req, res) => {
@@ -1239,21 +1242,24 @@ router.post('/teachers/import/commit', async (req, res) => {
     for (const it of items) {
       const pwd = String(it.password || '').trim();
       const setPassword = pwd ? 1 : 0;
-      const password_hash = await bcrypt.hash(pwd || it.username, 10); // default = username
+      const plainPwd = pwd || it.username;
+      const password_hash = await bcrypt.hash(plainPwd, 10); // default = username
 
       await conn.query(
-        `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active)
-         VALUES (:username,:full_name,'TEACHER',NULL,:password_hash,true)
+        `INSERT INTO users (username, full_name, role, class_id, password_hash, plain_password, is_active)
+         VALUES (:username,:full_name,'TEACHER',NULL,:password_hash,:plain_password,true)
          ON CONFLICT (username) DO UPDATE SET
            full_name=EXCLUDED.full_name,
            role='TEACHER',
            class_id=NULL,
            is_active=true,
-           password_hash=CASE WHEN :setPassword=1 THEN EXCLUDED.password_hash ELSE users.password_hash END;`,
+           password_hash=CASE WHEN :setPassword=1 THEN EXCLUDED.password_hash ELSE users.password_hash END,
+           plain_password=CASE WHEN :setPassword=1 THEN EXCLUDED.plain_password ELSE users.plain_password END;`,
         {
           username: it.username,
           full_name: it.full_name,
           password_hash,
+          plain_password: plainPwd,
           setPassword
         }
       );
@@ -1866,8 +1872,12 @@ router.post('/users', async (req, res) => {
 
 router.post('/users/:id/reset', async (req, res) => {
   try {
-    const password_hash = await bcrypt.hash(req.body.new_password || '123456', 10);
-    await pool.query(`UPDATE users SET password_hash=:ph, plain_password=:plain WHERE id=:id;`, { ph: password_hash, id: req.params.id });
+    const plain = String(req.body.new_password || '123456').trim();
+    const password_hash = await bcrypt.hash(plain, 10);
+    await pool.query(
+      `UPDATE users SET password_hash=:ph, plain_password=:plain WHERE id=:id;`,
+      { ph: password_hash, plain, id: req.params.id }
+    );
     req.flash('success', 'Password direset.');
   } catch (e) {
     console.error(e);
@@ -1878,11 +1888,24 @@ router.post('/users/:id/reset', async (req, res) => {
 
 router.post('/users/:id/toggle', async (req, res) => {
   try {
-    await pool.query(`UPDATE users SET is_active = IF(is_active=true,0,1) WHERE id=:id;`, { id: req.params.id });
-    req.flash('success', 'Status akun diperbarui.');
+    const [[user]] = await pool.query(
+      `UPDATE users SET is_active = NOT is_active WHERE id=:id RETURNING id, is_active;`,
+      { id: req.params.id }
+    );
+    return res.json({ success: true, is_active: user.is_active });
   } catch (e) {
     console.error(e);
-    req.flash('error', 'Gagal memperbarui status akun.');
+    return res.json({ success: false, message: 'Gagal memperbarui status akun.' });
+  }
+});
+
+router.post('/users/:id/delete', async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM users WHERE id=:id;`, { id: req.params.id });
+    req.flash('success', 'Pengguna berhasil dihapus.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menghapus pengguna.');
   }
   res.redirect('/admin/users');
 });
@@ -1890,7 +1913,7 @@ router.post('/users/:id/toggle', async (req, res) => {
 router.delete('/users/:id', async (req, res) => {
   try {
     await pool.query(`DELETE FROM users WHERE id=:id;`, { id: req.params.id });
-    req.flash('success', 'Pengguna dihapus.');
+    req.flash('success', 'Pengguna berhasil dihapus.');
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal menghapus pengguna.');
