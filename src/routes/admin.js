@@ -1505,7 +1505,7 @@ router.get('/users/print-cards', async (req, res) => {
     
     // Filter by specific IDs
     if (ids) {
-      const idArray = ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+      const idArray = [...new Set(ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)))];
       if (idArray.length > 0) {
         query += ` AND u.id IN (${idArray.join(',')})`;
       }

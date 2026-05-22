@@ -536,9 +536,9 @@
     
     // Print selected cards functionality
     window.printSelectedCards = function() {
-      const selectedIds = Array.from(userCheckboxes)
+      const selectedIds = [...new Set(Array.from(userCheckboxes)
         .filter(cb => cb.checked)
-        .map(cb => cb.getAttribute('data-user-id'));
+        .map(cb => cb.getAttribute('data-user-id')))];
       
       if (selectedIds.length === 0) {
         alert('Pilih pengguna yang ingin dicetak kartunya terlebih dahulu.');
