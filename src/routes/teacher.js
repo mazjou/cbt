@@ -435,22 +435,8 @@ router.post('/materials/:id/toggle-publish', async (req, res) => {
       { id: req.params.id, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
     );
 
-    // Kirim notifikasi jika materi baru dipublish
-    if (!wasPublished) {
-      try {
-        const className = material.class_name || 'Semua Kelas';
-        await createNotificationForClass({
-          classId: material.class_id,
-          title: `Materi Baru: ${material.title}`,
-          message: `Guru telah mempublish materi baru "${material.title}" untuk mata pelajaran ${material.subject_name} (${className})`,
-          type: 'MATERIAL',
-          referenceId: material.id
-        });
-      } catch (notifError) {
-        // Log error tapi jangan gagalkan proses publish
-        console.error('Error sending notification:', notifError);
-      }
-    }
+    // Kirim notifikasi jika materi baru dipublish — DIHAPUS
+    // Notifikasi hanya dibuat manual oleh guru
 
     req.flash('success', 'Status publish materi diperbarui.');
   } catch (e) {
@@ -732,45 +718,6 @@ router.post('/exams/:id/toggle-publish', async (req, res) => {
       id: req.params.id,
       tid: user.id
     });
-
-    // Kirim notifikasi jika ujian baru dipublish
-    if (!wasPublished) {
-      try {
-        // Get class IDs for this exam
-        const [examClasses] = await pool.query(
-          `SELECT ec.class_id, c.name AS class_name
-           FROM exam_classes ec
-           JOIN classes c ON c.id=ec.class_id
-           WHERE ec.exam_id=:exam_id;`,
-          { exam_id: exam.id }
-        );
-
-        if (examClasses.length > 0) {
-          const classIds = examClasses.map(ec => ec.class_id);
-          const classNames = examClasses.map(ec => ec.class_name).join(', ');
-          
-          await createNotificationForMultipleClasses({
-            classIds,
-            title: `Ujian Baru: ${exam.title}`,
-            message: `Guru telah mempublish ujian baru "${exam.title}" untuk mata pelajaran ${exam.subject_name} (${classNames})`,
-            type: 'EXAM',
-            referenceId: exam.id
-          });
-        } else if (exam.class_id) {
-          // Fallback untuk exam dengan single class_id (backward compatibility)
-          await createNotificationForClass({
-            classId: exam.class_id,
-            title: `Ujian Baru: ${exam.title}`,
-            message: `Guru telah mempublish ujian baru "${exam.title}" untuk mata pelajaran ${exam.subject_name}`,
-            type: 'EXAM',
-            referenceId: exam.id
-          });
-        }
-      } catch (notifError) {
-        // Log error tapi jangan gagalkan proses publish
-        console.error('Error sending notification:', notifError);
-      }
-    }
 
     req.flash('success', 'Status publish diperbarui.');
   } catch (e) {
@@ -3335,22 +3282,9 @@ router.post('/assignments/:id/toggle-publish', async (req, res) => {
       { status: newStatus, id: assignmentId }
     );
     
-    // Send notification if publishing
-    if (newStatus === 1 && assignment.class_id) {
-      try {
-        await createNotificationForClass(
-          assignment.class_id,
-          'ASSIGNMENT',
-          `Tugas Baru: ${assignment.title}`,
-          `Guru telah memberikan tugas baru. Deadline: ${assignment.due_date ? new Date(assignment.due_date).toLocaleDateString('id-ID') : 'Tidak ada'}`,
-          assignmentId
-        );
-      } catch (notifError) {
-        // Log error tapi jangan gagalkan proses publish
-        console.error('Error sending notification:', notifError);
-      }
-    }
-    
+    // Send notification if publishing — DIHAPUS
+    // Notifikasi hanya dibuat manual oleh guru
+
     req.flash('success', newStatus ? 'Tugas dipublikasi' : 'Tugas di-unpublish');
     res.redirect('/teacher/assignments');
   } catch (err) {
