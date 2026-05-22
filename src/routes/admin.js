@@ -1503,7 +1503,6 @@ router.get('/users/print-cards', async (req, res) => {
     let query = 'SELECT u.id, u.username, u.full_name, u.role, u.nomor_peserta, u.profile_photo, u.plain_password, c.name AS class_name FROM users u LEFT JOIN classes c ON c.id = u.class_id WHERE 1=1';
     const params = {};
     
-    // Filter by specific IDs
     if (ids) {
       const idArray = [...new Set(ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)))];
       if (idArray.length > 0) {
@@ -1511,13 +1510,11 @@ router.get('/users/print-cards', async (req, res) => {
       }
     }
     
-    // Filter by role
     if (role && ['TEACHER', 'STUDENT'].includes(role)) {
       query += ' AND u.role = :role';
       params.role = role;
     }
     
-    // Filter by class
     if (class_id) {
       query += ' AND u.class_id = :class_id';
       params.class_id = class_id;
@@ -1532,24 +1529,29 @@ router.get('/users/print-cards', async (req, res) => {
       return res.redirect('/admin/users');
     }
     
-    // Get classes for filter
     const [classes] = await pool.query('SELECT id, name FROM classes ORDER BY name ASC;');
     
-    // Get school info from env or default
     const schoolInfo = {
       name: process.env.SCHOOL_NAME || 'SMK Negeri 1 Kras',
       address: process.env.SCHOOL_ADDRESS || 'Kediri, Jawa Timur',
       logo: '/images/logo.png'
     };
     
-    res.render('admin/print_login_cards', {
+    // Render dengan layout: false menggunakan app.render langsung
+    res.app.render('admin/print_login_cards', {
       title: 'Cetak Kartu Login',
       users,
       classes,
       schoolInfo,
       role: role || '',
       class_id: class_id || '',
-      layout: false // No layout for print page
+      settings: { 'view options': { layout: false } }
+    }, (err, html) => {
+      if (err) {
+        console.error('Render error:', err);
+        return res.status(500).send('Gagal render halaman cetak.');
+      }
+      res.send(html);
     });
   } catch (e) {
     console.error(e);
