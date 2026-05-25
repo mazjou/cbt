@@ -142,13 +142,27 @@
     </div>
 
     <!-- Maks Pelanggaran -->
-    <div class="mt-3 flex items-center gap-3 p-3 rounded-xl border border-red-200 bg-white">
-      <span class="text-base">🚨</span>
-      <label class="text-sm font-semibold text-red-800 whitespace-nowrap">Maks Pelanggaran:</label>
-      <input type="number" name="max_violations" min="1" max="20"
-        value="<%= exam.max_violations || 3 %>"
-        class="w-20 rounded-lg border border-red-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
-      <span class="text-xs text-slate-400">Layar terkunci setelah N pelanggaran. Butuh token guru untuk buka.</span>
+    <div class="mt-3 p-3 rounded-xl border border-red-200 bg-white">
+      <div class="flex items-center gap-3 mb-2">
+        <span class="text-base">🚨</span>
+        <label class="text-sm font-semibold text-red-800">Anti-Cheat Maks Pelanggaran:</label>
+        <label class="flex items-center gap-2 cursor-pointer ml-auto">
+          <span class="text-xs text-slate-500">Aktifkan</span>
+          <input type="checkbox" name="anticheat_enabled" id="anticheat_enabled_edit" value="1"
+            <%= (exam.max_violations && exam.max_violations > 0) ? 'checked' : '' %>
+            onchange="toggleAnticheatEdit(this)"
+            class="w-4 h-4 accent-red-500 cursor-pointer" />
+        </label>
+      </div>
+      <div id="anticheat_input_edit" class="flex items-center gap-3 <%= (!exam.max_violations || exam.max_violations <= 0) ? 'hidden' : '' %>">
+        <input type="number" name="max_violations" id="max_violations_edit" min="1" max="20"
+          value="<%= (exam.max_violations && exam.max_violations > 0) ? exam.max_violations : 3 %>"
+          class="w-20 rounded-lg border border-red-200 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+        <span class="text-xs text-slate-400">Layar terkunci setelah N pelanggaran. Guru buka kunci dari halaman Siswa Terkunci.</span>
+      </div>
+      <div id="anticheat_off_edit" class="text-xs text-slate-400 <%= (exam.max_violations && exam.max_violations > 0) ? 'hidden' : '' %>">
+        Anti-cheat dinonaktifkan — pelanggaran tidak akan mengunci layar siswa.
+      </div>
     </div>
   </div>
 
@@ -263,4 +277,20 @@
 
   // Initialize on page load
   updateSelectedClasses();
+
+  function toggleAnticheatEdit(cb) {
+    const input = document.getElementById('anticheat_input_edit');
+    const off = document.getElementById('anticheat_off_edit');
+    const numInput = document.getElementById('max_violations_edit');
+    if (cb.checked) {
+      input.classList.remove('hidden');
+      off.classList.add('hidden');
+      numInput.disabled = false;
+    } else {
+      input.classList.add('hidden');
+      off.classList.remove('hidden');
+      numInput.disabled = true;
+      numInput.value = '0';
+    }
+  }
 </script>

@@ -394,7 +394,7 @@ router.post('/attempts/:id/violation', async (req, res) => {
 
   const [[attempt]] = await pool.query(
     `SELECT a.id, a.status, a.is_locked, a.student_id, a.exam_id,
-            COALESCE(e.max_violations, 3) AS max_violations
+            COALESCE(e.max_violations, 0) AS max_violations
      FROM attempts a
      JOIN exams e ON e.id = a.exam_id
      WHERE a.id=:aid AND a.student_id=:sid LIMIT 1;`,
@@ -402,7 +402,13 @@ router.post('/attempts/:id/violation', async (req, res) => {
   );
   if (!attempt) return res.status(404).json({ ok: false, message: 'Attempt tidak ditemukan' });
 
-  // Jika sudah terkunci, kembalikan status terkunci
+  // Jika anti-cheat dinonaktifkan (max_violations = 0), abaikan pelanggaran
+  const maxV = Number(attempt.max_violations || 0);
+  if (maxV === 0) {
+    return res.json({ ok: true, logged: false, locked: false, disabled: true });
+  }
+
+  // Jika sudah terkunci, kembalikan status terkunci — jangan catat pelanggaran baru
   if (attempt.is_locked) {
     return res.json({ ok: true, logged: false, locked: true, needToken: true });
   }
@@ -415,16 +421,21 @@ router.post('/attempts/:id/violation', async (req, res) => {
     );
   } catch (e) {
     console.error('Anti-cheat log insert failed:', e?.message || e);
-    return res.json({ ok: true, logged: false, max: 3, count: null, locked: false });
+    return res.json({ ok: true, logged: false, max: maxV, count: null, locked: false });
   }
 
   if (attempt.status === 'IN_PROGRESS') {
+    // Hitung pelanggaran sejak terakhir dibuka kunci (bukan total akumulasi)
     const [cntRows] = await pool.query(
-      `SELECT COUNT(*) AS c FROM attempt_violations WHERE attempt_id=:aid;`,
+      `SELECT COUNT(*) AS c FROM attempt_violations
+       WHERE attempt_id=:aid
+       AND created_at > COALESCE(
+         (SELECT locked_at FROM attempts WHERE id=:aid),
+         '1970-01-01'
+       );`,
       { aid: attemptId }
     );
     const count = Number(cntRows?.[0]?.c || 0);
-    const maxV = Number(attempt.max_violations || 3);
 
     if (count >= maxV) {
       // KUNCI layar — JANGAN auto-submit, jawaban tetap tersimpan

@@ -810,7 +810,7 @@ router.put('/exams/:id', async (req, res) => {
         show_score_to_student: show_score_to_student ? true : false,
         show_review_to_student: show_review_to_student ? true : false,
         max_questions: max_questions ? Number(max_questions) : null,
-        max_violations: max_violations ? Number(max_violations) : 3
+        max_violations: Number(max_violations) >= 0 ? Number(max_violations) : 3
       }
     );
 
@@ -2173,7 +2173,7 @@ router.post('/violations/unlock/:attemptId', async (req, res) => {
     if (!attempt) return res.json({ ok: false, message: 'Attempt tidak ditemukan.' });
 
     await pool.query(
-      `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1 WHERE id=:aid;`,
+      `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1, locked_at=now() WHERE id=:aid;`,
       { aid: attemptId }
     );
     return res.json({ ok: true });
@@ -2209,7 +2209,7 @@ router.post('/violations/unlock-bulk', async (req, res) => {
     const p2 = {};
     validIds.forEach((id, i) => { p2[`vid${i}`] = id; });
     await pool.query(
-      `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1
+      `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1, locked_at=now()
        WHERE id IN (${ph2});`,
       p2
     );

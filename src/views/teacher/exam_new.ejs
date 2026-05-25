@@ -212,13 +212,23 @@
 
     <!-- Maks Pelanggaran -->
     <div class="bg-white rounded-2xl p-5 border border-red-200">
-      <label class="text-sm font-semibold text-red-800 flex items-center gap-2 mb-2">
-        <span class="text-lg">🚨</span> Maksimal Pelanggaran Anti-Cheat
-      </label>
-      <div class="flex items-center gap-3">
-        <input type="number" name="max_violations" min="1" max="20" value="3"
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-lg">🚨</span>
+        <label class="text-sm font-semibold text-red-800">Anti-Cheat Maks Pelanggaran</label>
+        <label class="flex items-center gap-2 cursor-pointer ml-auto">
+          <span class="text-xs text-slate-500">Aktifkan</span>
+          <input type="checkbox" name="anticheat_enabled" id="anticheat_enabled_new" value="1"
+            checked onchange="toggleAnticheatNew(this)"
+            class="w-4 h-4 accent-red-500 cursor-pointer" />
+        </label>
+      </div>
+      <div id="anticheat_input_new" class="flex items-center gap-3">
+        <input type="number" name="max_violations" id="max_violations_new" min="1" max="20" value="3"
           class="w-24 rounded-xl border border-red-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
-        <span class="text-xs text-slate-500">Layar siswa terkunci setelah N pelanggaran. Butuh token dari guru untuk membuka kembali.</span>
+        <span class="text-xs text-slate-500">Layar siswa terkunci setelah N pelanggaran. Guru buka dari halaman Siswa Terkunci.</span>
+      </div>
+      <div id="anticheat_off_new" class="hidden text-xs text-slate-400 mt-1">
+        Anti-cheat dinonaktifkan — pelanggaran tidak akan mengunci layar siswa.
       </div>
     </div>
   </div>
@@ -332,4 +342,21 @@
 
   // Initial count
   updateSelectedCount();
+
+  function toggleAnticheatNew(cb) {
+    const input = document.getElementById('anticheat_input_new');
+    const off = document.getElementById('anticheat_off_new');
+    const numInput = document.getElementById('max_violations_new');
+    if (cb.checked) {
+      input.classList.remove('hidden');
+      off.classList.add('hidden');
+      numInput.disabled = false;
+      if (!numInput.value || numInput.value === '0') numInput.value = '3';
+    } else {
+      input.classList.add('hidden');
+      off.classList.remove('hidden');
+      numInput.disabled = true;
+      numInput.value = '0';
+    }
+  }
 </script>
