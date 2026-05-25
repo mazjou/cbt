@@ -33,7 +33,7 @@
   
   <div class="rounded-lg bg-purple-50 border border-purple-200 p-3 sm:p-4">
     <p class="text-xs text-purple-600 font-medium mb-1">Total Soal</p>
-    <p class="text-xl sm:text-2xl font-bold text-purple-900"><%= exams.reduce((sum, e) => sum + e.question_count, 0) %></p>
+    <p class="text-xl sm:text-2xl font-bold text-purple-900"><%= exams.reduce((sum, e) => sum + (parseInt(e.question_count) || 0), 0) %></p>
   </div>
 </div>
 
