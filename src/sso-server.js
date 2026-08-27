@@ -2,24 +2,21 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 process.env.TZ = process.env.TZ || 'Asia/Jakarta';
 
-const fs   = require('fs/promises');
-const os   = require('os');
+const fs = require('fs/promises');
+const os = require('os');
 const http = require('http');
-
-const express        = require('express');
-const session        = require('express-session');
-const RedisStore     = require('connect-redis').default;
+const express = require('express');
+const session = require('express-session');
+const RedisStore = require('connect-redis').default;
 const { createClient } = require('redis');
-const flash          = require('connect-flash');
-const morgan         = require('morgan');
-const helmet         = require('helmet');
-const compression    = require('compression');
+const flash = require('connect-flash');
+const morgan = require('morgan');
+const helmet = require('helmet');
 const methodOverride = require('method-override');
 const expressLayouts = require('express-ejs-layouts');
-const cron           = require('node-cron');
+const cron = require('node-cron');
 
 const authRoutes         = require('./routes/auth');
-const ssoRoutes          = require('./routes/sso');
 const dashboardRoutes    = require('./routes/dashboard');
 const adminRoutes        = require('./routes/admin');
 const teacherRoutes      = require('./routes/teacher');
@@ -30,28 +27,29 @@ const liveClassesRoutes  = require('./routes/live-classes');
 const quizApiRoutes      = require('./routes/quiz-api');
 const questionBankRoutes = require('./routes/question_bank');
 const profileRoutes      = require('./routes/profile');
+const ssoRoutes          = require('./routes/sso'); // ← SSO SDMS
 
 const pool = require('./db/pool');
 const { autoSubmitMiddleware, autoSubmitAllExpired } = require('./middleware/auto-submit');
 
 const app = express();
 
-const APP_NAME     = process.env.APP_NAME    || os.hostname();
-const APP_IP       = process.env.APP_IP      || 'unknown';
-const PORT         = Number(process.env.PORT || 3000);
-const IS_PROD      = process.env.NODE_ENV    === 'production';
+const APP_NAME    = process.env.APP_NAME    || os.hostname();
+const APP_IP      = process.env.APP_IP      || 'unknown';
+const PORT        = Number(process.env.PORT || 3000);
+const IS_PROD     = process.env.NODE_ENV    === 'production';
 const RUN_SCHEDULER = process.env.RUN_SCHEDULER === '1';
-const SESSION_NAME = process.env.SESSION_NAME || 'connect.sid';
-const UPLOAD_ROOT  = process.env.UPLOAD_ROOT  || path.join(__dirname, 'public', 'uploads');
+const SESSION_NAME  = process.env.SESSION_NAME  || 'connect.sid';
+const UPLOAD_ROOT   = process.env.UPLOAD_ROOT   || path.join(__dirname, 'public', 'uploads');
 const AUTO_SUBMIT_MIDDLEWARE_ENABLED = process.env.AUTO_SUBMIT_MIDDLEWARE_ENABLED !== '0';
 const ONLINE_ZSET_KEY        = process.env.ONLINE_ZSET_KEY        || 'online_users_zset';
 const ONLINE_USER_KEY_PREFIX = process.env.ONLINE_USER_KEY_PREFIX || 'online_user:';
 const ONLINE_TTL_SECONDS     = Number(process.env.ONLINE_TTL_SECONDS || 180);
 
-let redisClient      = null;
-let isRedisConnected = false;
-let autoSubmitJob    = null;
-let server           = null;
+let redisClient       = null;
+let isRedisConnected  = false;
+let autoSubmitJob     = null;
+let server            = null;
 let sessionMiddleware = null;
 
 app.set('trust proxy', 1);
@@ -66,7 +64,6 @@ Object.defineProperty(app.locals, 'isRedisConnected', {
   enumerable: true,
 });
 
-// ── Helpers ──────────────────────────────────────────────────
 function getClientIp(req) {
   const xRealIp      = req.headers['x-real-ip'];
   const xForwardedFor = req.headers['x-forwarded-for'];
@@ -78,17 +75,22 @@ function getClientIp(req) {
 function resolveOnlineIdentity(sessionUser, sessionId) {
   if (!sessionUser) return null;
   const rawId =
-    sessionUser.id ?? sessionUser.user_id ?? sessionUser.student_id ??
-    sessionUser.teacher_id ?? sessionUser.nisn ?? sessionUser.nis ??
-    sessionUser.username ?? sessionId;
+    sessionUser.id          ??
+    sessionUser.user_id     ??
+    sessionUser.student_id  ??
+    sessionUser.teacher_id  ??
+    sessionUser.nisn        ??
+    sessionUser.nis         ??
+    sessionUser.username    ??
+    sessionId;
   if (rawId === undefined || rawId === null || rawId === '') return null;
   const role = sessionUser.role || sessionUser.level || sessionUser.user_type || 'user';
   return {
     userKey:     `${role}:${String(rawId)}`,
     id:          String(rawId),
     role,
-    username:    sessionUser.username || null,
-    displayName: sessionUser.full_name || sessionUser.name || sessionUser.username || null,
+    username:    sessionUser.username    || null,
+    displayName: sessionUser.full_name   || sessionUser.name || sessionUser.username || null,
   };
 }
 
@@ -99,10 +101,15 @@ async function trackOnlineUser(req) {
   const now     = Math.floor(Date.now() / 1000);
   const metaKey = `${ONLINE_USER_KEY_PREFIX}${identity.userKey}`;
   const payload = JSON.stringify({
-    id: identity.id, role: identity.role, username: identity.username,
-    displayName: identity.displayName, sessionId: req.sessionID || null,
-    server: APP_NAME, ip: getClientIp(req),
-    userAgent: req.headers['user-agent'] || null, lastSeen: now,
+    id:          identity.id,
+    role:        identity.role,
+    username:    identity.username,
+    displayName: identity.displayName,
+    sessionId:   req.sessionID || null,
+    server:      APP_NAME,
+    ip:          getClientIp(req),
+    userAgent:   req.headers['user-agent'] || null,
+    lastSeen:    now,
   });
   await redisClient.multi()
     .zAdd(ONLINE_ZSET_KEY, [{ score: now, value: identity.userKey }])
@@ -112,7 +119,8 @@ async function trackOnlineUser(req) {
 }
 
 async function getRuntimeStats() {
-  let online180 = null, activeExams = null;
+  let online180  = null;
+  let activeExams = null;
   try {
     if (redisClient && isRedisConnected) {
       const now = Math.floor(Date.now() / 1000);
@@ -120,18 +128,16 @@ async function getRuntimeStats() {
     }
   } catch { online180 = null; }
   try {
-    const [[row]] = await pool.query(
-      `SELECT COUNT(*) AS c FROM attempts
-       WHERE status = 'IN_PROGRESS'
-         AND (submission_status IS NULL OR submission_status <> 'SUBMITTED')`
-    );
+    const [[row]] = await pool.query(`
+      SELECT COUNT(*) AS c
+      FROM attempts
+      WHERE status = 'IN_PROGRESS'
+        AND (submission_status IS NULL OR submission_status <> 'SUBMITTED')
+    `);
     activeExams = Number(row?.c || 0);
   } catch { activeExams = null; }
   return { online180, activeExams };
 }
-
-// ── Health endpoints (tidak butuh session/json middleware) ───
-app.get('/health', (req, res) => res.json({ ok: true, app: process.env.APP_NAME }));
 
 app.get('/healthz', async (req, res) => {
   try {
@@ -151,31 +157,17 @@ app.get('/healthz', async (req, res) => {
   }
 });
 
-// ── Body parsers & middleware (SEBELUM webhook & routes) ─────
+const compression = require('compression');
 app.use(compression({ level: 6, threshold: 1024 }));
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan(IS_PROD ? 'combined' : 'dev'));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
-app.use(express.json({ limit: '2mb' }));
+app.use(express.json({ limit: '1mb' }));
 app.use(methodOverride('_method'));
-
 app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use('/public/uploads', express.static(UPLOAD_ROOT, { maxAge: '7d', etag: true, lastModified: true }));
 
-// ── SDMS Webhook — HARUS setelah express.json() ──────────────
-const { verifySDMS, handleWebhook, setupTables } = require('./sdms-webhook');
-setupTables().catch(err => console.error('[SDMS] Setup tabel gagal:', err.message));
-
-app.post('/api/webhooks/sdms', verifySDMS, handleWebhook);
-app.get('/api/webhooks/sdms/status', (req, res) => {
-  res.json({ status: 'ok', message: 'SDMS webhook receiver aktif', time: new Date().toISOString() });
-});
-
-// ── SDMS Manual Sync (tombol sync dari LMS) ──────────────────
-const sdmsSyncRouter = require('./sdms-sync-endpoint');
-app.use(sdmsSyncRouter);
-
-// ── Rate limiting untuk endpoint ujian ──────────────────────
+// ── Rate limiting untuk endpoint ujian ──────────────────────────────────────
 const answerRateMap = new Map();
 app.use('/student/attempts', (req, res, next) => {
   if (req.method !== 'POST') return next();
@@ -207,16 +199,15 @@ setInterval(() => {
   }
 }, 300000);
 
-// ── Redis ────────────────────────────────────────────────────
 async function ensureUploadDirectories() {
   const dirs = ['questions', 'materials', 'profiles', 'assignments', 'imports'];
   await fs.mkdir(UPLOAD_ROOT, { recursive: true });
-  await Promise.all(dirs.map(dir => fs.mkdir(path.join(UPLOAD_ROOT, dir), { recursive: true })));
+  await Promise.all(dirs.map((dir) => fs.mkdir(path.join(UPLOAD_ROOT, dir), { recursive: true })));
 }
 
 async function initRedis() {
   if (!process.env.REDIS_HOST) {
-    console.log('⚠️ REDIS_HOST tidak diset. Session akan memakai memory store.');
+    console.log('⚠️  REDIS_HOST tidak diset. Session akan memakai memory store.');
     return null;
   }
   const client = createClient({
@@ -237,8 +228,8 @@ async function initRedis() {
     disableOfflineQueue: true,
   });
   client.on('error', (err) => { isRedisConnected = false; console.error('❌ Redis error:', err.message); });
-  client.on('ready', () => { isRedisConnected = true; console.log('✅ Redis ready'); });
-  client.on('end',   () => { isRedisConnected = false; console.log('⚠️ Redis connection ended'); });
+  client.on('ready', ()      => { isRedisConnected = true;  console.log('✅ Redis ready'); });
+  client.on('end',   ()      => { isRedisConnected = false; console.log('⚠️  Redis connection ended'); });
   await client.connect();
   redisClient = client;
   return client;
@@ -246,18 +237,23 @@ async function initRedis() {
 
 function buildSessionMiddleware() {
   const config = {
-    name: SESSION_NAME,
-    secret: process.env.SESSION_SECRET || 'ganti-session-secret-production',
-    resave: false,
+    name:             SESSION_NAME,
+    secret:           process.env.SESSION_SECRET || 'ganti-session-secret-production',
+    resave:           false,
     saveUninitialized: false,
-    proxy: true,
-    cookie: { httpOnly: true, sameSite: 'lax', secure: IS_PROD, maxAge: 1000 * 60 * 60 * 8 },
+    proxy:            true,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure:   IS_PROD,
+      maxAge:   1000 * 60 * 60 * 8,
+    },
   };
   if (redisClient) {
     config.store = new RedisStore({ client: redisClient, prefix: 'lms:sess:', ttl: 60 * 60 * 8 });
     console.log('✅ Session store: Redis');
   } else {
-    console.log('⚠️ Session store: memory');
+    console.log('⚠️  Session store: memory (tidak disarankan untuk production multi-node)');
   }
   sessionMiddleware = session(config);
   return sessionMiddleware;
@@ -304,16 +300,17 @@ function registerRoutes() {
     return res.redirect('/dashboard');
   });
 
+  // ── SSO SDMS — harus sebelum authRoutes ─────────────────────────────────
   app.use(ssoRoutes);
-  app.use(authRoutes);
-  app.use('/dashboard',    dashboardRoutes);
-  app.use('/profile',      profileRoutes);
-  app.use('/admin',        adminRoutes);
-  app.use('/teacher',      teacherRoutes);
-  app.use('/teacher/question-bank', questionBankRoutes);
-  app.use('/api/question-bank',     questionBankRoutes);
-  app.use('/notifications', notificationRoutes);
 
+  app.use(authRoutes);
+  app.use('/dashboard', dashboardRoutes);
+  app.use('/profile', profileRoutes);
+  app.use('/admin', adminRoutes);
+  app.use('/teacher', teacherRoutes);
+  app.use('/teacher/question-bank', questionBankRoutes);
+  app.use('/api/question-bank', questionBankRoutes);
+  app.use('/notifications', notificationRoutes);
   app.use('/api/subjects', async (req, res) => {
     try {
       const [subjects] = await pool.query('SELECT id, name FROM subjects ORDER BY name ASC');
@@ -339,7 +336,6 @@ function registerRoutes() {
   });
 }
 
-// ── Redis Lock ───────────────────────────────────────────────
 async function acquireRedisLock(key, value, ttlSeconds) {
   if (!redisClient) return true;
   const locked = await redisClient.set(key, value, { NX: true, EX: ttlSeconds });
@@ -356,10 +352,9 @@ async function releaseRedisLock(key, value) {
   }
 }
 
-// ── Cron auto-submit ─────────────────────────────────────────
 function startAutoSubmitCron() {
   if (!RUN_SCHEDULER) {
-    console.log('⏸️ Auto-submit cron dinonaktifkan di node ini');
+    console.log('⏸️  Auto-submit cron dinonaktifkan di node ini');
     return;
   }
   autoSubmitJob = cron.schedule('*/5 * * * *', async () => {
@@ -368,9 +363,7 @@ function startAutoSubmitCron() {
       const hasLock = await acquireRedisLock('lock:auto-submit', lockValue, 240);
       if (!hasLock) return;
       const result = await autoSubmitAllExpired();
-      if (result?.processed > 0) {
-        console.log(`[AUTO-SUBMIT] ✅ ${result.processed} attempt diproses oleh ${APP_NAME}`);
-      }
+      if (result?.processed > 0) console.log(`[AUTO-SUBMIT] ✅ ${result.processed} attempt diproses oleh ${APP_NAME}`);
     } catch (error) {
       console.error('[AUTO-SUBMIT] ❌ Error:', error.message);
     } finally {
@@ -380,12 +373,11 @@ function startAutoSubmitCron() {
   console.log(`⏰ Auto-submit cron aktif di ${APP_NAME}`);
 }
 
-// ── Graceful shutdown ─────────────────────────────────────────
 async function gracefulShutdown(signal) {
   console.log(`\n🛑 ${signal} diterima. Shutdown graceful...`);
   try {
     if (autoSubmitJob) { autoSubmitJob.stop(); console.log('✅ Auto-submit cron stopped'); }
-    if (server)        { await new Promise(resolve => server.close(resolve)); console.log('✅ HTTP server closed'); }
+    if (server)        { await new Promise((resolve) => server.close(resolve)); console.log('✅ HTTP server closed'); }
     if (redisClient)   { await redisClient.quit(); console.log('✅ Redis closed'); }
   } catch (error) {
     console.error('❌ Error saat shutdown:', error.message);
@@ -394,7 +386,6 @@ async function gracefulShutdown(signal) {
   }
 }
 
-// ── Bootstrap ─────────────────────────────────────────────────
 async function bootstrap() {
   try {
     await ensureUploadDirectories();
@@ -403,28 +394,23 @@ async function bootstrap() {
       console.log('✅ Redis connected');
     } catch (error) {
       console.error('❌ Redis gagal connect:', error.message);
-      console.log('⚠️ Melanjutkan dengan memory session store');
+      console.log('⚠️  Melanjutkan dengan memory session store');
       redisClient      = null;
       isRedisConnected = false;
     }
-
     buildSessionMiddleware();
     registerRoutes();
-
     server = http.createServer(app);
     server.keepAliveTimeout = 65000;
     server.headersTimeout   = 66000;
     server.requestTimeout   = 120000;
-
     const { initializeSocket } = require('./socket');
     await initializeSocket(server, { redisClient, sessionMiddleware });
-
     server.listen(PORT, () => {
       console.log(`✅ ${APP_NAME} listening on ${PORT}`);
       console.log(`📡 APP_IP: ${APP_IP}`);
-      console.log(`🗂️ UPLOAD_ROOT: ${UPLOAD_ROOT}`);
+      console.log(`🗂️  UPLOAD_ROOT: ${UPLOAD_ROOT}`);
     });
-
     startAutoSubmitCron();
   } catch (error) {
     console.error('❌ Bootstrap gagal:', error);
