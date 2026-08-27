@@ -129,7 +129,7 @@ else
 fi
 
 # ── 10. Verifikasi aplikasi berjalan ──────────────────────
-sleep 3
+sleep 10
 info "Verifikasi aplikasi..."
 if pm2 list | grep "$APP_NAME" | grep -q "online"; then
   log "Aplikasi berjalan normal ✅"
