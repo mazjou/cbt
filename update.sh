@@ -131,8 +131,10 @@ fi
 # ── 10. Verifikasi aplikasi berjalan ──────────────────────
 sleep 10
 info "Verifikasi aplikasi..."
-if pm2 list | grep "$APP_NAME" | grep -q "online"; then
-  log "Aplikasi berjalan normal ✅"
+# Cek via HTTP healthcheck lebih andal daripada pm2 list
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://localhost:3000/health 2>/dev/null || echo "000")
+if [ "$HTTP_CODE" = "200" ] || pm2 list --no-color 2>/dev/null | grep "$APP_NAME" | grep -q "online"; then
+  log "Aplikasi berjalan normal ✅ (HTTP $HTTP_CODE)"
 else
   warn "Aplikasi tidak online! Mencoba rollback ke $PREV_COMMIT..."
   git reset --hard $PREV_COMMIT 2>&1
