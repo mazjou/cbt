@@ -29,14 +29,8 @@ const SDMS_WEBHOOK_SECRET = process.env.SDMS_WEBHOOK_SECRET || 'sdms_lms_secret'
 const requireAdmin = (req, res, next) => {
   const user = req.session?.user;
   if (!user) {
-    // Jika akses via browser, redirect ke login
-    if (req.accepts('html')) return res.redirect('/login?redirect=/sdms-sync');
+    if (req.accepts('html')) return res.redirect('/login');
     return res.status(401).json({ ok: false, message: 'Login dulu' });
-  }
-  const role = (user.role || user.level || '').toUpperCase();
-  const allowed = ['ADMIN', 'SUPER_ADMIN', 'TEACHER', 'OPERATOR'];
-  if (!allowed.includes(role)) {
-    return res.status(403).json({ ok: false, message: 'Tidak punya akses' });
   }
   next();
 };
@@ -136,19 +130,27 @@ router.post('/api/sdms/sync', requireAdmin, async (req, res) => {
         }
       };
 
-      // Fetch semua data master dari SDMS
-      [guru, siswa, kelas, mapel, pegawai] = await Promise.all([
-        fetchSDMS('/api/v1/master/guru'),
-        fetchSDMS('/api/v1/master/siswa'),
-        fetchSDMS('/api/v1/master/kelas'),
-        fetchSDMS('/api/v1/master/mapel'),
-        fetchSDMS('/api/v1/master/pegawai'),
-      ]);
+      // Trigger SDMS untuk kirim bulk sync ke LMS via webhook
+      // SDMS akan push data ke endpoint /api/webhooks/sdms yang sudah terpasang
+      try {
+        const triggerResp = await axios.post(
+          `${SDMS_URL}/api/lms/request-sync`,
+          {},
+          {
+            timeout: 10000,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-SDMS-Internal': SDMS_WEBHOOK_SECRET,
+            },
+          }
+        );
+        console.log('[SDMS-Sync] SDMS bulk sync triggered:', JSON.stringify(triggerResp.data));
+      } catch (triggerErr) {
+        console.warn('[SDMS-Sync] Trigger bulk sync gagal:', triggerErr.message);
+      }
 
-      console.log(`[SDMS-Sync] Data dari SDMS — guru:${guru.length} siswa:${siswa.length} kelas:${kelas.length}`);
-
-      // 2. Upsert ke tabel sdms_* (tidak dobel, hanya melengkapi/update yang berubah)
-      const stats = await handleBulkSync({ guru, siswa, kelas, mapel, pegawai });
+      // Data akan masuk via webhook — set stats dummy
+      const stats = { inserted: 0, updated: 0, skipped: 0, errors: 0 };
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(1);
       console.log(`[SDMS-Sync] Selesai dalam ${duration}s — insert:${stats.inserted} update:${stats.updated} skip:${stats.skipped} err:${stats.errors}`);

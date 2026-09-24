@@ -210,10 +210,15 @@ const softDeleteGuru = async (sdmsId) => {
 // Return: 'inserted' | 'updated' | 'skipped'
 // ============================================================
 const upsertSiswa = async (data) => {
+  // Ambil kelas_id dan kelas_nama dari payload
+  // SDMS kirim data.kelas_id (uuid) dan data.kelas?.nama
+  const kelasId   = data.kelas_id   || data.kelas?.id   || null;
+  const kelasNama = data.kelas_nama  || data.kelas?.nama || null;
+
   const existing = await q(
     `SELECT nama, nisn, nis, jenis_kelamin, jurusan_kode,
             tahun_masuk, status, tempat_lahir, tanggal_lahir::text,
-            agama, no_hp, alamat
+            agama, no_hp, alamat, kelas_id, kelas_nama
      FROM sdms_siswa WHERE sdms_id=$1`,
     [data.id]
   );
@@ -232,7 +237,9 @@ const upsertSiswa = async (data) => {
       e.tanggal_lahir === (data.tanggal_lahir    || null) &&
       e.agama         === (data.agama            || null) &&
       e.no_hp         === (data.no_hp            || null) &&
-      e.alamat        === (data.alamat           || null);
+      e.alamat        === (data.alamat           || null) &&
+      e.kelas_id      === kelasId &&
+      e.kelas_nama    === kelasNama;
     if (same) { return 'skipped'; }
   }
 
@@ -240,8 +247,8 @@ const upsertSiswa = async (data) => {
     INSERT INTO sdms_siswa
       (sdms_id, nama, nisn, nis, jenis_kelamin, jurusan_kode,
        tahun_masuk, status, tempat_lahir, tanggal_lahir,
-       agama, no_hp, alamat, is_active, synced_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,true,NOW())
+       agama, no_hp, alamat, kelas_id, kelas_nama, is_active, synced_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,true,NOW())
     ON CONFLICT (sdms_id) DO UPDATE SET
       nama=EXCLUDED.nama, nisn=EXCLUDED.nisn, nis=EXCLUDED.nis,
       jenis_kelamin=EXCLUDED.jenis_kelamin,
@@ -250,7 +257,10 @@ const upsertSiswa = async (data) => {
       tempat_lahir=EXCLUDED.tempat_lahir,
       tanggal_lahir=EXCLUDED.tanggal_lahir,
       agama=EXCLUDED.agama, no_hp=EXCLUDED.no_hp,
-      alamat=EXCLUDED.alamat, is_active=true, synced_at=NOW()
+      alamat=EXCLUDED.alamat,
+      kelas_id=EXCLUDED.kelas_id,
+      kelas_nama=EXCLUDED.kelas_nama,
+      is_active=true, synced_at=NOW()
     RETURNING (xmax = 0) AS is_new
   `, [
     data.id, data.nama, data.nisn||null, data.nis||null,
@@ -258,10 +268,11 @@ const upsertSiswa = async (data) => {
     data.tahun_masuk||null, data.status||'Aktif',
     data.tempat_lahir||null, data.tanggal_lahir||null,
     data.agama||null, data.no_hp||null, data.alamat||null,
+    kelasId, kelasNama,
   ]);
 
   const isNew = rows[0]?.is_new;
-  log(`Siswa ${isNew ? 'INSERT' : 'UPDATE'}: ${data.nama}`);
+  log(`Siswa ${isNew ? 'INSERT' : 'UPDATE'}: ${data.nama}${kelasNama ? ' [' + kelasNama + ']' : ''}`);
   return isNew ? 'inserted' : 'updated';
 };
 
@@ -484,6 +495,8 @@ const setupTables = async () => {
       nis           VARCHAR(20),
       jenis_kelamin CHAR(1),
       jurusan_kode  VARCHAR(20),
+      kelas_id      VARCHAR(36),
+      kelas_nama    VARCHAR(100),
       tahun_masuk   VARCHAR(10),
       status        VARCHAR(20),
       tempat_lahir  VARCHAR(100),
@@ -496,6 +509,9 @@ const setupTables = async () => {
       created_at    TIMESTAMP DEFAULT NOW()
     )
   `);
+  // Tambah kolom jika belum ada (upgrade dari versi lama)
+  await q(`ALTER TABLE sdms_siswa ADD COLUMN IF NOT EXISTS kelas_id VARCHAR(36)`);
+  await q(`ALTER TABLE sdms_siswa ADD COLUMN IF NOT EXISTS kelas_nama VARCHAR(100)`);
 
   await q(`
     CREATE TABLE IF NOT EXISTS sdms_pegawai (

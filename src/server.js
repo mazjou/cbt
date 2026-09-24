@@ -171,9 +171,6 @@ app.get('/api/webhooks/sdms/status', (req, res) => {
   res.json({ status: 'ok', message: 'SDMS webhook receiver aktif', time: new Date().toISOString() });
 });
 
-// ── SDMS Manual Sync (tombol sync dari LMS) ──────────────────
-const sdmsSyncRouter = require('./sdms-sync-endpoint');
-app.use(sdmsSyncRouter);
 
 // ── Rate limiting untuk endpoint ujian ──────────────────────
 const answerRateMap = new Map();
@@ -309,6 +306,9 @@ function registerRoutes() {
   app.use('/dashboard',    dashboardRoutes);
   app.use('/profile',      profileRoutes);
   app.use('/admin',        adminRoutes);
+  // ── SDMS Manual Sync ─────────────────────────────────────
+  const sdmsSyncRouter = require('./sdms-sync-endpoint');
+  app.use(sdmsSyncRouter);
   app.use('/teacher',      teacherRoutes);
   app.use('/teacher/question-bank', questionBankRoutes);
   app.use('/api/question-bank',     questionBankRoutes);
