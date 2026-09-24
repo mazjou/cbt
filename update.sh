@@ -129,17 +129,34 @@ else
 fi
 
 # ── 10. Verifikasi aplikasi berjalan ──────────────────────
-sleep 10
-info "Verifikasi aplikasi..."
-# Cek via HTTP healthcheck lebih andal daripada pm2 list
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://localhost:3000/health 2>/dev/null || echo "000")
-if [ "$HTTP_CODE" = "200" ] || pm2 list --no-color 2>/dev/null | grep "$APP_NAME" | grep -q "online"; then
-  log "Aplikasi berjalan normal ✅ (HTTP $HTTP_CODE)"
+info "Menunggu aplikasi siap..."
+sleep 20
+
+# Retry hingga 3x dengan interval 10 detik
+VERIFIED=0
+for i in 1 2 3; do
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://localhost:3000/health 2>/dev/null || echo "000")
+  if [ "$HTTP_CODE" = "200" ]; then
+    VERIFIED=1
+    break
+  fi
+  warn "Cek ke-$i gagal (HTTP $HTTP_CODE), tunggu 10 detik..."
+  sleep 10
+done
+
+if [ "$VERIFIED" = "1" ]; then
+  log "Aplikasi berjalan normal ✅ (HTTP 200)"
 else
-  warn "Aplikasi tidak online! Mencoba rollback ke $PREV_COMMIT..."
-  git reset --hard $PREV_COMMIT 2>&1
-  pm2 reload $APP_NAME 2>&1
-  err "Update gagal! Sudah rollback ke $PREV_COMMIT. Cek log: pm2 logs $APP_NAME"
+  # Fallback: cek PM2 status
+  if pm2 list --no-color 2>/dev/null | grep "$APP_NAME" | grep -q "online"; then
+    warn "HTTP health gagal tapi PM2 online — anggap OK. Cek manual: curl http://localhost:3000/health"
+    log "Aplikasi online via PM2 ✅"
+  else
+    warn "Aplikasi tidak online! Mencoba rollback ke $PREV_COMMIT..."
+    git reset --hard $PREV_COMMIT 2>&1
+    pm2 reload $APP_NAME 2>/dev/null || pm2 start ecosystem.config.js --env production 2>&1
+    err "Update gagal! Sudah rollback ke $PREV_COMMIT. Cek log: pm2 logs $APP_NAME"
+  fi
 fi
 
 # ── 11. Selesai ───────────────────────────────────────────
