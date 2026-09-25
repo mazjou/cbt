@@ -160,19 +160,20 @@ router.get('/reports', async (req, res) => {
     const filters = { start_date: startDate, end_date: endDate };
 
     // Get summary statistics
-    const [[summaryRow]] = await pool.query(`
+    const summaryResult = await pool.query(`
       SELECT 
-        (SELECT COUNT(*) FROM exams WHERE created_at BETWEEN :startDate AND :endDate) as total_exams,
-        (SELECT COUNT(*) FROM materials WHERE created_at BETWEEN :startDate AND :endDate) as total_materials,
-        (SELECT COUNT(*) FROM assignments WHERE created_at BETWEEN :startDate AND :endDate) as total_assignments,
-        (SELECT COUNT(*) FROM attempts WHERE created_at BETWEEN :startDate AND :endDate) as total_attempts,
-        (SELECT COALESCE(AVG(score), 0) FROM attempts WHERE created_at BETWEEN :startDate AND :endDate AND score IS NOT NULL) as avg_score,
-        (SELECT COUNT(*) FROM attempts WHERE created_at BETWEEN :startDate AND :endDate AND score >= (SELECT pass_score FROM exams WHERE id = attempts.exam_id)) as passed_attempts,
-        (SELECT COUNT(*) FROM material_reads WHERE created_at BETWEEN :startDate AND :endDate) as total_material_reads,
-        (SELECT COUNT(*) FROM assignment_submissions WHERE created_at BETWEEN :startDate AND :endDate) as total_submissions,
-        (SELECT COUNT(DISTINCT student_id) FROM attempts WHERE created_at BETWEEN :startDate AND :endDate) as active_students,
+        (SELECT COUNT(*) FROM exams WHERE created_at BETWEEN $1 AND $2) as total_exams,
+        (SELECT COUNT(*) FROM materials WHERE created_at BETWEEN $1 AND $2) as total_materials,
+        (SELECT COUNT(*) FROM assignments WHERE created_at BETWEEN $1 AND $2) as total_assignments,
+        (SELECT COUNT(*) FROM attempts WHERE created_at BETWEEN $1 AND $2) as total_attempts,
+        (SELECT COALESCE(AVG(score), 0) FROM attempts WHERE created_at BETWEEN $1 AND $2 AND score IS NOT NULL) as avg_score,
+        (SELECT COUNT(*) FROM attempts WHERE created_at BETWEEN $1 AND $2 AND score >= (SELECT pass_score FROM exams WHERE id = attempts.exam_id)) as passed_attempts,
+        (SELECT COUNT(*) FROM material_reads WHERE created_at BETWEEN $1 AND $2) as total_material_reads,
+        (SELECT COUNT(*) FROM assignment_submissions WHERE created_at BETWEEN $1 AND $2) as total_submissions,
+        (SELECT COUNT(DISTINCT student_id) FROM attempts WHERE created_at BETWEEN $1 AND $2) as active_students,
         (SELECT COUNT(*) FROM users WHERE role = 'STUDENT' AND is_active = true) as total_students
-    `, { startDate, endDate });
+    `, [startDate, endDate]);
+    const summaryRow = summaryResult.rows[0];
 
     const summary = {
       total_exams: summaryRow.total_exams || 0,
@@ -189,7 +190,7 @@ router.get('/reports', async (req, res) => {
     };
 
     // Get active teachers
-    const [activeTeachers] = await pool.query(`
+    const activeTeachersResult = await pool.query(`
       SELECT 
         u.id, u.full_name,
         COUNT(DISTINCT e.id) as total_exams,
@@ -197,18 +198,19 @@ router.get('/reports', async (req, res) => {
         COUNT(DISTINCT a.id) as total_assignments,
         (COUNT(DISTINCT e.id) * 3 + COUNT(DISTINCT m.id) * 2 + COUNT(DISTINCT a.id) * 2) as activity_score
       FROM users u
-      LEFT JOIN exams e ON e.teacher_id = u.id AND e.created_at BETWEEN :startDate AND :endDate
-      LEFT JOIN materials m ON m.teacher_id = u.id AND m.created_at BETWEEN :startDate AND :endDate
-      LEFT JOIN assignments a ON a.teacher_id = u.id AND a.created_at BETWEEN :startDate AND :endDate
+      LEFT JOIN exams e ON e.teacher_id = u.id AND e.created_at BETWEEN $1 AND $2
+      LEFT JOIN materials m ON m.teacher_id = u.id AND m.created_at BETWEEN $1 AND $2
+      LEFT JOIN assignments a ON a.teacher_id = u.id AND a.created_at BETWEEN $1 AND $2
       WHERE u.role = 'TEACHER' AND u.is_active = true
       GROUP BY u.id, u.full_name
       HAVING (COUNT(DISTINCT e.id) * 3 + COUNT(DISTINCT m.id) * 2 + COUNT(DISTINCT a.id) * 2) > 0
       ORDER BY activity_score DESC, u.full_name ASC
       LIMIT 10
-    `, { startDate, endDate });
+    `, [startDate, endDate]);
+    const activeTeachers = activeTeachersResult.rows;
 
     // Get active students
-    const [activeStudents] = await pool.query(`
+    const activeStudentsResult = await pool.query(`
       SELECT 
         u.id, u.full_name, c.name as class_name,
         COUNT(DISTINCT at.id) as total_attempts,
@@ -217,18 +219,19 @@ router.get('/reports', async (req, res) => {
         (COUNT(DISTINCT at.id) * 3 + COUNT(DISTINCT asub.id) * 2 + COUNT(DISTINCT mr.id) * 1) as activity_score
       FROM users u
       LEFT JOIN classes c ON c.id = u.class_id
-      LEFT JOIN attempts at ON at.student_id = u.id AND at.created_at BETWEEN :startDate AND :endDate
-      LEFT JOIN assignment_submissions asub ON asub.student_id = u.id AND asub.created_at BETWEEN :startDate AND :endDate
-      LEFT JOIN material_reads mr ON mr.student_id = u.id AND mr.created_at BETWEEN :startDate AND :endDate
+      LEFT JOIN attempts at ON at.student_id = u.id AND at.created_at BETWEEN $1 AND $2
+      LEFT JOIN assignment_submissions asub ON asub.student_id = u.id AND asub.created_at BETWEEN $1 AND $2
+      LEFT JOIN material_reads mr ON mr.student_id = u.id AND mr.created_at BETWEEN $1 AND $2
       WHERE u.role = 'STUDENT' AND u.is_active = true
       GROUP BY u.id, u.full_name, c.name
       HAVING (COUNT(DISTINCT at.id) * 3 + COUNT(DISTINCT asub.id) * 2 + COUNT(DISTINCT mr.id)) > 0
       ORDER BY activity_score DESC, u.full_name ASC
       LIMIT 10
-    `, { startDate, endDate });
+    `, [startDate, endDate]);
+    const activeStudents = activeStudentsResult.rows;
 
     // Get active classes
-    const [activeClassesRaw] = await pool.query(`
+    const activeClassesResult = await pool.query(`
       SELECT 
         c.id, c.name as class_name,
         COUNT(DISTINCT u.id) as total_students,
@@ -244,18 +247,19 @@ router.get('/reports', async (req, res) => {
         END as participation_rate
       FROM classes c
       LEFT JOIN users u ON u.class_id = c.id AND u.role = 'STUDENT' AND u.is_active = true
-      LEFT JOIN attempts at ON at.student_id = u.id AND at.created_at BETWEEN :startDate AND :endDate
+      LEFT JOIN attempts at ON at.student_id = u.id AND at.created_at BETWEEN $1 AND $2
       LEFT JOIN (
         SELECT asub.*, ac.class_id as target_class_id
         FROM assignment_submissions asub
         INNER JOIN assignment_classes ac ON ac.assignment_id = asub.assignment_id
-        WHERE asub.created_at BETWEEN :startDate AND :endDate
+        WHERE asub.created_at BETWEEN $1 AND $2
       ) asub_filtered ON asub_filtered.student_id = u.id AND asub_filtered.target_class_id = c.id
-      LEFT JOIN material_reads mr ON mr.student_id = u.id AND mr.created_at BETWEEN :startDate AND :endDate
+      LEFT JOIN material_reads mr ON mr.student_id = u.id AND mr.created_at BETWEEN $1 AND $2
       GROUP BY c.id, c.name
       HAVING COUNT(DISTINCT u.id) > 0
       ORDER BY total_activities DESC, participation_rate DESC, c.name ASC
-    `, { startDate, endDate });
+    `, [startDate, endDate]);
+    const activeClassesRaw = activeClassesResult.rows;
 
     // Convert avg_score to numbers
     const activeClasses = activeClassesRaw.map(cls => ({
@@ -264,7 +268,7 @@ router.get('/reports', async (req, res) => {
     }));
 
     // Get popular subjects
-    const [popularSubjectsRaw] = await pool.query(`
+    const popularSubjectsResult = await pool.query(`
       SELECT 
         s.id, s.name as subject_name,
         COUNT(DISTINCT e.id) as total_exams,
@@ -272,14 +276,15 @@ router.get('/reports', async (req, res) => {
         COUNT(DISTINCT at.id) as total_attempts,
         COALESCE(AVG(at.score), 0) as avg_score
       FROM subjects s
-      LEFT JOIN exams e ON e.subject_id = s.id AND e.created_at BETWEEN :startDate AND :endDate
-      LEFT JOIN materials m ON m.subject_id = s.id AND m.created_at BETWEEN :startDate AND :endDate
-      LEFT JOIN attempts at ON at.exam_id = e.id AND at.created_at BETWEEN :startDate AND :endDate
+      LEFT JOIN exams e ON e.subject_id = s.id AND e.created_at BETWEEN $1 AND $2
+      LEFT JOIN materials m ON m.subject_id = s.id AND m.created_at BETWEEN $1 AND $2
+      LEFT JOIN attempts at ON at.exam_id = e.id AND at.created_at BETWEEN $1 AND $2
       GROUP BY s.id, s.name
       HAVING (COUNT(DISTINCT e.id) + COUNT(DISTINCT m.id) + COUNT(DISTINCT at.id)) > 0
       ORDER BY (COUNT(DISTINCT e.id) + COUNT(DISTINCT m.id) + COUNT(DISTINCT at.id)) DESC, avg_score DESC
       LIMIT 10
-    `, { startDate, endDate });
+    `, [startDate, endDate]);
+    const popularSubjectsRaw = popularSubjectsResult.rows;
 
     // Convert avg_score to numbers
     const popularSubjects = popularSubjectsRaw.map(subj => ({
@@ -414,20 +419,25 @@ router.get('/classes', async (req, res) => {
   let whereClause = '';
   let queryParams = {};
   
+  let whereClause = '';
+  let queryParams = [];
+
   if (search) {
-    whereClause = 'WHERE code LIKE :search OR name LIKE :search';
-    queryParams.search = `%${search}%`;
+    queryParams.push(`%${search}%`);
+    whereClause = `WHERE code ILIKE $${queryParams.length} OR name ILIKE $${queryParams.length}`;
   }
 
-  const [[{ total }]] = await pool.query(
+  const countResult = await pool.query(
     `SELECT COUNT(*) as total FROM classes ${whereClause}`,
     queryParams
   );
+  const total = countResult.rows[0].total;
 
-  const [classes] = await pool.query(
-    `SELECT * FROM classes ${whereClause} ORDER BY id DESC LIMIT :limit OFFSET :offset;`,
-    { ...queryParams, limit, offset }
+  const classesResult = await pool.query(
+    `SELECT * FROM classes ${whereClause} ORDER BY id DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
+    [...queryParams, limit, offset]
   );
+  const classes = classesResult.rows;
 
   const totalPages = Math.ceil(total / limit);
 
@@ -550,30 +560,28 @@ router.post('/classes/import/commit', async (req, res) => {
     return res.redirect('/admin/classes/import');
   }
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let inserted = 0;
   let updated = 0;
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     for (const it of items) {
-      await conn.query(
-        `INSERT INTO classes (code, name)
-         VALUES (:code,:name)
-         ON CONFLICT (code) DO UPDATE SET
-           name=EXCLUDED.name;`,
-        { code: it.code, name: it.name }
+      await client.query(
+        `INSERT INTO classes (code, name) VALUES ($1,$2)
+         ON CONFLICT (code) DO UPDATE SET name=EXCLUDED.name`,
+        [it.code, it.name]
       );
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;
     }
-    await conn.commit();
+    await client.query('COMMIT');
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error(e);
     req.flash('error', 'Gagal commit import kelas. Coba ulangi / pecah file.');
     return res.redirect('/admin/classes/import');
   } finally {
-    conn.release();
+    client.release();
   }
 
   req.session.classImportPreview = null;
@@ -584,7 +592,7 @@ router.post('/classes/import/commit', async (req, res) => {
 router.post('/classes', async (req, res) => {
   const { code, name } = req.body;
   try {
-    await pool.query(`INSERT INTO classes (code, name) VALUES (:code,:name);`, { code, name });
+    await pool.query(`INSERT INTO classes (code, name) VALUES ($1,$2)`, [code, name]);
     req.flash('success', 'Kelas ditambahkan.');
   } catch (e) {
     console.error(e);
@@ -596,11 +604,7 @@ router.post('/classes', async (req, res) => {
 router.post('/classes/:id/update', async (req, res) => {
   const { code, name } = req.body;
   try {
-    await pool.query(`UPDATE classes SET code=:code, name=:name WHERE id=:id;`, {
-      id: req.params.id,
-      code,
-      name
-    });
+    await pool.query(`UPDATE classes SET code=$1, name=$2 WHERE id=$3`, [code, name, req.params.id]);
     req.flash('success', 'Kelas diperbarui.');
   } catch (e) {
     console.error(e);
@@ -612,10 +616,8 @@ router.post('/classes/:id/update', async (req, res) => {
 // JSON endpoint untuk modal edit kelas (AJAX)
 router.get('/classes/:id/json', async (req, res) => {
   try {
-    const [rows] = await pool.query(`SELECT id, code, name FROM classes WHERE id=:id LIMIT 1;`, {
-      id: req.params.id
-    });
-    const item = rows && rows[0];
+    const result = await pool.query(`SELECT id, code, name FROM classes WHERE id=$1 LIMIT 1`, [req.params.id]);
+    const item = result.rows && result.rows[0];
     if (!item) return res.status(404).json({ ok: false, message: 'Kelas tidak ditemukan.' });
     return res.json({ ok: true, item });
   } catch (e) {
@@ -628,16 +630,16 @@ router.get('/classes/:id/json', async (req, res) => {
 router.post('/classes/:id/ajax-update', async (req, res) => {
   const { code, name } = req.body || {};
   try {
-    await pool.query(`UPDATE classes SET code=:code, name=:name WHERE id=:id;`, {
-      id: req.params.id,
-      code: String(code || '').trim(),
-      name: String(name || '').trim()
-    });
-    const [rows] = await pool.query(`SELECT id, code, name FROM classes WHERE id=:id LIMIT 1;`, { id: req.params.id });
-    return res.json({ ok: true, item: rows && rows[0] });
+    await pool.query(`UPDATE classes SET code=$1, name=$2 WHERE id=$3`, [
+      String(code || '').trim(),
+      String(name || '').trim(),
+      req.params.id
+    ]);
+    const result = await pool.query(`SELECT id, code, name FROM classes WHERE id=$1 LIMIT 1`, [req.params.id]);
+    return res.json({ ok: true, item: result.rows && result.rows[0] });
   } catch (e) {
     console.error(e);
-    if (String(e && e.code) === 'ER_DUP_ENTRY') {
+    if (e.code === '23505') {
       return res.status(409).json({ ok: false, message: 'Kode kelas sudah dipakai.' });
     }
     return res.status(500).json({ ok: false, message: 'Gagal menyimpan perubahan kelas.' });
@@ -646,7 +648,7 @@ router.post('/classes/:id/ajax-update', async (req, res) => {
 
 router.delete('/classes/:id', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM classes WHERE id=:id;`, { id: req.params.id });
+    await pool.query(`DELETE FROM classes WHERE id=$1`, [req.params.id]);
     req.flash('success', 'Kelas dihapus.');
   } catch (e) {
     console.error(e);
@@ -680,38 +682,38 @@ router.post('/classes/bulk-delete', async (req, res) => {
     return res.redirect('/admin/classes');
   }
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let deleted = 0;
   
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete related data
-    await conn.query(`UPDATE users SET class_id = NULL WHERE class_id IN (${placeholders});`, validIds);
-    await conn.query(`DELETE FROM exam_classes WHERE class_id IN (${placeholders});`, validIds);
+    await client.query(`UPDATE users SET class_id = NULL WHERE class_id IN (${placeholders})`, validIds);
+    await client.query(`DELETE FROM exam_classes WHERE class_id IN (${placeholders})`, validIds);
     
     // Try to delete from material_classes if table exists
     try {
-      await conn.query(`DELETE FROM material_classes WHERE class_id IN (${placeholders});`, validIds);
+      await client.query(`DELETE FROM material_classes WHERE class_id IN (${placeholders})`, validIds);
     } catch (err) {
       // Table might not exist, skip silently
       console.log('material_classes table not found, skipping...');
     }
     
     // Delete classes
-    const [result] = await conn.query(`DELETE FROM classes WHERE id IN (${placeholders});`, validIds);
-    deleted = result.affectedRows || 0;
+    const result = await client.query(`DELETE FROM classes WHERE id IN (${placeholders})`, validIds);
+    deleted = result.rowCount || 0;
     
-    await conn.commit();
+    await client.query('COMMIT');
     req.flash('success', `Berhasil menghapus ${deleted} kelas dan data terkait.`);
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error(e);
     req.flash('error', 'Gagal menghapus kelas. Terjadi kesalahan pada database.');
   } finally {
-    conn.release();
+    client.release();
   }
   
   res.redirect('/admin/classes');
@@ -725,22 +727,24 @@ router.get('/subjects', async (req, res) => {
   const search = req.query.search || '';
 
   let whereClause = '';
-  let queryParams = {};
+  let queryParams = [];
   
   if (search) {
-    whereClause = 'WHERE code LIKE :search OR name LIKE :search';
-    queryParams.search = `%${search}%`;
+    queryParams.push(`%${search}%`);
+    whereClause = `WHERE code ILIKE $${queryParams.length} OR name ILIKE $${queryParams.length}`;
   }
 
-  const [[{ total }]] = await pool.query(
+  const subjectCountResult = await pool.query(
     `SELECT COUNT(*) as total FROM subjects ${whereClause}`,
     queryParams
   );
+  const total = subjectCountResult.rows[0].total;
 
-  const [subjects] = await pool.query(
-    `SELECT * FROM subjects ${whereClause} ORDER BY id DESC LIMIT :limit OFFSET :offset;`,
-    { ...queryParams, limit, offset }
+  const subjectsResult = await pool.query(
+    `SELECT * FROM subjects ${whereClause} ORDER BY id DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
+    [...queryParams, limit, offset]
   );
+  const subjects = subjectsResult.rows;
 
   const totalPages = Math.ceil(total / limit);
 
@@ -863,30 +867,28 @@ router.post('/subjects/import/commit', async (req, res) => {
     return res.redirect('/admin/subjects/import');
   }
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let inserted = 0;
   let updated = 0;
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     for (const it of items) {
-      await conn.query(
-        `INSERT INTO subjects (code, name)
-         VALUES (:code,:name)
-         ON CONFLICT (code) DO UPDATE SET
-           name=EXCLUDED.name;`,
-        { code: it.code, name: it.name }
+      await client.query(
+        `INSERT INTO subjects (code, name) VALUES ($1,$2)
+         ON CONFLICT (code) DO UPDATE SET name=EXCLUDED.name`,
+        [it.code, it.name]
       );
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;
     }
-    await conn.commit();
+    await client.query('COMMIT');
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error(e);
     req.flash('error', 'Gagal commit import mapel. Coba ulangi / pecah file.');
     return res.redirect('/admin/subjects/import');
   } finally {
-    conn.release();
+    client.release();
   }
 
   req.session.subjectImportPreview = null;
@@ -897,7 +899,7 @@ router.post('/subjects/import/commit', async (req, res) => {
 router.post('/subjects', async (req, res) => {
   const { code, name } = req.body;
   try {
-    await pool.query(`INSERT INTO subjects (code, name) VALUES (:code,:name);`, { code, name });
+    await pool.query(`INSERT INTO subjects (code, name) VALUES ($1,$2)`, [code, name]);
     req.flash('success', 'Mapel ditambahkan.');
   } catch (e) {
     console.error(e);
@@ -909,11 +911,7 @@ router.post('/subjects', async (req, res) => {
 router.post('/subjects/:id/update', async (req, res) => {
   const { code, name } = req.body;
   try {
-    await pool.query(`UPDATE subjects SET code=:code, name=:name WHERE id=:id;`, {
-      id: req.params.id,
-      code,
-      name
-    });
+    await pool.query(`UPDATE subjects SET code=$1, name=$2 WHERE id=$3`, [code, name, req.params.id]);
     req.flash('success', 'Mapel diperbarui.');
   } catch (e) {
     console.error(e);
@@ -925,10 +923,8 @@ router.post('/subjects/:id/update', async (req, res) => {
 // JSON endpoint untuk modal edit mapel (AJAX)
 router.get('/subjects/:id/json', async (req, res) => {
   try {
-    const [rows] = await pool.query(`SELECT id, code, name FROM subjects WHERE id=:id LIMIT 1;`, {
-      id: req.params.id
-    });
-    const item = rows && rows[0];
+    const result = await pool.query(`SELECT id, code, name FROM subjects WHERE id=$1 LIMIT 1`, [req.params.id]);
+    const item = result.rows && result.rows[0];
     if (!item) return res.status(404).json({ ok: false, message: 'Mapel tidak ditemukan.' });
     return res.json({ ok: true, item });
   } catch (e) {
@@ -941,16 +937,16 @@ router.get('/subjects/:id/json', async (req, res) => {
 router.post('/subjects/:id/ajax-update', async (req, res) => {
   const { code, name } = req.body || {};
   try {
-    await pool.query(`UPDATE subjects SET code=:code, name=:name WHERE id=:id;`, {
-      id: req.params.id,
-      code: String(code || '').trim(),
-      name: String(name || '').trim()
-    });
-    const [rows] = await pool.query(`SELECT id, code, name FROM subjects WHERE id=:id LIMIT 1;`, { id: req.params.id });
-    return res.json({ ok: true, item: rows && rows[0] });
+    await pool.query(`UPDATE subjects SET code=$1, name=$2 WHERE id=$3`, [
+      String(code || '').trim(),
+      String(name || '').trim(),
+      req.params.id
+    ]);
+    const result = await pool.query(`SELECT id, code, name FROM subjects WHERE id=$1 LIMIT 1`, [req.params.id]);
+    return res.json({ ok: true, item: result.rows && result.rows[0] });
   } catch (e) {
     console.error(e);
-    if (String(e && e.code) === 'ER_DUP_ENTRY') {
+    if (e.code === '23505') {
       return res.status(409).json({ ok: false, message: 'Kode mapel sudah dipakai.' });
     }
     return res.status(500).json({ ok: false, message: 'Gagal menyimpan perubahan mapel.' });
@@ -1004,8 +1000,8 @@ router.post('/teachers', async (req, res) => {
     const password_hash = await bcrypt.hash(password || '123456', 10);
     await pool.query(
       `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active)
-       VALUES (:username,:full_name,'TEACHER',NULL,:password_hash,true);`,
-      { username, full_name, password_hash }
+       VALUES ($1,$2,'TEACHER',NULL,$3,true)`,
+      [username, full_name, password_hash]
     );
     req.flash('success', 'Guru ditambahkan.');
   } catch (e) {
@@ -1018,24 +1014,20 @@ router.post('/teachers', async (req, res) => {
 router.post('/teachers/:id/update', async (req, res) => {
   const { username, full_name, is_active, password } = req.body;
   try {
-    const setPassword = String(password || '').trim() ? 1 : 0;
-    const password_hash = await bcrypt.hash(String(password || '123456').trim() || '123456', 10);
-    await pool.query(
-      `UPDATE users
-       SET username=:username,
-           full_name=:full_name,
-           is_active=:is_active,
-           password_hash=IF(:setPassword=1, :password_hash, password_hash)
-       WHERE id=:id AND role='TEACHER';`,
-      {
-        id: req.params.id,
-        username,
-        full_name,
-        is_active: Boolean(Number(is_active)),
-        setPassword,
-        password_hash
-      }
-    );
+    const plain = String(password || '').trim();
+    if (plain) {
+      const password_hash = await bcrypt.hash(plain, 10);
+      await pool.query(
+        `UPDATE users SET username=$1, full_name=$2, is_active=$3, password_hash=$4, plain_password=$5
+         WHERE id=$6 AND role='TEACHER'`,
+        [username, full_name, Boolean(Number(is_active)), password_hash, plain, req.params.id]
+      );
+    } else {
+      await pool.query(
+        `UPDATE users SET username=$1, full_name=$2, is_active=$3 WHERE id=$4 AND role='TEACHER'`,
+        [username, full_name, Boolean(Number(is_active)), req.params.id]
+      );
+    }
     req.flash('success', 'Data guru diperbarui.');
   } catch (e) {
     console.error(e);
@@ -1047,14 +1039,11 @@ router.post('/teachers/:id/update', async (req, res) => {
 // JSON endpoint untuk modal edit guru (AJAX)
 router.get('/teachers/:id/json', async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      `SELECT id, username, full_name, is_active
-       FROM users
-       WHERE id=:id AND role='TEACHER'
-       LIMIT 1;`,
-      { id: req.params.id }
+    const result = await pool.query(
+      `SELECT id, username, full_name, is_active FROM users WHERE id=$1 AND role='TEACHER' LIMIT 1`,
+      [req.params.id]
     );
-    const item = rows && rows[0];
+    const item = result.rows && result.rows[0];
     if (!item) return res.status(404).json({ ok: false, message: 'Guru tidak ditemukan.' });
     return res.json({ ok: true, item });
   } catch (e) {
@@ -1067,41 +1056,34 @@ router.get('/teachers/:id/json', async (req, res) => {
 router.post('/teachers/:id/ajax-update', async (req, res) => {
   const { username, full_name, is_active, new_password } = req.body || {};
   try {
-    const setPassword = new_password && String(new_password).trim().length > 0 ? 1 : 0;
-    const plainPwd = setPassword ? String(new_password).trim() : null;
-    const password_hash = setPassword ? await bcrypt.hash(plainPwd, 10) : null;
+    const plainPwd = new_password && String(new_password).trim().length > 0 ? String(new_password).trim() : null;
 
-    await pool.query(
-      `UPDATE users
-       SET username=:username,
-           full_name=:full_name,
-           is_active=:is_active,
-           password_hash=CASE WHEN :setPassword=1 THEN :password_hash ELSE password_hash END,
-           plain_password=CASE WHEN :setPassword=1 THEN :plain_password ELSE plain_password END
-       WHERE id=:id AND role='TEACHER';`,
-      {
-        id: req.params.id,
-        username: String(username || '').trim(),
-        full_name: String(full_name || '').trim(),
-        is_active: String(is_active) === '1' || is_active === true,
-        setPassword,
-        password_hash,
-        plain_password: plainPwd
-      }
+    if (plainPwd) {
+      const password_hash = await bcrypt.hash(plainPwd, 10);
+      await pool.query(
+        `UPDATE users SET username=$1, full_name=$2, is_active=$3, password_hash=$4, plain_password=$5
+         WHERE id=$6 AND role='TEACHER'`,
+        [String(username || '').trim(), String(full_name || '').trim(),
+         String(is_active) === '1' || is_active === true,
+         password_hash, plainPwd, req.params.id]
+      );
+    } else {
+      await pool.query(
+        `UPDATE users SET username=$1, full_name=$2, is_active=$3 WHERE id=$4 AND role='TEACHER'`,
+        [String(username || '').trim(), String(full_name || '').trim(),
+         String(is_active) === '1' || is_active === true,
+         req.params.id]
+      );
+    }
+
+    const result = await pool.query(
+      `SELECT id, username, full_name, is_active FROM users WHERE id=$1 AND role='TEACHER' LIMIT 1`,
+      [req.params.id]
     );
-
-    const [rows] = await pool.query(
-      `SELECT id, username, full_name, is_active
-       FROM users
-       WHERE id=:id AND role='TEACHER'
-       LIMIT 1;`,
-      { id: req.params.id }
-    );
-
-    return res.json({ ok: true, item: rows && rows[0] });
+    return res.json({ ok: true, item: result.rows && result.rows[0] });
   } catch (e) {
     console.error(e);
-    if (String(e && e.code) === 'ER_DUP_ENTRY') {
+    if (e.code === '23505') {
       return res.status(409).json({ ok: false, message: 'Username sudah dipakai pengguna lain.' });
     }
     return res.status(500).json({ ok: false, message: 'Gagal menyimpan perubahan guru.' });
@@ -1113,8 +1095,8 @@ router.post('/teachers/:id/reset', async (req, res) => {
     const plain = String(req.body.new_password || '123456').trim();
     const password_hash = await bcrypt.hash(plain, 10);
     await pool.query(
-      `UPDATE users SET password_hash=:ph, plain_password=:plain WHERE id=:id AND role='TEACHER';`,
-      { ph: password_hash, plain, id: req.params.id }
+      `UPDATE users SET password_hash=$1, plain_password=$2 WHERE id=$3 AND role='TEACHER'`,
+      [password_hash, plain, req.params.id]
     );
     req.flash('success', 'Password guru direset.');
   } catch (e) {
@@ -1126,10 +1108,11 @@ router.post('/teachers/:id/reset', async (req, res) => {
 
 router.post('/teachers/:id/toggle', async (req, res) => {
   try {
-    const [[user]] = await pool.query(
-      `UPDATE users SET is_active = NOT is_active WHERE id=:id AND role='TEACHER' RETURNING id, is_active;`,
-      { id: req.params.id }
+    const result = await pool.query(
+      `UPDATE users SET is_active = NOT is_active WHERE id=$1 AND role='TEACHER' RETURNING id, is_active`,
+      [req.params.id]
     );
+    const user = result.rows && result.rows[0];
     return res.json({ success: true, is_active: user.is_active });
   } catch (e) {
     console.error(e);
@@ -1139,7 +1122,7 @@ router.post('/teachers/:id/toggle', async (req, res) => {
 
 router.delete('/teachers/:id', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM users WHERE id=:id AND role='TEACHER';`, { id: req.params.id });
+    await pool.query(`DELETE FROM users WHERE id=$1 AND role='TEACHER'`, [req.params.id]);
     req.flash('success', 'Guru dihapus.');
   } catch (e) {
     console.error(e);
@@ -1150,7 +1133,7 @@ router.delete('/teachers/:id', async (req, res) => {
 
 router.post('/teachers/:id/delete', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM users WHERE id=:id AND role='TEACHER';`, { id: req.params.id });
+    await pool.query(`DELETE FROM users WHERE id=$1 AND role='TEACHER'`, [req.params.id]);
     req.flash('success', 'Guru berhasil dihapus.');
   } catch (e) {
     console.error(e);
@@ -1245,47 +1228,41 @@ router.post('/teachers/import/commit', async (req, res) => {
     return res.redirect('/admin/teachers/import');
   }
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let inserted = 0;
   let updated = 0;
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     for (const it of items) {
       const pwd = String(it.password || '').trim();
-      const setPassword = pwd ? 1 : 0;
       const plainPwd = pwd || it.username;
-      const password_hash = await bcrypt.hash(plainPwd, 10); // default = username
+      const password_hash = await bcrypt.hash(plainPwd, 10);
+      const setPassword = pwd ? true : false;
 
-      await conn.query(
+      await client.query(
         `INSERT INTO users (username, full_name, role, class_id, password_hash, plain_password, is_active)
-         VALUES (:username,:full_name,'TEACHER',NULL,:password_hash,:plain_password,true)
+         VALUES ($1,$2,'TEACHER',NULL,$3,$4,true)
          ON CONFLICT (username) DO UPDATE SET
            full_name=EXCLUDED.full_name,
            role='TEACHER',
            class_id=NULL,
            is_active=true,
-           password_hash=CASE WHEN :setPassword=1 THEN EXCLUDED.password_hash ELSE users.password_hash END,
-           plain_password=CASE WHEN :setPassword=1 THEN EXCLUDED.plain_password ELSE users.plain_password END;`,
-        {
-          username: it.username,
-          full_name: it.full_name,
-          password_hash,
-          plain_password: plainPwd,
-          setPassword
-        }
+           password_hash=CASE WHEN $5 THEN EXCLUDED.password_hash ELSE users.password_hash END,
+           plain_password=CASE WHEN $5 THEN EXCLUDED.plain_password ELSE users.plain_password END`,
+        [it.username, it.full_name, password_hash, plainPwd, setPassword]
       );
 
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;
     }
-    await conn.commit();
+    await client.query('COMMIT');
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error(e);
     req.flash('error', 'Gagal commit import guru. Coba ulangi / pecah file.');
     return res.redirect('/admin/teachers/import');
   } finally {
-    conn.release();
+    client.release();
   }
 
   req.session.teacherImportPreview = null;
@@ -1295,7 +1272,7 @@ router.post('/teachers/import/commit', async (req, res) => {
 
 router.delete('/subjects/:id', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM subjects WHERE id=:id;`, { id: req.params.id });
+    await pool.query(`DELETE FROM subjects WHERE id=$1`, [req.params.id]);
     req.flash('success', 'Mapel dihapus.');
   } catch (e) {
     console.error(e);
@@ -1329,31 +1306,31 @@ router.post('/subjects/bulk-delete', async (req, res) => {
     return res.redirect('/admin/subjects');
   }
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let deleted = 0;
   
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     
-    const placeholders = validIds.map(() => '?').join(',');
+    const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete related data
-    await conn.query(`DELETE FROM exams WHERE subject_id IN (${placeholders});`, validIds);
-    await conn.query(`DELETE FROM materials WHERE subject_id IN (${placeholders});`, validIds);
-    await conn.query(`DELETE FROM question_bank WHERE subject_id IN (${placeholders});`, validIds);
+    await client.query(`DELETE FROM exams WHERE subject_id IN (${placeholders})`, validIds);
+    await client.query(`DELETE FROM materials WHERE subject_id IN (${placeholders})`, validIds);
+    await client.query(`DELETE FROM question_bank WHERE subject_id IN (${placeholders})`, validIds);
     
     // Delete subjects
-    const [result] = await conn.query(`DELETE FROM subjects WHERE id IN (${placeholders});`, validIds);
-    deleted = result.affectedRows || 0;
+    const result = await client.query(`DELETE FROM subjects WHERE id IN (${placeholders})`, validIds);
+    deleted = result.rowCount || 0;
     
-    await conn.commit();
+    await client.query('COMMIT');
     req.flash('success', `Berhasil menghapus ${deleted} mata pelajaran dan data terkait.`);
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error(e);
     req.flash('error', 'Gagal menghapus mata pelajaran. Terjadi kesalahan pada database.');
   } finally {
-    conn.release();
+    client.release();
   }
   
   res.redirect('/admin/subjects');
@@ -1371,48 +1348,50 @@ router.get('/users', async (req, res) => {
 
   const [classes] = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
   
-  // Build WHERE clause
+  // Build WHERE clause - PostgreSQL style
   let whereConditions = [];
-  let queryParams = {};
+  let queryParams = [];
   
   if (search) {
-    whereConditions.push('(u.username LIKE :search OR u.full_name LIKE :search)');
-    queryParams.search = `%${search}%`;
+    queryParams.push(`%${search}%`);
+    whereConditions.push(`(u.username ILIKE $${queryParams.length} OR u.full_name ILIKE $${queryParams.length})`);
   }
   
   if (roleFilter) {
-    whereConditions.push('u.role = :role');
-    queryParams.role = roleFilter;
+    queryParams.push(roleFilter);
+    whereConditions.push(`u.role = $${queryParams.length}`);
   }
   
   if (classFilter) {
-    whereConditions.push('u.class_id = :classId');
-    queryParams.classId = parseInt(classFilter);
+    queryParams.push(parseInt(classFilter));
+    whereConditions.push(`u.class_id = $${queryParams.length}`);
   }
   
   if (statusFilter) {
-    whereConditions.push('u.is_active = :status');
-    queryParams.status = statusFilter === 'active' ? 1 : 0;
+    queryParams.push(statusFilter === 'active');
+    whereConditions.push(`u.is_active = $${queryParams.length}`);
   }
   
   const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
   
   // Get total count
-  const [[{ total }]] = await pool.query(
+  const userCountResult = await pool.query(
     `SELECT COUNT(*) as total FROM users u ${whereClause}`,
     queryParams
   );
+  const total = userCountResult.rows[0].total;
   
   // Get paginated users
-  const [users] = await pool.query(
+  const usersResult = await pool.query(
     `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.class_id, c.name AS class_name
      FROM users u
      LEFT JOIN classes c ON c.id=u.class_id
      ${whereClause}
      ORDER BY u.id DESC
-     LIMIT :limit OFFSET :offset;`,
-    { ...queryParams, limit, offset }
+     LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
+    [...queryParams, limit, offset]
   );
+  const users = usersResult.rows;
   
   const totalPages = Math.ceil(total / limit);
   
@@ -1501,7 +1480,7 @@ router.get('/users/print-cards', async (req, res) => {
     const { ids, role, class_id } = req.query;
     
     let query = 'SELECT u.id, u.username, u.full_name, u.role, u.nomor_peserta, u.profile_photo, u.plain_password, c.name AS class_name FROM users u LEFT JOIN classes c ON c.id = u.class_id WHERE 1=1';
-    const params = {};
+    const params = [];
     
     if (ids) {
       const idArray = [...new Set(ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)))];
@@ -1511,18 +1490,19 @@ router.get('/users/print-cards', async (req, res) => {
     }
     
     if (role && ['TEACHER', 'STUDENT'].includes(role)) {
-      query += ' AND u.role = :role';
-      params.role = role;
+      params.push(role);
+      query += ` AND u.role = $${params.length}`;
     }
     
     if (class_id) {
-      query += ' AND u.class_id = :class_id';
-      params.class_id = class_id;
+      params.push(class_id);
+      query += ` AND u.class_id = $${params.length}`;
     }
     
-    query += ' ORDER BY u.full_name ASC;';
+    query += ' ORDER BY u.full_name ASC';
     
-    const [users] = await pool.query(query, params);
+    const printResult = await pool.query(query, params);
+    const users = printResult.rows;
     
     if (users.length === 0) {
       req.flash('error', 'Tidak ada pengguna yang dipilih untuk dicetak.');
@@ -1563,12 +1543,12 @@ router.get('/users/print-cards', async (req, res) => {
 // JSON endpoint untuk modal edit (AJAX)
 router.get('/users/:id/json', async (req, res) => {
   try {
-    const [rows] = await pool.query(
+    const result = await pool.query(
       `SELECT id, username, full_name, role, class_id, is_active, nomor_peserta
-       FROM users WHERE id=:id LIMIT 1;`,
-      { id: req.params.id }
+       FROM users WHERE id=$1 LIMIT 1`,
+      [req.params.id]
     );
-    const user = rows && rows[0];
+    const user = result.rows && result.rows[0];
     if (!user) return res.status(404).json({ ok: false, message: 'Pengguna tidak ditemukan.' });
     return res.json({ ok: true, user });
   } catch (e) {
@@ -1581,39 +1561,34 @@ router.get('/users/:id/json', async (req, res) => {
 router.post('/users/:id/ajax-update', async (req, res) => {
   const { username, full_name, role, class_id, is_active, new_password, nomor_peserta } = req.body || {};
   try {
-    const setPassword = new_password && String(new_password).trim().length > 0 ? 1 : 0;
-    const password_hash = setPassword ? await bcrypt.hash(String(new_password).trim(), 10) : null;
+    const plainPwd = new_password && String(new_password).trim().length > 0 ? String(new_password).trim() : null;
     const noPeserta = String(nomor_peserta || '').trim() || null;
 
-    await pool.query(
-      `UPDATE users
-       SET username=:username,
-           full_name=:full_name,
-           role=:role,
-           class_id=:class_id,
-           is_active=:is_active,
-           nomor_peserta=:nomor_peserta,
-           password_hash=CASE WHEN :setPassword=1 THEN :password_hash ELSE password_hash END
-       WHERE id=:id;`,
-      {
-        id: req.params.id,
-        username: String(username || '').trim(),
-        full_name: String(full_name || '').trim(),
-        role: String(role || 'STUDENT').trim(),
-        class_id: class_id ? Number(class_id) : null,
-        is_active: String(is_active) === '1' || is_active === true,
-        nomor_peserta: noPeserta,
-        setPassword,
-        password_hash
-      }
-    );
+    if (plainPwd) {
+      const password_hash = await bcrypt.hash(plainPwd, 10);
+      await pool.query(
+        `UPDATE users SET username=$1, full_name=$2, role=$3, class_id=$4, is_active=$5,
+         nomor_peserta=$6, password_hash=$7, plain_password=$8 WHERE id=$9`,
+        [String(username||'').trim(), String(full_name||'').trim(), String(role||'STUDENT').trim(),
+         class_id ? Number(class_id) : null, String(is_active)==='1'||is_active===true,
+         noPeserta, password_hash, plainPwd, req.params.id]
+      );
+    } else {
+      await pool.query(
+        `UPDATE users SET username=$1, full_name=$2, role=$3, class_id=$4, is_active=$5,
+         nomor_peserta=$6 WHERE id=$7`,
+        [String(username||'').trim(), String(full_name||'').trim(), String(role||'STUDENT').trim(),
+         class_id ? Number(class_id) : null, String(is_active)==='1'||is_active===true,
+         noPeserta, req.params.id]
+      );
+    }
 
-    const [rows] = await pool.query(
+    const result = await pool.query(
       `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.class_id, u.nomor_peserta, c.name AS class_name
-       FROM users u LEFT JOIN classes c ON c.id=u.class_id WHERE u.id=:id LIMIT 1;`,
-      { id: req.params.id }
+       FROM users u LEFT JOIN classes c ON c.id=u.class_id WHERE u.id=$1 LIMIT 1`,
+      [req.params.id]
     );
-    return res.json({ ok: true, user: rows && rows[0] });
+    return res.json({ ok: true, user: result.rows && result.rows[0] });
   } catch (e) {
     console.error(e);
     if (e.code === '23505') {
@@ -1626,13 +1601,13 @@ router.post('/users/:id/ajax-update', async (req, res) => {
 // ===== EDIT PENGGUNA (terutama siswa) =====
 router.get('/users/:id/edit', async (req, res) => {
   try {
-    const [classes] = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
-    const [rows] = await pool.query(
-      `SELECT id, username, full_name, role, class_id, is_active, nomor_peserta
-       FROM users WHERE id=:id LIMIT 1;`,
-      { id: req.params.id }
+    const classResult = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC`);
+    const classes = classResult.rows;
+    const userResult = await pool.query(
+      `SELECT id, username, full_name, role, class_id, is_active, nomor_peserta FROM users WHERE id=$1 LIMIT 1`,
+      [req.params.id]
     );
-    const user = rows && rows[0];
+    const user = userResult.rows && userResult.rows[0];
     if (!user) {
       req.flash('error', 'Pengguna tidak ditemukan.');
       return res.redirect('/admin/users');
@@ -1648,35 +1623,27 @@ router.get('/users/:id/edit', async (req, res) => {
 router.post('/users/:id/edit', async (req, res) => {
   const { username, full_name, role, class_id, is_active, new_password, nomor_peserta } = req.body;
   try {
-    const setPassword = new_password && String(new_password).trim().length > 0 ? 1 : 0;
-    const password_hash = setPassword ? await bcrypt.hash(String(new_password).trim(), 10) : null;
+    const plainPwd = new_password && String(new_password).trim().length > 0 ? String(new_password).trim() : null;
     const noPeserta = String(nomor_peserta || '').trim() || null;
-    const plainPwd = setPassword ? String(new_password).trim() : null;
 
-    await pool.query(
-      `UPDATE users
-       SET username=:username,
-           full_name=:full_name,
-           role=:role,
-           class_id=:class_id,
-           is_active=:is_active,
-           nomor_peserta=:nomor_peserta,
-           plain_password=CASE WHEN :setPassword=1 THEN :plain_password ELSE plain_password END,
-           password_hash=CASE WHEN :setPassword=1 THEN :password_hash ELSE password_hash END
-       WHERE id=:id;`,
-      {
-        id: req.params.id,
-        username: String(username || '').trim(),
-        full_name: String(full_name || '').trim(),
-        role: String(role || 'STUDENT').trim(),
-        class_id: class_id ? Number(class_id) : null,
-        is_active: String(is_active) === '1',
-        nomor_peserta: noPeserta,
-        plain_password: plainPwd,
-        setPassword,
-        password_hash
-      }
-    );
+    if (plainPwd) {
+      const password_hash = await bcrypt.hash(plainPwd, 10);
+      await pool.query(
+        `UPDATE users SET username=$1, full_name=$2, role=$3, class_id=$4, is_active=$5,
+         nomor_peserta=$6, plain_password=$7, password_hash=$8 WHERE id=$9`,
+        [String(username||'').trim(), String(full_name||'').trim(), String(role||'STUDENT').trim(),
+         class_id ? Number(class_id) : null, String(is_active)==='1',
+         noPeserta, plainPwd, password_hash, req.params.id]
+      );
+    } else {
+      await pool.query(
+        `UPDATE users SET username=$1, full_name=$2, role=$3, class_id=$4, is_active=$5,
+         nomor_peserta=$6 WHERE id=$7`,
+        [String(username||'').trim(), String(full_name||'').trim(), String(role||'STUDENT').trim(),
+         class_id ? Number(class_id) : null, String(is_active)==='1',
+         noPeserta, req.params.id]
+      );
+    }
 
     req.flash('success', 'Pengguna berhasil diperbarui.');
     return res.redirect('/admin/users');
@@ -1812,12 +1779,12 @@ router.post('/users/import/commit', async (req, res) => {
     })
   );
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let inserted = 0;
   let updated = 0;
 
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
 
     // Bulk insert menggunakan unnest — 1 query untuk semua baris (sangat cepat)
     const usernames  = prepared.map(it => it.username);
@@ -1827,8 +1794,7 @@ router.post('/users/import/commit', async (req, res) => {
     const nomorList  = prepared.map(it => it.nomor_peserta || null);
     const plainPwds  = prepared.map(it => it.plainPwd);
 
-    // rawQuery: bypass converter, langsung PostgreSQL native
-    await conn.rawQuery(
+    await client.query(
       `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active, nomor_peserta, plain_password)
        SELECT u, fn, 'STUDENT', ci::int, ph, true, np, pp
        FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[])
@@ -1849,14 +1815,14 @@ router.post('/users/import/commit', async (req, res) => {
       else inserted += 1;
     }
 
-    await conn.commit();
+    await client.query('COMMIT');
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error(e);
     req.flash('error', 'Gagal commit import. Coba ulangi atau pecah file menjadi lebih kecil.');
     return res.redirect('/admin/users/import');
   } finally {
-    conn.release();
+    client.release();
   }
 
   // clear session preview
@@ -1868,12 +1834,13 @@ router.post('/users/import/commit', async (req, res) => {
 router.post('/users', async (req, res) => {
   const { username, full_name, role, class_id, password, nomor_peserta } = req.body;
   try {
-    const password_hash = await bcrypt.hash(password || username, 10);
+    const plain = String(password || username).trim();
+    const password_hash = await bcrypt.hash(plain, 10);
     const noPeserta = String(nomor_peserta || '').trim() || null;
     await pool.query(
       `INSERT INTO users (username, full_name, role, class_id, password_hash, nomor_peserta, plain_password)
-       VALUES (:username,:full_name,:role,:class_id,:password_hash,:nomor_peserta,:plain_password);`,
-      { username, full_name, role, class_id: class_id || null, password_hash, nomor_peserta: noPeserta, plain_password: String(password || username).trim() }
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [username, full_name, role, class_id || null, password_hash, noPeserta, plain]
     );
     req.flash('success', 'Pengguna ditambahkan.');
   } catch (e) {
@@ -1888,8 +1855,8 @@ router.post('/users/:id/reset', async (req, res) => {
     const plain = String(req.body.new_password || '123456').trim();
     const password_hash = await bcrypt.hash(plain, 10);
     await pool.query(
-      `UPDATE users SET password_hash=:ph, plain_password=:plain WHERE id=:id;`,
-      { ph: password_hash, plain, id: req.params.id }
+      `UPDATE users SET password_hash=$1, plain_password=$2 WHERE id=$3`,
+      [password_hash, plain, req.params.id]
     );
     req.flash('success', 'Password direset.');
   } catch (e) {
@@ -1901,10 +1868,11 @@ router.post('/users/:id/reset', async (req, res) => {
 
 router.post('/users/:id/toggle', async (req, res) => {
   try {
-    const [[user]] = await pool.query(
-      `UPDATE users SET is_active = NOT is_active WHERE id=:id RETURNING id, is_active;`,
-      { id: req.params.id }
+    const result = await pool.query(
+      `UPDATE users SET is_active = NOT is_active WHERE id=$1 RETURNING id, is_active`,
+      [req.params.id]
     );
+    const user = result.rows && result.rows[0];
     return res.json({ success: true, is_active: user.is_active });
   } catch (e) {
     console.error(e);
@@ -1914,7 +1882,7 @@ router.post('/users/:id/toggle', async (req, res) => {
 
 router.post('/users/:id/delete', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM users WHERE id=:id;`, { id: req.params.id });
+    await pool.query(`DELETE FROM users WHERE id=$1`, [req.params.id]);
     req.flash('success', 'Pengguna berhasil dihapus.');
   } catch (e) {
     console.error(e);
@@ -1925,7 +1893,7 @@ router.post('/users/:id/delete', async (req, res) => {
 
 router.delete('/users/:id', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM users WHERE id=:id;`, { id: req.params.id });
+    await pool.query(`DELETE FROM users WHERE id=$1`, [req.params.id]);
     req.flash('success', 'Pengguna berhasil dihapus.');
   } catch (e) {
     console.error(e);
@@ -1957,46 +1925,46 @@ router.post('/users/bulk-delete', async (req, res) => {
   }
 
   const ph = validIds.map((_, i) => `$${i+1}`).join(',');
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
 
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
 
     // Hapus data terkait - pakai nama kolom yang benar sesuai schema
     // attempts & attempt_answers sudah CASCADE dari FK
     // Hapus manual yang tidak CASCADE
-    await conn.query(`DELETE FROM material_reads WHERE student_id IN (${ph})`, validIds);
-    await conn.query(`DELETE FROM notification_reads WHERE user_id IN (${ph})`, validIds);
-    await conn.query(`DELETE FROM assignment_submissions WHERE student_id IN (${ph})`, validIds);
-    await conn.query(`DELETE FROM live_class_participants WHERE student_id IN (${ph})`, validIds);
-    await conn.query(`DELETE FROM device_tokens WHERE user_id IN (${ph})`, validIds);
+    await client.query(`DELETE FROM material_reads WHERE student_id IN (${ph})`, validIds);
+    await client.query(`DELETE FROM notification_reads WHERE user_id IN (${ph})`, validIds);
+    await client.query(`DELETE FROM assignment_submissions WHERE student_id IN (${ph})`, validIds);
+    await client.query(`DELETE FROM live_class_participants WHERE student_id IN (${ph})`, validIds);
+    await client.query(`DELETE FROM device_tokens WHERE user_id IN (${ph})`, validIds);
 
     // Hapus attempt_answers dulu (FK ke attempts)
-    await conn.query(`
+    await client.query(`
       DELETE FROM attempt_answers WHERE attempt_id IN (
         SELECT id FROM attempts WHERE student_id IN (${ph})
       )`, validIds);
-    await conn.query(`
+    await client.query(`
       DELETE FROM attempt_violations WHERE attempt_id IN (
         SELECT id FROM attempts WHERE student_id IN (${ph})
       )`, validIds);
-    await conn.query(`DELETE FROM attempts WHERE student_id IN (${ph})`, validIds);
+    await client.query(`DELETE FROM attempts WHERE student_id IN (${ph})`, validIds);
 
     // Hapus submission_backups
-    await conn.query(`DELETE FROM submission_backups WHERE student_id IN (${ph})`, validIds);
+    await client.query(`DELETE FROM submission_backups WHERE student_id IN (${ph})`, validIds);
 
     // Hapus users
-    const [result] = await conn.query(`DELETE FROM users WHERE id IN (${ph})`, validIds);
-    const deleted = result.affectedRows || 0;
+    const result = await client.query(`DELETE FROM users WHERE id IN (${ph})`, validIds);
+    const deleted = result.rowCount || 0;
 
-    await conn.commit();
+    await client.query('COMMIT');
     req.flash('success', `Berhasil menghapus ${deleted} pengguna.`);
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error('Bulk delete error:', e.message);
     req.flash('error', `Gagal menghapus: ${e.message}`);
   } finally {
-    conn.release();
+    client.release();
   }
 
   res.redirect('/admin/users');
@@ -2038,8 +2006,8 @@ router.post('/users/bulk-reset-password', async (req, res) => {
       for (const u of users) {
         const pwd = password_type === 'username' ? u.username : newPassword;
         const hash = await bcrypt.hash(pwd, 10);
-        await pool.query(`UPDATE users SET password_hash=:h, plain_password=:p WHERE id=:id`,
-          { h: hash, p: pwd, id: u.id });
+        await pool.query(`UPDATE users SET password_hash=$1, plain_password=$2 WHERE id=$3`,
+          [hash, pwd, u.id]);
         updated++;
       }
       req.flash('success', `Password ${updated} pengguna berhasil direset.`);
@@ -2047,18 +2015,20 @@ router.post('/users/bulk-reset-password', async (req, res) => {
     }
 
     // Reset berdasarkan filter role/kelas
-    if (role_filter) { query += ` AND role=:role`; params.role = role_filter; }
-    if (class_filter) { query += ` AND class_id=:class_id`; params.class_id = class_filter; }
+    const filterParams = [];
+    if (role_filter) { query += ` AND role=$${filterParams.length+1}`; filterParams.push(role_filter); }
+    if (class_filter) { query += ` AND class_id=$${filterParams.length+1}`; filterParams.push(class_filter); }
 
-    const [users] = await pool.query(query, params);
+    const filterResult = await pool.query(query, filterParams);
+    const users = filterResult.rows;
     if (!users.length) { req.flash('error', 'Tidak ada pengguna yang sesuai filter.'); return res.redirect('/admin/users'); }
 
     let updated = 0;
     for (const u of users) {
       const pwd = password_type === 'username' ? u.username : newPassword;
       const hash = await bcrypt.hash(pwd, 10);
-      await pool.query(`UPDATE users SET password_hash=:h, plain_password=:p WHERE id=:id`,
-        { h: hash, p: pwd, id: u.id });
+      await pool.query(`UPDATE users SET password_hash=$1, plain_password=$2 WHERE id=$3`,
+        [hash, pwd, u.id]);
       updated++;
     }
 
@@ -2151,8 +2121,8 @@ router.post('/users/import-password/commit', async (req, res) => {
     try {
       const hash = await bcrypt.hash(it.password, 10);
       await pool.query(
-        `UPDATE users SET password_hash=:h, plain_password=:p WHERE username=:u`,
-        { h: hash, p: it.password, u: it.username }
+        `UPDATE users SET password_hash=$1, plain_password=$2 WHERE username=$3`,
+        [hash, it.password, it.username]
       );
       updated++;
     } catch(e) {
@@ -2207,12 +2177,12 @@ router.post('/users/bulk-move-class', async (req, res) => {
     
     // Get class name for confirmation message
     try {
-      const [classRows] = await pool.query(`SELECT name FROM classes WHERE id = :id LIMIT 1;`, { id: targetClassId });
-      if (classRows.length === 0) {
+      const classResult = await pool.query(`SELECT name FROM classes WHERE id = $1 LIMIT 1`, [targetClassId]);
+      if (classResult.rows.length === 0) {
         req.flash('error', 'Kelas tujuan tidak ditemukan.');
         return res.redirect('/admin/users');
       }
-      targetClassName = classRows[0].name;
+      targetClassName = classResult.rows[0].name;
     } catch (e) {
       console.error(e);
       req.flash('error', 'Gagal memvalidasi kelas tujuan.');
@@ -2220,29 +2190,29 @@ router.post('/users/bulk-move-class', async (req, res) => {
     }
   }
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let updated = 0;
   
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     
-    const placeholders = validIds.map(() => '?').join(',');
+    const placeholders = validIds.map((_, i) => `$${i + 2}`).join(',');
     
     // Update users' class_id
-    const [result] = await conn.query(
-      `UPDATE users SET class_id = ? WHERE id IN (${placeholders});`, 
+    const result = await client.query(
+      `UPDATE users SET class_id = $1 WHERE id IN (${placeholders})`, 
       [targetClassId, ...validIds]
     );
-    updated = result.affectedRows || 0;
+    updated = result.rowCount || 0;
     
-    await conn.commit();
+    await client.query('COMMIT');
     req.flash('success', `Berhasil memindahkan ${updated} pengguna ke kelas "${targetClassName}".`);
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error('Bulk move class error:', e);
     req.flash('error', `Gagal memindahkan pengguna ke kelas. Error: ${e.message}`);
   } finally {
-    conn.release();
+    client.release();
   }
   
   res.redirect('/admin/users');
@@ -2264,29 +2234,28 @@ router.get('/exams', async (req, res) => {
   const [teachers] = await pool.query(`SELECT id, username, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
   const [classes] = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
 
-  // Build WHERE clause
+  // Build WHERE clause - PostgreSQL style
   let whereConditions = [];
-  let queryParams = {};
+  let queryParams = [];
 
   if (search) {
-    whereConditions.push('(e.title LIKE :search OR e.description LIKE :search)');
-    queryParams.search = `%${search}%`;
+    queryParams.push(`%${search}%`);
+    whereConditions.push(`(e.title ILIKE $${queryParams.length} OR e.description ILIKE $${queryParams.length})`);
   }
 
   if (subjectFilter) {
-    whereConditions.push('e.subject_id = :subjectId');
-    queryParams.subjectId = subjectFilter;
+    queryParams.push(subjectFilter);
+    whereConditions.push(`e.subject_id = $${queryParams.length}`);
   }
 
   if (teacherFilter) {
-    whereConditions.push('e.teacher_id = :teacherId');
-    queryParams.teacherId = teacherFilter;
+    queryParams.push(teacherFilter);
+    whereConditions.push(`e.teacher_id = $${queryParams.length}`);
   }
 
   if (classFilter) {
-    // Cek di exam_classes (sistem baru) ATAU class_id (sistem lama)
-    whereConditions.push('(EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id AND ec.class_id=:classId) OR e.class_id=:classId)');
-    queryParams.classId = classFilter;
+    queryParams.push(classFilter);
+    whereConditions.push(`(EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id AND ec.class_id=$${queryParams.length}) OR e.class_id=$${queryParams.length})`);
   }
 
   if (statusFilter === 'published') {
@@ -2298,13 +2267,14 @@ router.get('/exams', async (req, res) => {
   const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
 
   // Get total count
-  const [[{ total }]] = await pool.query(
+  const countResult = await pool.query(
     `SELECT COUNT(*) as total FROM exams e ${whereClause}`,
     queryParams
   );
+  const total = countResult.rows[0].total;
 
   // Get paginated exams with related data
-  const [exams] = await pool.query(
+  const examsResult = await pool.query(
     `SELECT 
       e.id, e.title, e.description, e.start_at, e.end_at, 
       e.duration_minutes, e.is_published, e.created_at, e.class_id,
@@ -2331,9 +2301,10 @@ router.get('/exams', async (req, res) => {
      LEFT JOIN classes c ON c.id = e.class_id
      ${whereClause}
      ORDER BY e.created_at DESC
-     LIMIT :limit OFFSET :offset;`,
-    { ...queryParams, limit, offset }
+     LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
+    [...queryParams, limit, offset]
   );
+  const exams = examsResult.rows;
   
   // Calculate participation percentage for each exam
   exams.forEach(exam => {
@@ -2367,7 +2338,7 @@ router.get('/exams', async (req, res) => {
 // Get exam detail JSON for modal
 router.get('/exams/:id/json', async (req, res) => {
   try {
-    const [rows] = await pool.query(
+    const result = await pool.query(
       `SELECT 
         e.id, e.title, e.description, e.subject_id, e.teacher_id, e.class_id,
         e.start_at, e.end_at, e.duration_minutes, e.pass_score, 
@@ -2381,11 +2352,11 @@ router.get('/exams/:id/json', async (req, res) => {
        LEFT JOIN subjects s ON s.id = e.subject_id
        LEFT JOIN users u ON u.id = e.teacher_id
        LEFT JOIN classes c ON c.id = e.class_id
-       WHERE e.id = :id
-       LIMIT 1;`,
-      { id: req.params.id }
+       WHERE e.id = $1
+       LIMIT 1`,
+      [req.params.id]
     );
-    const exam = rows && rows[0];
+    const exam = result.rows && result.rows[0];
     if (!exam) return res.status(404).json({ ok: false, message: 'Ujian tidak ditemukan.' });
     return res.json({ ok: true, exam });
   } catch (e) {
@@ -2398,8 +2369,8 @@ router.get('/exams/:id/json', async (req, res) => {
 router.post('/exams/:id/toggle-publish', async (req, res) => {
   try {
     await pool.query(
-      `UPDATE exams SET is_published = NOT is_published WHERE id=:id;`,
-      { id: req.params.id }
+      `UPDATE exams SET is_published = NOT is_published WHERE id=$1`,
+      [req.params.id]
     );
     req.flash('success', 'Status publikasi ujian diperbarui.');
   } catch (e) {
@@ -2412,7 +2383,7 @@ router.post('/exams/:id/toggle-publish', async (req, res) => {
 // Delete exam
 router.delete('/exams/:id', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM exams WHERE id=:id;`, { id: req.params.id });
+    await pool.query(`DELETE FROM exams WHERE id=$1`, [req.params.id]);
     req.flash('success', 'Ujian berhasil dihapus.');
   } catch (e) {
     console.error(e);
@@ -2453,39 +2424,32 @@ router.post('/exams', async (req, res) => {
   } = req.body;
 
   try {
-    const [result] = await pool.query(
+    const result = await pool.query(
       `INSERT INTO exams
         (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published, max_questions)
-       VALUES
-        (:subject_id,:teacher_id,:title,:description,NULL,:start_at,:end_at,:duration_minutes,:pass_score,:max_attempts,:shuffle_questions,:shuffle_options,:access_code,:show_score_to_student,:show_review_to_student,:is_published,:max_questions);`,
-      {
-        subject_id, teacher_id, title,
-        description: description || null,
-        start_at: start_at || null, end_at: end_at || null,
-        duration_minutes: Number(duration_minutes || 60),
-        pass_score: Number(pass_score || 75),
-        max_attempts: Number(max_attempts || 1),
-        shuffle_questions: shuffle_questions ? true : false,
-        shuffle_options: shuffle_options ? true : false,
-        access_code: access_code || null,
-        show_score_to_student: show_score_to_student ? true : false,
-        show_review_to_student: show_review_to_student ? true : false,
-        is_published: false,
-        max_questions: max_questions ? Number(max_questions) : null
-      }
+       VALUES ($1,$2,$3,$4,NULL,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,false,$15)
+       RETURNING id`,
+      [
+        subject_id, teacher_id, title, description || null,
+        start_at || null, end_at || null,
+        Number(duration_minutes || 60), Number(pass_score || 75), Number(max_attempts || 1),
+        shuffle_questions ? true : false, shuffle_options ? true : false,
+        access_code || null,
+        show_score_to_student ? true : false, show_review_to_student ? true : false,
+        max_questions ? Number(max_questions) : null
+      ]
     );
 
-    const examId = result.insertId;
+    const examId = result.rows[0].id;
 
     // Insert exam_classes if class_ids provided
     if (class_ids && class_ids.length > 0) {
       const classIdsArray = Array.isArray(class_ids) ? class_ids : [class_ids];
-      
       for (const classId of classIdsArray) {
         if (classId) {
           await pool.query(
-            `INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`,
-            { exam_id: examId, class_id: classId }
+            `INSERT INTO exam_classes (exam_id, class_id) VALUES ($1, $2)`,
+            [examId, classId]
           );
         }
       }
@@ -2506,10 +2470,8 @@ router.get('/exams/:id/edit', async (req, res) => {
 
   try {
     // Get exam data
-    const [[exam]] = await pool.query(
-      `SELECT * FROM exams WHERE id=:id LIMIT 1;`,
-      { id: examId }
-    );
+    const examResult = await pool.query(`SELECT * FROM exams WHERE id=$1 LIMIT 1`, [examId]);
+    const exam = examResult.rows && examResult.rows[0];
 
     if (!exam) {
       req.flash('error', 'Ujian tidak ditemukan.');
@@ -2517,22 +2479,21 @@ router.get('/exams/:id/edit', async (req, res) => {
     }
 
     // Get exam classes
-    const [examClasses] = await pool.query(
-      `SELECT class_id FROM exam_classes WHERE exam_id = :exam_id`,
-      { exam_id: examId }
+    const examClassesResult = await pool.query(
+      `SELECT class_id FROM exam_classes WHERE exam_id = $1`, [examId]
     );
-    exam.selected_classes = examClasses.map(ec => ec.class_id);
+    exam.selected_classes = examClassesResult.rows.map(ec => ec.class_id);
 
-    const [subjects] = await pool.query(`SELECT * FROM subjects ORDER BY name ASC;`);
-    const [teachers] = await pool.query(`SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC;`);
-    const [classes] = await pool.query(`SELECT * FROM classes ORDER BY name ASC;`);
+    const subjectsResult = await pool.query(`SELECT * FROM subjects ORDER BY name ASC`);
+    const teachersResult = await pool.query(`SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC`);
+    const classesResult  = await pool.query(`SELECT * FROM classes ORDER BY name ASC`);
 
     res.render('admin/exam_edit', { 
       title: `Edit Ujian: ${exam.title}`, 
       exam, 
-      subjects, 
-      teachers, 
-      classes 
+      subjects: subjectsResult.rows, 
+      teachers: teachersResult.rows, 
+      classes:  classesResult.rows
     });
   } catch (error) {
     console.error(error);
@@ -2554,40 +2515,35 @@ router.put('/exams/:id', async (req, res) => {
   try {
     await pool.query(
       `UPDATE exams SET
-        subject_id=:subject_id, teacher_id=:teacher_id, title=:title, description=:description,
-        start_at=:start_at, end_at=:end_at, duration_minutes=:duration_minutes,
-        pass_score=:pass_score, max_attempts=:max_attempts,
-        shuffle_questions=:shuffle_questions, shuffle_options=:shuffle_options,
-        access_code=:access_code, show_score_to_student=:show_score_to_student,
-        show_review_to_student=:show_review_to_student, max_questions=:max_questions
-       WHERE id=:id;`,
-      {
-        id: examId, subject_id, teacher_id, title,
-        description: description || null,
-        start_at: start_at || null, end_at: end_at || null,
-        duration_minutes: Number(duration_minutes || 60),
-        pass_score: Number(pass_score || 75),
-        max_attempts: Number(max_attempts || 1),
-        shuffle_questions: shuffle_questions ? true : false,
-        shuffle_options: shuffle_options ? true : false,
-        access_code: access_code || null,
-        show_score_to_student: show_score_to_student ? true : false,
-        show_review_to_student: show_review_to_student ? true : false,
-        max_questions: max_questions ? Number(max_questions) : null
-      }
+        subject_id=$1, teacher_id=$2, title=$3, description=$4,
+        start_at=$5, end_at=$6, duration_minutes=$7,
+        pass_score=$8, max_attempts=$9,
+        shuffle_questions=$10, shuffle_options=$11,
+        access_code=$12, show_score_to_student=$13,
+        show_review_to_student=$14, max_questions=$15
+       WHERE id=$16`,
+      [
+        subject_id, teacher_id, title, description || null,
+        start_at || null, end_at || null,
+        Number(duration_minutes || 60), Number(pass_score || 75), Number(max_attempts || 1),
+        shuffle_questions ? true : false, shuffle_options ? true : false,
+        access_code || null,
+        show_score_to_student ? true : false, show_review_to_student ? true : false,
+        max_questions ? Number(max_questions) : null,
+        examId
+      ]
     );
 
     // Update exam_classes
-    await pool.query(`DELETE FROM exam_classes WHERE exam_id=:exam_id;`, { exam_id: examId });
+    await pool.query(`DELETE FROM exam_classes WHERE exam_id=$1`, [examId]);
 
     if (class_ids && class_ids.length > 0) {
       const classIdsArray = Array.isArray(class_ids) ? class_ids : [class_ids];
-      
       for (const classId of classIdsArray) {
         if (classId) {
           await pool.query(
-            `INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`,
-            { exam_id: examId, class_id: classId }
+            `INSERT INTO exam_classes (exam_id, class_id) VALUES ($1, $2)`,
+            [examId, classId]
           );
         }
       }
@@ -2607,15 +2563,15 @@ router.get('/exams/:id', async (req, res) => {
   const examId = req.params.id;
 
   try {
-    const [[exam]] = await pool.query(
+    const examResult = await pool.query(
       `SELECT e.*, s.name AS subject_name, u.full_name AS teacher_name
        FROM exams e
        LEFT JOIN subjects s ON s.id = e.subject_id
        LEFT JOIN users u ON u.id = e.teacher_id
-       WHERE e.id = :id
-       LIMIT 1;`,
-      { id: examId }
+       WHERE e.id = $1 LIMIT 1`,
+      [examId]
     );
+    const exam = examResult.rows && examResult.rows[0];
 
     if (!exam) {
       req.flash('error', 'Ujian tidak ditemukan.');
@@ -2623,70 +2579,62 @@ router.get('/exams/:id', async (req, res) => {
     }
 
     // Get questions
-    const [questions] = await pool.query(
+    const questionsResult = await pool.query(
       `SELECT q.*, 
               (SELECT COUNT(*) FROM options WHERE question_id = q.id) as option_count
        FROM questions q 
-       WHERE q.exam_id = :exam_id 
+       WHERE q.exam_id = $1 
        ORDER BY q.id ASC`,
-      { exam_id: examId }
+      [examId]
     );
+    const questions = questionsResult.rows;
 
     // Get exam classes
-    const [examClasses] = await pool.query(
+    const examClassesResult = await pool.query(
       `SELECT c.name 
        FROM exam_classes ec
        JOIN classes c ON c.id = ec.class_id
-       WHERE ec.exam_id = :exam_id
+       WHERE ec.exam_id = $1
        ORDER BY c.name`,
-      { exam_id: examId }
+      [examId]
     );
-    exam.class_names = examClasses.map(ec => ec.name).join(', ') || 'Semua Kelas';
+    exam.class_names = examClassesResult.rows.map(ec => ec.name).join(', ') || 'Semua Kelas';
 
-    // Get participation statistics (same logic as teacher)
-    const [examClassesCount] = await pool.query(
-      `SELECT COUNT(*) as count FROM exam_classes WHERE exam_id = :exam_id`,
-      { exam_id: examId }
+    // Get participation statistics
+    const examClassesCountResult = await pool.query(
+      `SELECT COUNT(*) as count FROM exam_classes WHERE exam_id = $1`, [examId]
     );
-    
+    const examClassesCount = examClassesCountResult.rows[0].count;
+
     let totalStudentsQuery;
-    let queryParams = { exam_id: examId };
+    let queryParams;
     
-    if (examClassesCount[0].count > 0) {
+    if (Number(examClassesCount) > 0) {
       totalStudentsQuery = `
         SELECT COUNT(DISTINCT u.id) as total 
         FROM users u
         INNER JOIN exam_classes ec ON ec.class_id = u.class_id
-        WHERE u.role = 'STUDENT' 
-        AND u.is_active = true 
-        AND ec.exam_id = :exam_id
+        WHERE u.role = 'STUDENT' AND u.is_active = true AND ec.exam_id = $1
       `;
+      queryParams = [examId];
     } else if (exam.class_id) {
       totalStudentsQuery = `
-        SELECT COUNT(*) as total 
-        FROM users 
-        WHERE role = 'STUDENT' 
-        AND is_active = true 
-        AND class_id = :class_id
+        SELECT COUNT(*) as total FROM users 
+        WHERE role = 'STUDENT' AND is_active = true AND class_id = $1
       `;
-      queryParams.class_id = exam.class_id;
+      queryParams = [exam.class_id];
     } else {
-      totalStudentsQuery = `
-        SELECT COUNT(*) as total 
-        FROM users 
-        WHERE role = 'STUDENT' 
-        AND is_active = true
-      `;
+      totalStudentsQuery = `SELECT COUNT(*) as total FROM users WHERE role = 'STUDENT' AND is_active = true`;
+      queryParams = [];
     }
     
-    const [[totalStudentsResult]] = await pool.query(totalStudentsQuery, queryParams);
-    const [[completedResult]] = await pool.query(
-      `SELECT COUNT(DISTINCT student_id) as completed FROM attempts WHERE exam_id = :exam_id`,
-      { exam_id: examId }
+    const totalResult    = await pool.query(totalStudentsQuery, queryParams);
+    const completedResult = await pool.query(
+      `SELECT COUNT(DISTINCT student_id) as completed FROM attempts WHERE exam_id = $1`, [examId]
     );
     
-    exam.completed_count = completedResult.completed || 0;
-    exam.total_students = totalStudentsResult.total || 0;
+    exam.completed_count = completedResult.rows[0].completed || 0;
+    exam.total_students = totalResult.rows[0].total || 0;
     exam.not_completed_count = exam.total_students - exam.completed_count;
     exam.completed_percentage = exam.total_students > 0 ? Math.round((exam.completed_count / exam.total_students) * 100) : 0;
     exam.not_completed_percentage = 100 - exam.completed_percentage;
@@ -2742,31 +2690,31 @@ router.post('/exams/bulk-delete', async (req, res) => {
     return res.redirect('/admin/exams');
   }
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let deleted = 0;
   
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     
-    const placeholders = validIds.map(() => '?').join(',');
+    const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete related data
-    await conn.query(`DELETE FROM attempts WHERE exam_id IN (${placeholders});`, validIds);
-    await conn.query(`DELETE FROM questions WHERE exam_id IN (${placeholders});`, validIds);
-    await conn.query(`DELETE FROM exam_classes WHERE exam_id IN (${placeholders});`, validIds);
+    await client.query(`DELETE FROM attempts WHERE exam_id IN (${placeholders})`, validIds);
+    await client.query(`DELETE FROM questions WHERE exam_id IN (${placeholders})`, validIds);
+    await client.query(`DELETE FROM exam_classes WHERE exam_id IN (${placeholders})`, validIds);
     
     // Delete exams
-    const [result] = await conn.query(`DELETE FROM exams WHERE id IN (${placeholders});`, validIds);
-    deleted = result.affectedRows || 0;
+    const result = await client.query(`DELETE FROM exams WHERE id IN (${placeholders})`, validIds);
+    deleted = result.rowCount || 0;
     
-    await conn.commit();
+    await client.query('COMMIT');
     req.flash('success', `Berhasil menghapus ${deleted} ujian dan data terkait.`);
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error(e);
     req.flash('error', 'Gagal menghapus ujian. Terjadi kesalahan pada database.');
   } finally {
-    conn.release();
+    client.release();
   }
   
   res.redirect('/admin/exams');
@@ -2789,28 +2737,28 @@ router.get('/materials', async (req, res) => {
   const [teachers] = await pool.query(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
   const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC;`);
 
-  // Build WHERE clause
+  // Build WHERE clause - PostgreSQL style
   let whereConditions = [];
-  let queryParams = {};
+  let queryParams = [];
   
   if (search) {
-    whereConditions.push('(m.title LIKE :search OR m.description LIKE :search)');
-    queryParams.search = `%${search}%`;
+    queryParams.push(`%${search}%`);
+    whereConditions.push(`(m.title ILIKE $${queryParams.length} OR m.description ILIKE $${queryParams.length})`);
   }
   
   if (subjectFilter) {
-    whereConditions.push('m.subject_id = :subjectId');
-    queryParams.subjectId = parseInt(subjectFilter);
+    queryParams.push(parseInt(subjectFilter));
+    whereConditions.push(`m.subject_id = $${queryParams.length}`);
   }
   
   if (teacherFilter) {
-    whereConditions.push('m.teacher_id = :teacherId');
-    queryParams.teacherId = parseInt(teacherFilter);
+    queryParams.push(parseInt(teacherFilter));
+    whereConditions.push(`m.teacher_id = $${queryParams.length}`);
   }
   
   if (classFilter) {
-    whereConditions.push('m.class_id = :classId');
-    queryParams.classId = parseInt(classFilter);
+    queryParams.push(parseInt(classFilter));
+    whereConditions.push(`m.class_id = $${queryParams.length}`);
   }
   
   if (statusFilter === 'published') {
@@ -2822,13 +2770,14 @@ router.get('/materials', async (req, res) => {
   const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
   
   // Get total count
-  const [[{ total }]] = await pool.query(
+  const matCountResult = await pool.query(
     `SELECT COUNT(*) as total FROM materials m ${whereClause}`,
     queryParams
   );
+  const total = matCountResult.rows[0].total;
   
   // Get paginated materials
-  const [materials] = await pool.query(
+  const materialsResult = await pool.query(
     `SELECT 
       m.id, m.title, m.description, m.embed_type, m.embed_url, m.is_published, m.created_at,
       s.code AS subject_code, s.name AS subject_name,
@@ -2843,9 +2792,10 @@ router.get('/materials', async (req, res) => {
      LEFT JOIN classes c ON c.id = m.class_id
      ${whereClause}
      ORDER BY m.created_at DESC
-     LIMIT :limit OFFSET :offset;`,
-    { ...queryParams, limit, offset }
+     LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
+    [...queryParams, limit, offset]
   );
+  const materials = materialsResult.rows;
   
   // Calculate read percentage for each material
   materials.forEach(m => {
@@ -2879,7 +2829,7 @@ router.get('/materials', async (req, res) => {
 // Get material detail JSON for modal
 router.get('/materials/:id/json', async (req, res) => {
   try {
-    const [rows] = await pool.query(
+    const result = await pool.query(
       `SELECT 
         m.id, m.title, m.description, m.content_html, m.embed_type, m.embed_url,
         m.subject_id, m.teacher_id, m.class_id, m.is_published,
@@ -2893,11 +2843,11 @@ router.get('/materials/:id/json', async (req, res) => {
        LEFT JOIN subjects s ON s.id = m.subject_id
        LEFT JOIN users u ON u.id = m.teacher_id
        LEFT JOIN classes c ON c.id = m.class_id
-       WHERE m.id = :id
-       LIMIT 1;`,
-      { id: req.params.id }
+       WHERE m.id = $1
+       LIMIT 1`,
+      [req.params.id]
     );
-    const material = rows && rows[0];
+    const material = result.rows && result.rows[0];
     if (!material) return res.status(404).json({ ok: false, message: 'Materi tidak ditemukan.' });
     return res.json({ ok: true, material });
   } catch (e) {
@@ -2910,8 +2860,8 @@ router.get('/materials/:id/json', async (req, res) => {
 router.post('/materials/:id/toggle-publish', async (req, res) => {
   try {
     await pool.query(
-      `UPDATE materials SET is_published = NOT is_published WHERE id=:id;`,
-      { id: req.params.id }
+      `UPDATE materials SET is_published = NOT is_published WHERE id=$1`,
+      [req.params.id]
     );
     req.flash('success', 'Status publikasi materi diperbarui.');
   } catch (e) {
@@ -2924,7 +2874,7 @@ router.post('/materials/:id/toggle-publish', async (req, res) => {
 // Delete material
 router.delete('/materials/:id', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM materials WHERE id=:id;`, { id: req.params.id });
+    await pool.query(`DELETE FROM materials WHERE id=$1`, [req.params.id]);
     req.flash('success', 'Materi berhasil dihapus.');
   } catch (e) {
     console.error(e);
@@ -2958,37 +2908,36 @@ router.post('/materials/bulk-delete', async (req, res) => {
     return res.redirect('/admin/materials');
   }
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let deleted = 0;
   
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     
-    const placeholders = validIds.map(() => '?').join(',');
+    const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete related data
-    await conn.query(`DELETE FROM material_reads WHERE material_id IN (${placeholders});`, validIds);
+    await client.query(`DELETE FROM material_reads WHERE material_id IN (${placeholders})`, validIds);
     
     // Try to delete from material_classes if table exists
     try {
-      await conn.query(`DELETE FROM material_classes WHERE material_id IN (${placeholders});`, validIds);
+      await client.query(`DELETE FROM material_classes WHERE material_id IN (${placeholders})`, validIds);
     } catch (err) {
-      // Table might not exist, skip silently
       console.log('material_classes table not found, skipping...');
     }
     
     // Delete materials
-    const [result] = await conn.query(`DELETE FROM materials WHERE id IN (${placeholders});`, validIds);
-    deleted = result.affectedRows || 0;
+    const result = await client.query(`DELETE FROM materials WHERE id IN (${placeholders})`, validIds);
+    deleted = result.rowCount || 0;
     
-    await conn.commit();
+    await client.query('COMMIT');
     req.flash('success', `Berhasil menghapus ${deleted} materi dan data terkait.`);
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error(e);
     req.flash('error', 'Gagal menghapus materi. Terjadi kesalahan pada database.');
   } finally {
-    conn.release();
+    client.release();
   }
   
   res.redirect('/admin/materials');
@@ -3023,14 +2972,14 @@ router.get('/violations/locked', async (req, res) => {
 router.post('/violations/unlock/:attemptId', async (req, res) => {
   const { attemptId } = req.params;
   try {
-    const [[attempt]] = await pool.query(
-      `SELECT id FROM attempts WHERE id=:aid AND is_locked=true LIMIT 1;`,
-      { aid: attemptId }
+    const result = await pool.query(
+      `SELECT id FROM attempts WHERE id=$1 AND is_locked=true LIMIT 1`,
+      [attemptId]
     );
-    if (!attempt) return res.json({ ok: false, message: 'Attempt tidak ditemukan.' });
+    if (!result.rows[0]) return res.json({ ok: false, message: 'Attempt tidak ditemukan.' });
     await pool.query(
-      `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1 WHERE id=:aid;`,
-      { aid: attemptId }
+      `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1 WHERE id=$1`,
+      [attemptId]
     );
     return res.json({ ok: true });
   } catch(e) {
@@ -3077,23 +3026,23 @@ router.get('/grades', async (req, res) => {
   const [teachers] = await pool.query(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
 
   const where = ['1=1'];
-  const params = {};
+  const params = [];
 
   if (exam_id) {
-    where.push('e.id=:exam_id');
-    params.exam_id = exam_id;
+    params.push(exam_id);
+    where.push(`e.id=$${params.length}`);
   }
   if (class_id) {
-    where.push('u.class_id=:class_id');
-    params.class_id = class_id;
+    params.push(class_id);
+    where.push(`u.class_id=$${params.length}`);
   }
   if (teacher_id) {
-    where.push('e.teacher_id=:teacher_id');
-    params.teacher_id = teacher_id;
+    params.push(teacher_id);
+    where.push(`e.teacher_id=$${params.length}`);
   }
   if (status) {
-    where.push('a.status=:status');
-    params.status = status;
+    params.push(status);
+    where.push(`a.status=$${params.length}`);
   }
   if (result && result === 'LULUS') {
     where.push("a.status='SUBMITTED' AND a.score >= e.pass_score");
@@ -3102,24 +3051,25 @@ router.get('/grades', async (req, res) => {
     where.push("a.status='SUBMITTED' AND a.score < e.pass_score");
   }
   if (q) {
-    where.push('(u.full_name LIKE :q OR u.username LIKE :q OR e.title LIKE :q)');
-    params.q = '%' + q + '%';
+    params.push('%' + q + '%');
+    where.push(`(u.full_name ILIKE $${params.length} OR u.username ILIKE $${params.length} OR e.title ILIKE $${params.length})`);
   }
 
   // Count total
-  const [[{ total }]] = await pool.query(
+  const countResult = await pool.query(
     `SELECT COUNT(*) AS total
      FROM attempts a
      JOIN exams e ON e.id=a.exam_id
      JOIN users u ON u.id=a.student_id
      LEFT JOIN classes c ON c.id=u.class_id
      LEFT JOIN users t ON t.id=e.teacher_id
-     WHERE ${where.join(' AND ')};`,
+     WHERE ${where.join(' AND ')}`,
     params
   );
+  const total = countResult.rows[0].total;
 
   // Get paginated data
-  const [rows] = await pool.query(
+  const rowsResult = await pool.query(
     `SELECT a.id, a.score, a.status, a.started_at, a.finished_at,
             e.id AS exam_id, e.title AS exam_title, e.pass_score,
             u.full_name AS student_name, u.username,
@@ -3132,9 +3082,10 @@ router.get('/grades', async (req, res) => {
      LEFT JOIN users t ON t.id=e.teacher_id
      WHERE ${where.join(' AND ')}
      ORDER BY a.id DESC
-     LIMIT :limit OFFSET :offset;`,
-    { ...params, limit, offset }
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
   );
+  const rows = rowsResult.rows;
 
   const rows2 = rows.map((r) => ({
     ...r,
@@ -3161,7 +3112,7 @@ router.get('/grades', async (req, res) => {
 router.get('/attempts/:id/detail', async (req, res) => {
   const attemptId = req.params.id;
   try {
-    const [[attempt]] = await pool.query(
+    const attemptResult = await pool.query(
       `SELECT a.*, e.title AS exam_title, e.pass_score, e.id AS exam_id,
               u.full_name AS student_name, u.username,
               s.name AS subject_name, t.full_name AS teacher_name,
@@ -3172,30 +3123,32 @@ router.get('/attempts/:id/detail', async (req, res) => {
        JOIN subjects s ON s.id=e.subject_id
        JOIN users t ON t.id=e.teacher_id
        LEFT JOIN classes c ON c.id=u.class_id
-       WHERE a.id=:id LIMIT 1;`,
-      { id: attemptId }
+       WHERE a.id=$1 LIMIT 1`,
+      [attemptId]
     );
+    const attempt = attemptResult.rows && attemptResult.rows[0];
     if (!attempt) { req.flash('error','Attempt tidak ditemukan.'); return res.redirect('/admin/grades'); }
 
     // Ambil jawaban + opsi
-    const [ans] = await pool.query(
+    const ansResult = await pool.query(
       `SELECT aa.question_id, aa.option_id AS chosen_option_id, aa.is_correct,
               q.question_text, q.question_image, q.points
        FROM attempt_answers aa
        JOIN questions q ON q.id=aa.question_id
-       WHERE aa.attempt_id=:aid ORDER BY aa.id ASC;`,
-      { aid: attemptId }
+       WHERE aa.attempt_id=$1 ORDER BY aa.id ASC`,
+      [attemptId]
     );
+    const ans = ansResult.rows;
 
     const qids = ans.map(a => a.question_id);
     let optionsMap = {};
     if (qids.length) {
       const ph = qids.map((_,i) => `$${i+1}`).join(',');
-      const [opts] = await pool.query(
-        `SELECT id, question_id, option_label, option_text, is_correct FROM options WHERE question_id IN (${ph}) ORDER BY question_id ASC, option_label ASC;`,
+      const optsResult = await pool.query(
+        `SELECT id, question_id, option_label, option_text, is_correct FROM options WHERE question_id IN (${ph}) ORDER BY question_id ASC, option_label ASC`,
         qids
       );
-      for (const o of opts) {
+      for (const o of optsResult.rows) {
         if (!optionsMap[o.question_id]) optionsMap[o.question_id] = [];
         optionsMap[o.question_id].push(o);
       }
@@ -3210,11 +3163,11 @@ router.get('/attempts/:id/detail', async (req, res) => {
     // Log pelanggaran anti-cheat
     let violations = [];
     try {
-      const [vrows] = await pool.query(
-        `SELECT violation_type, details, created_at FROM attempt_violations WHERE attempt_id=:aid ORDER BY id ASC LIMIT 300;`,
-        { aid: attemptId }
+      const vResult = await pool.query(
+        `SELECT violation_type, details, created_at FROM attempt_violations WHERE attempt_id=$1 ORDER BY id ASC LIMIT 300`,
+        [attemptId]
       );
-      violations = vrows || [];
+      violations = vResult.rows || [];
     } catch(_) {}
 
     res.render('admin/attempt_detail', {
@@ -3272,48 +3225,49 @@ router.post('/attempts/bulk-reset', async (req, res) => {
     return res.redirect('/admin/grades');
   }
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let deleted = 0;
   
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     
     // Get attempt details for logging
-    const placeholders = validIds.map(() => '?').join(',');
-    const [attempts] = await conn.query(
+    const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
+    const attemptsResult = await client.query(
       `SELECT a.id, e.title AS exam_title, u.full_name AS student_name
        FROM attempts a
        JOIN exams e ON e.id=a.exam_id
        JOIN users u ON u.id=a.student_id
-       WHERE a.id IN (${placeholders});`,
+       WHERE a.id IN (${placeholders})`,
       validIds
     );
+    const attempts = attemptsResult.rows;
     
     console.log('Found attempts:', attempts.length, 'Expected:', validIds.length);
     
     if (attempts.length === 0) {
-      await conn.rollback();
+      await client.query('ROLLBACK');
       req.flash('error', 'Tidak ada attempt yang ditemukan.');
       return res.redirect('/admin/grades');
     }
     
     // Delete attempts (attempt_answers will be deleted automatically via CASCADE)
-    const [result] = await conn.query(
-      `DELETE FROM attempts WHERE id IN (${placeholders});`,
+    const result = await client.query(
+      `DELETE FROM attempts WHERE id IN (${placeholders})`,
       validIds
     );
     
-    deleted = result.affectedRows || 0;
+    deleted = result.rowCount || 0;
     console.log('Deleted attempts:', deleted);
     
-    await conn.commit();
+    await client.query('COMMIT');
     req.flash('success', `Berhasil reset ${deleted} nilai siswa. Siswa dapat mengulang ujian.`);
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error('Admin bulk reset error:', e);
     req.flash('error', `Gagal reset nilai. Error: ${e.message}`);
   } finally {
-    conn.release();
+    client.release();
   }
   
   res.redirect('/admin/grades');
@@ -3324,15 +3278,15 @@ router.post('/attempts/:id/reset', async (req, res) => {
   const attemptId = req.params.id;
 
   // Get attempt details
-  const [[attempt]] = await pool.query(
+  const attemptResult = await pool.query(
     `SELECT a.id, a.exam_id, e.title AS exam_title, u.full_name AS student_name
      FROM attempts a
      JOIN exams e ON e.id=a.exam_id
      JOIN users u ON u.id=a.student_id
-     WHERE a.id=:aid
-     LIMIT 1;`,
-    { aid: attemptId }
+     WHERE a.id=$1 LIMIT 1`,
+    [attemptId]
   );
+  const attempt = attemptResult.rows && attemptResult.rows[0];
 
   if (!attempt) {
     req.flash('error', 'Hasil ujian tidak ditemukan.');
@@ -3341,7 +3295,7 @@ router.post('/attempts/:id/reset', async (req, res) => {
 
   try {
     // Delete attempt (attempt_answers will be deleted automatically via CASCADE)
-    await pool.query(`DELETE FROM attempts WHERE id=:id;`, { id: attemptId });
+    await pool.query(`DELETE FROM attempts WHERE id=$1`, [attemptId]);
     req.flash(
       'success',
       `Berhasil reset nilai ${attempt.student_name} untuk ujian: ${attempt.exam_title}. Siswa dapat mengulang ujian.`
@@ -3373,22 +3327,25 @@ router.get('/assignments/monitoring', async (req, res) => {
 
   let submissions = [];
   if (assignment_id) {
-    [submissions] = await pool.query(
-      `SELECT u.id AS student_id, u.full_name AS student_name, u.username,
+    let submParams = [assignment_id];
+    let submQuery = `SELECT u.id AS student_id, u.full_name AS student_name, u.username,
               c.name AS class_name, t.full_name AS teacher_name,
               sub.id AS submission_id, sub.file_path, sub.file_name,
               sub.link_url, sub.notes, sub.submitted_at, sub.score, sub.feedback
        FROM users u
-       INNER JOIN assignment_classes ac ON ac.class_id=u.class_id AND ac.assignment_id=:aid
+       INNER JOIN assignment_classes ac ON ac.class_id=u.class_id AND ac.assignment_id=$1
        LEFT JOIN classes c ON c.id=u.class_id
-       LEFT JOIN assignments a ON a.id=:aid
+       LEFT JOIN assignments a ON a.id=$1
        LEFT JOIN users t ON t.id=a.teacher_id
-       LEFT JOIN assignment_submissions sub ON sub.assignment_id=:aid AND sub.student_id=u.id
-       WHERE u.role='STUDENT' AND u.is_active=true
-         ${class_id ? 'AND u.class_id=:cid' : ''}
-       ORDER BY c.name ASC, u.full_name ASC;`,
-      { aid: assignment_id, ...(class_id ? { cid: class_id } : {}) }
-    );
+       LEFT JOIN assignment_submissions sub ON sub.assignment_id=$1 AND sub.student_id=u.id
+       WHERE u.role='STUDENT' AND u.is_active=true`;
+    if (class_id) {
+      submParams.push(class_id);
+      submQuery += ` AND u.class_id=$${submParams.length}`;
+    }
+    submQuery += ` ORDER BY c.name ASC, u.full_name ASC`;
+    const submResult = await pool.query(submQuery, submParams);
+    submissions = submResult.rows;
   }
 
   const total = submissions.length;
@@ -3413,18 +3370,18 @@ router.get('/assignments', async (req, res) => {
     // Get subjects for filter
     const [subjects] = await pool.query(`SELECT id, name FROM subjects ORDER BY name ASC;`);
 
-    // Build WHERE clause
+    // Build WHERE clause - PostgreSQL style
     let whereConditions = ['1=1'];
-    let queryParams = {};
+    let queryParams = [];
 
     if (search) {
-      whereConditions.push(`(a.title LIKE :search OR u.full_name LIKE :search)`);
-      queryParams.search = `%${search}%`;
+      queryParams.push(`%${search}%`);
+      whereConditions.push(`(a.title ILIKE $${queryParams.length} OR u.full_name ILIKE $${queryParams.length})`);
     }
 
     if (subject_id) {
-      whereConditions.push(`a.subject_id = :subject_id`);
-      queryParams.subject_id = subject_id;
+      queryParams.push(subject_id);
+      whereConditions.push(`a.subject_id = $${queryParams.length}`);
     }
 
     if (status === 'published') {
@@ -3436,7 +3393,7 @@ router.get('/assignments', async (req, res) => {
     const whereClause = whereConditions.join(' AND ');
 
     // Get assignments
-    const [assignments] = await pool.query(
+    const assignmentsResult = await pool.query(
       `SELECT 
         a.*,
         u.full_name as teacher_name,
@@ -3449,9 +3406,10 @@ router.get('/assignments', async (req, res) => {
       JOIN subjects s ON a.subject_id = s.id
       LEFT JOIN classes c ON a.class_id = c.id
       WHERE ${whereClause}
-      ORDER BY a.created_at DESC;`,
+      ORDER BY a.created_at DESC`,
       queryParams
     );
+    const assignments = assignmentsResult.rows;
     
     // Calculate submission percentage for each assignment
     assignments.forEach(assignment => {
@@ -3459,14 +3417,15 @@ router.get('/assignments', async (req, res) => {
     });
 
     // Get stats
-    const [[statsRow]] = await pool.query(`
+    const statsResult = await pool.query(`
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN is_published = true THEN 1 ELSE 0 END) as published,
         SUM(CASE WHEN is_published = false THEN 1 ELSE 0 END) as draft,
         (SELECT COUNT(*) FROM assignment_submissions) as submissions
-      FROM assignments;
+      FROM assignments
     `);
+    const statsRow = statsResult.rows[0];
 
     const stats = {
       total: statsRow.total || 0,
@@ -3497,7 +3456,7 @@ router.get('/assignments/:id', async (req, res) => {
     const assignmentId = req.params.id;
     
     // Get assignment detail
-    const [[assignment]] = await pool.query(
+    const assignResult = await pool.query(
       `SELECT 
         a.*,
         u.full_name as teacher_name,
@@ -3508,10 +3467,10 @@ router.get('/assignments/:id', async (req, res) => {
       JOIN users u ON a.teacher_id = u.id
       JOIN subjects s ON a.subject_id = s.id
       LEFT JOIN classes c ON a.class_id = c.id
-      WHERE a.id = :id
-      LIMIT 1;`,
-      { id: assignmentId }
+      WHERE a.id = $1 LIMIT 1`,
+      [assignmentId]
     );
+    const assignment = assignResult.rows && assignResult.rows[0];
     
     if (!assignment) {
       req.flash('error', 'Tugas tidak ditemukan.');
@@ -3519,7 +3478,7 @@ router.get('/assignments/:id', async (req, res) => {
     }
     
     // Get submissions
-    const [submissions] = await pool.query(
+    const submResult = await pool.query(
       `SELECT 
         asub.*,
         u.full_name as student_name,
@@ -3528,10 +3487,11 @@ router.get('/assignments/:id', async (req, res) => {
       FROM assignment_submissions asub
       JOIN users u ON asub.student_id = u.id
       LEFT JOIN classes c ON u.class_id = c.id
-      WHERE asub.assignment_id = :id
-      ORDER BY asub.submitted_at DESC;`,
-      { id: assignmentId }
+      WHERE asub.assignment_id = $1
+      ORDER BY asub.submitted_at DESC`,
+      [assignmentId]
     );
+    const submissions = submResult.rows;
     
     // Calculate stats
     const stats = {
@@ -3561,7 +3521,7 @@ router.post('/assignments/:id/delete', async (req, res) => {
   const assignmentId = req.params.id;
   
   try {
-    await pool.query(`DELETE FROM assignments WHERE id = :id;`, { id: assignmentId });
+    await pool.query(`DELETE FROM assignments WHERE id = $1`, [assignmentId]);
     req.flash('success', 'Tugas berhasil dihapus.');
   } catch (e) {
     console.error(e);
@@ -3587,29 +3547,29 @@ router.post('/assignments/bulk-delete', async (req, res) => {
     return res.redirect('/admin/assignments');
   }
   
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let deleted = 0;
   
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     
-    const placeholders = validIds.map(() => '?').join(',');
+    const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete related data first
-    await conn.query(`DELETE FROM assignment_submissions WHERE assignment_id IN (${placeholders});`, validIds);
+    await client.query(`DELETE FROM assignment_submissions WHERE assignment_id IN (${placeholders})`, validIds);
     
     // Delete assignments
-    const [result] = await conn.query(`DELETE FROM assignments WHERE id IN (${placeholders});`, validIds);
-    deleted = result.affectedRows || 0;
+    const result = await client.query(`DELETE FROM assignments WHERE id IN (${placeholders})`, validIds);
+    deleted = result.rowCount || 0;
     
-    await conn.commit();
+    await client.query('COMMIT');
     req.flash('success', `Berhasil menghapus ${deleted} tugas dan data terkait.`);
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error(e);
     req.flash('error', 'Gagal menghapus tugas. Terjadi kesalahan pada database.');
   } finally {
-    conn.release();
+    client.release();
   }
   
   res.redirect('/admin/assignments');
@@ -3702,29 +3662,29 @@ router.get('/question-bank', async (req, res) => {
     // Get subjects for filter
     const [subjects] = await pool.query(`SELECT id, name FROM subjects ORDER BY name ASC;`);
 
-    // Build WHERE clause
+    // Build WHERE clause - PostgreSQL style
     let whereConditions = ['1=1'];
-    let queryParams = {};
+    let queryParams = [];
 
     if (search) {
-      whereConditions.push(`(qb.question_text LIKE :search OR u.full_name LIKE :search)`);
-      queryParams.search = `%${search}%`;
+      queryParams.push(`%${search}%`);
+      whereConditions.push(`(qb.question_text ILIKE $${queryParams.length} OR u.full_name ILIKE $${queryParams.length})`);
     }
 
     if (subject_id) {
-      whereConditions.push(`qb.subject_id = :subject_id`);
-      queryParams.subject_id = subject_id;
+      queryParams.push(subject_id);
+      whereConditions.push(`qb.subject_id = $${queryParams.length}`);
     }
 
     if (difficulty) {
-      whereConditions.push(`qb.difficulty = :difficulty`);
-      queryParams.difficulty = difficulty;
+      queryParams.push(difficulty);
+      whereConditions.push(`qb.difficulty = $${queryParams.length}`);
     }
 
     const whereClause = whereConditions.join(' AND ');
 
     // Get questions
-    const [questions] = await pool.query(
+    const qbResult = await pool.query(
       `SELECT 
         qb.*,
         u.full_name as teacher_name,
@@ -3733,19 +3693,21 @@ router.get('/question-bank', async (req, res) => {
       JOIN users u ON qb.teacher_id = u.id
       JOIN subjects s ON qb.subject_id = s.id
       WHERE ${whereClause}
-      ORDER BY qb.created_at DESC;`,
+      ORDER BY qb.created_at DESC`,
       queryParams
     );
+    const questions = qbResult.rows;
 
     // Get stats
-    const [[statsRow]] = await pool.query(`
+    const qbStatsResult = await pool.query(`
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN difficulty = 'EASY' THEN 1 ELSE 0 END) as easy,
         SUM(CASE WHEN difficulty = 'MEDIUM' THEN 1 ELSE 0 END) as medium,
         SUM(CASE WHEN difficulty = 'HARD' THEN 1 ELSE 0 END) as hard
-      FROM question_bank;
+      FROM question_bank
     `);
+    const statsRow = qbStatsResult.rows[0];
 
     const stats = {
       total: statsRow.total || 0,
@@ -3775,7 +3737,7 @@ router.post('/question-bank/:id/delete', async (req, res) => {
   const questionId = req.params.id;
   
   try {
-    await pool.query(`DELETE FROM question_bank WHERE id = :id;`, { id: questionId });
+    await pool.query(`DELETE FROM question_bank WHERE id = $1`, [questionId]);
     req.flash('success', 'Soal berhasil dihapus.');
   } catch (e) {
     console.error(e);
@@ -3801,26 +3763,26 @@ router.post('/question-bank/bulk-delete', async (req, res) => {
     return res.redirect('/admin/question-bank');
   }
   
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   let deleted = 0;
   
   try {
-    await conn.beginTransaction();
+    await client.query('BEGIN');
     
-    const placeholders = validIds.map(() => '?').join(',');
+    const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete question bank items
-    const [result] = await conn.query(`DELETE FROM question_bank WHERE id IN (${placeholders});`, validIds);
-    deleted = result.affectedRows || 0;
+    const result = await client.query(`DELETE FROM question_bank WHERE id IN (${placeholders})`, validIds);
+    deleted = result.rowCount || 0;
     
-    await conn.commit();
+    await client.query('COMMIT');
     req.flash('success', `Berhasil menghapus ${deleted} soal dari bank soal.`);
   } catch (e) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     console.error(e);
     req.flash('error', 'Gagal menghapus soal. Terjadi kesalahan pada database.');
   } finally {
-    conn.release();
+    client.release();
   }
   
   res.redirect('/admin/question-bank');
@@ -3892,14 +3854,15 @@ router.get('/failed-submissions', async (req, res) => {
 router.post('/failed-submissions/:id/force-submit', async (req, res) => {
   const attemptId = req.params.id;
   try {
-    const [[attempt]] = await pool.query(
+    const forceResult = await pool.query(
       `SELECT a.id, a.student_id, a.exam_id, a.status,
               e.duration_minutes,
               FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) AS minutes_elapsed
        FROM attempts a JOIN exams e ON e.id = a.exam_id
-       WHERE a.id = :aid AND a.status = 'IN_PROGRESS' LIMIT 1;`,
-      { aid: attemptId }
+       WHERE a.id = $1 AND a.status = 'IN_PROGRESS' LIMIT 1`,
+      [attemptId]
     );
+    const attempt = forceResult.rows && forceResult.rows[0];
     if (!attempt) {
       req.flash('error', 'Attempt tidak ditemukan atau sudah disubmit.');
       return res.redirect('/admin/failed-submissions');
@@ -3932,12 +3895,13 @@ router.post('/failed-submissions/:id/recover', async (req, res) => {
   const attemptId = req.params.id;
   
   try {
-    const [[attempt]] = await pool.query(`
+    const recoverResult = await pool.query(`
       SELECT a.*, sb.backup_data, sb.id as backup_id
       FROM attempts a
       LEFT JOIN submission_backups sb ON sb.attempt_id = a.id AND sb.status = 'ACTIVE'
-      WHERE a.id = :aid AND a.submission_status = 'FAILED'
-    `, { aid: attemptId });
+      WHERE a.id = $1 AND a.submission_status = 'FAILED'
+    `, [attemptId]);
+    const attempt = recoverResult.rows && recoverResult.rows[0];
 
     if (!attempt) {
       req.flash('error', 'Attempt tidak ditemukan atau bukan status FAILED.');
@@ -3952,36 +3916,31 @@ router.post('/failed-submissions/:id/recover', async (req, res) => {
     // Parse backup data
     const backupData = JSON.parse(attempt.backup_data);
     
-    const connection = await pool.getConnection();
+    const connection = await pool.connect();
     try {
-      await connection.beginTransaction();
+      await connection.query('BEGIN');
 
       // Restore answers from backup
       for (const answer of backupData.answers) {
         await connection.query(`
           UPDATE attempt_answers 
-          SET option_id = :oid, is_correct = :isc, answered_at = :at
-          WHERE attempt_id = :aid AND question_id = :qid
-        `, {
-          oid: answer.option_id,
-          isc: answer.is_correct,
-          at: answer.answered_at,
-          aid: attemptId,
-          qid: answer.question_id
-        });
+          SET option_id = $1, is_correct = $2, answered_at = $3
+          WHERE attempt_id = $4 AND question_id = $5
+        `, [answer.option_id, answer.is_correct, answer.answered_at, attemptId, answer.question_id]);
       }
 
       // Recalculate and finalize
-      const [[sum]] = await connection.query(`
+      const sumResult = await connection.query(`
         SELECT
             SUM(q.points) AS total_points,
-            SUM(CASE WHEN aa.is_correct=1 THEN q.points ELSE 0 END) AS score_points,
-            SUM(CASE WHEN aa.is_correct=1 THEN 1 ELSE 0 END) AS correct_count,
-            SUM(CASE WHEN aa.option_id IS NOT NULL AND aa.is_correct=0 THEN 1 ELSE 0 END) AS wrong_count
+            SUM(CASE WHEN aa.is_correct=true THEN q.points ELSE 0 END) AS score_points,
+            SUM(CASE WHEN aa.is_correct=true THEN 1 ELSE 0 END) AS correct_count,
+            SUM(CASE WHEN aa.option_id IS NOT NULL AND aa.is_correct=false THEN 1 ELSE 0 END) AS wrong_count
          FROM attempt_answers aa
          JOIN questions q ON q.id=aa.question_id
-         WHERE aa.attempt_id=:aid;
-      `, { aid: attemptId });
+         WHERE aa.attempt_id=$1
+      `, [attemptId]);
+      const sum = sumResult.rows[0];
 
       const total_points = Number(sum.total_points || 0);
       const score_points = Number(sum.score_points || 0);
@@ -3993,23 +3952,23 @@ router.post('/failed-submissions/:id/recover', async (req, res) => {
       await connection.query(`
         UPDATE attempts
         SET finished_at = NOW(), status = 'SUBMITTED', submission_status = 'SUBMITTED',
-            score = :score, total_points = :total_points, 
-            correct_count = :correct_count, wrong_count = :wrong_count
-        WHERE id = :aid
-      `, { score, total_points, correct_count, wrong_count, aid: attemptId });
+            score = $1, total_points = $2, 
+            correct_count = $3, wrong_count = $4
+        WHERE id = $5
+      `, [score, total_points, correct_count, wrong_count, attemptId]);
 
       // Mark backup as restored
       await connection.query(`
         UPDATE submission_backups 
         SET status = 'RESTORED', restored_at = NOW()
-        WHERE id = :bid
-      `, { bid: attempt.backup_id });
+        WHERE id = $1
+      `, [attempt.backup_id]);
 
-      await connection.commit();
+      await connection.query('COMMIT');
       
       req.flash('success', `Submission berhasil dipulihkan. Nilai: ${score}`);
     } catch (error) {
-      await connection.rollback();
+      await connection.query('ROLLBACK');
       throw error;
     } finally {
       connection.release();
@@ -4028,11 +3987,12 @@ router.post('/failed-submissions/:id/retry', async (req, res) => {
   const attemptId = req.params.id;
   
   try {
-    const [[attempt]] = await pool.query(`
+    const attemptResult = await pool.query(`
       SELECT a.student_id, a.exam_id
       FROM attempts a
-      WHERE a.id = :aid AND a.submission_status = 'FAILED'
-    `, { aid: attemptId });
+      WHERE a.id = $1 AND a.submission_status = 'FAILED'
+    `, [attemptId]);
+    const attempt = attemptResult.rows && attemptResult.rows[0];
 
     if (!attempt) {
       req.flash('error', 'Attempt tidak ditemukan atau bukan status FAILED.');
@@ -4043,8 +4003,8 @@ router.post('/failed-submissions/:id/retry', async (req, res) => {
     await pool.query(`
       UPDATE attempts 
       SET submission_status = 'PENDING'
-      WHERE id = :aid
-    `, { aid: attemptId });
+      WHERE id = $1
+    `, [attemptId]);
 
     // Try to finalize again
     await finalizeAttemptWithBackup(attemptId, attempt.student_id, attempt.exam_id);
@@ -4078,51 +4038,54 @@ router.post('/update-ranking', async (req, res) => {
     const oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
 
     // Pre-calculate and cache new ranking data
-    const [activeClasses] = await pool.query(`
+    const activeClassesRankResult = await pool.query(`
       SELECT 
         c.name as class_name,
         COUNT(DISTINCT at.id) + COUNT(DISTINCT mr.id) as activity_score
       FROM classes c
       LEFT JOIN users u ON u.class_id = c.id AND u.role = 'STUDENT'
-      LEFT JOIN attempts at ON at.student_id = u.id AND at.created_at >= :weekAgo
-      LEFT JOIN material_reads mr ON mr.student_id = u.id AND mr.created_at >= :weekAgo
+      LEFT JOIN attempts at ON at.student_id = u.id AND at.created_at >= $1
+      LEFT JOIN material_reads mr ON mr.student_id = u.id AND mr.created_at >= $1
       GROUP BY c.id, c.name
       HAVING COUNT(DISTINCT at.id) + COUNT(DISTINCT mr.id) > 0
       ORDER BY activity_score DESC
-      LIMIT 3;
-    `, { weekAgo: oneWeekAgoStr });
+      LIMIT 3
+    `, [oneWeekAgoStr]);
+    const activeClasses = activeClassesRankResult.rows;
 
-    const [activeStudents] = await pool.query(`
+    const activeStudentsRankResult = await pool.query(`
       SELECT 
         u.full_name,
         c.name as class_name,
         COUNT(DISTINCT at.id) + COUNT(DISTINCT mr.id) + COUNT(DISTINCT asub.id) as activity_score
       FROM users u
       LEFT JOIN classes c ON c.id = u.class_id
-      LEFT JOIN attempts at ON at.student_id = u.id AND at.created_at >= :weekAgo
-      LEFT JOIN material_reads mr ON mr.student_id = u.id AND mr.created_at >= :weekAgo
-      LEFT JOIN assignment_submissions asub ON asub.student_id = u.id AND asub.created_at >= :weekAgo
+      LEFT JOIN attempts at ON at.student_id = u.id AND at.created_at >= $1
+      LEFT JOIN material_reads mr ON mr.student_id = u.id AND mr.created_at >= $1
+      LEFT JOIN assignment_submissions asub ON asub.student_id = u.id AND asub.created_at >= $1
       WHERE u.role = 'STUDENT' AND u.is_active = true
       GROUP BY u.id, u.full_name, c.name
       HAVING COUNT(DISTINCT at.id) + COUNT(DISTINCT mr.id) + COUNT(DISTINCT asub.id) > 0
       ORDER BY activity_score DESC
-      LIMIT 3;
-    `, { weekAgo: oneWeekAgoStr });
+      LIMIT 3
+    `, [oneWeekAgoStr]);
+    const activeStudents = activeStudentsRankResult.rows;
 
-    const [activeTeachers] = await pool.query(`
+    const activeTeachersRankResult = await pool.query(`
       SELECT 
         u.full_name,
         COUNT(DISTINCT e.id) + COUNT(DISTINCT m.id) + COUNT(DISTINCT a.id) as activity_score
       FROM users u
-      LEFT JOIN exams e ON e.teacher_id = u.id AND e.created_at >= :weekAgo
-      LEFT JOIN materials m ON m.teacher_id = u.id AND m.created_at >= :weekAgo
-      LEFT JOIN assignments a ON a.teacher_id = u.id AND a.created_at >= :weekAgo
+      LEFT JOIN exams e ON e.teacher_id = u.id AND e.created_at >= $1
+      LEFT JOIN materials m ON m.teacher_id = u.id AND m.created_at >= $1
+      LEFT JOIN assignments a ON a.teacher_id = u.id AND a.created_at >= $1
       WHERE u.role = 'TEACHER' AND u.is_active = true
       GROUP BY u.id, u.full_name
       HAVING COUNT(DISTINCT e.id) + COUNT(DISTINCT m.id) + COUNT(DISTINCT a.id) > 0
       ORDER BY activity_score DESC
-      LIMIT 3;
-    `, { weekAgo: oneWeekAgoStr });
+      LIMIT 3
+    `, [oneWeekAgoStr]);
+    const activeTeachers = activeTeachersRankResult.rows;
 
     // Update cache in auth router
     const responseData = {
@@ -4482,15 +4445,17 @@ router.get('/agenda', async (req, res) => {
   const tahun = parseInt(req.query.tahun) || new Date().getFullYear();
   const teacher_id = req.query.teacher_id || '';
 
+  const agendaParams = [bulan, tahun];
   let q = `SELECT a.*, u.full_name AS teacher_name
            FROM agendas a JOIN users u ON u.id=a.teacher_id
-           WHERE EXTRACT(MONTH FROM a.agenda_date)=:bulan AND EXTRACT(YEAR FROM a.agenda_date)=:tahun`;
-  const params = { bulan, tahun };
-  if (teacher_id) { q += ' AND a.teacher_id=:tid'; params.tid = teacher_id; }
-  q += ' ORDER BY a.agenda_date ASC, a.start_time ASC;';
+           WHERE EXTRACT(MONTH FROM a.agenda_date)=$1 AND EXTRACT(YEAR FROM a.agenda_date)=$2`;
+  if (teacher_id) { agendaParams.push(teacher_id); q += ` AND a.teacher_id=$${agendaParams.length}`; }
+  q += ' ORDER BY a.agenda_date ASC, a.start_time ASC';
 
-  const [agendas] = await pool.query(q, params);
-  const [teachers] = await pool.query(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
+  const agendaResult = await pool.query(q, agendaParams);
+  const agendas = agendaResult.rows;
+  const teachersResult = await pool.query(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC`);
+  const teachers = teachersResult.rows;
 
   res.render('admin/agenda', { title: 'Agenda Guru', agendas, teachers, bulan, tahun, teacher_id });
 });
@@ -4506,19 +4471,21 @@ router.get('/notifications', async (req, res) => {
   try {
     // Rekap unik: GROUP BY title + sender + type + DATE(created_at)
     // Karena sistem insert 1 baris per siswa, kita deduplikasi
-    let having = 'HAVING 1=1';
-    const params = {};
+    let havingConditions = [];
+    const notifParams = [];
 
     if (q) {
-      having += ' AND (title LIKE :q OR sender_name LIKE :q OR sender_username LIKE :q)';
-      params.q = `%${q}%`;
+      notifParams.push(`%${q}%`);
+      havingConditions.push(`(u.full_name ILIKE $${notifParams.length} OR u.username ILIKE $${notifParams.length} OR n.title ILIKE $${notifParams.length})`);
     }
     if (type) {
-      having += ' AND notif_type = :type';
-      params.type = type;
+      notifParams.push(type);
+      havingConditions.push(`n.type = $${notifParams.length}`);
     }
 
-    const [notifications] = await pool.query(
+    const havingClause = havingConditions.length > 0 ? 'HAVING ' + havingConditions.join(' AND ') : '';
+
+    const notifResult = await pool.query(
       `SELECT
          MIN(n.id) AS id,
          n.title,
@@ -4542,26 +4509,26 @@ router.get('/notifications', async (req, res) => {
        LEFT JOIN notification_reads nr ON nr.notification_id = n.id
        GROUP BY n.title, n.message, n.type, n.sender_id, n.target_type, n.target_id, DATE(n.created_at),
                 u.full_name, u.username, u.role, c.name, n.is_active, n.expires_at
-       ${having}
+       ${havingClause}
        ORDER BY created_at DESC
-       LIMIT :limit OFFSET :offset`,
-      { ...params, limit, offset }
+       LIMIT $${notifParams.length + 1} OFFSET $${notifParams.length + 2}`,
+      [...notifParams, limit, offset]
     );
+    const notifications = notifResult.rows;
 
-    const [[{ total }]] = await pool.query(
+    const notifCountResult = await pool.query(
       `SELECT COUNT(*) AS total FROM (
          SELECT n.title, n.sender_id, n.type, n.target_type, n.target_id, DATE(n.created_at),
-                u.full_name AS sender_name, u.username AS sender_username
+                u.full_name, u.username
          FROM notifications n
          LEFT JOIN users u ON u.id = n.sender_id
          GROUP BY n.title, n.message, n.type, n.sender_id, n.target_type, n.target_id, DATE(n.created_at),
                   u.full_name, u.username
-         ${having.replace('sender_name', 'u.full_name').replace('sender_username', 'u.username').replace('notif_type', 'n.type')}
+         ${havingClause}
        ) sub`,
-      params
+      notifParams
     );
-
-    const totalPages = Math.ceil(total / limit);
+    const total = notifCountResult.rows[0].total;
 
     res.render('admin/notifications', {
       title: 'Pantau Notifikasi Guru',
@@ -4580,25 +4547,21 @@ router.get('/notifications', async (req, res) => {
 router.post('/notifications/:id/delete', async (req, res) => {
   try {
     // Ambil data notif dulu untuk hapus semua yang sama
-    const [[notif]] = await pool.query(
+    const notifDetailResult = await pool.query(
       `SELECT title, message, sender_id, type, target_type, target_id, DATE(created_at) AS tgl
-       FROM notifications WHERE id = :id LIMIT 1`,
-      { id: req.params.id }
+       FROM notifications WHERE id = $1 LIMIT 1`,
+      [req.params.id]
     );
+    const notif = notifDetailResult.rows && notifDetailResult.rows[0];
     if (notif) {
       await pool.query(
         `DELETE FROM notifications
-         WHERE title = :title AND message = :message
-           AND COALESCE(sender_id, 0) = COALESCE(:sender_id, 0)
-           AND type = :type AND target_type = :target_type
-           AND COALESCE(target_id, 0) = COALESCE(:target_id, 0)
-           AND DATE(created_at) = :tgl`,
-        {
-          title: notif.title, message: notif.message,
-          sender_id: notif.sender_id, type: notif.type,
-          target_type: notif.target_type, target_id: notif.target_id,
-          tgl: notif.tgl
-        }
+         WHERE title = $1 AND message = $2
+           AND COALESCE(sender_id, 0) = COALESCE($3, 0)
+           AND type = $4 AND target_type = $5
+           AND COALESCE(target_id, 0) = COALESCE($6, 0)
+           AND DATE(created_at) = $7`,
+        [notif.title, notif.message, notif.sender_id, notif.type, notif.target_type, notif.target_id, notif.tgl]
       );
     }
     req.flash('success', 'Notifikasi dihapus.');
