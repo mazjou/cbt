@@ -13,14 +13,25 @@ const router = express.Router();
 router.use(requireRole('ADMIN'));
 
 // ── Compatibility wrapper ─────────────────────────────────────────────────────
-// Banyak query di file ini masih pakai pola MySQL: const [rows] = await pq(...)
-// PostgreSQL pg mengembalikan {rows:[...]}, bukan array.
-// Fungsi pq() membungkus pool.query() agar return [rows, fields] seperti MySQL
-// sehingga semua destructuring lama tetap bekerja.
-const pq = async (sql, params) => {
-  const result = await pool.query(sql, params);
-  return [result.rows, result.fields];
+// Admin.js ditulis dengan mixed pattern MySQL + PostgreSQL.
+// Override pool.query agar return [rows, fields] SEKALIGUS simpan .rows
+// sehingga SEMUA pola bekerja:
+//   const [rows] = await pool.query(...)      → MySQL style
+//   const result = await pool.query(...)
+//   result.rows[0]                            → PostgreSQL style
+//   const { rows } = await pool.query(...)    → destructuring style
+const _originalQuery = pool.query.bind(pool);
+pool.query = async function(sql, params) {
+  const result = await _originalQuery(sql, params);
+  // Jadikan result sekaligus array-like [rows, fields] DAN tetap punya .rows
+  const rows = result.rows || [];
+  const proxy = [rows, result.fields];
+  proxy.rows   = rows;
+  proxy.fields = result.fields;
+  proxy.rowCount = result.rowCount;
+  return proxy;
 };
+const pq = pool.query.bind(pool); // alias untuk kode yang sudah pakai pq()
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Upload config for admin imports
