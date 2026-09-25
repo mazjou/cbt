@@ -691,17 +691,26 @@ router.post('/classes/bulk-delete', async (req, res) => {
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
-    // Delete related data
-    await client.query(`UPDATE users SET class_id = NULL WHERE class_id IN (${placeholders})`, validIds);
-    await client.query(`DELETE FROM exam_classes WHERE class_id IN (${placeholders})`, validIds);
-    
-    // Try to delete from material_classes if table exists
-    try {
-      await client.query(`DELETE FROM material_classes WHERE class_id IN (${placeholders})`, validIds);
-    } catch (err) {
-      // Table might not exist, skip silently
-      console.log('material_classes table not found, skipping...');
-    }
+    // Hapus semua relasi ke classes secara aman
+    const safeQuery = async (sql, params) => {
+      try { await client.query(sql, params || validIds); } catch(err) {
+        console.log('safeQuery skip:', err.message.substring(0, 80));
+      }
+    };
+
+    // NULL-kan class_id di tabel yang allow NULL
+    await safeQuery(`UPDATE users SET class_id = NULL WHERE class_id IN (${placeholders})`);
+    await safeQuery(`UPDATE assignments SET class_id = NULL WHERE class_id IN (${placeholders})`);
+    await safeQuery(`UPDATE exams SET class_id = NULL WHERE class_id IN (${placeholders})`);
+    await safeQuery(`UPDATE materials SET class_id = NULL WHERE class_id IN (${placeholders})`);
+    await safeQuery(`UPDATE live_classes SET class_id = NULL WHERE class_id IN (${placeholders})`);
+    await safeQuery(`UPDATE notifications SET target_id = NULL WHERE target_type='class' AND target_id IN (${placeholders})`);
+
+    // Hapus tabel junction/relasi
+    await safeQuery(`DELETE FROM exam_classes WHERE class_id IN (${placeholders})`);
+    await safeQuery(`DELETE FROM assignment_classes WHERE class_id IN (${placeholders})`);
+    await safeQuery(`DELETE FROM material_classes WHERE class_id IN (${placeholders})`);
+    await safeQuery(`DELETE FROM live_class_participants WHERE live_class_id IN (SELECT id FROM live_classes WHERE class_id IN (${placeholders}))`);
     
     // Delete classes
     const result = await client.query(`DELETE FROM classes WHERE id IN (${placeholders})`, validIds);
