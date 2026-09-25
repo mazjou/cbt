@@ -12,6 +12,17 @@ const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 const router = express.Router();
 router.use(requireRole('ADMIN'));
 
+// ── Compatibility wrapper ─────────────────────────────────────────────────────
+// Banyak query di file ini masih pakai pola MySQL: const [rows] = await pq(...)
+// PostgreSQL pg mengembalikan {rows:[...]}, bukan array.
+// Fungsi pq() membungkus pool.query() agar return [rows, fields] seperti MySQL
+// sehingga semua destructuring lama tetap bekerja.
+const pq = async (sql, params) => {
+  const result = await pool.query(sql, params);
+  return [result.rows, result.fields];
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 // Upload config for admin imports
 const importDir = path.join(__dirname, '..', 'public', 'uploads', 'imports');
 fs.mkdirSync(importDir, { recursive: true });
@@ -456,7 +467,7 @@ router.get('/classes', async (req, res) => {
 // Download classes as Excel
 router.get('/classes/download', async (req, res) => {
   try {
-    const [classes] = await pool.query(`SELECT code, name FROM classes ORDER BY name ASC;`);
+    const [classes] = await pq(`SELECT code, name FROM classes ORDER BY name ASC;`);
     
     const data = classes.map(c => ({
       'code': c.code,
@@ -501,7 +512,7 @@ router.post('/classes/import/preview', uploadImport.single('file'), async (req, 
       return res.redirect('/admin/classes/import');
     }
 
-    const [existing] = await pool.query(`SELECT code FROM classes;`);
+    const [existing] = await pq(`SELECT code FROM classes;`);
     const existingCodesSet = new Set((existing || []).map((x) => x.code));
 
     const { preview, errors } = buildCodeNameImportPreview(rows, existingCodesSet);
@@ -763,7 +774,7 @@ router.get('/subjects', async (req, res) => {
 // Download subjects as Excel
 router.get('/subjects/download', async (req, res) => {
   try {
-    const [subjects] = await pool.query(`SELECT code, name FROM subjects ORDER BY name ASC;`);
+    const [subjects] = await pq(`SELECT code, name FROM subjects ORDER BY name ASC;`);
     
     const data = subjects.map(s => ({
       'code': s.code,
@@ -808,7 +819,7 @@ router.post('/subjects/import/preview', uploadImport.single('file'), async (req,
       return res.redirect('/admin/subjects/import');
     }
 
-    const [existing] = await pool.query(`SELECT code FROM subjects;`);
+    const [existing] = await pq(`SELECT code FROM subjects;`);
     const existingCodesSet = new Set((existing || []).map((x) => x.code));
 
     const { preview, errors } = buildCodeNameImportPreview(rows, existingCodesSet);
@@ -952,7 +963,7 @@ router.post('/subjects/:id/ajax-update', async (req, res) => {
 
 // ===== TEACHERS =====
 router.get('/teachers', async (req, res) => {
-  const [teachers] = await pool.query(
+  const [teachers] = await pq(
     `SELECT id, username, full_name, role, is_active, created_at
      FROM users
      WHERE role='TEACHER'
@@ -964,7 +975,7 @@ router.get('/teachers', async (req, res) => {
 // Download teachers as Excel
 router.get('/teachers/download', async (req, res) => {
   try {
-    const [teachers] = await pool.query(
+    const [teachers] = await pq(
       `SELECT username, full_name, plain_password FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`
     );
     
@@ -1168,7 +1179,7 @@ router.post('/teachers/import/preview', uploadImport.single('file'), async (req,
     let existingUsernamesSet = new Set();
     if (uniq.length) {
       const placeholders = uniq.map(() => '?').join(',');
-      const [exists] = await pool.query(`SELECT username FROM users WHERE username IN (${placeholders});`, uniq);
+      const [exists] = await pq(`SELECT username FROM users WHERE username IN (${placeholders});`, uniq);
       existingUsernamesSet = new Set((exists || []).map((x) => x.username));
     }
 
@@ -1343,7 +1354,7 @@ router.get('/users', async (req, res) => {
   const classFilter = (req.query.class || '').trim();
   const statusFilter = (req.query.status || '').trim();
 
-  const [classes] = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pq(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
   
   // Build WHERE clause - PostgreSQL style
   let whereConditions = [];
@@ -1433,7 +1444,7 @@ router.get('/users/download', async (req, res) => {
     
     query += ` ORDER BY c.name ASC, u.full_name ASC`;
     
-    const [users] = await pool.query(query, params);
+    const [users] = await pq(query, params);
     
     if (users.length === 0) {
       req.flash('error', 'Tidak ada data pengguna untuk diunduh.');
@@ -1506,7 +1517,7 @@ router.get('/users/print-cards', async (req, res) => {
       return res.redirect('/admin/users');
     }
     
-    const [classes] = await pool.query('SELECT id, name FROM classes ORDER BY name ASC;');
+    const [classes] = await pq('SELECT id, name FROM classes ORDER BY name ASC;');
     
     const schoolInfo = {
       name: process.env.SCHOOL_NAME || 'SMK Negeri 1 Kras',
@@ -1657,7 +1668,7 @@ router.post('/users/:id/edit', async (req, res) => {
 
 // ===== IMPORT SISWA (MASS UPLOAD) =====
 router.get('/users/import', async (req, res) => {
-  const [classes] = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pq(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
   res.render('admin/users_import', { title: 'Import Masal Siswa', classes });
 });
 
@@ -1680,7 +1691,7 @@ router.post('/users/import/preview', uploadImport.single('file'), async (req, re
     }
 
     // Build class map by code and name
-    const [classes] = await pool.query(`SELECT id, code, name FROM classes;`);
+    const [classes] = await pq(`SELECT id, code, name FROM classes;`);
     const classesMap = new Map();
     for (const c of classes) {
       if (c.code) classesMap.set(normalizeClassKey(c.code), c);
@@ -1696,7 +1707,7 @@ router.post('/users/import/preview', uploadImport.single('file'), async (req, re
     let existingUsernamesSet = new Set();
     if (uniq.length) {
       const placeholders = uniq.map(() => '?').join(',');
-      const [exists] = await pool.query(`SELECT username FROM users WHERE username IN (${placeholders});`, uniq);
+      const [exists] = await pq(`SELECT username FROM users WHERE username IN (${placeholders});`, uniq);
       existingUsernamesSet = new Set((exists || []).map((x) => x.username));
     }
 
@@ -1997,7 +2008,7 @@ router.post('/users/bulk-reset-password', async (req, res) => {
         .map(id => parseInt(id)).filter(id => !isNaN(id));
       if (!ids.length) { req.flash('error', 'Tidak ada user dipilih.'); return res.redirect('/admin/users'); }
       const ph = ids.map((_, i) => `$${i+1}`).join(',');
-      const [users] = await pool.query(`SELECT id, username FROM users WHERE id IN (${ph})`, ids);
+      const [users] = await pq(`SELECT id, username FROM users WHERE id IN (${ph})`, ids);
       
       let updated = 0;
       for (const u of users) {
@@ -2075,7 +2086,7 @@ router.post('/users/import-password/preview', uploadImport.single('file'), async
     if (preview.length) {
       const usernames = preview.map(p => p.username);
       const ph = usernames.map((_,i) => `$${i+1}`).join(',');
-      const [existing] = await pool.query(`SELECT username FROM users WHERE username IN (${ph})`, usernames);
+      const [existing] = await pq(`SELECT username FROM users WHERE username IN (${ph})`, usernames);
       const existSet = new Set(existing.map(u => u.username));
 
       for (const p of preview) {
@@ -2227,9 +2238,9 @@ router.get('/exams', async (req, res) => {
   const statusFilter = req.query.status || '';
 
   // Get filter options
-  const [subjects] = await pool.query(`SELECT id, code, name FROM subjects ORDER BY name ASC;`);
-  const [teachers] = await pool.query(`SELECT id, username, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
-  const [classes] = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
+  const [subjects] = await pq(`SELECT id, code, name FROM subjects ORDER BY name ASC;`);
+  const [teachers] = await pq(`SELECT id, username, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
+  const [classes] = await pq(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
 
   // Build WHERE clause - PostgreSQL style
   let whereConditions = [];
@@ -2394,9 +2405,9 @@ router.delete('/exams/:id', async (req, res) => {
 // GET Create New Exam
 router.get('/exams/new', async (req, res) => {
   try {
-    const [subjects] = await pool.query(`SELECT * FROM subjects ORDER BY name ASC;`);
-    const [teachers] = await pool.query(`SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC;`);
-    const [classes] = await pool.query(`SELECT * FROM classes ORDER BY name ASC;`);
+    const [subjects] = await pq(`SELECT * FROM subjects ORDER BY name ASC;`);
+    const [teachers] = await pq(`SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC;`);
+    const [classes] = await pq(`SELECT * FROM classes ORDER BY name ASC;`);
     
     res.render('admin/exam_new', { 
       title: 'Buat Ujian Baru', 
@@ -2730,9 +2741,9 @@ router.get('/materials', async (req, res) => {
   const statusFilter = (req.query.status || '').trim();
 
   // Get filter options
-  const [subjects] = await pool.query(`SELECT id, code, name FROM subjects ORDER BY name ASC;`);
-  const [teachers] = await pool.query(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
-  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC;`);
+  const [subjects] = await pq(`SELECT id, code, name FROM subjects ORDER BY name ASC;`);
+  const [teachers] = await pq(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
+  const [classes] = await pq(`SELECT id, name FROM classes ORDER BY name ASC;`);
 
   // Build WHERE clause - PostgreSQL style
   let whereConditions = [];
@@ -2943,7 +2954,7 @@ router.post('/materials/bulk-delete', async (req, res) => {
 // ===== VIOLATIONS - SISWA TERKUNCI =====
 router.get('/violations/locked', async (req, res) => {
   try {
-    const [locked] = await pool.query(
+    const [locked] = await pq(
       `SELECT a.id AS attempt_id, a.unlock_token, a.locked_at, a.unlock_count,
               u.full_name AS student_name, u.username,
               c.name AS class_name,
@@ -3018,9 +3029,9 @@ router.get('/grades', async (req, res) => {
   const offset = (page - 1) * limit;
 
   // Get filter options
-  const [exams] = await pool.query(`SELECT id, title FROM exams ORDER BY title ASC;`);
-  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC;`);
-  const [teachers] = await pool.query(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
+  const [exams] = await pq(`SELECT id, title FROM exams ORDER BY title ASC;`);
+  const [classes] = await pq(`SELECT id, name FROM classes ORDER BY name ASC;`);
+  const [teachers] = await pq(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
 
   const where = ['1=1'];
   const params = [];
@@ -3314,13 +3325,13 @@ router.get('/assignments/monitoring', async (req, res) => {
   const class_id = req.query.class_id || '';
   const teacher_id = req.query.teacher_id || '';
 
-  const [allAssignments] = await pool.query(
+  const [allAssignments] = await pq(
     `SELECT a.id, a.title, u.full_name AS teacher_name
      FROM assignments a JOIN users u ON u.id=a.teacher_id
      ORDER BY a.created_at DESC;`
   );
-  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC;`);
-  const [teachers] = await pool.query(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
+  const [classes] = await pq(`SELECT id, name FROM classes ORDER BY name ASC;`);
+  const [teachers] = await pq(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
 
   let submissions = [];
   if (assignment_id) {
@@ -3365,7 +3376,7 @@ router.get('/assignments', async (req, res) => {
     const status = req.query.status || '';
 
     // Get subjects for filter
-    const [subjects] = await pool.query(`SELECT id, name FROM subjects ORDER BY name ASC;`);
+    const [subjects] = await pq(`SELECT id, name FROM subjects ORDER BY name ASC;`);
 
     // Build WHERE clause - PostgreSQL style
     let whereConditions = ['1=1'];
@@ -3579,7 +3590,7 @@ router.get('/question-bank/export', async (req, res) => {
   const XLSX = require('xlsx');
   const path = require('path');
   try {
-    const [questions] = await pool.query(`
+    const [questions] = await pq(`
       SELECT qb.id, qb.question_text, qb.question_image, qb.points, qb.difficulty, qb.tags, qb.chapter,
              s.name AS subject_name, s.code AS subject_code,
              u.full_name AS teacher_name
@@ -3595,7 +3606,7 @@ router.get('/question-bank/export', async (req, res) => {
     const ids = questions.map(q => q.id);
     const ph = ids.map((_, i) => `:id${i}`).join(',');
     const pObj = {}; ids.forEach((id, i) => { pObj[`id${i}`] = id; });
-    const [options] = await pool.query(
+    const [options] = await pq(
       `SELECT question_bank_id, option_label, option_text, option_image, is_correct
        FROM question_bank_options WHERE question_bank_id IN (${ph})
        ORDER BY question_bank_id ASC, option_label ASC;`, pObj
@@ -3657,7 +3668,7 @@ router.get('/question-bank', async (req, res) => {
     const difficulty = req.query.difficulty || '';
 
     // Get subjects for filter
-    const [subjects] = await pool.query(`SELECT id, name FROM subjects ORDER BY name ASC;`);
+    const [subjects] = await pq(`SELECT id, name FROM subjects ORDER BY name ASC;`);
 
     // Build WHERE clause - PostgreSQL style
     let whereConditions = ['1=1'];
@@ -3788,7 +3799,7 @@ router.post('/question-bank/bulk-delete', async (req, res) => {
 router.get('/failed-submissions', async (req, res) => {
   try {
     // Cek kolom submission_status dengan cara PostgreSQL
-    const [cols] = await pool.query(`
+    const [cols] = await pq(`
       SELECT 1 FROM information_schema.columns
       WHERE table_name='attempts' AND column_name='submission_status' LIMIT 1
     `);
@@ -3798,7 +3809,7 @@ router.get('/failed-submissions', async (req, res) => {
     }
 
     // 1. Attempt dengan submission_status = FAILED
-    const [failedAttempts] = await pool.query(`
+    const [failedAttempts] = await pq(`
       SELECT a.id, a.exam_id, a.student_id, a.status, a.submission_status,
              a.started_at, a.finished_at,
              u.full_name as student_name, u.username as student_username,
@@ -3815,7 +3826,7 @@ router.get('/failed-submissions', async (req, res) => {
     `);
 
     // 2. Attempt IN_PROGRESS yang sudah melebihi waktu + 3 menit grace period
-    const [expiredAttempts] = await pool.query(`
+    const [expiredAttempts] = await pq(`
       SELECT a.id, a.exam_id, a.student_id, a.status,
              a.started_at, a.finished_at,
              u.full_name as student_name, u.username as student_username,
@@ -4186,13 +4197,13 @@ router.get('/monitoring/data', async (req, res) => {
     // DB stats
     let dbStats = { active: 0, total: 0, uptime: '-' };
     try {
-      const [r] = await pool.query(`
+      const [r] = await pq(`
         SELECT count(*) AS total,
                sum(CASE WHEN state='active' THEN 1 ELSE 0 END) AS active
         FROM pg_stat_activity
         WHERE datname = current_database()
       `);
-      const [u] = await pool.query(`
+      const [u] = await pq(`
         SELECT
           EXTRACT(DAY FROM (now() - pg_postmaster_start_time()))::int AS days,
           EXTRACT(HOUR FROM (now() - pg_postmaster_start_time()))::int % 24 AS hours,
@@ -4212,7 +4223,7 @@ router.get('/monitoring/data', async (req, res) => {
     // DB size
     let dbSize = '-';
     try {
-      const [s] = await pool.query(`SELECT pg_size_pretty(pg_database_size(current_database())) AS size`);
+      const [s] = await pq(`SELECT pg_size_pretty(pg_database_size(current_database())) AS size`);
       dbSize = s[0]?.size || '-';
     } catch(_) {}
 
@@ -4222,10 +4233,10 @@ router.get('/monitoring/data', async (req, res) => {
     
     // Stats dasar
     try {
-      const [r1] = await pool.query(`SELECT COUNT(*) AS c FROM users`);
-      const [r2] = await pool.query(`SELECT COUNT(*) AS c FROM exams`);
-      const [r3] = await pool.query(`SELECT COUNT(*) AS c FROM attempts`);
-      const [r4] = await pool.query(`SELECT COUNT(*) AS c FROM attempts WHERE status = 'IN_PROGRESS'`);
+      const [r1] = await pq(`SELECT COUNT(*) AS c FROM users`);
+      const [r2] = await pq(`SELECT COUNT(*) AS c FROM exams`);
+      const [r3] = await pq(`SELECT COUNT(*) AS c FROM attempts`);
+      const [r4] = await pq(`SELECT COUNT(*) AS c FROM attempts WHERE status = 'IN_PROGRESS'`);
       stats = {
         users:         Number(r1[0]?.c || 0),
         exams:         Number(r2[0]?.c || 0),
@@ -4238,7 +4249,7 @@ router.get('/monitoring/data', async (req, res) => {
 
     // Detail siswa yang sedang ujian - ringkasan per ujian (lebih ringan)
     try {
-      const [activeRows] = await pool.query(`
+      const [activeRows] = await pq(`
         SELECT
           e.id AS exam_id,
           e.title AS exam_title,
