@@ -1,13 +1,12 @@
 // Service Worker for Offline Support
-const CACHE_NAME = 'lms-smkn1kras-v1';
+const CACHE_NAME = 'lms-smkn1kras-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
   '/',
-  '/offline.html',
   '/public/images/logo.png',
-  'https://cdn.tailwindcss.com'
+  '/public/lib/tailwind.min.js'
 ];
 
 // Install event - cache essential assets
