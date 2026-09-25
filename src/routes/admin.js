@@ -705,13 +705,13 @@ router.post('/classes/bulk-delete', async (req, res) => {
     
     // Delete classes
     const result = await client.query(`DELETE FROM classes WHERE id IN (${placeholders})`, validIds);
-    deleted = result.rowCount || 0;
+    deleted = result.affectedRows || 0;
     
     await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} kelas dan data terkait.`);
   } catch (e) {
     await client.rollback();
-    console.error(e);
+    console.error('Bulk delete classes error:', e.message, e.code);
     req.flash('error', 'Gagal menghapus kelas. Terjadi kesalahan pada database.');
   } finally {
     client.release();
@@ -1322,7 +1322,7 @@ router.post('/subjects/bulk-delete', async (req, res) => {
     
     // Delete subjects
     const result = await client.query(`DELETE FROM subjects WHERE id IN (${placeholders})`, validIds);
-    deleted = result.rowCount || 0;
+    deleted = result.affectedRows || 0;
     
     await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} mata pelajaran dan data terkait.`);
@@ -1956,7 +1956,7 @@ router.post('/users/bulk-delete', async (req, res) => {
 
     // Hapus users
     const result = await client.query(`DELETE FROM users WHERE id IN (${ph})`, validIds);
-    const deleted = result.rowCount || 0;
+    const deleted = result.affectedRows || 0;
 
     await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} pengguna.`);
@@ -2204,7 +2204,7 @@ router.post('/users/bulk-move-class', async (req, res) => {
       `UPDATE users SET class_id = $1 WHERE id IN (${placeholders})`, 
       [targetClassId, ...validIds]
     );
-    updated = result.rowCount || 0;
+    updated = result.affectedRows || 0;
     
     await client.commit();
     req.flash('success', `Berhasil memindahkan ${updated} pengguna ke kelas "${targetClassName}".`);
@@ -2706,7 +2706,7 @@ router.post('/exams/bulk-delete', async (req, res) => {
     
     // Delete exams
     const result = await client.query(`DELETE FROM exams WHERE id IN (${placeholders})`, validIds);
-    deleted = result.rowCount || 0;
+    deleted = result.affectedRows || 0;
     
     await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} ujian dan data terkait.`);
@@ -2929,7 +2929,7 @@ router.post('/materials/bulk-delete', async (req, res) => {
     
     // Delete materials
     const result = await client.query(`DELETE FROM materials WHERE id IN (${placeholders})`, validIds);
-    deleted = result.rowCount || 0;
+    deleted = result.affectedRows || 0;
     
     await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} materi dan data terkait.`);
@@ -3258,7 +3258,7 @@ router.post('/attempts/bulk-reset', async (req, res) => {
       validIds
     );
     
-    deleted = result.rowCount || 0;
+    deleted = result.affectedRows || 0;
     console.log('Deleted attempts:', deleted);
     
     await client.commit();
@@ -3561,7 +3561,7 @@ router.post('/assignments/bulk-delete', async (req, res) => {
     
     // Delete assignments
     const result = await client.query(`DELETE FROM assignments WHERE id IN (${placeholders})`, validIds);
-    deleted = result.rowCount || 0;
+    deleted = result.affectedRows || 0;
     
     await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} tugas dan data terkait.`);
@@ -3774,7 +3774,7 @@ router.post('/question-bank/bulk-delete', async (req, res) => {
     
     // Delete question bank items
     const result = await client.query(`DELETE FROM question_bank WHERE id IN (${placeholders})`, validIds);
-    deleted = result.rowCount || 0;
+    deleted = result.affectedRows || 0;
     
     await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} soal dari bank soal.`);
