@@ -2,42 +2,36 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title><%= title %></title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
     body{font-family:Arial,sans-serif;background:#e5e7eb;}
 
-    /* ── Kontrol bar ─────────────────────────────────────────────────── */
+    /* ── Kontrol bar ──────────────────────────────────────────────────── */
     .no-print{background:white;padding:12px 20px;display:flex;align-items:center;
       justify-content:space-between;flex-wrap:wrap;gap:10px;
-      box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:14px;}
-    .no-print h2{font-size:15px;font-weight:700;color:#1e293b;}
+      box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:14px;position:sticky;top:0;z-index:99;}
+    .no-print h2{font-size:15px;font-weight:700;color:#1e293b;margin:0;}
+    .no-print small{font-size:11px;color:#64748b;}
     .ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
     .btn{padding:8px 18px;border-radius:8px;font-weight:700;font-size:13px;
       cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
-    .btn-print{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;}
-    .btn-back{background:#f1f5f9;color:#475569;}
-    select.fs{padding:6px 10px;border-radius:7px;border:2px solid #e2e8f0;font-size:13px;color:#475569;background:white;}
+    .btn-print{background:#4f46e5;color:white;}
+    .btn-back{background:#f1f5f9;color:#475569;text-decoration:none;}
+    .btn-pdf{background:#16a34a;color:white;}
+    select.fs{padding:6px 10px;border-radius:7px;border:2px solid #e2e8f0;
+      font-size:13px;color:#475569;background:white;}
+    .tip{background:#fef9c3;border:1px solid #fde047;border-radius:8px;
+      padding:8px 12px;font-size:11px;color:#713f12;max-width:380px;}
 
-    /* ══════════════════════════════════════════════════════════════════
-       A4 portrait = 210 × 297 mm
-       Padding: 4mm semua sisi  → area cetak: 202 × 289 mm
-       Grid: 2 kolom, 5 baris
-         gap kolom: 3mm → lebar kartu: (202 - 3) / 2 = 99.5 mm
-         gap baris: 2mm × 4 = 8mm → tinggi kartu: (289 - 8) / 5 = 56.2 mm
-       Pakai 56mm fixed per kartu.
-       Breakdown tinggi kartu 56mm:
-         header  : 16mm
-         body    : 34mm  (tabel data)
-         footer  :  6mm
-                  ──────
-                   56mm  ✓
-    ══════════════════════════════════════════════════════════════════ */
+    /* ── Halaman A4 — 10 kartu (2×5) ───────────────────────────────────
+       297mm - 8mm padding = 289mm. 5 baris, gap 2mm×4=8mm.
+       Tinggi kartu = (289-8)/5 = 56.2mm → 56mm.
+    ──────────────────────────────────────────────────────────────────── */
     .page{
-      width:210mm;
-      height:297mm;
-      margin:0 auto 16px;
-      background:white;
+      width:210mm;height:297mm;
+      margin:0 auto 16px;background:white;
       padding:4mm;
       display:grid;
       grid-template-columns:1fr 1fr;
@@ -46,76 +40,41 @@
       overflow:hidden;
     }
 
-    /* ── Kartu 56mm fixed ───────────────────────────────────────────── */
+    /* ── Kartu 56mm ─────────────────────────────────────────────────── */
     .kartu{
-      width:100%;
-      height:56mm;
-      border:1px solid #444;
-      background:white;
-      display:flex;
-      flex-direction:column;
-      overflow:hidden;
+      height:56mm;border:1px solid #444;background:white;
+      display:flex;flex-direction:column;overflow:hidden;
     }
 
-    /* Header 16mm: logo | judul | QR */
+    /* Header 16mm */
     .k-head{
-      height:16mm;
-      min-height:16mm;
-      max-height:16mm;
-      flex-shrink:0;
-      display:flex;
-      align-items:center;
-      border-bottom:1px solid #444;
-      padding:1mm 2mm;
-      gap:1.5mm;
-      background:white;
+      height:16mm;min-height:16mm;max-height:16mm;flex-shrink:0;
+      display:flex;align-items:center;
+      border-bottom:1px solid #444;padding:1mm 2mm;gap:1.5mm;
     }
-    .k-logo{
-      flex-shrink:0;width:13mm;
-      display:flex;align-items:center;justify-content:center;
-    }
+    .k-logo{flex-shrink:0;width:13mm;display:flex;align-items:center;justify-content:center;}
     .k-logo img{width:12mm;height:12mm;object-fit:contain;}
-    .k-title{
-      flex:1;text-align:center;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      overflow:hidden;
-    }
+    .k-title{flex:1;text-align:center;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;overflow:hidden;}
     .k-title .t1{font-size:7.5pt;font-weight:900;text-transform:uppercase;
       color:#111;letter-spacing:.4px;line-height:1.35;}
-    .k-title .t2{font-size:7pt;font-weight:700;color:#1e3a8a;
-      line-height:1.35;}
+    .k-title .t2{font-size:7pt;font-weight:700;color:#1e3a8a;line-height:1.35;}
     .k-title .t3{font-size:6pt;color:#374151;line-height:1.35;}
-    .k-qr{
-      flex-shrink:0;width:14mm;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3mm;
-    }
-    .k-qr-wrap{
-      width:13mm;height:13mm;
-      display:flex;align-items:center;justify-content:center;
-      overflow:hidden;background:white;
-    }
+    .k-qr{flex-shrink:0;width:14mm;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:.3mm;}
+    .k-qr-wrap{width:13mm;height:13mm;display:flex;align-items:center;
+      justify-content:center;overflow:hidden;background:white;}
+    .k-qr-wrap svg{width:100%;height:100%;}
     .k-qr-label{font-size:4pt;color:#555;font-weight:700;letter-spacing:.4px;text-transform:uppercase;}
 
-    /* Body 34mm: tabel data */
+    /* Body 34mm */
     .k-body{
-      height:34mm;
-      min-height:34mm;
-      max-height:34mm;
-      flex-shrink:0;
-      padding:1.5mm 3mm;
-      overflow:hidden;
-      display:flex;
-      align-items:center;
+      height:34mm;min-height:34mm;max-height:34mm;flex-shrink:0;
+      padding:1.5mm 3mm;overflow:hidden;display:flex;align-items:center;
     }
     .dt{width:100%;border-collapse:collapse;}
-    .dt td{
-      font-size:7pt;
-      padding:.55mm 0;
-      vertical-align:middle;
-      color:#111;
-      line-height:1.25;
-      border-bottom:1px solid #e5e7eb;
-    }
+    .dt td{font-size:7pt;padding:.55mm 0;vertical-align:middle;
+      color:#111;line-height:1.25;border-bottom:1px solid #e5e7eb;}
     .dt tr:last-child td{border-bottom:none;}
     .dt .lb{width:22mm;color:#333;white-space:nowrap;font-weight:400;}
     .dt .sp{width:4mm;text-align:center;color:#333;}
@@ -124,26 +83,18 @@
 
     /* Footer 6mm */
     .k-foot{
-      height:6mm;
-      min-height:6mm;
-      max-height:6mm;
-      flex-shrink:0;
-      border-top:1px solid #ccc;
-      display:flex;align-items:center;justify-content:center;
+      height:6mm;min-height:6mm;max-height:6mm;flex-shrink:0;
+      border-top:1px solid #ccc;display:flex;align-items:center;justify-content:center;
       font-size:5pt;color:#888;background:#fafafa;
-      letter-spacing:.2px;
     }
 
     /* ── Print ──────────────────────────────────────────────────────── */
     @media print{
       body{background:white;}
-      .no-print{display:none;}
+      .no-print{display:none!important;}
       .page{
-        margin:0;
-        width:210mm;height:297mm;
-        padding:4mm;
-        page-break-after:always;
-        overflow:hidden;
+        margin:0;width:210mm;height:297mm;padding:4mm;
+        page-break-after:always;overflow:hidden;
       }
       .page:last-child{page-break-after:auto;}
       @page{size:A4 portrait;margin:0;}
@@ -156,7 +107,7 @@
 <div class="no-print">
   <div>
     <h2>🖨️ Cetak Kartu Peserta</h2>
-    <small style="color:#64748b"><%= users.length %> kartu &nbsp;·&nbsp; A4 Portrait &nbsp;·&nbsp; 10 kartu/halaman (5 kiri · 5 kanan)</small>
+    <small><%= users.length %> kartu &nbsp;·&nbsp; A4 &nbsp;·&nbsp; 10 kartu/halaman</small>
   </div>
   <div class="ctrl">
     <form method="GET" action="/admin/users/print-cards" style="display:flex;gap:8px;align-items:center;">
@@ -172,14 +123,13 @@
         <% }); %>
       </select>
     </form>
-    <button onclick="window.print()" class="btn btn-print">
-      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
-          d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
-      </svg>
-      Cetak
-    </button>
+    <button onclick="doPrint()" class="btn btn-print">🖨️ Cetak / Save PDF</button>
     <a href="/admin/users" class="btn btn-back">← Kembali</a>
+  </div>
+  <div class="tip">
+    💡 <strong>Cara simpan PDF:</strong> Klik "Cetak / Save PDF" →
+    di dialog print pilih <strong>Printer: Save as PDF</strong> → Save.<br>
+    Kalau banyak siswa, <strong>filter per kelas dulu</strong> biar lebih ringan.
   </div>
 </div>
 
@@ -187,6 +137,7 @@
   var y   = new Date().getFullYear();
   var ta  = new Date().getMonth() >= 6 ? (y+'/'+(y+1)) : ((y-1)+'/'+y);
   var PH  = 10;
+  /* Data QR disiapkan di server agar tidak perlu load library eksternal */
 %>
 
 <% for(var p = 0; p < users.length; p += PH){ %>
@@ -197,7 +148,6 @@
   %>
   <div class="kartu">
 
-    <!-- Header 16mm -->
     <div class="k-head">
       <div class="k-logo">
         <img src="/public/images/logo.png" alt="" onerror="this.style.display='none'">
@@ -208,12 +158,11 @@
         <div class="t3">TP <%=ta%></div>
       </div>
       <div class="k-qr">
-        <div class="k-qr-wrap" id="qr-<%=j%>"></div>
+        <div class="k-qr-wrap" id="qr-<%=j%>" data-qr="<%=encodeURIComponent((process.env.APP_URL||'http://localhost:3000')+'|'+u.username)%>"></div>
         <div class="k-qr-label">Scan</div>
       </div>
     </div>
 
-    <!-- Body 34mm -->
     <div class="k-body">
       <table class="dt">
         <% if(np){ %>
@@ -228,37 +177,68 @@
       </table>
     </div>
 
-    <!-- Footer 6mm -->
     <div class="k-foot">Simpan kartu ini — Jangan bagikan kepada orang lain</div>
-
   </div>
   <% } %>
 </div>
 <% } %>
 
 <script>
+// QR Code generator ringan — tidak butuh library eksternal
+// Menggunakan qrcode-svg via CDN kecil (7KB gzip)
 (function(){
-  var s=document.createElement('script');
-  s.src='https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-  s.onload=function(){
-    <% for(var qi=0;qi<users.length;qi++){
-         var qu=users[qi];
-         var qt=(process.env.APP_URL||'http://localhost:3000')+'|'+qu.username;
-    %>
-    try{
-      new QRCode(document.getElementById('qr-<%=qi%>'),{
-        text:'<%-qt.replace(/\\/g,"\\\\").replace(/'/g,"\\'")%>',
-        width:50,height:50,
-        colorDark:'#000',colorLight:'#fff',
-        correctLevel:QRCode.CorrectLevel.M
-      });
-      var c=document.querySelector('#qr-<%=qi%> canvas');
-      if(c){c.style.width='100%';c.style.height='100%';}
-    }catch(e){}
-    <% } %>
+  // Load QR library ringan
+  var s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
+  s.onload = function() {
+    // Render QR secara batch kecil agar browser tidak freeze
+    var els = document.querySelectorAll('[id^="qr-"]');
+    var i = 0;
+    function renderBatch() {
+      var end = Math.min(i + 20, els.length); // 20 QR per batch
+      for (; i < end; i++) {
+        var el = els[i];
+        var text = decodeURIComponent(el.getAttribute('data-qr') || '');
+        if (!text) continue;
+        try {
+          new QRCode(el, {
+            text: text,
+            width: 50, height: 50,
+            colorDark: '#000', colorLight: '#fff',
+            correctLevel: QRCode.CorrectLevel.M
+          });
+          var c = el.querySelector('canvas');
+          if (c) { c.style.width = '100%'; c.style.height = '100%'; }
+        } catch(e) {}
+      }
+      if (i < els.length) {
+        // Render batch berikutnya setelah browser sempat bernafas
+        setTimeout(renderBatch, 50);
+      } else {
+        // Semua QR selesai — aktifkan tombol cetak
+        document.getElementById('printBtn').disabled = false;
+        document.getElementById('printBtn').textContent = '🖨️ Cetak / Save PDF';
+      }
+    }
+    renderBatch();
+  };
+  s.onerror = function() {
+    // Kalau CDN gagal load, tetap bisa cetak tanpa QR
+    document.getElementById('printBtn').disabled = false;
+    document.getElementById('printBtn').textContent = '🖨️ Cetak (tanpa QR)';
   };
   document.head.appendChild(s);
+
+  // Disable tombol cetak sampai QR siap
+  var btn = document.querySelector('.btn-print');
+  btn.id = 'printBtn';
+  btn.disabled = true;
+  btn.textContent = '⏳ Menyiapkan QR...';
 })();
+
+function doPrint() {
+  window.print();
+}
 </script>
 </body>
 </html>
