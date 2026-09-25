@@ -12,27 +12,9 @@ const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 const router = express.Router();
 router.use(requireRole('ADMIN'));
 
-// ── Compatibility wrapper ─────────────────────────────────────────────────────
-// Admin.js ditulis dengan mixed pattern MySQL + PostgreSQL.
-// Override pool.query agar return [rows, fields] SEKALIGUS simpan .rows
-// sehingga SEMUA pola bekerja:
-//   const [rows] = await pool.query(...)      → MySQL style
-//   const result = await pool.query(...)
-//   result.rows[0]                            → PostgreSQL style
-//   const { rows } = await pool.query(...)    → destructuring style
-const _originalQuery = pool.query.bind(pool);
-pool.query = async function(sql, params) {
-  const result = await _originalQuery(sql, params);
-  // Jadikan result sekaligus array-like [rows, fields] DAN tetap punya .rows
-  const rows = result.rows || [];
-  const proxy = [rows, result.fields];
-  proxy.rows   = rows;
-  proxy.fields = result.fields;
-  proxy.rowCount = result.rowCount;
-  return proxy;
-};
-const pq = pool.query.bind(pool); // alias untuk kode yang sudah pakai pq()
-// ─────────────────────────────────────────────────────────────────────────────
+// pool.js sudah handle konversi MySQL→PostgreSQL dan return [rows, fields]
+// Semua query: const [rows] = await pool.query(...) atau xResult[0][0] untuk single row
+const pq = pool.query.bind(pool);
 
 // Upload config for admin imports
 const importDir = path.join(__dirname, '..', 'public', 'uploads', 'imports');
@@ -195,7 +177,7 @@ router.get('/reports', async (req, res) => {
         (SELECT COUNT(DISTINCT student_id) FROM attempts WHERE created_at BETWEEN $1 AND $2) as active_students,
         (SELECT COUNT(*) FROM users WHERE role = 'STUDENT' AND is_active = true) as total_students
     `, [startDate, endDate]);
-    const summaryRow = summaryResult.rows[0];
+    const summaryRow = summaryResult[0][0];
 
     const summary = {
       total_exams: summaryRow.total_exams || 0,
@@ -229,7 +211,7 @@ router.get('/reports', async (req, res) => {
       ORDER BY activity_score DESC, u.full_name ASC
       LIMIT 10
     `, [startDate, endDate]);
-    const activeTeachers = activeTeachersResult.rows;
+    const activeTeachers = activeTeachersResult[0];
 
     // Get active students
     const activeStudentsResult = await pool.query(`
@@ -250,7 +232,7 @@ router.get('/reports', async (req, res) => {
       ORDER BY activity_score DESC, u.full_name ASC
       LIMIT 10
     `, [startDate, endDate]);
-    const activeStudents = activeStudentsResult.rows;
+    const activeStudents = activeStudentsResult[0];
 
     // Get active classes
     const activeClassesResult = await pool.query(`
@@ -281,7 +263,7 @@ router.get('/reports', async (req, res) => {
       HAVING COUNT(DISTINCT u.id) > 0
       ORDER BY total_activities DESC, participation_rate DESC, c.name ASC
     `, [startDate, endDate]);
-    const activeClassesRaw = activeClassesResult.rows;
+    const activeClassesRaw = activeClassesResult[0];
 
     // Convert avg_score to numbers
     const activeClasses = activeClassesRaw.map(cls => ({
@@ -306,7 +288,7 @@ router.get('/reports', async (req, res) => {
       ORDER BY (COUNT(DISTINCT e.id) + COUNT(DISTINCT m.id) + COUNT(DISTINCT at.id)) DESC, avg_score DESC
       LIMIT 10
     `, [startDate, endDate]);
-    const popularSubjectsRaw = popularSubjectsResult.rows;
+    const popularSubjectsRaw = popularSubjectsResult[0];
 
     // Convert avg_score to numbers
     const popularSubjects = popularSubjectsRaw.map(subj => ({
@@ -450,13 +432,13 @@ router.get('/classes', async (req, res) => {
     `SELECT COUNT(*) as total FROM classes ${whereClause}`,
     queryParams
   );
-  const total = countResult.rows[0].total;
+  const total = countResult[0][0].total;
 
   const classesResult = await pool.query(
     `SELECT * FROM classes ${whereClause} ORDER BY id DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
     [...queryParams, limit, offset]
   );
-  const classes = classesResult.rows;
+  const classes = classesResult[0];
 
   const totalPages = Math.ceil(total / limit);
 
@@ -636,7 +618,7 @@ router.post('/classes/:id/update', async (req, res) => {
 router.get('/classes/:id/json', async (req, res) => {
   try {
     const result = await pool.query(`SELECT id, code, name FROM classes WHERE id=$1 LIMIT 1`, [req.params.id]);
-    const item = result.rows && result.rows[0];
+    const item = result[0] && result[0][0];
     if (!item) return res.status(404).json({ ok: false, message: 'Kelas tidak ditemukan.' });
     return res.json({ ok: true, item });
   } catch (e) {
@@ -655,7 +637,7 @@ router.post('/classes/:id/ajax-update', async (req, res) => {
       req.params.id
     ]);
     const result = await pool.query(`SELECT id, code, name FROM classes WHERE id=$1 LIMIT 1`, [req.params.id]);
-    return res.json({ ok: true, item: result.rows && result.rows[0] });
+    return res.json({ ok: true, item: result[0] && result[0][0] });
   } catch (e) {
     console.error(e);
     if (e.code === '23505') {
@@ -757,13 +739,13 @@ router.get('/subjects', async (req, res) => {
     `SELECT COUNT(*) as total FROM subjects ${whereClause}`,
     queryParams
   );
-  const total = subjectCountResult.rows[0].total;
+  const total = subjectCountResult[0][0].total;
 
   const subjectsResult = await pool.query(
     `SELECT * FROM subjects ${whereClause} ORDER BY id DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
     [...queryParams, limit, offset]
   );
-  const subjects = subjectsResult.rows;
+  const subjects = subjectsResult[0];
 
   const totalPages = Math.ceil(total / limit);
 
@@ -943,7 +925,7 @@ router.post('/subjects/:id/update', async (req, res) => {
 router.get('/subjects/:id/json', async (req, res) => {
   try {
     const result = await pool.query(`SELECT id, code, name FROM subjects WHERE id=$1 LIMIT 1`, [req.params.id]);
-    const item = result.rows && result.rows[0];
+    const item = result[0] && result[0][0];
     if (!item) return res.status(404).json({ ok: false, message: 'Mapel tidak ditemukan.' });
     return res.json({ ok: true, item });
   } catch (e) {
@@ -962,7 +944,7 @@ router.post('/subjects/:id/ajax-update', async (req, res) => {
       req.params.id
     ]);
     const result = await pool.query(`SELECT id, code, name FROM subjects WHERE id=$1 LIMIT 1`, [req.params.id]);
-    return res.json({ ok: true, item: result.rows && result.rows[0] });
+    return res.json({ ok: true, item: result[0] && result[0][0] });
   } catch (e) {
     console.error(e);
     if (e.code === '23505') {
@@ -1062,7 +1044,7 @@ router.get('/teachers/:id/json', async (req, res) => {
       `SELECT id, username, full_name, is_active FROM users WHERE id=$1 AND role='TEACHER' LIMIT 1`,
       [req.params.id]
     );
-    const item = result.rows && result.rows[0];
+    const item = result[0] && result[0][0];
     if (!item) return res.status(404).json({ ok: false, message: 'Guru tidak ditemukan.' });
     return res.json({ ok: true, item });
   } catch (e) {
@@ -1099,7 +1081,7 @@ router.post('/teachers/:id/ajax-update', async (req, res) => {
       `SELECT id, username, full_name, is_active FROM users WHERE id=$1 AND role='TEACHER' LIMIT 1`,
       [req.params.id]
     );
-    return res.json({ ok: true, item: result.rows && result.rows[0] });
+    return res.json({ ok: true, item: result[0] && result[0][0] });
   } catch (e) {
     console.error(e);
     if (e.code === '23505') {
@@ -1131,7 +1113,7 @@ router.post('/teachers/:id/toggle', async (req, res) => {
       `UPDATE users SET is_active = NOT is_active WHERE id=$1 AND role='TEACHER' RETURNING id, is_active`,
       [req.params.id]
     );
-    const user = result.rows && result.rows[0];
+    const user = result[0] && result[0][0];
     return res.json({ success: true, is_active: user.is_active });
   } catch (e) {
     console.error(e);
@@ -1398,7 +1380,7 @@ router.get('/users', async (req, res) => {
     `SELECT COUNT(*) as total FROM users u ${whereClause}`,
     queryParams
   );
-  const total = userCountResult.rows[0].total;
+  const total = userCountResult[0][0].total;
   
   // Get paginated users
   const usersResult = await pool.query(
@@ -1410,7 +1392,7 @@ router.get('/users', async (req, res) => {
      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
     [...queryParams, limit, offset]
   );
-  const users = usersResult.rows;
+  const users = usersResult[0];
   
   const totalPages = Math.ceil(total / limit);
   
@@ -1521,7 +1503,7 @@ router.get('/users/print-cards', async (req, res) => {
     query += ' ORDER BY u.full_name ASC';
     
     const printResult = await pool.query(query, params);
-    const users = printResult.rows;
+    const users = printResult[0];
     
     if (users.length === 0) {
       req.flash('error', 'Tidak ada pengguna yang dipilih untuk dicetak.');
@@ -1567,7 +1549,7 @@ router.get('/users/:id/json', async (req, res) => {
        FROM users WHERE id=$1 LIMIT 1`,
       [req.params.id]
     );
-    const user = result.rows && result.rows[0];
+    const user = result[0] && result[0][0];
     if (!user) return res.status(404).json({ ok: false, message: 'Pengguna tidak ditemukan.' });
     return res.json({ ok: true, user });
   } catch (e) {
@@ -1607,7 +1589,7 @@ router.post('/users/:id/ajax-update', async (req, res) => {
        FROM users u LEFT JOIN classes c ON c.id=u.class_id WHERE u.id=$1 LIMIT 1`,
       [req.params.id]
     );
-    return res.json({ ok: true, user: result.rows && result.rows[0] });
+    return res.json({ ok: true, user: result[0] && result[0][0] });
   } catch (e) {
     console.error(e);
     if (e.code === '23505') {
@@ -1621,12 +1603,12 @@ router.post('/users/:id/ajax-update', async (req, res) => {
 router.get('/users/:id/edit', async (req, res) => {
   try {
     const classResult = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC`);
-    const classes = classResult.rows;
+    const classes = classResult[0];
     const userResult = await pool.query(
       `SELECT id, username, full_name, role, class_id, is_active, nomor_peserta FROM users WHERE id=$1 LIMIT 1`,
       [req.params.id]
     );
-    const user = userResult.rows && userResult.rows[0];
+    const user = userResult[0] && userResult[0][0];
     if (!user) {
       req.flash('error', 'Pengguna tidak ditemukan.');
       return res.redirect('/admin/users');
@@ -1891,7 +1873,7 @@ router.post('/users/:id/toggle', async (req, res) => {
       `UPDATE users SET is_active = NOT is_active WHERE id=$1 RETURNING id, is_active`,
       [req.params.id]
     );
-    const user = result.rows && result.rows[0];
+    const user = result[0] && result[0][0];
     return res.json({ success: true, is_active: user.is_active });
   } catch (e) {
     console.error(e);
@@ -2039,7 +2021,7 @@ router.post('/users/bulk-reset-password', async (req, res) => {
     if (class_filter) { query += ` AND class_id=$${filterParams.length+1}`; filterParams.push(class_filter); }
 
     const filterResult = await pool.query(query, filterParams);
-    const users = filterResult.rows;
+    const users = filterResult[0];
     if (!users.length) { req.flash('error', 'Tidak ada pengguna yang sesuai filter.'); return res.redirect('/admin/users'); }
 
     let updated = 0;
@@ -2197,11 +2179,11 @@ router.post('/users/bulk-move-class', async (req, res) => {
     // Get class name for confirmation message
     try {
       const classResult = await pool.query(`SELECT name FROM classes WHERE id = $1 LIMIT 1`, [targetClassId]);
-      if (classResult.rows.length === 0) {
+      if (classResult[0].length === 0) {
         req.flash('error', 'Kelas tujuan tidak ditemukan.');
         return res.redirect('/admin/users');
       }
-      targetClassName = classResult.rows[0].name;
+      targetClassName = classResult[0][0].name;
     } catch (e) {
       console.error(e);
       req.flash('error', 'Gagal memvalidasi kelas tujuan.');
@@ -2290,7 +2272,7 @@ router.get('/exams', async (req, res) => {
     `SELECT COUNT(*) as total FROM exams e ${whereClause}`,
     queryParams
   );
-  const total = countResult.rows[0].total;
+  const total = countResult[0][0].total;
 
   // Get paginated exams with related data
   const examsResult = await pool.query(
@@ -2323,7 +2305,7 @@ router.get('/exams', async (req, res) => {
      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
     [...queryParams, limit, offset]
   );
-  const exams = examsResult.rows;
+  const exams = examsResult[0];
   
   // Calculate participation percentage for each exam
   exams.forEach(exam => {
@@ -2375,7 +2357,7 @@ router.get('/exams/:id/json', async (req, res) => {
        LIMIT 1`,
       [req.params.id]
     );
-    const exam = result.rows && result.rows[0];
+    const exam = result[0] && result[0][0];
     if (!exam) return res.status(404).json({ ok: false, message: 'Ujian tidak ditemukan.' });
     return res.json({ ok: true, exam });
   } catch (e) {
@@ -2459,7 +2441,7 @@ router.post('/exams', async (req, res) => {
       ]
     );
 
-    const examId = result.rows[0].id;
+    const examId = result[0][0].id;
 
     // Insert exam_classes if class_ids provided
     if (class_ids && class_ids.length > 0) {
@@ -2490,7 +2472,7 @@ router.get('/exams/:id/edit', async (req, res) => {
   try {
     // Get exam data
     const examResult = await pool.query(`SELECT * FROM exams WHERE id=$1 LIMIT 1`, [examId]);
-    const exam = examResult.rows && examResult.rows[0];
+    const exam = examResult[0] && examResult[0][0];
 
     if (!exam) {
       req.flash('error', 'Ujian tidak ditemukan.');
@@ -2501,7 +2483,7 @@ router.get('/exams/:id/edit', async (req, res) => {
     const examClassesResult = await pool.query(
       `SELECT class_id FROM exam_classes WHERE exam_id = $1`, [examId]
     );
-    exam.selected_classes = examClassesResult.rows.map(ec => ec.class_id);
+    exam.selected_classes = examClassesResult[0].map(ec => ec.class_id);
 
     const subjectsResult = await pool.query(`SELECT * FROM subjects ORDER BY name ASC`);
     const teachersResult = await pool.query(`SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC`);
@@ -2510,9 +2492,9 @@ router.get('/exams/:id/edit', async (req, res) => {
     res.render('admin/exam_edit', { 
       title: `Edit Ujian: ${exam.title}`, 
       exam, 
-      subjects: subjectsResult.rows, 
-      teachers: teachersResult.rows, 
-      classes:  classesResult.rows
+      subjects: subjectsResult[0], 
+      teachers: teachersResult[0], 
+      classes:  classesResult[0]
     });
   } catch (error) {
     console.error(error);
@@ -2590,7 +2572,7 @@ router.get('/exams/:id', async (req, res) => {
        WHERE e.id = $1 LIMIT 1`,
       [examId]
     );
-    const exam = examResult.rows && examResult.rows[0];
+    const exam = examResult[0] && examResult[0][0];
 
     if (!exam) {
       req.flash('error', 'Ujian tidak ditemukan.');
@@ -2606,7 +2588,7 @@ router.get('/exams/:id', async (req, res) => {
        ORDER BY q.id ASC`,
       [examId]
     );
-    const questions = questionsResult.rows;
+    const questions = questionsResult[0];
 
     // Get exam classes
     const examClassesResult = await pool.query(
@@ -2617,13 +2599,13 @@ router.get('/exams/:id', async (req, res) => {
        ORDER BY c.name`,
       [examId]
     );
-    exam.class_names = examClassesResult.rows.map(ec => ec.name).join(', ') || 'Semua Kelas';
+    exam.class_names = examClassesResult[0].map(ec => ec.name).join(', ') || 'Semua Kelas';
 
     // Get participation statistics
     const examClassesCountResult = await pool.query(
       `SELECT COUNT(*) as count FROM exam_classes WHERE exam_id = $1`, [examId]
     );
-    const examClassesCount = examClassesCountResult.rows[0].count;
+    const examClassesCount = examClassesCountResult[0][0].count;
 
     let totalStudentsQuery;
     let queryParams;
@@ -2652,8 +2634,8 @@ router.get('/exams/:id', async (req, res) => {
       `SELECT COUNT(DISTINCT student_id) as completed FROM attempts WHERE exam_id = $1`, [examId]
     );
     
-    exam.completed_count = completedResult.rows[0].completed || 0;
-    exam.total_students = totalResult.rows[0].total || 0;
+    exam.completed_count = completedResult[0][0].completed || 0;
+    exam.total_students = totalResult[0][0].total || 0;
     exam.not_completed_count = exam.total_students - exam.completed_count;
     exam.completed_percentage = exam.total_students > 0 ? Math.round((exam.completed_count / exam.total_students) * 100) : 0;
     exam.not_completed_percentage = 100 - exam.completed_percentage;
@@ -2793,7 +2775,7 @@ router.get('/materials', async (req, res) => {
     `SELECT COUNT(*) as total FROM materials m ${whereClause}`,
     queryParams
   );
-  const total = matCountResult.rows[0].total;
+  const total = matCountResult[0][0].total;
   
   // Get paginated materials
   const materialsResult = await pool.query(
@@ -2814,7 +2796,7 @@ router.get('/materials', async (req, res) => {
      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
     [...queryParams, limit, offset]
   );
-  const materials = materialsResult.rows;
+  const materials = materialsResult[0];
   
   // Calculate read percentage for each material
   materials.forEach(m => {
@@ -2866,7 +2848,7 @@ router.get('/materials/:id/json', async (req, res) => {
        LIMIT 1`,
       [req.params.id]
     );
-    const material = result.rows && result.rows[0];
+    const material = result[0] && result[0][0];
     if (!material) return res.status(404).json({ ok: false, message: 'Materi tidak ditemukan.' });
     return res.json({ ok: true, material });
   } catch (e) {
@@ -2995,7 +2977,7 @@ router.post('/violations/unlock/:attemptId', async (req, res) => {
       `SELECT id FROM attempts WHERE id=$1 AND is_locked=true LIMIT 1`,
       [attemptId]
     );
-    if (!result.rows[0]) return res.json({ ok: false, message: 'Attempt tidak ditemukan.' });
+    if (!result[0][0]) return res.json({ ok: false, message: 'Attempt tidak ditemukan.' });
     await pool.query(
       `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1 WHERE id=$1`,
       [attemptId]
@@ -3085,7 +3067,7 @@ router.get('/grades', async (req, res) => {
      WHERE ${where.join(' AND ')}`,
     params
   );
-  const total = countResult.rows[0].total;
+  const total = countResult[0][0].total;
 
   // Get paginated data
   const rowsResult = await pool.query(
@@ -3104,7 +3086,7 @@ router.get('/grades', async (req, res) => {
      LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
     [...params, limit, offset]
   );
-  const rows = rowsResult.rows;
+  const rows = rowsResult[0];
 
   const rows2 = rows.map((r) => ({
     ...r,
@@ -3145,7 +3127,7 @@ router.get('/attempts/:id/detail', async (req, res) => {
        WHERE a.id=$1 LIMIT 1`,
       [attemptId]
     );
-    const attempt = attemptResult.rows && attemptResult.rows[0];
+    const attempt = attemptResult[0] && attemptResult[0][0];
     if (!attempt) { req.flash('error','Attempt tidak ditemukan.'); return res.redirect('/admin/grades'); }
 
     // Ambil jawaban + opsi
@@ -3157,7 +3139,7 @@ router.get('/attempts/:id/detail', async (req, res) => {
        WHERE aa.attempt_id=$1 ORDER BY aa.id ASC`,
       [attemptId]
     );
-    const ans = ansResult.rows;
+    const ans = ansResult[0];
 
     const qids = ans.map(a => a.question_id);
     let optionsMap = {};
@@ -3167,7 +3149,7 @@ router.get('/attempts/:id/detail', async (req, res) => {
         `SELECT id, question_id, option_label, option_text, is_correct FROM options WHERE question_id IN (${ph}) ORDER BY question_id ASC, option_label ASC`,
         qids
       );
-      for (const o of optsResult.rows) {
+      for (const o of optsResult[0]) {
         if (!optionsMap[o.question_id]) optionsMap[o.question_id] = [];
         optionsMap[o.question_id].push(o);
       }
@@ -3186,7 +3168,7 @@ router.get('/attempts/:id/detail', async (req, res) => {
         `SELECT violation_type, details, created_at FROM attempt_violations WHERE attempt_id=$1 ORDER BY id ASC LIMIT 300`,
         [attemptId]
       );
-      violations = vResult.rows || [];
+      violations = vResult[0] || [];
     } catch(_) {}
 
     res.render('admin/attempt_detail', {
@@ -3260,7 +3242,7 @@ router.post('/attempts/bulk-reset', async (req, res) => {
        WHERE a.id IN (${placeholders})`,
       validIds
     );
-    const attempts = attemptsResult.rows;
+    const attempts = attemptsResult[0];
     
     console.log('Found attempts:', attempts.length, 'Expected:', validIds.length);
     
@@ -3305,7 +3287,7 @@ router.post('/attempts/:id/reset', async (req, res) => {
      WHERE a.id=$1 LIMIT 1`,
     [attemptId]
   );
-  const attempt = attemptResult.rows && attemptResult.rows[0];
+  const attempt = attemptResult[0] && attemptResult[0][0];
 
   if (!attempt) {
     req.flash('error', 'Hasil ujian tidak ditemukan.');
@@ -3364,7 +3346,7 @@ router.get('/assignments/monitoring', async (req, res) => {
     }
     submQuery += ` ORDER BY c.name ASC, u.full_name ASC`;
     const submResult = await pool.query(submQuery, submParams);
-    submissions = submResult.rows;
+    submissions = submResult[0];
   }
 
   const total = submissions.length;
@@ -3428,7 +3410,7 @@ router.get('/assignments', async (req, res) => {
       ORDER BY a.created_at DESC`,
       queryParams
     );
-    const assignments = assignmentsResult.rows;
+    const assignments = assignmentsResult[0];
     
     // Calculate submission percentage for each assignment
     assignments.forEach(assignment => {
@@ -3444,7 +3426,7 @@ router.get('/assignments', async (req, res) => {
         (SELECT COUNT(*) FROM assignment_submissions) as submissions
       FROM assignments
     `);
-    const statsRow = statsResult.rows[0];
+    const statsRow = statsResult[0][0];
 
     const stats = {
       total: statsRow.total || 0,
@@ -3489,7 +3471,7 @@ router.get('/assignments/:id', async (req, res) => {
       WHERE a.id = $1 LIMIT 1`,
       [assignmentId]
     );
-    const assignment = assignResult.rows && assignResult.rows[0];
+    const assignment = assignResult[0] && assignResult[0][0];
     
     if (!assignment) {
       req.flash('error', 'Tugas tidak ditemukan.');
@@ -3510,7 +3492,7 @@ router.get('/assignments/:id', async (req, res) => {
       ORDER BY asub.submitted_at DESC`,
       [assignmentId]
     );
-    const submissions = submResult.rows;
+    const submissions = submResult[0];
     
     // Calculate stats
     const stats = {
@@ -3715,7 +3697,7 @@ router.get('/question-bank', async (req, res) => {
       ORDER BY qb.created_at DESC`,
       queryParams
     );
-    const questions = qbResult.rows;
+    const questions = qbResult[0];
 
     // Get stats
     const qbStatsResult = await pool.query(`
@@ -3726,7 +3708,7 @@ router.get('/question-bank', async (req, res) => {
         SUM(CASE WHEN difficulty = 'HARD' THEN 1 ELSE 0 END) as hard
       FROM question_bank
     `);
-    const statsRow = qbStatsResult.rows[0];
+    const statsRow = qbStatsResult[0][0];
 
     const stats = {
       total: statsRow.total || 0,
@@ -3881,7 +3863,7 @@ router.post('/failed-submissions/:id/force-submit', async (req, res) => {
        WHERE a.id = $1 AND a.status = 'IN_PROGRESS' LIMIT 1`,
       [attemptId]
     );
-    const attempt = forceResult.rows && forceResult.rows[0];
+    const attempt = forceResult[0] && forceResult[0][0];
     if (!attempt) {
       req.flash('error', 'Attempt tidak ditemukan atau sudah disubmit.');
       return res.redirect('/admin/failed-submissions');
@@ -3920,7 +3902,7 @@ router.post('/failed-submissions/:id/recover', async (req, res) => {
       LEFT JOIN submission_backups sb ON sb.attempt_id = a.id AND sb.status = 'ACTIVE'
       WHERE a.id = $1 AND a.submission_status = 'FAILED'
     `, [attemptId]);
-    const attempt = recoverResult.rows && recoverResult.rows[0];
+    const attempt = recoverResult[0] && recoverResult[0][0];
 
     if (!attempt) {
       req.flash('error', 'Attempt tidak ditemukan atau bukan status FAILED.');
@@ -3959,7 +3941,7 @@ router.post('/failed-submissions/:id/recover', async (req, res) => {
          JOIN questions q ON q.id=aa.question_id
          WHERE aa.attempt_id=$1
       `, [attemptId]);
-      const sum = sumResult.rows[0];
+      const sum = sumResult[0][0];
 
       const total_points = Number(sum.total_points || 0);
       const score_points = Number(sum.score_points || 0);
@@ -4011,7 +3993,7 @@ router.post('/failed-submissions/:id/retry', async (req, res) => {
       FROM attempts a
       WHERE a.id = $1 AND a.submission_status = 'FAILED'
     `, [attemptId]);
-    const attempt = attemptResult.rows && attemptResult.rows[0];
+    const attempt = attemptResult[0] && attemptResult[0][0];
 
     if (!attempt) {
       req.flash('error', 'Attempt tidak ditemukan atau bukan status FAILED.');
@@ -4070,7 +4052,7 @@ router.post('/update-ranking', async (req, res) => {
       ORDER BY activity_score DESC
       LIMIT 3
     `, [oneWeekAgoStr]);
-    const activeClasses = activeClassesRankResult.rows;
+    const activeClasses = activeClassesRankResult[0];
 
     const activeStudentsRankResult = await pool.query(`
       SELECT 
@@ -4088,7 +4070,7 @@ router.post('/update-ranking', async (req, res) => {
       ORDER BY activity_score DESC
       LIMIT 3
     `, [oneWeekAgoStr]);
-    const activeStudents = activeStudentsRankResult.rows;
+    const activeStudents = activeStudentsRankResult[0];
 
     const activeTeachersRankResult = await pool.query(`
       SELECT 
@@ -4104,7 +4086,7 @@ router.post('/update-ranking', async (req, res) => {
       ORDER BY activity_score DESC
       LIMIT 3
     `, [oneWeekAgoStr]);
-    const activeTeachers = activeTeachersRankResult.rows;
+    const activeTeachers = activeTeachersRankResult[0];
 
     // Update cache in auth router
     const responseData = {
@@ -4472,9 +4454,9 @@ router.get('/agenda', async (req, res) => {
   q += ' ORDER BY a.agenda_date ASC, a.start_time ASC';
 
   const agendaResult = await pool.query(q, agendaParams);
-  const agendas = agendaResult.rows;
+  const agendas = agendaResult[0];
   const teachersResult = await pool.query(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC`);
-  const teachers = teachersResult.rows;
+  const teachers = teachersResult[0];
 
   res.render('admin/agenda', { title: 'Agenda Guru', agendas, teachers, bulan, tahun, teacher_id });
 });
@@ -4533,7 +4515,7 @@ router.get('/notifications', async (req, res) => {
        LIMIT $${notifParams.length + 1} OFFSET $${notifParams.length + 2}`,
       [...notifParams, limit, offset]
     );
-    const notifications = notifResult.rows;
+    const notifications = notifResult[0];
 
     const notifCountResult = await pool.query(
       `SELECT COUNT(*) AS total FROM (
@@ -4547,7 +4529,7 @@ router.get('/notifications', async (req, res) => {
        ) sub`,
       notifParams
     );
-    const total = notifCountResult.rows[0].total;
+    const total = notifCountResult[0][0].total;
 
     res.render('admin/notifications', {
       title: 'Pantau Notifikasi Guru',
@@ -4571,7 +4553,7 @@ router.post('/notifications/:id/delete', async (req, res) => {
        FROM notifications WHERE id = $1 LIMIT 1`,
       [req.params.id]
     );
-    const notif = notifDetailResult.rows && notifDetailResult.rows[0];
+    const notif = notifDetailResult[0] && notifDetailResult[0][0];
     if (notif) {
       await pool.query(
         `DELETE FROM notifications
