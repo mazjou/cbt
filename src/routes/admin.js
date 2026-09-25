@@ -1346,6 +1346,18 @@ router.post('/subjects/bulk-delete', async (req, res) => {
 });
 
 // ===== USERS =====
+// SQL ekspresi untuk natural sort nama kelas: X < XI < XII, lalu jurusan alfabet, lalu nomor kelas
+const CLASS_ORDER_SQL = `
+  CASE
+    WHEN name ~* '^XII' THEN 3
+    WHEN name ~* '^XI'  THEN 2
+    WHEN name ~* '^X'   THEN 1
+    ELSE 4
+  END,
+  regexp_replace(upper(name), '^(XII|XI|X)\s+', '') ASC,
+  (regexp_match(name, '(\d+)\s*$'))[1]::int NULLS LAST
+`;
+
 router.get('/users', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
@@ -1355,7 +1367,7 @@ router.get('/users', async (req, res) => {
   const classFilter = (req.query.class || '').trim();
   const statusFilter = (req.query.status || '').trim();
 
-  const [classes] = await pq(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pq(`SELECT id, code, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
   
   // Build WHERE clause - PostgreSQL style
   let whereConditions = [];
@@ -1396,7 +1408,16 @@ router.get('/users', async (req, res) => {
      FROM users u
      LEFT JOIN classes c ON c.id=u.class_id
      ${whereClause}
-     ORDER BY u.id DESC
+     ORDER BY
+       CASE
+         WHEN c.name ~* '^XII' THEN 3
+         WHEN c.name ~* '^XI'  THEN 2
+         WHEN c.name ~* '^X'   THEN 1
+         ELSE 5
+       END,
+       regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+       (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+       u.full_name ASC
      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
     [...queryParams, limit, offset]
   );
