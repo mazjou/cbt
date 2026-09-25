@@ -648,11 +648,20 @@ router.post('/classes/:id/ajax-update', async (req, res) => {
 });
 
 router.delete('/classes/:id', async (req, res) => {
+  const id = req.params.id;
   try {
-    await pool.query(`DELETE FROM classes WHERE id=$1`, [req.params.id]);
+    await pool.query(`UPDATE users SET class_id = NULL WHERE class_id = $1`, [id]);
+    await pool.query(`UPDATE assignments SET class_id = NULL WHERE class_id = $1`, [id]);
+    await pool.query(`UPDATE exams SET class_id = NULL WHERE class_id = $1`, [id]);
+    await pool.query(`UPDATE materials SET class_id = NULL WHERE class_id = $1`, [id]);
+    await pool.query(`UPDATE live_classes SET class_id = NULL WHERE class_id = $1`, [id]);
+    await pool.query(`UPDATE notifications SET class_id = NULL WHERE class_id = $1`, [id]);
+    await pool.query(`DELETE FROM exam_classes WHERE class_id = $1`, [id]);
+    await pool.query(`DELETE FROM assignment_classes WHERE class_id = $1`, [id]);
+    await pool.query(`DELETE FROM classes WHERE id = $1`, [id]);
     req.flash('success', 'Kelas dihapus.');
   } catch (e) {
-    console.error(e);
+    console.error('Delete class error:', e.message, e.code);
     req.flash('error', 'Gagal menghapus kelas.');
   }
   res.redirect('/admin/classes');
@@ -691,26 +700,25 @@ router.post('/classes/bulk-delete', async (req, res) => {
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
-    // Hapus semua relasi ke classes secara aman
-    const safeQuery = async (sql, params) => {
-      try { await client.query(sql, params || validIds); } catch(err) {
+    // Hapus semua relasi ke classes (urutan penting - child dulu baru parent)
+    const safeQuery = async (sql) => {
+      try { await client.query(sql, validIds); } catch(err) {
         console.log('safeQuery skip:', err.message.substring(0, 80));
       }
     };
 
-    // NULL-kan class_id di tabel yang allow NULL
+    // 1. NULL-kan class_id di tabel yang allow NULL
     await safeQuery(`UPDATE users SET class_id = NULL WHERE class_id IN (${placeholders})`);
     await safeQuery(`UPDATE assignments SET class_id = NULL WHERE class_id IN (${placeholders})`);
     await safeQuery(`UPDATE exams SET class_id = NULL WHERE class_id IN (${placeholders})`);
     await safeQuery(`UPDATE materials SET class_id = NULL WHERE class_id IN (${placeholders})`);
     await safeQuery(`UPDATE live_classes SET class_id = NULL WHERE class_id IN (${placeholders})`);
-    await safeQuery(`UPDATE notifications SET target_id = NULL WHERE target_type='class' AND target_id IN (${placeholders})`);
+    await safeQuery(`UPDATE notifications SET class_id = NULL WHERE class_id IN (${placeholders})`);
 
-    // Hapus tabel junction/relasi
+    // 2. Hapus tabel junction
     await safeQuery(`DELETE FROM exam_classes WHERE class_id IN (${placeholders})`);
     await safeQuery(`DELETE FROM assignment_classes WHERE class_id IN (${placeholders})`);
     await safeQuery(`DELETE FROM material_classes WHERE class_id IN (${placeholders})`);
-    await safeQuery(`DELETE FROM live_class_participants WHERE live_class_id IN (SELECT id FROM live_classes WHERE class_id IN (${placeholders}))`);
     
     // Delete classes
     const result = await client.query(`DELETE FROM classes WHERE id IN (${placeholders})`, validIds);
