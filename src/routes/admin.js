@@ -4516,9 +4516,21 @@ router.get('/monitoring/backup-db', async (req, res) => {
   const filename   = `backup_${dbName}_${timestamp}.sql`;
   const backupPath = `/tmp/${filename}`;
 
-  const cmd = `PGPASSWORD="${dbPassword}" pg_dump -h ${dbHost} -p ${dbPort} -U ${dbUser} -d ${dbName} --no-owner --no-acl -f "${backupPath}"`;
-
-  exec(cmd, { timeout: 120000 }, (err) => {
+  // Pakai execFile (bukan exec) agar password tidak di-parse shell
+  // Password dipass lewat environment variable PGPASSWORD secara langsung
+  const { execFile } = require('child_process');
+  execFile('pg_dump', [
+    '-h', dbHost,
+    '-p', dbPort,
+    '-U', dbUser,
+    '-d', dbName,
+    '--no-owner',
+    '--no-acl',
+    '-f', backupPath
+  ], {
+    timeout: 120000,
+    env: { ...process.env, PGPASSWORD: dbPassword }
+  }, (err) => {
     if (err) {
       console.error('Backup DB error:', err.message);
       return res.status(500).json({ ok: false, message: 'Gagal backup database: ' + err.message });
