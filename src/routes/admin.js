@@ -561,11 +561,11 @@ router.post('/classes/import/commit', async (req, res) => {
     return res.redirect('/admin/classes/import');
   }
 
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let inserted = 0;
   let updated = 0;
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     for (const it of items) {
       await client.query(
         `INSERT INTO classes (code, name) VALUES ($1,$2)
@@ -575,9 +575,9 @@ router.post('/classes/import/commit', async (req, res) => {
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;
     }
-    await client.query('COMMIT');
+    await client.commit();
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error(e);
     req.flash('error', 'Gagal commit import kelas. Coba ulangi / pecah file.');
     return res.redirect('/admin/classes/import');
@@ -683,11 +683,11 @@ router.post('/classes/bulk-delete', async (req, res) => {
     return res.redirect('/admin/classes');
   }
 
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let deleted = 0;
   
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
@@ -707,10 +707,10 @@ router.post('/classes/bulk-delete', async (req, res) => {
     const result = await client.query(`DELETE FROM classes WHERE id IN (${placeholders})`, validIds);
     deleted = result.rowCount || 0;
     
-    await client.query('COMMIT');
+    await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} kelas dan data terkait.`);
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error(e);
     req.flash('error', 'Gagal menghapus kelas. Terjadi kesalahan pada database.');
   } finally {
@@ -868,11 +868,11 @@ router.post('/subjects/import/commit', async (req, res) => {
     return res.redirect('/admin/subjects/import');
   }
 
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let inserted = 0;
   let updated = 0;
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     for (const it of items) {
       await client.query(
         `INSERT INTO subjects (code, name) VALUES ($1,$2)
@@ -882,9 +882,9 @@ router.post('/subjects/import/commit', async (req, res) => {
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;
     }
-    await client.query('COMMIT');
+    await client.commit();
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error(e);
     req.flash('error', 'Gagal commit import mapel. Coba ulangi / pecah file.');
     return res.redirect('/admin/subjects/import');
@@ -1229,11 +1229,11 @@ router.post('/teachers/import/commit', async (req, res) => {
     return res.redirect('/admin/teachers/import');
   }
 
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let inserted = 0;
   let updated = 0;
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     for (const it of items) {
       const pwd = String(it.password || '').trim();
       const plainPwd = pwd || it.username;
@@ -1256,9 +1256,9 @@ router.post('/teachers/import/commit', async (req, res) => {
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;
     }
-    await client.query('COMMIT');
+    await client.commit();
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error(e);
     req.flash('error', 'Gagal commit import guru. Coba ulangi / pecah file.');
     return res.redirect('/admin/teachers/import');
@@ -1307,11 +1307,11 @@ router.post('/subjects/bulk-delete', async (req, res) => {
     return res.redirect('/admin/subjects');
   }
 
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let deleted = 0;
   
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
@@ -1324,10 +1324,10 @@ router.post('/subjects/bulk-delete', async (req, res) => {
     const result = await client.query(`DELETE FROM subjects WHERE id IN (${placeholders})`, validIds);
     deleted = result.rowCount || 0;
     
-    await client.query('COMMIT');
+    await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} mata pelajaran dan data terkait.`);
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error(e);
     req.flash('error', 'Gagal menghapus mata pelajaran. Terjadi kesalahan pada database.');
   } finally {
@@ -1780,12 +1780,12 @@ router.post('/users/import/commit', async (req, res) => {
     })
   );
 
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let inserted = 0;
   let updated = 0;
 
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
 
     // Bulk insert menggunakan unnest — 1 query untuk semua baris (sangat cepat)
     const usernames  = prepared.map(it => it.username);
@@ -1816,9 +1816,9 @@ router.post('/users/import/commit', async (req, res) => {
       else inserted += 1;
     }
 
-    await client.query('COMMIT');
+    await client.commit();
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error(e);
     req.flash('error', 'Gagal commit import. Coba ulangi atau pecah file menjadi lebih kecil.');
     return res.redirect('/admin/users/import');
@@ -1926,10 +1926,10 @@ router.post('/users/bulk-delete', async (req, res) => {
   }
 
   const ph = validIds.map((_, i) => `$${i+1}`).join(',');
-  const client = await pool.connect();
+  const client = await pool.getConnection();
 
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
 
     // Hapus data terkait - pakai nama kolom yang benar sesuai schema
     // attempts & attempt_answers sudah CASCADE dari FK
@@ -1958,10 +1958,10 @@ router.post('/users/bulk-delete', async (req, res) => {
     const result = await client.query(`DELETE FROM users WHERE id IN (${ph})`, validIds);
     const deleted = result.rowCount || 0;
 
-    await client.query('COMMIT');
+    await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} pengguna.`);
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error('Bulk delete error:', e.message);
     req.flash('error', `Gagal menghapus: ${e.message}`);
   } finally {
@@ -2191,11 +2191,11 @@ router.post('/users/bulk-move-class', async (req, res) => {
     }
   }
 
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let updated = 0;
   
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     
     const placeholders = validIds.map((_, i) => `$${i + 2}`).join(',');
     
@@ -2206,10 +2206,10 @@ router.post('/users/bulk-move-class', async (req, res) => {
     );
     updated = result.rowCount || 0;
     
-    await client.query('COMMIT');
+    await client.commit();
     req.flash('success', `Berhasil memindahkan ${updated} pengguna ke kelas "${targetClassName}".`);
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error('Bulk move class error:', e);
     req.flash('error', `Gagal memindahkan pengguna ke kelas. Error: ${e.message}`);
   } finally {
@@ -2691,11 +2691,11 @@ router.post('/exams/bulk-delete', async (req, res) => {
     return res.redirect('/admin/exams');
   }
 
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let deleted = 0;
   
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
@@ -2708,10 +2708,10 @@ router.post('/exams/bulk-delete', async (req, res) => {
     const result = await client.query(`DELETE FROM exams WHERE id IN (${placeholders})`, validIds);
     deleted = result.rowCount || 0;
     
-    await client.query('COMMIT');
+    await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} ujian dan data terkait.`);
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error(e);
     req.flash('error', 'Gagal menghapus ujian. Terjadi kesalahan pada database.');
   } finally {
@@ -2909,11 +2909,11 @@ router.post('/materials/bulk-delete', async (req, res) => {
     return res.redirect('/admin/materials');
   }
 
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let deleted = 0;
   
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
@@ -2931,10 +2931,10 @@ router.post('/materials/bulk-delete', async (req, res) => {
     const result = await client.query(`DELETE FROM materials WHERE id IN (${placeholders})`, validIds);
     deleted = result.rowCount || 0;
     
-    await client.query('COMMIT');
+    await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} materi dan data terkait.`);
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error(e);
     req.flash('error', 'Gagal menghapus materi. Terjadi kesalahan pada database.');
   } finally {
@@ -3226,11 +3226,11 @@ router.post('/attempts/bulk-reset', async (req, res) => {
     return res.redirect('/admin/grades');
   }
 
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let deleted = 0;
   
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     
     // Get attempt details for logging
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
@@ -3247,7 +3247,7 @@ router.post('/attempts/bulk-reset', async (req, res) => {
     console.log('Found attempts:', attempts.length, 'Expected:', validIds.length);
     
     if (attempts.length === 0) {
-      await client.query('ROLLBACK');
+      await client.rollback();
       req.flash('error', 'Tidak ada attempt yang ditemukan.');
       return res.redirect('/admin/grades');
     }
@@ -3261,10 +3261,10 @@ router.post('/attempts/bulk-reset', async (req, res) => {
     deleted = result.rowCount || 0;
     console.log('Deleted attempts:', deleted);
     
-    await client.query('COMMIT');
+    await client.commit();
     req.flash('success', `Berhasil reset ${deleted} nilai siswa. Siswa dapat mengulang ujian.`);
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error('Admin bulk reset error:', e);
     req.flash('error', `Gagal reset nilai. Error: ${e.message}`);
   } finally {
@@ -3548,11 +3548,11 @@ router.post('/assignments/bulk-delete', async (req, res) => {
     return res.redirect('/admin/assignments');
   }
   
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let deleted = 0;
   
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
@@ -3563,10 +3563,10 @@ router.post('/assignments/bulk-delete', async (req, res) => {
     const result = await client.query(`DELETE FROM assignments WHERE id IN (${placeholders})`, validIds);
     deleted = result.rowCount || 0;
     
-    await client.query('COMMIT');
+    await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} tugas dan data terkait.`);
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error(e);
     req.flash('error', 'Gagal menghapus tugas. Terjadi kesalahan pada database.');
   } finally {
@@ -3764,11 +3764,11 @@ router.post('/question-bank/bulk-delete', async (req, res) => {
     return res.redirect('/admin/question-bank');
   }
   
-  const client = await pool.connect();
+  const client = await pool.getConnection();
   let deleted = 0;
   
   try {
-    await client.query('BEGIN');
+    await client.beginTransaction();
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
@@ -3776,10 +3776,10 @@ router.post('/question-bank/bulk-delete', async (req, res) => {
     const result = await client.query(`DELETE FROM question_bank WHERE id IN (${placeholders})`, validIds);
     deleted = result.rowCount || 0;
     
-    await client.query('COMMIT');
+    await client.commit();
     req.flash('success', `Berhasil menghapus ${deleted} soal dari bank soal.`);
   } catch (e) {
-    await client.query('ROLLBACK');
+    await client.rollback();
     console.error(e);
     req.flash('error', 'Gagal menghapus soal. Terjadi kesalahan pada database.');
   } finally {
@@ -3917,9 +3917,9 @@ router.post('/failed-submissions/:id/recover', async (req, res) => {
     // Parse backup data
     const backupData = JSON.parse(attempt.backup_data);
     
-    const connection = await pool.connect();
+    const connection = await pool.getConnection();
     try {
-      await connection.query('BEGIN');
+      await connection.beginTransaction();
 
       // Restore answers from backup
       for (const answer of backupData.answers) {
@@ -3965,11 +3965,11 @@ router.post('/failed-submissions/:id/recover', async (req, res) => {
         WHERE id = $1
       `, [attempt.backup_id]);
 
-      await connection.query('COMMIT');
+      await connection.commit();
       
       req.flash('success', `Submission berhasil dipulihkan. Nilai: ${score}`);
     } catch (error) {
-      await connection.query('ROLLBACK');
+      await connection.rollback();
       throw error;
     } finally {
       connection.release();
