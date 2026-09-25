@@ -1529,7 +1529,16 @@ router.get('/users/print-cards', async (req, res) => {
       query += ` AND u.class_id = $${params.length}`;
     }
     
-    query += ' ORDER BY u.full_name ASC';
+    query += ` ORDER BY
+      CASE
+        WHEN c.name ~* '^XII' THEN 3
+        WHEN c.name ~* '^XI'  THEN 2
+        WHEN c.name ~* '^X'   THEN 1
+        ELSE 4
+      END,
+      regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+      (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+      u.full_name ASC`;
     
     const printResult = await pool.query(query, params);
     const users = printResult[0];
