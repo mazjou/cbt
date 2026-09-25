@@ -2034,6 +2034,55 @@ router.post('/users/bulk-delete', async (req, res) => {
   res.redirect('/admin/users');
 });
 
+// ===== HAPUS SEMUA PENGGUNA BERDASARKAN ROLE =====
+router.post('/users/delete-by-role', async (req, res) => {
+  const { role, confirm_text } = req.body;
+  const VALID_ROLES = ['STUDENT', 'TEACHER', 'PRINCIPAL'];
+
+  if (!role || !VALID_ROLES.includes(role)) {
+    req.flash('error', 'Role tidak valid.');
+    return res.redirect('/admin/users');
+  }
+
+  // Konfirmasi teks wajib sesuai
+  const roleLabel = { STUDENT: 'HAPUS SISWA', TEACHER: 'HAPUS GURU', PRINCIPAL: 'HAPUS KEPSEK' };
+  if (!confirm_text || confirm_text.trim() !== roleLabel[role]) {
+    req.flash('error', 'Teks konfirmasi tidak sesuai. Hapus dibatalkan.');
+    return res.redirect('/admin/users');
+  }
+
+  try {
+    // Ambil semua ID user berdasarkan role
+    const [targets] = await pq(`SELECT id FROM users WHERE role = $1`, [role]);
+    if (!targets || targets.length === 0) {
+      req.flash('error', `Tidak ada pengguna dengan role ${role}.`);
+      return res.redirect('/admin/users');
+    }
+
+    const ids = targets.map(u => u.id);
+    const ph = ids.map((_, i) => `$${i+1}`).join(',');
+
+    // Hapus semua data terkait (sama seperti bulk-delete)
+    await pool.query(`DELETE FROM material_reads WHERE student_id IN (${ph})`, ids);
+    await pool.query(`DELETE FROM notification_reads WHERE user_id IN (${ph})`, ids);
+    await pool.query(`DELETE FROM assignment_submissions WHERE student_id IN (${ph})`, ids);
+    await pool.query(`DELETE FROM live_class_participants WHERE student_id IN (${ph})`, ids);
+    await pool.query(`DELETE FROM device_tokens WHERE user_id IN (${ph})`, ids);
+    await pool.query(`DELETE FROM attempt_answers WHERE attempt_id IN (SELECT id FROM attempts WHERE student_id IN (${ph}))`, ids);
+    await pool.query(`DELETE FROM attempt_violations WHERE attempt_id IN (SELECT id FROM attempts WHERE student_id IN (${ph}))`, ids);
+    await pool.query(`DELETE FROM attempts WHERE student_id IN (${ph})`, ids);
+    await pool.query(`DELETE FROM submission_backups WHERE student_id IN (${ph})`, ids);
+    await pool.query(`DELETE FROM users WHERE id IN (${ph})`, ids);
+
+    req.flash('success', `Berhasil menghapus ${ids.length} pengguna dengan role ${role}.`);
+  } catch (e) {
+    console.error('Delete-by-role error:', e.message);
+    req.flash('error', `Gagal menghapus: ${e.message}`);
+  }
+
+  res.redirect('/admin/users');
+});
+
 // ===== RESET PASSWORD MASSAL =====
 router.post('/users/bulk-reset-password', async (req, res) => {
   const { password_type, custom_password, role_filter, class_filter, user_ids } = req.body;

@@ -22,6 +22,10 @@
     <a href="/admin/users/import-password" class="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-red-400 hover:from-orange-500 hover:to-red-500 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
       🔑 Import Password
     </a>
+    <button type="button" onclick="openDeleteByRoleModal()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      Hapus Massal
+    </button>
     <a href="/admin" class="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-500 hover:to-blue-500 text-white font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
       Kembali
     </a>
@@ -435,6 +439,83 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════════════════════════════════
+     MODAL: Hapus Massal Berdasarkan Role
+══════════════════════════════════════════════════════════════════════ -->
+<div id="deleteByRoleModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+
+    <!-- Header modal -->
+    <div class="bg-gradient-to-r from-red-600 to-rose-700 px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          </svg>
+        </div>
+        <h3 class="text-white font-bold text-lg">Hapus Massal Pengguna</h3>
+      </div>
+      <button onclick="closeDeleteByRoleModal()" class="text-white/70 hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body modal -->
+    <div class="px-6 py-5">
+      <div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-5">
+        <p class="text-red-700 text-sm font-semibold">⚠️ Peringatan!</p>
+        <p class="text-red-600 text-sm mt-1">Tindakan ini akan menghapus <strong>semua pengguna</strong> dengan role yang dipilih beserta seluruh data terkaitnya (ujian, jawaban, tugas, dll). <strong>Tidak dapat dibatalkan!</strong></p>
+      </div>
+
+      <form id="deleteByRoleForm" action="/admin/users/delete-by-role" method="POST">
+        <!-- Pilih Role -->
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Pilih Role yang Akan Dihapus</label>
+          <select name="role" id="deleteRoleSelect" onchange="updateDeleteConfirmHint()"
+            class="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100">
+            <option value="">-- Pilih Role --</option>
+            <option value="STUDENT">Siswa</option>
+            <option value="TEACHER">Guru</option>
+            <option value="PRINCIPAL">Kepala Sekolah</option>
+          </select>
+        </div>
+
+        <!-- Konfirmasi ketik teks -->
+        <div class="mb-5">
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+            Ketik <span id="confirmHintText" class="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-red-600">HAPUS SISWA</span> untuk konfirmasi
+          </label>
+          <input type="text" name="confirm_text" id="deleteConfirmInput"
+            placeholder="Ketik teks konfirmasi di sini..."
+            autocomplete="off"
+            class="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 font-mono"/>
+        </div>
+
+        <!-- Tombol aksi -->
+        <div class="flex gap-3">
+          <button type="button" onclick="closeDeleteByRoleModal()"
+            class="flex-1 px-4 py-2.5 rounded-xl border-2 border-slate-200 text-slate-600 font-semibold text-sm hover:bg-slate-50 transition-colors">
+            Batal
+          </button>
+          <button type="submit" id="deleteByRoleSubmitBtn"
+            onclick="return validateDeleteByRole()"
+            class="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-semibold text-sm shadow-md transition-all flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+            Hapus Semua
+          </button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+</div>
+
 <script>
   function toggleCustomPwd(val) {
     const wrap = document.getElementById('custom_pwd_wrap');
@@ -743,4 +824,48 @@
       btn.style.opacity = '1';
     }
   }
+</script>
+
+<script>
+  // ── Hapus Massal berdasarkan Role ──────────────────────────────────────
+  const ROLE_CONFIRM_MAP = {
+    STUDENT:   'HAPUS SISWA',
+    TEACHER:   'HAPUS GURU',
+    PRINCIPAL: 'HAPUS KEPSEK'
+  };
+
+  function openDeleteByRoleModal() {
+    const modal = document.getElementById('deleteByRoleModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('deleteRoleSelect').value = '';
+    document.getElementById('deleteConfirmInput').value = '';
+    document.getElementById('confirmHintText').textContent = 'HAPUS SISWA';
+  }
+
+  function closeDeleteByRoleModal() {
+    const modal = document.getElementById('deleteByRoleModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+
+  function updateDeleteConfirmHint() {
+    const role = document.getElementById('deleteRoleSelect').value;
+    const hint = ROLE_CONFIRM_MAP[role] || 'HAPUS SISWA';
+    document.getElementById('confirmHintText').textContent = hint;
+    document.getElementById('deleteConfirmInput').value = '';
+  }
+
+  function validateDeleteByRole() {
+    const role = document.getElementById('deleteRoleSelect').value;
+    const typed = document.getElementById('deleteConfirmInput').value.trim();
+    const expected = ROLE_CONFIRM_MAP[role];
+    if (!role) { alert('Pilih role terlebih dahulu.'); return false; }
+    if (typed !== expected) { alert('Teks konfirmasi salah. Ketik persis: ' + expected); return false; }
+    return confirm('⚠️ KONFIRMASI TERAKHIR\n\nAnda akan menghapus SEMUA pengguna dengan role "' + role + '".\nData ini TIDAK DAPAT dikembalikan!\n\nLanjutkan?');
+  }
+
+  document.getElementById('deleteByRoleModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteByRoleModal();
+  });
 </script>
