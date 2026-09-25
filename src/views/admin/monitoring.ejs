@@ -486,6 +486,21 @@ async function restartService(service, btn) {
 async function fetchData() {
   try {
     const r = await fetch('/admin/monitoring/data');
+    // Jika server redirect ke login (302 → HTML), tangani dengan pesan yang jelas
+    if (!r.ok || r.redirected || r.url.includes('/login')) {
+      document.getElementById('status-bar').className = 'mb-4 rounded-xl px-4 py-2 text-sm font-medium bg-amber-50 border border-amber-200 text-amber-700';
+      document.getElementById('status-bar').textContent = '⚠️ Sesi berakhir. Silakan login ulang.';
+      // Redirect ke login setelah 2 detik
+      setTimeout(() => { window.location.href = '/login'; }, 2000);
+      return;
+    }
+    const contentType = r.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      document.getElementById('status-bar').className = 'mb-4 rounded-xl px-4 py-2 text-sm font-medium bg-amber-50 border border-amber-200 text-amber-700';
+      document.getElementById('status-bar').textContent = '⚠️ Sesi berakhir. Silakan login ulang.';
+      setTimeout(() => { window.location.href = '/login'; }, 2000);
+      return;
+    }
     const d = await r.json();
     if (!d.ok) return;
 
@@ -668,8 +683,15 @@ async function fetchData() {
     drawChart();
 
   } catch(e) {
-    document.getElementById('status-bar').className = 'mb-4 rounded-xl px-4 py-2 text-sm font-medium bg-red-50 border border-red-200 text-red-700';
-    document.getElementById('status-bar').textContent = '❌ Gagal memuat data: ' + e.message;
+    const isSessionError = e.message && (e.message.includes('<!doctype') || e.message.includes('token') || e.message.includes('JSON'));
+    if (isSessionError) {
+      document.getElementById('status-bar').className = 'mb-4 rounded-xl px-4 py-2 text-sm font-medium bg-amber-50 border border-amber-200 text-amber-700';
+      document.getElementById('status-bar').textContent = '⚠️ Sesi berakhir. Mengalihkan ke halaman login...';
+      setTimeout(() => { window.location.href = '/login'; }, 2000);
+    } else {
+      document.getElementById('status-bar').className = 'mb-4 rounded-xl px-4 py-2 text-sm font-medium bg-red-50 border border-red-200 text-red-700';
+      document.getElementById('status-bar').textContent = '❌ Gagal memuat data: ' + e.message;
+    }
   }
 }
 
