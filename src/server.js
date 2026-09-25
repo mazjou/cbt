@@ -248,6 +248,7 @@ function buildSessionMiddleware() {
     resave: false,
     saveUninitialized: false,
     proxy: true,
+    rolling: true,
     cookie: { httpOnly: true, sameSite: 'lax', secure: IS_PROD, maxAge: 1000 * 60 * 60 * 8 },
   };
   if (redisClient) {

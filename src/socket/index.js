@@ -180,7 +180,11 @@ async function initializeSocket(server, { redisClient = null, sessionMiddleware 
       origin: process.env.CLIENT_URL || 'http://localhost:3000',
       methods: ['GET', 'POST'],
       credentials: true
-    }
+    },
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    upgradeTimeout: 30000,
+    transports: ['websocket', 'polling'],
   });
 
   if (redisClient) {

@@ -32,8 +32,8 @@ liveclass.tam.web.id {
         }
     }
     
-    # Compression untuk performa lebih baik
-    encode gzip zstd
+    # Compression - hanya gzip (Safari tidak support zstd)
+    encode gzip
     
     # Security headers
     header {
