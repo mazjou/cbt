@@ -5,9 +5,9 @@
   <title><%= title %></title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box;}
-    body{font-family:'Arial',sans-serif;background:#e5e7eb;}
+    body{font-family:Arial,sans-serif;background:#e5e7eb;}
 
-    /* ── Kontrol bar ──────────────────────────────────────────────────────── */
+    /* ── Kontrol bar ─────────────────────────────────────────────────── */
     .no-print{background:white;padding:12px 20px;display:flex;align-items:center;
       justify-content:space-between;flex-wrap:wrap;gap:10px;
       box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:14px;}
@@ -15,166 +15,125 @@
     .no-print small{font-size:12px;color:#64748b;}
     .ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
     .btn{padding:8px 18px;border-radius:8px;font-weight:700;font-size:13px;
-      cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+      cursor:pointer;border:none;text-decoration:none;display:inline-flex;
+      align-items:center;gap:6px;}
     .btn-print{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:white;}
     .btn-back{background:#f1f5f9;color:#475569;}
     select.fs{padding:6px 10px;border-radius:7px;border:2px solid #e2e8f0;
       font-size:13px;color:#475569;background:white;}
 
-    /* ── Halaman A4 ────────────────────────────────────────────────────────
-       297mm tinggi, padding 4mm atas-bawah = 289mm area.
-       10 kartu, gap 2mm x4 = 8mm. Tiap kartu = (289-8)/5 = 56.2mm
-       Pakai 56mm fixed per kartu.
-    ─────────────────────────────────────────────────────────────────────── */
+    /* ── Halaman A4 portrait — 10 kartu (2 × 5) ────────────────────────
+       Halaman: 210 × 297mm. Padding: 6mm semua sisi.
+       Area cetak: 198 × 285mm.
+       Gap kolom: 4mm. Gap baris: 3mm × 4 = 12mm.
+       Tinggi per kartu: (285 - 12) / 5 = 54.6mm → 54mm.
+       Lebar per kartu: (198 - 4) / 2 = 97mm.
+    ──────────────────────────────────────────────────────────────────── */
     .page{
       width:210mm;
       height:297mm;
       margin:0 auto 16px;
       background:white;
-      padding:4mm 5mm;
+      padding:6mm;
       display:grid;
       grid-template-columns:1fr 1fr;
-      grid-template-rows:repeat(5,56mm);
-      gap:2mm 3mm;
+      grid-template-rows:repeat(5,54mm);
+      gap:3mm 4mm;
       overflow:hidden;
     }
 
-    /* ── Kartu: lebar ~(200-3)/2=98.5mm, tinggi 56mm fixed ─────────────── */
+    /* ── Kartu ──────────────────────────────────────────────────────── */
     .kartu{
-      border:1.5px solid #1e3a8a;
-      border-radius:3px;
+      height:54mm;
+      border:1px solid #555;
       background:white;
       display:flex;
       flex-direction:column;
-      height:56mm;
       overflow:hidden;
     }
 
-    /* Header: 9mm */
+    /* Header: logo | judul | QR — setinggi 18mm */
     .k-head{
-      height:9mm;
+      height:18mm;
       flex-shrink:0;
-      display:flex;align-items:stretch;
-      background:linear-gradient(90deg,#1e3a8a,#1d4ed8);
+      display:flex;
+      align-items:center;
+      border-bottom:1px solid #555;
+      padding:1mm 2mm;
+      gap:2mm;
+      background:white;
     }
     .k-logo{
-      width:9mm;flex-shrink:0;
+      flex-shrink:0;
+      width:14mm;
       display:flex;align-items:center;justify-content:center;
-      border-right:1px solid rgba(255,255,255,.2);
-      background:rgba(0,0,0,.15);
     }
-    .k-logo img{width:7mm;height:7mm;object-fit:contain;}
+    .k-logo img{width:13mm;height:13mm;object-fit:contain;}
     .k-title{
-      flex:1;display:flex;flex-direction:column;
-      align-items:center;justify-content:center;
-      padding:0 1mm;text-align:center;
+      flex:1;
+      text-align:center;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
     }
-    .k-title .t1{font-size:6pt;font-weight:900;text-transform:uppercase;
-      color:white;letter-spacing:.4px;}
-    .k-title .t2{font-size:5.5pt;font-weight:700;color:#bfdbfe;margin-top:.2mm;}
-    .k-title .t3{font-size:5pt;color:#93c5fd;margin-top:.1mm;}
-    .k-panitia{
-      width:7mm;flex-shrink:0;
-      border-left:1px solid rgba(255,255,255,.2);
+    .k-title .t1{font-size:7pt;font-weight:900;text-transform:uppercase;
+      color:#111;letter-spacing:.3px;line-height:1.3;}
+    .k-title .t2{font-size:6.5pt;font-weight:700;color:#1e3a8a;margin-top:.5mm;
+      line-height:1.3;}
+    .k-title .t3{font-size:5.5pt;color:#374151;margin-top:.3mm;}
+    .k-qr{
+      flex-shrink:0;
+      width:16mm;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:.5mm;
+    }
+    .k-qr-wrap{
+      width:15mm;height:15mm;
       display:flex;align-items:center;justify-content:center;
-      font-size:4pt;font-weight:700;color:rgba(255,255,255,.75);
-      writing-mode:vertical-rl;transform:rotate(180deg);
-      background:rgba(0,0,0,.12);letter-spacing:1px;
+      background:white;
+      overflow:hidden;
     }
+    .k-qr-label{font-size:4pt;color:#555;text-align:center;font-weight:600;
+      letter-spacing:.3px;text-transform:uppercase;}
 
-    /* Body: flex sisa ruang */
+    /* Body: tabel data — sisa ruang */
     .k-body{
       flex:1;
-      display:flex;flex-direction:row;
-      padding:1.5mm 2mm 1mm;
-      gap:1.5mm;
-      min-height:0;
+      padding:1.5mm 3mm;
       overflow:hidden;
+      display:flex;
+      align-items:flex-start;
     }
-    .k-left{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;}
-
-    /* Tabel data */
     .dt{width:100%;border-collapse:collapse;}
-    .dt td{font-size:5.5pt;padding:.3mm 0;vertical-align:middle;
-      color:#111827;line-height:1.2;}
-    .dt .lb{width:13mm;color:#4b5563;white-space:nowrap;font-weight:500;}
-    .dt .sp{width:2mm;text-align:center;color:#4b5563;}
-    .dt .vl{font-weight:700;font-size:5.5pt;word-break:break-all;color:#111827;}
-    .dt .mono{font-family:'Courier New',monospace;font-size:5pt;
-      font-weight:700;color:#1e40af;letter-spacing:.2px;}
+    .dt td{
+      font-size:6pt;
+      padding:.4mm 0;
+      vertical-align:middle;
+      color:#111;
+      line-height:1.25;
+    }
+    .dt .lb{width:24mm;color:#444;white-space:nowrap;font-weight:400;}
+    .dt .sp{width:4mm;text-align:center;color:#444;}
+    .dt .vl{font-weight:700;font-size:6pt;word-break:break-all;color:#111;}
+    .dt .mono{font-family:'Courier New',monospace;font-size:5.8pt;
+      font-weight:700;color:#1e3a8a;}
 
-    /* Kanan: foto + QR dalam 1 kolom sempit */
-    .k-right{
-      flex-shrink:0;
-      width:22mm;
-      display:flex;flex-direction:column;
-      align-items:center;justify-content:center;
-      gap:1mm;
-    }
-
-    /* Foto — tampil sebagai kotak 3×3 cm tapi di kartu kecil ini muat 20mm */
-    .foto-box{
-      width:20mm;height:20mm;
-      border:1px solid #94a3b8;border-radius:2px;
-      display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(135deg,#f1f5f9,#e2e8f0);
-      overflow:hidden;flex-shrink:0;
-    }
-    .foto-box img{width:100%;height:100%;object-fit:cover;}
-    .foto-ph{
-      display:flex;flex-direction:column;align-items:center;
-      justify-content:center;gap:.8mm;
-      color:#94a3b8;text-align:center;width:100%;height:100%;
-    }
-    .foto-ph svg{width:7mm;height:7mm;opacity:.4;}
-    .foto-ph .ph-txt{font-size:4pt;color:#94a3b8;font-weight:700;
-      text-transform:uppercase;letter-spacing:.3px;}
-    .foto-ph .ph-sub{font-size:3.5pt;color:#cbd5e1;}
-
-    /* QR */
-    .qr-row{
-      display:flex;flex-direction:column;align-items:center;gap:.5mm;
-    }
-    .qr-wrap{
-      width:14mm;height:14mm;
-      display:flex;align-items:center;justify-content:center;
-      background:white;border:1px solid #e2e8f0;border-radius:1px;
-      overflow:hidden;flex-shrink:0;
-    }
-    .qr-label{font-size:3.5pt;color:#6b7280;text-align:center;
-      font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
-
-    /* TTD: 11mm fixed */
-    .k-ttd{
-      height:11mm;
-      flex-shrink:0;
-      border-top:1px dashed #cbd5e1;
-      padding:.5mm 2mm;
-      background:#f8fafc;
-      overflow:hidden;
-    }
-    .ttd-left{font-size:4.5pt;color:#374151;line-height:1.45;}
-    .ttd-garis{border-bottom:1px solid #374151;width:20mm;margin:1mm 0 .3mm;}
-    .ttd-nama{font-weight:700;font-size:4.5pt;color:#111827;}
-    .ttd-nip{font-size:4pt;color:#4b5563;}
-
-    /* Footer: 4mm fixed */
+    /* Footer: 5mm */
     .k-foot{
-      height:4mm;
+      height:5mm;
       flex-shrink:0;
-      border-top:1px solid #e5e7eb;
+      border-top:1px solid #ccc;
       display:flex;align-items:center;justify-content:center;
-      font-size:3.8pt;color:#9ca3af;background:#f9fafb;
+      font-size:4pt;color:#888;background:#f9fafb;
+      letter-spacing:.2px;
     }
 
-    /* ── Print ─────────────────────────────────────────────────────────────── */
+    /* ── Print ──────────────────────────────────────────────────────── */
     @media print{
       body{background:white;}
       .no-print{display:none;}
       .page{
         margin:0;
         width:210mm;height:297mm;
-        padding:4mm 5mm;
+        padding:6mm;
         page-break-after:always;
         overflow:hidden;
       }
@@ -228,11 +187,10 @@
   <% for(var j = p; j < Math.min(p+PH, users.length); j++){
        var u   = users[j];
        var np  = u.nomor_peserta || null;
-       var fs2 = u.profile_photo && u.profile_photo.startsWith('/public/') ? u.profile_photo : null;
   %>
   <div class="kartu">
 
-    <!-- Header 9mm -->
+    <!-- Header: logo | judul | QR -->
     <div class="k-head">
       <div class="k-logo">
         <img src="/public/images/logo.png" alt="" onerror="this.style.display='none'">
@@ -242,76 +200,49 @@
         <div class="t2"><%=schoolInfo.name%></div>
         <div class="t3">TP <%=ta%></div>
       </div>
-      <div class="k-panitia">Panitia</div>
+      <div class="k-qr">
+        <div class="k-qr-wrap" id="qr-<%=j%>"></div>
+        <div class="k-qr-label">Scan</div>
+      </div>
     </div>
 
-    <!-- Body flex -->
+    <!-- Body: data siswa -->
     <div class="k-body">
-      <div class="k-left">
-        <table class="dt">
-          <% if(np){ %>
-          <tr>
-            <td class="lb">No. Peserta</td><td class="sp">:</td>
-            <td class="vl mono"><%=np%></td>
-          </tr>
-          <% } %>
-          <tr>
-            <td class="lb">Nama</td><td class="sp">:</td>
-            <td class="vl"><%=u.full_name%></td>
-          </tr>
-          <% if(u.class_name){ %>
-          <tr>
-            <td class="lb">Kelas</td><td class="sp">:</td>
-            <td class="vl"><%=u.class_name%></td>
-          </tr>
-          <% } %>
-          <tr>
-            <td class="lb">Username</td><td class="sp">:</td>
-            <td class="vl mono"><%=u.username%></td>
-          </tr>
-          <tr>
-            <td class="lb">Password</td><td class="sp">:</td>
-            <td class="vl mono"><%=u.plain_password||u.username%></td>
-          </tr>
-        </table>
-      </div>
-
-      <!-- Foto + QR -->
-      <div class="k-right">
-        <div class="foto-box">
-          <% if(fs2){ %>
-            <img src="<%=fs2%>" alt="Foto"
-              onerror="this.parentNode.innerHTML='<div class=\'foto-ph\'><svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z\'/></svg><div class=\'ph-txt\'>No User</div></div>'">
-          <% } else { %>
-            <div class="foto-ph">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-              </svg>
-              <div class="ph-txt">No User</div>
-            </div>
-          <% } %>
-        </div>
-        <div class="qr-row">
-          <div class="qr-wrap" id="qr-<%=j%>"></div>
-          <div class="qr-label">Scan</div>
-        </div>
-      </div>
+      <table class="dt">
+        <% if(np){ %>
+        <tr>
+          <td class="lb">No. Peserta</td>
+          <td class="sp">:</td>
+          <td class="vl mono"><%=np%></td>
+        </tr>
+        <% } %>
+        <tr>
+          <td class="lb">Nama</td>
+          <td class="sp">:</td>
+          <td class="vl"><%=u.full_name%></td>
+        </tr>
+        <% if(u.class_name){ %>
+        <tr>
+          <td class="lb">Kelas</td>
+          <td class="sp">:</td>
+          <td class="vl"><%=u.class_name%></td>
+        </tr>
+        <% } %>
+        <tr>
+          <td class="lb">Username</td>
+          <td class="sp">:</td>
+          <td class="vl mono"><%=u.username%></td>
+        </tr>
+        <tr>
+          <td class="lb">Password</td>
+          <td class="sp">:</td>
+          <td class="vl mono"><%=u.plain_password||u.username%></td>
+        </tr>
+      </table>
     </div>
 
-    <!-- TTD 11mm -->
-    <div class="k-ttd">
-      <div class="ttd-left">
-        <div><%=schoolInfo.address%>, <%=tgl%></div>
-        <div>Kepala Sekolah,</div>
-        <div class="ttd-garis"></div>
-        <div class="ttd-nama"><%=process.env.PRINCIPAL_NAME||'Kepala Sekolah'%></div>
-        <div class="ttd-nip">NIP. <%=process.env.PRINCIPAL_NIP||'-'%></div>
-      </div>
-    </div>
-
-    <!-- Footer 4mm -->
-    <div class="k-foot">🔒 Simpan kartu ini — Jangan bagikan kepada orang lain</div>
+    <!-- Footer -->
+    <div class="k-foot">Simpan kartu ini — Jangan bagikan kepada orang lain</div>
 
   </div>
   <% } %>
@@ -330,7 +261,7 @@
     try{
       new QRCode(document.getElementById('qr-<%=qi%>'),{
         text:'<%-qt.replace(/\\/g,"\\\\").replace(/'/g,"\\'")%>',
-        width:52,height:52,
+        width:56,height:56,
         colorDark:'#000',colorLight:'#fff',
         correctLevel:QRCode.CorrectLevel.M
       });
