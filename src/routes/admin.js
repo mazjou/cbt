@@ -565,9 +565,9 @@ router.post('/classes/import/commit', async (req, res) => {
   let inserted = 0;
   let updated = 0;
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
     for (const it of items) {
-      await client.query(
+      await pool.query(
         `INSERT INTO classes (code, name) VALUES ($1,$2)
          ON CONFLICT (code) DO UPDATE SET name=EXCLUDED.name`,
         [it.code, it.name]
@@ -575,14 +575,14 @@ router.post('/classes/import/commit', async (req, res) => {
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;
     }
-    await client.commit();
+    // commit done (no-transaction);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error(e);
     req.flash('error', 'Gagal commit import kelas. Coba ulangi / pecah file.');
     return res.redirect('/admin/classes/import');
   } finally {
-    client.release();
+    // release (no-transaction);
   }
 
   req.session.classImportPreview = null;
@@ -692,46 +692,37 @@ router.post('/classes/bulk-delete', async (req, res) => {
     return res.redirect('/admin/classes');
   }
 
-  const client = await pool.getConnection();
-  let deleted = 0;
-  
   try {
-    await client.beginTransaction();
-    
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
-    // Hapus semua relasi ke classes (urutan penting - child dulu baru parent)
-    const safeQuery = async (sql) => {
-      try { await client.query(sql, validIds); } catch(err) {
-        console.log('safeQuery skip:', err.message.substring(0, 80));
+    // Helper - abaikan error (tabel tidak ada, kolom tidak ada, dll)
+    const safe = async (sql) => {
+      try { await pool.query(sql, validIds); } catch(err) {
+        console.log('[delete-classes] skip:', err.message.substring(0, 100));
       }
     };
 
-    // 1. NULL-kan class_id di tabel yang allow NULL
-    await safeQuery(`UPDATE users SET class_id = NULL WHERE class_id IN (${placeholders})`);
-    await safeQuery(`UPDATE assignments SET class_id = NULL WHERE class_id IN (${placeholders})`);
-    await safeQuery(`UPDATE exams SET class_id = NULL WHERE class_id IN (${placeholders})`);
-    await safeQuery(`UPDATE materials SET class_id = NULL WHERE class_id IN (${placeholders})`);
-    await safeQuery(`UPDATE live_classes SET class_id = NULL WHERE class_id IN (${placeholders})`);
-    await safeQuery(`UPDATE notifications SET class_id = NULL WHERE class_id IN (${placeholders})`);
-
-    // 2. Hapus tabel junction
-    await safeQuery(`DELETE FROM exam_classes WHERE class_id IN (${placeholders})`);
-    await safeQuery(`DELETE FROM assignment_classes WHERE class_id IN (${placeholders})`);
-    await safeQuery(`DELETE FROM material_classes WHERE class_id IN (${placeholders})`);
+    // NULL-kan semua FK yang allow NULL
+    await safe(`UPDATE users SET class_id = NULL WHERE class_id IN (${placeholders})`);
+    await safe(`UPDATE assignments SET class_id = NULL WHERE class_id IN (${placeholders})`);
+    await safe(`UPDATE exams SET class_id = NULL WHERE class_id IN (${placeholders})`);
+    await safe(`UPDATE materials SET class_id = NULL WHERE class_id IN (${placeholders})`);
+    await safe(`UPDATE live_classes SET class_id = NULL WHERE class_id IN (${placeholders})`);
+    await safe(`UPDATE notifications SET class_id = NULL WHERE class_id IN (${placeholders})`);
     
-    // Delete classes
-    const result = await client.query(`DELETE FROM classes WHERE id IN (${placeholders})`, validIds);
-    deleted = result.affectedRows || 0;
+    // Hapus tabel junction
+    await safe(`DELETE FROM exam_classes WHERE class_id IN (${placeholders})`);
+    await safe(`DELETE FROM assignment_classes WHERE class_id IN (${placeholders})`);
+    await safe(`DELETE FROM material_classes WHERE class_id IN (${placeholders})`);
     
-    await client.commit();
+    // Hapus kelas
+    const result = await pool.query(`DELETE FROM classes WHERE id IN (${placeholders})`, validIds);
+    const deleted = result.affectedRows || 0;
+    
     req.flash('success', `Berhasil menghapus ${deleted} kelas dan data terkait.`);
   } catch (e) {
-    await client.rollback();
-    console.error('Bulk delete classes error:', e.message, e.code);
+    console.error('Bulk delete classes error:', e.message, e.code, e.detail);
     req.flash('error', 'Gagal menghapus kelas. Terjadi kesalahan pada database.');
-  } finally {
-    client.release();
   }
   
   res.redirect('/admin/classes');
@@ -889,9 +880,9 @@ router.post('/subjects/import/commit', async (req, res) => {
   let inserted = 0;
   let updated = 0;
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
     for (const it of items) {
-      await client.query(
+      await pool.query(
         `INSERT INTO subjects (code, name) VALUES ($1,$2)
          ON CONFLICT (code) DO UPDATE SET name=EXCLUDED.name`,
         [it.code, it.name]
@@ -899,14 +890,14 @@ router.post('/subjects/import/commit', async (req, res) => {
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;
     }
-    await client.commit();
+    // commit done (no-transaction);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error(e);
     req.flash('error', 'Gagal commit import mapel. Coba ulangi / pecah file.');
     return res.redirect('/admin/subjects/import');
   } finally {
-    client.release();
+    // release (no-transaction);
   }
 
   req.session.subjectImportPreview = null;
@@ -1250,14 +1241,14 @@ router.post('/teachers/import/commit', async (req, res) => {
   let inserted = 0;
   let updated = 0;
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
     for (const it of items) {
       const pwd = String(it.password || '').trim();
       const plainPwd = pwd || it.username;
       const password_hash = await bcrypt.hash(plainPwd, 10);
       const setPassword = pwd ? true : false;
 
-      await client.query(
+      await pool.query(
         `INSERT INTO users (username, full_name, role, class_id, password_hash, plain_password, is_active)
          VALUES ($1,$2,'TEACHER',NULL,$3,$4,true)
          ON CONFLICT (username) DO UPDATE SET
@@ -1273,14 +1264,14 @@ router.post('/teachers/import/commit', async (req, res) => {
       if (it.action === 'UPDATE') updated += 1;
       else inserted += 1;
     }
-    await client.commit();
+    // commit done (no-transaction);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error(e);
     req.flash('error', 'Gagal commit import guru. Coba ulangi / pecah file.');
     return res.redirect('/admin/teachers/import');
   } finally {
-    client.release();
+    // release (no-transaction);
   }
 
   req.session.teacherImportPreview = null;
@@ -1328,27 +1319,27 @@ router.post('/subjects/bulk-delete', async (req, res) => {
   let deleted = 0;
   
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete related data
-    await client.query(`DELETE FROM exams WHERE subject_id IN (${placeholders})`, validIds);
-    await client.query(`DELETE FROM materials WHERE subject_id IN (${placeholders})`, validIds);
-    await client.query(`DELETE FROM question_bank WHERE subject_id IN (${placeholders})`, validIds);
+    await pool.query(`DELETE FROM exams WHERE subject_id IN (${placeholders})`, validIds);
+    await pool.query(`DELETE FROM materials WHERE subject_id IN (${placeholders})`, validIds);
+    await pool.query(`DELETE FROM question_bank WHERE subject_id IN (${placeholders})`, validIds);
     
     // Delete subjects
-    const result = await client.query(`DELETE FROM subjects WHERE id IN (${placeholders})`, validIds);
+    const result = await pool.query(`DELETE FROM subjects WHERE id IN (${placeholders})`, validIds);
     deleted = result.affectedRows || 0;
     
-    await client.commit();
+    // commit done (no-transaction);
     req.flash('success', `Berhasil menghapus ${deleted} mata pelajaran dan data terkait.`);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error(e);
     req.flash('error', 'Gagal menghapus mata pelajaran. Terjadi kesalahan pada database.');
   } finally {
-    client.release();
+    // release (no-transaction);
   }
   
   res.redirect('/admin/subjects');
@@ -1802,7 +1793,7 @@ router.post('/users/import/commit', async (req, res) => {
   let updated = 0;
 
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
 
     // Bulk insert menggunakan unnest — 1 query untuk semua baris (sangat cepat)
     const usernames  = prepared.map(it => it.username);
@@ -1812,7 +1803,7 @@ router.post('/users/import/commit', async (req, res) => {
     const nomorList  = prepared.map(it => it.nomor_peserta || null);
     const plainPwds  = prepared.map(it => it.plainPwd);
 
-    await client.query(
+    await pool.query(
       `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active, nomor_peserta, plain_password)
        SELECT u, fn, 'STUDENT', ci::int, ph, true, np, pp
        FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[])
@@ -1833,14 +1824,14 @@ router.post('/users/import/commit', async (req, res) => {
       else inserted += 1;
     }
 
-    await client.commit();
+    // commit done (no-transaction);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error(e);
     req.flash('error', 'Gagal commit import. Coba ulangi atau pecah file menjadi lebih kecil.');
     return res.redirect('/admin/users/import');
   } finally {
-    client.release();
+    // release (no-transaction);
   }
 
   // clear session preview
@@ -1980,43 +1971,43 @@ router.post('/users/bulk-delete', async (req, res) => {
   const client = await pool.getConnection();
 
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
 
     // Hapus data terkait - pakai nama kolom yang benar sesuai schema
     // attempts & attempt_answers sudah CASCADE dari FK
     // Hapus manual yang tidak CASCADE
-    await client.query(`DELETE FROM material_reads WHERE student_id IN (${ph})`, validIds);
-    await client.query(`DELETE FROM notification_reads WHERE user_id IN (${ph})`, validIds);
-    await client.query(`DELETE FROM assignment_submissions WHERE student_id IN (${ph})`, validIds);
-    await client.query(`DELETE FROM live_class_participants WHERE student_id IN (${ph})`, validIds);
-    await client.query(`DELETE FROM device_tokens WHERE user_id IN (${ph})`, validIds);
+    await pool.query(`DELETE FROM material_reads WHERE student_id IN (${ph})`, validIds);
+    await pool.query(`DELETE FROM notification_reads WHERE user_id IN (${ph})`, validIds);
+    await pool.query(`DELETE FROM assignment_submissions WHERE student_id IN (${ph})`, validIds);
+    await pool.query(`DELETE FROM live_class_participants WHERE student_id IN (${ph})`, validIds);
+    await pool.query(`DELETE FROM device_tokens WHERE user_id IN (${ph})`, validIds);
 
     // Hapus attempt_answers dulu (FK ke attempts)
-    await client.query(`
+    await pool.query(`
       DELETE FROM attempt_answers WHERE attempt_id IN (
         SELECT id FROM attempts WHERE student_id IN (${ph})
       )`, validIds);
-    await client.query(`
+    await pool.query(`
       DELETE FROM attempt_violations WHERE attempt_id IN (
         SELECT id FROM attempts WHERE student_id IN (${ph})
       )`, validIds);
-    await client.query(`DELETE FROM attempts WHERE student_id IN (${ph})`, validIds);
+    await pool.query(`DELETE FROM attempts WHERE student_id IN (${ph})`, validIds);
 
     // Hapus submission_backups
-    await client.query(`DELETE FROM submission_backups WHERE student_id IN (${ph})`, validIds);
+    await pool.query(`DELETE FROM submission_backups WHERE student_id IN (${ph})`, validIds);
 
     // Hapus users
-    const result = await client.query(`DELETE FROM users WHERE id IN (${ph})`, validIds);
+    const result = await pool.query(`DELETE FROM users WHERE id IN (${ph})`, validIds);
     const deleted = result.affectedRows || 0;
 
-    await client.commit();
+    // commit done (no-transaction);
     req.flash('success', `Berhasil menghapus ${deleted} pengguna.`);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error('Bulk delete error:', e.message);
     req.flash('error', `Gagal menghapus: ${e.message}`);
   } finally {
-    client.release();
+    // release (no-transaction);
   }
 
   res.redirect('/admin/users');
@@ -2246,25 +2237,25 @@ router.post('/users/bulk-move-class', async (req, res) => {
   let updated = 0;
   
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
     
     const placeholders = validIds.map((_, i) => `$${i + 2}`).join(',');
     
     // Update users' class_id
-    const result = await client.query(
+    const result = await pool.query(
       `UPDATE users SET class_id = $1 WHERE id IN (${placeholders})`, 
       [targetClassId, ...validIds]
     );
     updated = result.affectedRows || 0;
     
-    await client.commit();
+    // commit done (no-transaction);
     req.flash('success', `Berhasil memindahkan ${updated} pengguna ke kelas "${targetClassName}".`);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error('Bulk move class error:', e);
     req.flash('error', `Gagal memindahkan pengguna ke kelas. Error: ${e.message}`);
   } finally {
-    client.release();
+    // release (no-transaction);
   }
   
   res.redirect('/admin/users');
@@ -2746,27 +2737,27 @@ router.post('/exams/bulk-delete', async (req, res) => {
   let deleted = 0;
   
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete related data
-    await client.query(`DELETE FROM attempts WHERE exam_id IN (${placeholders})`, validIds);
-    await client.query(`DELETE FROM questions WHERE exam_id IN (${placeholders})`, validIds);
-    await client.query(`DELETE FROM exam_classes WHERE exam_id IN (${placeholders})`, validIds);
+    await pool.query(`DELETE FROM attempts WHERE exam_id IN (${placeholders})`, validIds);
+    await pool.query(`DELETE FROM questions WHERE exam_id IN (${placeholders})`, validIds);
+    await pool.query(`DELETE FROM exam_classes WHERE exam_id IN (${placeholders})`, validIds);
     
     // Delete exams
-    const result = await client.query(`DELETE FROM exams WHERE id IN (${placeholders})`, validIds);
+    const result = await pool.query(`DELETE FROM exams WHERE id IN (${placeholders})`, validIds);
     deleted = result.affectedRows || 0;
     
-    await client.commit();
+    // commit done (no-transaction);
     req.flash('success', `Berhasil menghapus ${deleted} ujian dan data terkait.`);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error(e);
     req.flash('error', 'Gagal menghapus ujian. Terjadi kesalahan pada database.');
   } finally {
-    client.release();
+    // release (no-transaction);
   }
   
   res.redirect('/admin/exams');
@@ -2964,32 +2955,32 @@ router.post('/materials/bulk-delete', async (req, res) => {
   let deleted = 0;
   
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete related data
-    await client.query(`DELETE FROM material_reads WHERE material_id IN (${placeholders})`, validIds);
+    await pool.query(`DELETE FROM material_reads WHERE material_id IN (${placeholders})`, validIds);
     
     // Try to delete from material_classes if table exists
     try {
-      await client.query(`DELETE FROM material_classes WHERE material_id IN (${placeholders})`, validIds);
+      await pool.query(`DELETE FROM material_classes WHERE material_id IN (${placeholders})`, validIds);
     } catch (err) {
       console.log('material_classes table not found, skipping...');
     }
     
     // Delete materials
-    const result = await client.query(`DELETE FROM materials WHERE id IN (${placeholders})`, validIds);
+    const result = await pool.query(`DELETE FROM materials WHERE id IN (${placeholders})`, validIds);
     deleted = result.affectedRows || 0;
     
-    await client.commit();
+    // commit done (no-transaction);
     req.flash('success', `Berhasil menghapus ${deleted} materi dan data terkait.`);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error(e);
     req.flash('error', 'Gagal menghapus materi. Terjadi kesalahan pada database.');
   } finally {
-    client.release();
+    // release (no-transaction);
   }
   
   res.redirect('/admin/materials');
@@ -3281,11 +3272,11 @@ router.post('/attempts/bulk-reset', async (req, res) => {
   let deleted = 0;
   
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
     
     // Get attempt details for logging
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
-    const attemptsResult = await client.query(
+    const attemptsResult = await pool.query(
       `SELECT a.id, e.title AS exam_title, u.full_name AS student_name
        FROM attempts a
        JOIN exams e ON e.id=a.exam_id
@@ -3298,13 +3289,13 @@ router.post('/attempts/bulk-reset', async (req, res) => {
     console.log('Found attempts:', attempts.length, 'Expected:', validIds.length);
     
     if (attempts.length === 0) {
-      await client.rollback();
+      // rollback done (no-transaction);
       req.flash('error', 'Tidak ada attempt yang ditemukan.');
       return res.redirect('/admin/grades');
     }
     
     // Delete attempts (attempt_answers will be deleted automatically via CASCADE)
-    const result = await client.query(
+    const result = await pool.query(
       `DELETE FROM attempts WHERE id IN (${placeholders})`,
       validIds
     );
@@ -3312,14 +3303,14 @@ router.post('/attempts/bulk-reset', async (req, res) => {
     deleted = result.affectedRows || 0;
     console.log('Deleted attempts:', deleted);
     
-    await client.commit();
+    // commit done (no-transaction);
     req.flash('success', `Berhasil reset ${deleted} nilai siswa. Siswa dapat mengulang ujian.`);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error('Admin bulk reset error:', e);
     req.flash('error', `Gagal reset nilai. Error: ${e.message}`);
   } finally {
-    client.release();
+    // release (no-transaction);
   }
   
   res.redirect('/admin/grades');
@@ -3603,25 +3594,25 @@ router.post('/assignments/bulk-delete', async (req, res) => {
   let deleted = 0;
   
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete related data first
-    await client.query(`DELETE FROM assignment_submissions WHERE assignment_id IN (${placeholders})`, validIds);
+    await pool.query(`DELETE FROM assignment_submissions WHERE assignment_id IN (${placeholders})`, validIds);
     
     // Delete assignments
-    const result = await client.query(`DELETE FROM assignments WHERE id IN (${placeholders})`, validIds);
+    const result = await pool.query(`DELETE FROM assignments WHERE id IN (${placeholders})`, validIds);
     deleted = result.affectedRows || 0;
     
-    await client.commit();
+    // commit done (no-transaction);
     req.flash('success', `Berhasil menghapus ${deleted} tugas dan data terkait.`);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error(e);
     req.flash('error', 'Gagal menghapus tugas. Terjadi kesalahan pada database.');
   } finally {
-    client.release();
+    // release (no-transaction);
   }
   
   res.redirect('/admin/assignments');
@@ -3819,22 +3810,22 @@ router.post('/question-bank/bulk-delete', async (req, res) => {
   let deleted = 0;
   
   try {
-    await client.beginTransaction();
+    // begin (no-transaction);
     
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
     
     // Delete question bank items
-    const result = await client.query(`DELETE FROM question_bank WHERE id IN (${placeholders})`, validIds);
+    const result = await pool.query(`DELETE FROM question_bank WHERE id IN (${placeholders})`, validIds);
     deleted = result.affectedRows || 0;
     
-    await client.commit();
+    // commit done (no-transaction);
     req.flash('success', `Berhasil menghapus ${deleted} soal dari bank soal.`);
   } catch (e) {
-    await client.rollback();
+    // rollback done (no-transaction);
     console.error(e);
     req.flash('error', 'Gagal menghapus soal. Terjadi kesalahan pada database.');
   } finally {
-    client.release();
+    // release (no-transaction);
   }
   
   res.redirect('/admin/question-bank');
