@@ -1899,22 +1899,56 @@ router.post('/users/:id/toggle', async (req, res) => {
 });
 
 router.post('/users/:id/delete', async (req, res) => {
+  const id = req.params.id;
   try {
-    await pool.query(`DELETE FROM users WHERE id=$1`, [req.params.id]);
+    // NULL-kan FK yang allow NULL dulu (untuk guru yang punya ujian/materi)
+    await pool.query(`UPDATE exams SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
+    await pool.query(`UPDATE materials SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
+    await pool.query(`UPDATE assignments SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
+    await pool.query(`UPDATE live_classes SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
+    await pool.query(`UPDATE question_bank SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
+    await pool.query(`UPDATE notifications SET created_by = NULL WHERE created_by = $1`, [id]);
+    // Hapus data siswa (attempts, submissions, dll)
+    await pool.query(`DELETE FROM attempt_answers WHERE attempt_id IN (SELECT id FROM attempts WHERE student_id = $1)`, [id]);
+    await pool.query(`DELETE FROM attempt_violations WHERE attempt_id IN (SELECT id FROM attempts WHERE student_id = $1)`, [id]);
+    await pool.query(`DELETE FROM attempts WHERE student_id = $1`, [id]);
+    await pool.query(`DELETE FROM assignment_submissions WHERE student_id = $1`, [id]);
+    await pool.query(`DELETE FROM material_reads WHERE student_id = $1`, [id]);
+    await pool.query(`DELETE FROM notification_reads WHERE user_id = $1`, [id]);
+    await pool.query(`DELETE FROM live_class_participants WHERE student_id = $1`, [id]);
+    await pool.query(`DELETE FROM device_tokens WHERE user_id = $1`, [id]);
+    await pool.query(`DELETE FROM submission_backups WHERE student_id = $1`, [id]);
+    await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
     req.flash('success', 'Pengguna berhasil dihapus.');
   } catch (e) {
-    console.error(e);
+    console.error('Delete user error:', e.message, e.code, e.detail);
     req.flash('error', 'Gagal menghapus pengguna.');
   }
   res.redirect('/admin/users');
 });
 
 router.delete('/users/:id', async (req, res) => {
+  const id = req.params.id;
   try {
-    await pool.query(`DELETE FROM users WHERE id=$1`, [req.params.id]);
+    await pool.query(`UPDATE exams SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
+    await pool.query(`UPDATE materials SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
+    await pool.query(`UPDATE assignments SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
+    await pool.query(`UPDATE live_classes SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
+    await pool.query(`UPDATE question_bank SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
+    await pool.query(`UPDATE notifications SET created_by = NULL WHERE created_by = $1`, [id]);
+    await pool.query(`DELETE FROM attempt_answers WHERE attempt_id IN (SELECT id FROM attempts WHERE student_id = $1)`, [id]);
+    await pool.query(`DELETE FROM attempt_violations WHERE attempt_id IN (SELECT id FROM attempts WHERE student_id = $1)`, [id]);
+    await pool.query(`DELETE FROM attempts WHERE student_id = $1`, [id]);
+    await pool.query(`DELETE FROM assignment_submissions WHERE student_id = $1`, [id]);
+    await pool.query(`DELETE FROM material_reads WHERE student_id = $1`, [id]);
+    await pool.query(`DELETE FROM notification_reads WHERE user_id = $1`, [id]);
+    await pool.query(`DELETE FROM live_class_participants WHERE student_id = $1`, [id]);
+    await pool.query(`DELETE FROM device_tokens WHERE user_id = $1`, [id]);
+    await pool.query(`DELETE FROM submission_backups WHERE student_id = $1`, [id]);
+    await pool.query(`DELETE FROM users WHERE id=$1`, [id]);
     req.flash('success', 'Pengguna berhasil dihapus.');
   } catch (e) {
-    console.error(e);
+    console.error('Delete user error:', e.message, e.code, e.detail);
     req.flash('error', 'Gagal menghapus pengguna.');
   }
   res.redirect('/admin/users');
