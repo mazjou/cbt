@@ -417,9 +417,6 @@ router.get('/classes', async (req, res) => {
   const search = req.query.search || '';
 
   let whereClause = '';
-  let queryParams = {};
-  
-  let whereClause = '';
   let queryParams = [];
 
   if (search) {
