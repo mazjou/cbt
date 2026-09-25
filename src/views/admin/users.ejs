@@ -453,10 +453,21 @@
     const selectedCountSpan = document.getElementById('selectedCount');
     const bulkDeleteIdsInput = document.getElementById('bulkDeleteIds');
 
-    function updateBulkActionBar() {
-      const selectedIds = Array.from(userCheckboxes)
+    // Karena setiap user punya 2 checkbox (desktop + mobile), gunakan Set untuk deduplikasi
+    function getSelectedIds() {
+      const seen = new Set();
+      return Array.from(userCheckboxes)
         .filter(cb => cb.checked)
-        .map(cb => cb.getAttribute('data-user-id'));
+        .map(cb => cb.getAttribute('data-user-id'))
+        .filter(id => {
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        });
+    }
+
+    function updateBulkActionBar() {
+      const selectedIds = getSelectedIds();
       
       if (selectedIds.length > 0) {
         bulkActionBar.classList.remove('hidden');
@@ -466,11 +477,12 @@
         bulkActionBar.classList.add('hidden');
       }
       
-      // Update select all checkbox state
-      const allChecked = userCheckboxes.length > 0 && Array.from(userCheckboxes).every(cb => cb.checked);
-      const someChecked = Array.from(userCheckboxes).some(cb => cb.checked);
+      // Update select all checkbox state — hitung berdasarkan unique user ID
+      const totalUsers = new Set(Array.from(userCheckboxes).map(cb => cb.getAttribute('data-user-id'))).size;
+      const allChecked = totalUsers > 0 && selectedIds.length === totalUsers;
+      const someChecked = selectedIds.length > 0 && !allChecked;
       selectAllCheckbox.checked = allChecked;
-      selectAllCheckbox.indeterminate = someChecked && !allChecked;
+      selectAllCheckbox.indeterminate = someChecked;
     }
 
     selectAllCheckbox.addEventListener('change', function() {
@@ -480,8 +492,15 @@
       updateBulkActionBar();
     });
 
+    // Sync pasangan checkbox desktop↔mobile saat salah satu diubah
     userCheckboxes.forEach(cb => {
-      cb.addEventListener('change', updateBulkActionBar);
+      cb.addEventListener('change', function() {
+        const userId = this.getAttribute('data-user-id');
+        document.querySelectorAll(`.user-checkbox[data-user-id="${userId}"]`).forEach(pair => {
+          pair.checked = this.checked;
+        });
+        updateBulkActionBar();
+      });
     });
 
     window.confirmBulkDelete = function() {
@@ -491,9 +510,7 @@
 
     // Bulk move class functionality - moved inside to access userCheckboxes
     window.bulkMoveClass = function() {
-      const selectedIds = Array.from(userCheckboxes)
-        .filter(cb => cb.checked)
-        .map(cb => cb.getAttribute('data-user-id'));
+      const selectedIds = getSelectedIds();
       
       if (selectedIds.length === 0) {
         alert('Pilih pengguna yang ingin dipindah kelas terlebih dahulu.');
@@ -536,9 +553,7 @@
     
     // Print selected cards functionality
     window.printSelectedCards = function() {
-      const selectedIds = [...new Set(Array.from(userCheckboxes)
-        .filter(cb => cb.checked)
-        .map(cb => cb.getAttribute('data-user-id')))];
+      const selectedIds = getSelectedIds();
       
       if (selectedIds.length === 0) {
         alert('Pilih pengguna yang ingin dicetak kartunya terlebih dahulu.');
@@ -551,9 +566,7 @@
     
     // Download selected excel functionality
     window.downloadSelectedExcel = function() {
-      const selectedIds = Array.from(userCheckboxes)
-        .filter(cb => cb.checked)
-        .map(cb => cb.getAttribute('data-user-id'));
+      const selectedIds = getSelectedIds();
       
       if (selectedIds.length === 0) {
         alert('Pilih pengguna yang ingin didownload terlebih dahulu.');
