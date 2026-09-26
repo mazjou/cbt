@@ -431,6 +431,112 @@
   </div>
 </div>
 
+<!-- ── PANDUAN DARURAT SAAT UJIAN ── -->
+<div class="mt-4 rounded-2xl border-2 border-red-200 bg-red-50 p-5 shadow-sm">
+  <div class="flex items-center gap-3 mb-4">
+    <span class="text-2xl">🚨</span>
+    <div>
+      <div class="font-bold text-red-900 text-lg">Panduan Darurat Saat Ujian</div>
+      <div class="text-xs text-red-700 mt-0.5">Tindakan yang harus dilakukan jika server bermasalah saat ujian berlangsung</div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-4">
+
+    <!-- Kondisi 1: Website tidak bisa diakses -->
+    <div class="rounded-xl border border-red-300 bg-white p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-7 h-7 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+        <div class="font-semibold text-red-800 text-sm">Website Tidak Bisa Diakses</div>
+      </div>
+      <div class="text-xs text-slate-600 mb-3">Siswa tidak bisa buka halaman login sama sekali (timeout/error)</div>
+      <div class="space-y-1.5">
+        <div class="text-xs font-semibold text-slate-700">Tindakan di server aplikasi:</div>
+        <pre class="bg-slate-900 text-green-400 rounded-lg px-3 py-2 text-xs font-mono overflow-x-auto">pm2 reload all</pre>
+        <div class="text-xs text-slate-500">Tunggu 10-15 detik, lalu minta siswa refresh browser.</div>
+        <div class="text-xs font-semibold text-slate-700 mt-2">Jika masih tidak bisa:</div>
+        <pre class="bg-slate-900 text-yellow-300 rounded-lg px-3 py-2 text-xs font-mono overflow-x-auto">pm2 restart all --update-env</pre>
+      </div>
+    </div>
+
+    <!-- Kondisi 2: Sebagian siswa logout tiba-tiba -->
+    <div class="rounded-xl border border-orange-300 bg-white p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-7 h-7 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+        <div class="font-semibold text-orange-800 text-sm">Siswa Logout Tiba-tiba</div>
+      </div>
+      <div class="text-xs text-slate-600 mb-3">Siswa tiba-tiba keluar dan harus login ulang, jawaban mungkin belum tersimpan</div>
+      <div class="space-y-1.5">
+        <div class="text-xs font-semibold text-slate-700">Penyebab umum:</div>
+        <ul class="text-xs text-slate-600 list-disc list-inside space-y-1">
+          <li>Redis restart → session hilang</li>
+          <li>PM2 instance crash → dipindah instance lain</li>
+        </ul>
+        <div class="text-xs font-semibold text-slate-700 mt-2">Tindakan:</div>
+        <pre class="bg-slate-900 text-green-400 rounded-lg px-3 py-2 text-xs font-mono overflow-x-auto">pm2 reload all
+# Jangan restart Redis saat ujian!</pre>
+        <div class="text-xs text-red-600 font-semibold mt-1">⚠️ Jawaban siswa tetap tersimpan di DB — minta login ulang dan lanjutkan ujian</div>
+      </div>
+    </div>
+
+    <!-- Kondisi 3: Server sangat lambat -->
+    <div class="rounded-xl border border-yellow-300 bg-white p-4">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="w-7 h-7 rounded-full bg-yellow-500 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+        <div class="font-semibold text-yellow-800 text-sm">Server Sangat Lambat / 503</div>
+      </div>
+      <div class="text-xs text-slate-600 mb-3">Halaman lama terbuka, banyak siswa dapat error 503 atau loading terus</div>
+      <div class="space-y-1.5">
+        <div class="text-xs font-semibold text-slate-700">Cek RAM dulu:</div>
+        <pre class="bg-slate-900 text-green-400 rounded-lg px-3 py-2 text-xs font-mono overflow-x-auto">free -h && pm2 status</pre>
+        <div class="text-xs font-semibold text-slate-700 mt-2">Jika RAM > 80% atau ada instance error:</div>
+        <pre class="bg-slate-900 text-green-400 rounded-lg px-3 py-2 text-xs font-mono overflow-x-auto">pm2 reload all</pre>
+        <div class="text-xs text-slate-500 mt-1">Cek halaman ini tiap 5 detik untuk pantau CPU & RAM.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Perintah monitor -->
+  <div class="mt-4 rounded-xl border border-red-200 bg-white p-4">
+    <div class="font-semibold text-slate-700 text-sm mb-2">🖥️ Jalankan Monitor Real-time di Terminal Server (saat ujian berlangsung)</div>
+    <div class="grid md:grid-cols-2 gap-3">
+      <div>
+        <div class="text-xs text-slate-500 mb-1">Monitor otomatis — auto-reload jika ada masalah:</div>
+        <pre class="bg-slate-900 text-green-400 rounded-lg px-3 py-2 text-xs font-mono overflow-x-auto">chmod +x /cbt/scripts/monitor-ujian.sh
+bash /cbt/scripts/monitor-ujian.sh</pre>
+      </div>
+      <div>
+        <div class="text-xs text-slate-500 mb-1">Monitor RAM & PM2 setiap 5 detik:</div>
+        <pre class="bg-slate-900 text-green-400 rounded-lg px-3 py-2 text-xs font-mono overflow-x-auto">watch -n 5 'pm2 status && free -h'</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hal yang TIDAK boleh dilakukan -->
+  <div class="mt-3 rounded-xl border border-red-300 bg-red-100 p-4">
+    <div class="font-semibold text-red-800 text-sm mb-2">🚫 JANGAN Dilakukan Saat Ujian Berlangsung</div>
+    <div class="grid md:grid-cols-2 gap-2">
+      <div class="flex items-start gap-2">
+        <span class="text-red-500 font-bold text-sm flex-shrink-0">✗</span>
+        <div class="text-xs text-red-700"><strong>Restart Redis</strong> — semua session hilang, semua siswa logout serentak</div>
+      </div>
+      <div class="flex items-start gap-2">
+        <span class="text-red-500 font-bold text-sm flex-shrink-0">✗</span>
+        <div class="text-xs text-red-700"><strong>Restart PostgreSQL</strong> — koneksi DB putus, ujian error</div>
+      </div>
+      <div class="flex items-start gap-2">
+        <span class="text-red-500 font-bold text-sm flex-shrink-0">✗</span>
+        <div class="text-xs text-red-700"><strong>pm2 restart all</strong> — ada downtime. Pakai <code class="bg-red-200 px-1 rounded">pm2 reload all</code> saja</div>
+      </div>
+      <div class="flex items-start gap-2">
+        <span class="text-red-500 font-bold text-sm flex-shrink-0">✗</span>
+        <div class="text-xs text-red-700"><strong>Update/pull kode baru</strong> — tunggu ujian selesai dulu</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const cpuHistory = [], ramHistory = [], labels = [];
 const MAX_POINTS = 12; // 12 × 5 detik = 60 detik
