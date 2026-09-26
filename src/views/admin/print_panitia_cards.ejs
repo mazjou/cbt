@@ -22,134 +22,128 @@
       cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
     .btn-print{background:#4f46e5;color:white;}
     .btn-back{background:#f1f5f9;color:#475569;}
-
-    /* Form pengaturan teks header */
-    .settings{
-      background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
-      padding:12px 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
-    }
+    .settings{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;
+      padding:12px 16px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
     .settings label{font-size:11px;font-weight:600;color:#475569;display:block;margin-bottom:3px;}
     .settings input{width:100%;border:1.5px solid #cbd5e1;border-radius:6px;
       padding:6px 10px;font-size:12px;color:#1e293b;outline:none;}
     .settings input:focus{border-color:#6366f1;}
     .settings-note{font-size:10px;color:#94a3b8;margin-top:6px;}
 
-    /* ── Halaman A4 — 4 kartu (2×2) ────────────────────────────────── */
+    /* ── Halaman A4 — 6 kartu (3×2) ─────────────────────────────────────
+       Kartu: 60×100mm
+       Padding A4: 8mm → area 194×281mm
+       3 kolom: 60×3 + 5×2 gap = 190mm < 194mm ✓
+       2 baris: 100×2 + 5×1 gap = 205mm < 281mm ✓
+    ──────────────────────────────────────────────────────────────────── */
     .page{
       width:210mm;height:297mm;
       margin:0 auto 16px;
       background:#d1d5db;
-      padding:10mm;
+      padding:8mm;
       display:grid;
-      grid-template-columns:80mm 80mm;
-      grid-template-rows:105mm 105mm;
-      gap:10mm;
+      grid-template-columns:60mm 60mm 60mm;
+      grid-template-rows:100mm 100mm;
+      gap:5mm;
       justify-content:center;
       overflow:hidden;
     }
 
-    /* ── Kartu fixed 80×105mm ───────────────────────────────────────── */
+    /* ── Kartu fixed 60×100mm ───────────────────────────────────────── */
     .kartu{
-      width:80mm;height:105mm;
-      border-radius:5mm;overflow:hidden;
+      width:60mm;height:100mm;
+      border-radius:4mm;overflow:hidden;
       display:flex;flex-direction:column;
       background:#2563eb;
       box-shadow:0 3px 12px rgba(0,0,0,.3);
     }
 
-    /* Header biru: 35mm */
+    /* Header biru: 32mm */
     .k-header{
-      height:35mm;flex-shrink:0;
+      height:32mm;flex-shrink:0;
       background:linear-gradient(160deg,#1d4ed8 0%,#2563eb 60%,#3b82f6 100%);
       display:flex;flex-direction:column;
       align-items:center;justify-content:center;
-      padding:0 5mm;text-align:center;gap:1.5mm;
+      padding:0 3mm;text-align:center;gap:1mm;
     }
-    .k-hole{width:8mm;height:3mm;background:rgba(255,255,255,.3);
-      border-radius:2mm;margin-bottom:1mm;}
-    .k-line1{font-size:16pt;font-weight:900;text-transform:uppercase;
-      color:white;letter-spacing:.5px;line-height:1.2;}
-    .k-line2{font-size:8pt;font-weight:700;text-transform:uppercase;
-      color:#bfdbfe;letter-spacing:.3px;line-height:1.4;}
-    .k-line3{font-size:7.5pt;color:#93c5fd;line-height:1.4;}
+    .k-hole{width:6mm;height:2.5mm;background:rgba(255,255,255,.3);
+      border-radius:1.5mm;margin-bottom:.5mm;}
+    .k-line1{font-size:10pt;font-weight:900;text-transform:uppercase;
+      color:white;letter-spacing:.3px;line-height:1.2;}
+    .k-line2{font-size:6pt;font-weight:700;text-transform:uppercase;
+      color:#bfdbfe;letter-spacing:.2px;line-height:1.3;}
+    .k-line3{font-size:5.5pt;color:#93c5fd;line-height:1.3;}
 
-    /* Badge jabatan kuning-emas: 10mm */
+    /* Badge jabatan kuning: 8mm */
     .k-badge{
-      height:10mm;flex-shrink:0;
-      margin:0 4mm;
+      height:8mm;flex-shrink:0;
+      margin:0 3mm;
       background:linear-gradient(90deg,#d97706,#f59e0b,#fbbf24);
-      border-radius:2mm;
+      border-radius:1.5mm;
       display:flex;align-items:center;justify-content:center;
-      font-size:11pt;font-weight:900;text-transform:uppercase;
-      color:white;letter-spacing:2px;
+      font-size:8.5pt;font-weight:900;text-transform:uppercase;
+      color:white;letter-spacing:1.5px;
       text-shadow:0 1px 2px rgba(0,0,0,.25);
     }
 
-    /* Body putih: flex sisa */
+    /* Body putih */
     .k-body{
-      flex:1;
-      background:white;
-      margin:2mm 4mm 0;
+      flex:1;background:white;
+      margin:2mm 3mm 0;
       border-radius:2mm 2mm 0 0;
       display:flex;flex-direction:column;
       align-items:center;
-      padding:3mm 4mm 2mm;
-      gap:2mm;
-      overflow:hidden;
+      padding:2mm 3mm 1.5mm;
+      gap:1.5mm;overflow:hidden;
     }
 
-    /* Foto: 22×27mm */
+    /* Foto: 16×21mm */
     .k-foto{
-      width:22mm;height:27mm;flex-shrink:0;
-      border:1.5px solid #374151;
-      border-radius:1mm;
+      width:16mm;height:21mm;flex-shrink:0;
+      border:1px solid #374151;border-radius:1mm;
       background:linear-gradient(135deg,#eff6ff,#dbeafe);
       display:flex;align-items:center;justify-content:center;
       overflow:hidden;
     }
     .k-foto img{width:100%;height:100%;object-fit:cover;}
     .k-foto-ph{display:flex;flex-direction:column;align-items:center;gap:.5mm;}
-    .k-foto-ph svg{width:10mm;height:10mm;opacity:.35;}
-    .k-foto-ph span{font-size:4pt;color:#94a3b8;font-weight:700;text-transform:uppercase;}
+    .k-foto-ph svg{width:7mm;height:7mm;opacity:.35;}
+    .k-foto-ph span{font-size:3.5pt;color:#94a3b8;font-weight:700;text-transform:uppercase;}
 
-    /* Nama + NIP centered, tidak ada label */
-    .k-nama{
-      font-size:8.5pt;font-weight:900;color:#1e3a8a;
+    /* Nama */
+    .k-nama{font-size:7pt;font-weight:900;color:#1e3a8a;
       text-align:center;line-height:1.3;
       border-bottom:1px solid #374151;
-      width:100%;padding-bottom:1.5mm;
-    }
-    .k-nip{
-      font-size:6.5pt;color:#374151;
+      width:100%;padding-bottom:1mm;}
+
+    /* NIP */
+    .k-nip{font-size:5.5pt;color:#374151;
       font-family:'Courier New',monospace;
-      text-align:center;width:100%;
-    }
+      text-align:center;width:100%;}
 
     /* Ruang opsional */
-    .k-ruang{
-      font-size:7pt;font-weight:700;color:#1d4ed8;
-      text-align:center;width:100%;
-    }
+    .k-ruang{font-size:6pt;font-weight:700;color:#1d4ed8;text-align:center;width:100%;}
 
-    /* Footer biru: 14mm */
+    /* Footer biru: 12mm */
     .k-footer{
-      height:14mm;flex-shrink:0;
+      height:12mm;flex-shrink:0;
       background:linear-gradient(90deg,#1d4ed8,#2563eb);
-      margin:0 4mm;
+      margin:0 3mm;
       border-radius:0 0 2mm 2mm;
       display:flex;flex-direction:column;
-      align-items:center;justify-content:center;gap:1mm;
+      align-items:center;justify-content:center;gap:.8mm;
     }
-    .k-footer-name{font-size:7pt;font-weight:900;text-transform:uppercase;
-      color:white;letter-spacing:.5px;}
-    .k-footer-sub{font-size:5pt;color:#bfdbfe;}
+    .k-footer-name{font-size:6pt;font-weight:900;text-transform:uppercase;
+      color:white;letter-spacing:.3px;}
+    .k-footer-sub{font-size:4.5pt;color:#bfdbfe;}
 
+    /* ── Print ──────────────────────────────────────────────────────── */
     @media print{
       body{background:white;}
       .no-print{display:none!important;}
       .page{
         margin:0;width:210mm;height:297mm;
-        padding:10mm;background:white;
+        padding:8mm;background:white;
         page-break-after:always;overflow:hidden;
       }
       .page:last-child{page-break-after:auto;}
@@ -160,28 +154,25 @@
 </head>
 <body>
 
-<!-- Kontrol bar dengan pengaturan teks header -->
 <div class="no-print">
   <div class="no-print-top">
     <div>
       <h2>🎫 Cetak ID Card Panitia Ujian</h2>
-      <small style="color:#64748b"><%= panitia.length %> panitia &nbsp;·&nbsp; ID Card B3 (80×105mm) &nbsp;·&nbsp; 4 kartu/halaman</small>
+      <small style="color:#64748b"><%= panitia.length %> panitia &nbsp;·&nbsp; 60×100mm &nbsp;·&nbsp; 6 kartu/halaman A4</small>
     </div>
     <div class="ctrl">
       <button onclick="applySettings(); window.print();" class="btn btn-print">🖨️ Cetak / Save PDF</button>
       <a href="/admin/panitia" class="btn btn-back">← Kembali</a>
     </div>
   </div>
-
-  <!-- Form isian header kartu — bisa diedit bebas -->
   <div class="settings">
     <div>
       <label>Baris 1 — Judul Besar</label>
-      <input id="set-line1" value="<%= schoolInfo.name %>" placeholder="Nama sekolah / judul ujian" />
+      <input id="set-line1" value="<%= schoolInfo.name %>" />
     </div>
     <div>
       <label>Baris 2 — Subjudul</label>
-      <input id="set-line2" value="<%= schoolInfo.address %>" placeholder="Kota / instansi" />
+      <input id="set-line2" value="<%= schoolInfo.address %>" />
     </div>
     <div>
       <label>Baris 3 — Tahun / Keterangan</label>
@@ -189,27 +180,26 @@
         var y = new Date().getFullYear();
         var ta = new Date().getMonth() >= 6 ? (y+'/'+(y+1)) : ((y-1)+'/'+y);
       %>
-      <input id="set-line3" value="Tahun Pelajaran <%= ta %>" placeholder="TP / keterangan" />
+      <input id="set-line3" value="Tahun Pelajaran <%= ta %>" />
     </div>
   </div>
-  <div class="settings-note">💡 Ubah teks di atas lalu klik Cetak — perubahan langsung diterapkan ke semua kartu</div>
+  <div class="settings-note">💡 Ubah teks lalu klik Cetak — perubahan diterapkan ke semua kartu</div>
 </div>
 
 <%
   var schoolName = schoolInfo.name || 'SMK Negeri 1 Kras';
   var schoolAddr = schoolInfo.address || 'Kediri, Jawa Timur';
-  var PH = 4;
+  var PH = 6;
 %>
 
 <% for(var p = 0; p < panitia.length; p += PH){ %>
 <div class="page">
   <% for(var j = p; j < Math.min(p+PH, panitia.length); j++){
-       var pn  = panitia[j];
+       var pn   = panitia[j];
        var foto = pn.profile_photo && pn.profile_photo.startsWith('/public/') ? pn.profile_photo : null;
   %>
   <div class="kartu">
 
-    <!-- Header -->
     <div class="k-header">
       <div class="k-hole"></div>
       <div class="k-line1 hdr-line1"><%=schoolName%></div>
@@ -217,10 +207,8 @@
       <div class="k-line3 hdr-line3">Tahun Pelajaran <%=ta%></div>
     </div>
 
-    <!-- Badge jabatan kuning -->
     <div class="k-badge"><%=pn.jabatan%></div>
 
-    <!-- Body putih -->
     <div class="k-body">
       <div class="k-foto">
         <% if(foto){ %>
@@ -237,19 +225,14 @@
         <% } %>
       </div>
 
-      <!-- Nama bold centered -->
       <div class="k-nama"><%=pn.full_name%></div>
-
-      <!-- NIP di bawah nama, centered, dari data username guru -->
       <div class="k-nip">NIP. <%=pn.username%></div>
 
-      <!-- Nomor ruang jika ada -->
       <% if(pn.nomor_ruang){ %>
         <div class="k-ruang">Ruang : <%=pn.nomor_ruang%></div>
       <% } %>
     </div>
 
-    <!-- Footer biru -->
     <div class="k-footer">
       <div class="k-footer-name ftr-name"><%=schoolName%></div>
       <div class="k-footer-sub ftr-sub">TP <%=ta%></div>
@@ -261,7 +244,6 @@
 <% } %>
 
 <script>
-// Terapkan perubahan teks header ke semua kartu sebelum cetak
 function applySettings() {
   var l1 = document.getElementById('set-line1').value;
   var l2 = document.getElementById('set-line2').value;
@@ -271,7 +253,6 @@ function applySettings() {
   document.querySelectorAll('.hdr-line3').forEach(el => el.textContent = l3);
   document.querySelectorAll('.ftr-name').forEach(el => el.textContent = l1);
 }
-// Auto-apply saat input berubah (live preview)
 ['set-line1','set-line2','set-line3'].forEach(id => {
   document.getElementById(id).addEventListener('input', applySettings);
 });
