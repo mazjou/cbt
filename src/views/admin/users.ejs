@@ -100,7 +100,7 @@
         <option value="ADMIN" <%= filters.role === 'ADMIN' ? 'selected' : '' %>>Admin</option>
       </select>
       
-      <select name="class" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+      <select name="class" onchange="autoSubmitWithLimit(this)" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
         <option value="">Semua Kelas</option>
         <% classes.forEach(c => { %>
           <option value="<%= c.id %>" <%= String(filters.class) === String(c.id) ? 'selected' : '' %>><%= c.name %></option>
@@ -113,9 +113,10 @@
         <option value="inactive" <%= filters.status === 'inactive' ? 'selected' : '' %>>Nonaktif</option>
       </select>
       
-      <select name="limit" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+      <select name="limit" id="limitSelect" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
         <option value="10" <%= pagination.limit == 10 ? 'selected' : '' %>>10 per halaman</option>
         <option value="20" <%= pagination.limit == 20 ? 'selected' : '' %>>20 per halaman</option>
+        <option value="40" <%= pagination.limit == 40 ? 'selected' : '' %>>40 per halaman</option>
         <option value="50" <%= pagination.limit == 50 ? 'selected' : '' %>>50 per halaman</option>
         <option value="100" <%= pagination.limit == 100 ? 'selected' : '' %>>100 per halaman</option>
       </select>
@@ -868,4 +869,18 @@
   document.getElementById('deleteByRoleModal').addEventListener('click', function(e) {
     if (e.target === this) closeDeleteByRoleModal();
   });
+</script>
+
+<script>
+// Saat pilih kelas, otomatis set limit ke 40 lalu submit form
+function autoSubmitWithLimit(selectEl) {
+  const form = selectEl.closest('form');
+  if (!form) return;
+  const limitSel = form.querySelector('#limitSelect');
+  // Kalau pilih kelas tertentu (bukan "Semua Kelas"), set limit 40
+  if (selectEl.value && limitSel) {
+    limitSel.value = '40';
+  }
+  form.submit();
+}
 </script>
