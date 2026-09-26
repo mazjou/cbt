@@ -983,16 +983,20 @@ router.post('/subjects/:id/ajax-update', async (req, res) => {
 
 // ===== TEACHERS =====
 router.get('/teachers', async (req, res) => {
-  const [teachers] = await pq(
-    `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.created_at,
+  const search = (req.query.search || '').trim();
+  let query = `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.created_at,
             COUNT(DISTINCT e.id) AS jumlah_mapel
      FROM users u
      LEFT JOIN exams e ON e.teacher_id = u.id
-     WHERE u.role='TEACHER'
-     GROUP BY u.id
-     ORDER BY u.full_name ASC;`
-  );
-  res.render('admin/teachers', { title: 'Kelola Guru', teachers });
+     WHERE u.role='TEACHER'`;
+  const params = [];
+  if (search) {
+    params.push(`%${search}%`);
+    query += ` AND (u.full_name ILIKE $${params.length} OR u.username ILIKE $${params.length})`;
+  }
+  query += ` GROUP BY u.id ORDER BY u.full_name ASC`;
+  const [teachers] = await pq(query, params);
+  res.render('admin/teachers', { title: 'Kelola Guru', teachers, search });
 });
 
 // Download teachers as Excel
