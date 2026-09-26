@@ -88,11 +88,11 @@
     </div>
     
     <!-- Filter Section -->
-    <form method="GET" action="/admin/users" class="mb-4 grid md:grid-cols-6 gap-3">
+    <form method="GET" action="/admin/users" class="mb-4 grid md:grid-cols-7 gap-3" id="filterForm">
       <input type="text" name="search" value="<%= filters.search %>" placeholder="Cari username/nama..." 
              class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
       
-      <select name="role" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+      <select name="role" onchange="autoSubmitFilter()" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
         <option value="">Semua Role</option>
         <option value="STUDENT" <%= filters.role === 'STUDENT' ? 'selected' : '' %>>Siswa</option>
         <option value="TEACHER" <%= filters.role === 'TEACHER' ? 'selected' : '' %>>Guru</option>
@@ -107,7 +107,7 @@
         <% }) %>
       </select>
       
-      <select name="status" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+      <select name="status" onchange="autoSubmitFilter()" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
         <option value="">Semua Status</option>
         <option value="active" <%= filters.status === 'active' ? 'selected' : '' %>>Aktif</option>
         <option value="inactive" <%= filters.status === 'inactive' ? 'selected' : '' %>>Nonaktif</option>
@@ -882,5 +882,11 @@ function autoSubmitWithLimit(selectEl) {
     limitSel.value = '40';
   }
   form.submit();
+}
+
+// Saat pilih role atau status, langsung submit form
+function autoSubmitFilter() {
+  const form = document.getElementById('filterForm');
+  if (form) form.submit();
 }
 </script>
