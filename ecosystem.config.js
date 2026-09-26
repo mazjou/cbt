@@ -9,11 +9,11 @@ module.exports = {
       node_args: '--max-old-space-size=512',  // 512MB heap per instance
       watch: false,
       autorestart: true,
-      max_memory_restart: '400M',  // Restart jika 1 instance > 400MB
+      max_memory_restart: '600M',  // Restart jika 1 instance > 600MB (di atas heap limit)
       kill_timeout: 10000,
       listen_timeout: 10000,
-      restart_delay: 2000,
-      exp_backoff_restart_delay: 100,
+      restart_delay: 5000,          // Tunggu 5 detik sebelum restart (bukan 2 detik)
+      exp_backoff_restart_delay: 200, // Backoff lebih panjang jika terus crash
       merge_logs: true,
       out_file: '/cbt/logs/pm2-out.log',
       error_file: '/cbt/logs/pm2-error.log',
