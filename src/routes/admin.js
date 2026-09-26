@@ -4353,12 +4353,14 @@ router.get('/monitoring/data', async (req, res) => {
     const uptimeSec = os.uptime();
     const uptimeApp = process.uptime();
 
+// Cache du -sm result selama 60 detik agar tidak scan folder setiap request
+let _duCache = { uploadSize: '-', ts: 0 };
+
     // Storage (disk usage) - pakai df di Linux
     let storage = { total: 0, used: 0, free: 0, percent: 0, uploadSize: '-' };
     try {
       if (process.platform !== 'win32') {
         const dfOut = execSync("df -BM / | tail -1").toString().trim();
-        // Format: /dev/vda1  20480M  8192M  12288M  40% /
         const parts = dfOut.split(/\s+/);
         const total = parseInt(parts[1]) || 0;
         const used  = parseInt(parts[2]) || 0;
@@ -4366,15 +4368,19 @@ router.get('/monitoring/data', async (req, res) => {
         const pct   = parseInt(parts[4]) || 0;
         storage = { total, used, free, percent: pct };
 
-        // Ukuran folder uploads
-        try {
-          const UPLOAD_ROOT = process.env.UPLOAD_ROOT || require('path').join(__dirname, '..', 'public', 'uploads');
-          const duOut = execSync(`du -sm "${UPLOAD_ROOT}" 2>/dev/null || echo "0"`).toString().trim();
-          const sizeMb = parseInt(duOut.split('\t')[0]) || 0;
-          storage.uploadSize = sizeMb >= 1024
-            ? (sizeMb / 1024).toFixed(1) + ' GB'
-            : sizeMb + ' MB';
-        } catch(_) { storage.uploadSize = '-'; }
+        // Ukuran folder uploads — cache 60 detik agar tidak scan tiap request
+        if (Date.now() - _duCache.ts > 60000) {
+          try {
+            const UPLOAD_ROOT = process.env.UPLOAD_ROOT || require('path').join(__dirname, '..', 'public', 'uploads');
+            const duOut = execSync(`du -sm "${UPLOAD_ROOT}" 2>/dev/null || echo "0"`).toString().trim();
+            const sizeMb = parseInt(duOut.split('\t')[0]) || 0;
+            _duCache.uploadSize = sizeMb >= 1024
+              ? (sizeMb / 1024).toFixed(1) + ' GB'
+              : sizeMb + ' MB';
+            _duCache.ts = Date.now();
+          } catch(_) { _duCache.uploadSize = '-'; }
+        }
+        storage.uploadSize = _duCache.uploadSize;
       }
     } catch(_) {}
 
