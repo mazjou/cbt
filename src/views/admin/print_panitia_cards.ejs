@@ -4,7 +4,11 @@
   <meta charset="UTF-8">
   <title><%= title %></title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box;}
+    *{margin:0;padding:0;box-sizing:border-box;
+      -webkit-print-color-adjust:exact !important;
+      print-color-adjust:exact !important;
+      color-adjust:exact !important;
+    }
     body{font-family:Arial,sans-serif;background:#d1d5db;}
 
     /* ── Kontrol bar ─────────────────────────────────────────────────── */
@@ -116,10 +120,9 @@
       width:100%;padding-bottom:1.5mm;
     }
     .k-nip{
-      font-size:6.5pt;color:#475569;
+      font-size:6.5pt;color:#374151;
       font-family:'Courier New',monospace;
-      text-align:center;
-      width:100%;
+      text-align:center;width:100%;
     }
 
     /* Ruang opsional */
@@ -238,7 +241,7 @@
       <div class="k-nama"><%=pn.full_name%></div>
 
       <!-- NIP di bawah nama, centered, dari data username guru -->
-      <div class="k-nip"><%=pn.username%></div>
+      <div class="k-nip">NIP. <%=pn.username%></div>
 
       <!-- Nomor ruang jika ada -->
       <% if(pn.nomor_ruang){ %>

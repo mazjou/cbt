@@ -4911,7 +4911,8 @@ router.get('/panitia/print-cards', async (req, res) => {
     res.render('admin/print_panitia_cards', {
       title: 'Cetak Kartu Panitia',
       panitia,
-      schoolInfo
+      schoolInfo,
+      layout: false
     });
   } catch(e) {
     console.error(e);
