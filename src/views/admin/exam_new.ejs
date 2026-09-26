@@ -151,6 +151,28 @@
       <input type="text" name="access_code" maxlength="20" class="w-full rounded-xl border-2 border-rose-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-rose-500" placeholder="Contoh: UJIAN2024" />
       <p class="mt-2 text-xs text-rose-600">Siswa harus memasukkan kode ini untuk mengakses ujian</p>
     </div>
+
+    <!-- Anti-Cheat Maks Pelanggaran -->
+    <div class="mt-5 bg-white rounded-2xl p-5 border border-red-200">
+      <div class="flex items-center gap-2 mb-2">
+        <span class="text-lg">🚨</span>
+        <label class="text-sm font-semibold text-red-800">Anti-Cheat Maks Pelanggaran</label>
+        <label class="flex items-center gap-2 cursor-pointer ml-auto">
+          <span class="text-xs text-slate-500">Aktifkan</span>
+          <input type="checkbox" name="anticheat_enabled" id="anticheat_enabled_admin_new" value="1"
+            checked onchange="toggleAnticheatAdminNew(this)"
+            class="w-4 h-4 accent-red-500 cursor-pointer" />
+        </label>
+      </div>
+      <div id="anticheat_input_admin_new" class="flex items-center gap-3">
+        <input type="number" name="max_violations" id="max_violations_admin_new" min="1" max="20" value="3"
+          class="w-24 rounded-xl border border-red-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+        <span class="text-xs text-slate-500">Layar siswa terkunci setelah N pelanggaran. Buka dari halaman Siswa Terkunci.</span>
+      </div>
+      <div id="anticheat_off_admin_new" class="hidden text-xs text-slate-400 mt-1">
+        Anti-cheat dinonaktifkan — pelanggaran tidak akan mengunci layar siswa.
+      </div>
+    </div>
   </div>
 
   <!-- Display Options -->
@@ -199,3 +221,22 @@
     </a>
   </div>
 </form>
+
+<script>
+function toggleAnticheatAdminNew(cb) {
+  const input = document.getElementById('anticheat_input_admin_new');
+  const off   = document.getElementById('anticheat_off_admin_new');
+  const num   = document.getElementById('max_violations_admin_new');
+  if (cb.checked) {
+    input.classList.remove('hidden');
+    off.classList.add('hidden');
+    num.disabled = false;
+    if (!num.value || num.value === '0') num.value = '3';
+  } else {
+    input.classList.add('hidden');
+    off.classList.remove('hidden');
+    num.disabled = false;
+    num.value = '0';
+  }
+}
+</script>
