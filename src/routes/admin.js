@@ -3094,7 +3094,7 @@ router.get('/violations/locked', async (req, res) => {
          (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
          u.full_name ASC;`
     );
-    res.render('teacher/violations_locked', { title: 'Siswa Terkunci', locked });
+    res.render('teacher/violations_locked', { title: 'Siswa Terkunci', locked, user: req.session.user });
   } catch(e) {
     console.error(e);
     req.flash('error', 'Gagal memuat data.');

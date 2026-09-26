@@ -3,7 +3,7 @@
     <h1 class="text-2xl font-bold text-slate-900">🔒 Siswa Terkunci</h1>
     <p class="text-sm text-slate-500 mt-1">Siswa yang layarnya terkunci karena pelanggaran.</p>
   </div>
-  <a href="/teacher/grades" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">← Kembali</a>
+  <a href="<%= user && user.role === 'ADMIN' ? '/admin' : '/teacher/grades' %>" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">← Kembali</a>
 </div>
 
 <% if (!locked || locked.length === 0) { %>
