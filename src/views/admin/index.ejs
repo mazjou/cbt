@@ -20,11 +20,11 @@
     <div class="text-sm text-green-600 font-medium">👥 Manajemen</div>
     <div class="mt-1 text-xl font-semibold text-green-900">Pengguna</div>
     <div class="mt-2 text-green-700 text-sm">Admin, guru, siswa + reset password.</div>
-  </a>
-  <a href="/admin/teachers" class="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 shadow-soft p-5 transition-all">
-    <div class="text-sm text-orange-600 font-medium">👨‍🏫 Manajemen</div>
-    <div class="mt-1 text-xl font-semibold text-orange-900">Guru</div>
-    <div class="mt-2 text-orange-700 text-sm">Import masal guru + edit data guru.</div>
+    <div class="mt-2 flex gap-2 flex-wrap">
+      <a href="/admin/users?role=STUDENT" onclick="event.stopPropagation()" class="text-xs px-2 py-1 rounded-lg bg-green-200 hover:bg-green-300 text-green-800 font-medium">👨‍🎓 Siswa</a>
+      <a href="/admin/teachers" onclick="event.stopPropagation()" class="text-xs px-2 py-1 rounded-lg bg-green-200 hover:bg-green-300 text-green-800 font-medium">👨‍🏫 Guru</a>
+      <a href="/admin/users/import" onclick="event.stopPropagation()" class="text-xs px-2 py-1 rounded-lg bg-green-200 hover:bg-green-300 text-green-800 font-medium">📥 Import</a>
+    </div>
   </a>
   <a href="/admin/exams" class="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 shadow-soft p-5 transition-all">
     <div class="text-sm text-red-600 font-medium">📝 Manajemen</div>
@@ -40,11 +40,9 @@
     <div class="text-sm text-amber-600 font-medium">📋 Manajemen</div>
     <div class="mt-1 text-xl font-semibold text-amber-900">Tugas</div>
     <div class="mt-2 text-amber-700 text-sm">Kelola semua tugas dari guru.</div>
-  </a>
-  <a href="/admin/assignments/monitoring" class="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 shadow-soft p-5 transition-all">
-    <div class="text-sm text-orange-600 font-medium">📊 Pemantauan</div>
-    <div class="mt-1 text-xl font-semibold text-orange-900">Pantau Tugas</div>
-    <div class="mt-2 text-orange-700 text-sm">Status pengumpulan tugas siswa.</div>
+    <div class="mt-2 flex gap-2">
+      <a href="/admin/assignments/monitoring" onclick="event.stopPropagation()" class="text-xs px-2 py-1 rounded-lg bg-amber-200 hover:bg-amber-300 text-amber-800 font-medium">📊 Pantau Tugas</a>
+    </div>
   </a>
   <a href="/admin/question-bank" class="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 shadow-soft p-5 transition-all">
     <div class="text-sm text-pink-600 font-medium">🗂️ Manajemen</div>
@@ -67,24 +65,22 @@
     <div class="mt-2 text-teal-700 text-sm">Statistik guru, siswa, kelas teraktif.</div>
   </a>
   <a href="/admin/failed-submissions" class="rounded-2xl border border-red-300 bg-gradient-to-br from-red-100 to-red-200 hover:from-red-200 hover:to-red-300 shadow-soft p-5 transition-all">
-    <div class="text-sm text-red-700 font-medium">🚨 Recovery</div>
-    <div class="mt-1 text-xl font-semibold text-red-900">Submission Gagal</div>
-    <div class="mt-2 text-red-800 text-sm">Pulihkan jawaban ujian yang gagal submit.</div>
-  </a>
-  <a href="/admin/monitoring" class="rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200 shadow-soft p-5 transition-all">
-    <div class="text-sm text-slate-600 font-medium">🖥️ Sistem</div>
-    <div class="mt-1 text-xl font-semibold text-slate-900">Monitoring</div>
-    <div class="mt-2 text-slate-700 text-sm">CPU, RAM, database, uptime server.</div>
-  </a>
-  <a href="/admin/violations/locked" class="rounded-2xl border border-red-300 bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 shadow-soft p-5 transition-all">
-    <div class="text-sm text-red-600 font-medium">🔒 Anti-Cheat</div>
-    <div class="mt-1 text-xl font-semibold text-red-900">Siswa Terkunci</div>
-    <div class="mt-2 text-red-700 text-sm">Buka kunci siswa yang melanggar ujian.</div>
+    <div class="text-sm text-red-700 font-medium">🚨 Recovery & Anti-Cheat</div>
+    <div class="mt-1 text-xl font-semibold text-red-900">Darurat Ujian</div>
+    <div class="mt-2 text-red-800 text-sm">Pulihkan jawaban gagal & buka kunci siswa.</div>
+    <div class="mt-2 flex gap-2">
+      <a href="/admin/violations/locked" onclick="event.stopPropagation()" class="text-xs px-2 py-1 rounded-lg bg-red-200 hover:bg-red-300 text-red-800 font-medium">🔒 Siswa Terkunci</a>
+    </div>
   </a>
   <a href="/admin/notifications" class="rounded-2xl border border-yellow-200 bg-gradient-to-br from-yellow-50 to-amber-50 hover:from-yellow-100 hover:to-amber-100 shadow-soft p-5 transition-all">
     <div class="text-sm text-yellow-700 font-medium">🔔 Notifikasi</div>
     <div class="mt-1 text-xl font-semibold text-yellow-900">Pantau Notifikasi Guru</div>
     <div class="mt-2 text-yellow-700 text-sm">Lihat semua notifikasi yang dikirim guru ke siswa.</div>
+  </a>
+  <a href="/admin/monitoring" class="rounded-2xl border border-slate-300 bg-gradient-to-br from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200 shadow-soft p-5 transition-all">
+    <div class="text-sm text-slate-600 font-medium">🖥️ Sistem</div>
+    <div class="mt-1 text-xl font-semibold text-slate-900">Monitoring</div>
+    <div class="mt-2 text-slate-700 text-sm">CPU, RAM, database, uptime server.</div>
   </a>
   <button onclick="updateRankingData()" class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 shadow-soft p-5 transition-all text-left w-full">
     <div class="text-sm text-emerald-600 font-medium">🔄 Update</div>
