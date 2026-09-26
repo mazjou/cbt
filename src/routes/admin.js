@@ -4605,19 +4605,19 @@ router.get('/notifications', async (req, res) => {
   try {
     // Rekap unik: GROUP BY title + sender + type + DATE(created_at)
     // Karena sistem insert 1 baris per siswa, kita deduplikasi
-    let havingConditions = [];
+    let whereConditions = [];
     const notifParams = [];
 
     if (q) {
       notifParams.push(`%${q}%`);
-      havingConditions.push(`(u.full_name ILIKE $${notifParams.length} OR u.username ILIKE $${notifParams.length} OR n.title ILIKE $${notifParams.length})`);
+      whereConditions.push(`(u.full_name ILIKE $${notifParams.length} OR u.username ILIKE $${notifParams.length} OR n.title ILIKE $${notifParams.length})`);
     }
     if (type) {
       notifParams.push(type);
-      havingConditions.push(`n.type = $${notifParams.length}`);
+      whereConditions.push(`n.type = $${notifParams.length}`);
     }
 
-    const havingClause = havingConditions.length > 0 ? 'HAVING ' + havingConditions.join(' AND ') : '';
+    const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
 
     const notifResult = await pool.query(
       `SELECT
@@ -4641,10 +4641,10 @@ router.get('/notifications', async (req, res) => {
        LEFT JOIN users u ON u.id = n.sender_id
        LEFT JOIN classes c ON c.id = n.target_id AND n.target_type = 'class'
        LEFT JOIN notification_reads nr ON nr.notification_id = n.id
+       ${whereClause}
        GROUP BY n.title, n.message, n.type, n.sender_id, n.target_type, n.target_id, DATE(n.created_at),
                 u.full_name, u.username, u.role, c.name, n.is_active, n.expires_at
-       ${havingClause}
-       ORDER BY created_at DESC
+       ORDER BY MIN(n.created_at) DESC
        LIMIT $${notifParams.length + 1} OFFSET $${notifParams.length + 2}`,
       [...notifParams, limit, offset]
     );
@@ -4656,13 +4656,14 @@ router.get('/notifications', async (req, res) => {
                 u.full_name, u.username
          FROM notifications n
          LEFT JOIN users u ON u.id = n.sender_id
+         ${whereClause}
          GROUP BY n.title, n.message, n.type, n.sender_id, n.target_type, n.target_id, DATE(n.created_at),
                   u.full_name, u.username
-         ${havingClause}
        ) sub`,
       notifParams
     );
     const total = notifCountResult[0][0].total;
+    const totalPages = Math.ceil(total / limit);
 
     res.render('admin/notifications', {
       title: 'Pantau Notifikasi Guru',
