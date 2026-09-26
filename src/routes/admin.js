@@ -2151,12 +2151,17 @@ router.post('/users/bulk-reset-password', async (req, res) => {
       const [users] = await pq(`SELECT id, username FROM users WHERE id IN (${ph})`, ids);
       
       let updated = 0;
-      for (const u of users) {
-        const pwd = password_type === 'username' ? u.username : newPassword;
-        const hash = await bcrypt.hash(pwd, 10);
-        await pool.query(`UPDATE users SET password_hash=$1, plain_password=$2 WHERE id=$3`,
-          [hash, pwd, u.id]);
-        updated++;
+      // Proses paralel per batch 50
+      const BATCH = 50;
+      for (let i = 0; i < users.length; i += BATCH) {
+        const batch = users.slice(i, i + BATCH);
+        await Promise.all(batch.map(async (u) => {
+          const pwd = password_type === 'username' ? u.username : newPassword;
+          const hash = await bcrypt.hash(pwd, 10);
+          await pool.query(`UPDATE users SET password_hash=$1, plain_password=$2 WHERE id=$3`,
+            [hash, pwd, u.id]);
+          updated++;
+        }));
       }
       req.flash('success', `Password ${updated} pengguna berhasil direset.`);
       return res.redirect('/admin/users');
@@ -2172,12 +2177,18 @@ router.post('/users/bulk-reset-password', async (req, res) => {
     if (!users.length) { req.flash('error', 'Tidak ada pengguna yang sesuai filter.'); return res.redirect('/admin/users'); }
 
     let updated = 0;
-    for (const u of users) {
-      const pwd = password_type === 'username' ? u.username : newPassword;
-      const hash = await bcrypt.hash(pwd, 10);
-      await pool.query(`UPDATE users SET password_hash=$1, plain_password=$2 WHERE id=$3`,
-        [hash, pwd, u.id]);
-      updated++;
+    // Proses per batch 50 agar tidak timeout untuk user banyak (1000+)
+    const BATCH = 50;
+    for (let i = 0; i < users.length; i += BATCH) {
+      const batch = users.slice(i, i + BATCH);
+      // Hash semua password dalam batch secara paralel
+      await Promise.all(batch.map(async (u) => {
+        const pwd = password_type === 'username' ? u.username : newPassword;
+        const hash = await bcrypt.hash(pwd, 10);
+        await pool.query(`UPDATE users SET password_hash=$1, plain_password=$2 WHERE id=$3`,
+          [hash, pwd, u.id]);
+        updated++;
+      }));
     }
 
     req.flash('success', `Password ${updated} pengguna berhasil direset ke "${password_type === 'username' ? 'username masing-masing' : newPassword}".`);
