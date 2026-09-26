@@ -154,21 +154,21 @@ router.get('/', async (req, res) => {
     const [[counts]] = await pq(`
       SELECT
         COUNT(*) FILTER (WHERE role = 'STUDENT' AND is_active = true) AS total_siswa,
-        COUNT(*) FILTER (WHERE role = 'TEACHER' AND is_active = true) AS total_guru,
-        COUNT(*) FILTER (WHERE role = 'STUDENT') AS total_siswa_all,
-        COUNT(*) FILTER (WHERE role = 'TEACHER') AS total_guru_all
+        COUNT(*) FILTER (WHERE role = 'TEACHER' AND is_active = true) AS total_guru
       FROM users
     `);
     const [[total_kelas]] = await pq(`SELECT COUNT(*) AS total FROM classes`);
+    const [[total_mapel]] = await pq(`SELECT COUNT(*) AS total FROM subjects`);
     const stats = {
       siswa:  Number(counts?.total_siswa  || 0),
       guru:   Number(counts?.total_guru   || 0),
       kelas:  Number(total_kelas?.total   || 0),
+      mapel:  Number(total_mapel?.total   || 0),
     };
     res.render('admin/index', { title: 'Panel Admin', stats });
   } catch(e) {
     console.error(e);
-    res.render('admin/index', { title: 'Panel Admin', stats: { siswa: 0, guru: 0, kelas: 0 } });
+    res.render('admin/index', { title: 'Panel Admin', stats: { siswa: 0, guru: 0, kelas: 0, mapel: 0 } });
   }
 });
 
@@ -984,10 +984,13 @@ router.post('/subjects/:id/ajax-update', async (req, res) => {
 // ===== TEACHERS =====
 router.get('/teachers', async (req, res) => {
   const [teachers] = await pq(
-    `SELECT id, username, full_name, role, is_active, created_at
-     FROM users
-     WHERE role='TEACHER'
-     ORDER BY id DESC;`
+    `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.created_at,
+            COUNT(DISTINCT e.id) AS jumlah_mapel
+     FROM users u
+     LEFT JOIN exams e ON e.teacher_id = u.id
+     WHERE u.role='TEACHER'
+     GROUP BY u.id
+     ORDER BY u.full_name ASC;`
   );
   res.render('admin/teachers', { title: 'Kelola Guru', teachers });
 });
