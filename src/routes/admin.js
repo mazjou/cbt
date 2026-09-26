@@ -149,8 +149,27 @@ function buildTeacherImportPreview(rows, existingUsernamesSet) {
   return { preview, errors };
 }
 
-router.get('/', (req, res) => {
-  res.render('admin/index', { title: 'Panel Admin' });
+router.get('/', async (req, res) => {
+  try {
+    const [[counts]] = await pq(`
+      SELECT
+        COUNT(*) FILTER (WHERE role = 'STUDENT' AND is_active = true) AS total_siswa,
+        COUNT(*) FILTER (WHERE role = 'TEACHER' AND is_active = true) AS total_guru,
+        COUNT(*) FILTER (WHERE role = 'STUDENT') AS total_siswa_all,
+        COUNT(*) FILTER (WHERE role = 'TEACHER') AS total_guru_all
+      FROM users
+    `);
+    const [[total_kelas]] = await pq(`SELECT COUNT(*) AS total FROM classes`);
+    const stats = {
+      siswa:  Number(counts?.total_siswa  || 0),
+      guru:   Number(counts?.total_guru   || 0),
+      kelas:  Number(total_kelas?.total   || 0),
+    };
+    res.render('admin/index', { title: 'Panel Admin', stats });
+  } catch(e) {
+    console.error(e);
+    res.render('admin/index', { title: 'Panel Admin', stats: { siswa: 0, guru: 0, kelas: 0 } });
+  }
 });
 
 // ===== REPORTS =====
