@@ -4783,4 +4783,141 @@ router.post('/notifications/:id/delete', async (req, res) => {
   res.redirect('/admin/notifications');
 });
 
+// ===== PANITIA UJIAN =====
+
+// Auto-create tabel saat module dimuat
+(async () => {
+  try {
+    await pq(`
+      CREATE TABLE IF NOT EXISTS panitia_ujian (
+        id SERIAL PRIMARY KEY,
+        user_id INT NOT NULL,
+        jabatan VARCHAR(100) NOT NULL DEFAULT 'Panitia',
+        nomor_ruang VARCHAR(20) NULL,
+        keterangan TEXT NULL,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (user_id),
+        CONSTRAINT fk_panitia_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      )
+    `);
+  } catch(_) {}
+})();
+
+// GET — halaman kelola panitia
+router.get('/panitia', async (req, res) => {
+  try {
+    // Daftar panitia yang sudah ditunjuk
+    const [panitia] = await pq(`
+      SELECT p.id, p.user_id, p.jabatan, p.nomor_ruang, p.keterangan, p.is_active,
+             u.full_name, u.username
+      FROM panitia_ujian p
+      JOIN users u ON u.id = p.user_id
+      ORDER BY u.full_name ASC
+    `);
+
+    // Daftar guru yang belum jadi panitia (untuk dropdown tambah)
+    const [guruBelum] = await pq(`
+      SELECT u.id, u.full_name, u.username
+      FROM users u
+      WHERE u.role = 'TEACHER' AND u.is_active = true
+        AND u.id NOT IN (SELECT user_id FROM panitia_ujian)
+      ORDER BY u.full_name ASC
+    `);
+
+    res.render('admin/panitia', {
+      title: 'Panitia Ujian',
+      panitia,
+      guruBelum
+    });
+  } catch(e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat data panitia.');
+    res.redirect('/admin');
+  }
+});
+
+// POST — tambah panitia
+router.post('/panitia', async (req, res) => {
+  const { user_id, jabatan, nomor_ruang, keterangan } = req.body;
+  try {
+    await pq(
+      `INSERT INTO panitia_ujian (user_id, jabatan, nomor_ruang, keterangan)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id) DO UPDATE SET
+         jabatan = EXCLUDED.jabatan,
+         nomor_ruang = EXCLUDED.nomor_ruang,
+         keterangan = EXCLUDED.keterangan,
+         is_active = true`,
+      [user_id, jabatan || 'Panitia', nomor_ruang || null, keterangan || null]
+    );
+    req.flash('success', 'Panitia berhasil ditambahkan.');
+  } catch(e) {
+    console.error(e);
+    req.flash('error', 'Gagal menambahkan panitia: ' + e.message);
+  }
+  res.redirect('/admin/panitia');
+});
+
+// POST — update panitia
+router.post('/panitia/:id/update', async (req, res) => {
+  const { jabatan, nomor_ruang, keterangan, is_active } = req.body;
+  try {
+    await pq(
+      `UPDATE panitia_ujian SET jabatan=$1, nomor_ruang=$2, keterangan=$3, is_active=$4 WHERE id=$5`,
+      [jabatan || 'Panitia', nomor_ruang || null, keterangan || null,
+       is_active === '1' || is_active === 'true', req.params.id]
+    );
+    req.flash('success', 'Data panitia diperbarui.');
+  } catch(e) {
+    req.flash('error', 'Gagal update: ' + e.message);
+  }
+  res.redirect('/admin/panitia');
+});
+
+// POST — hapus dari daftar panitia
+router.post('/panitia/:id/delete', async (req, res) => {
+  try {
+    await pq(`DELETE FROM panitia_ujian WHERE id=$1`, [req.params.id]);
+    req.flash('success', 'Panitia dihapus dari daftar.');
+  } catch(e) {
+    req.flash('error', 'Gagal menghapus panitia.');
+  }
+  res.redirect('/admin/panitia');
+});
+
+// GET — cetak kartu panitia
+router.get('/panitia/print-cards', async (req, res) => {
+  try {
+    const [panitia] = await pq(`
+      SELECT p.id, p.jabatan, p.nomor_ruang, p.keterangan,
+             u.id AS user_id, u.full_name, u.username, u.plain_password, u.profile_photo
+      FROM panitia_ujian p
+      JOIN users u ON u.id = p.user_id
+      WHERE p.is_active = true
+      ORDER BY u.full_name ASC
+    `);
+
+    if (!panitia.length) {
+      req.flash('error', 'Tidak ada panitia aktif untuk dicetak.');
+      return res.redirect('/admin/panitia');
+    }
+
+    const schoolInfo = {
+      name: process.env.SCHOOL_NAME || 'SMK Negeri 1 Kras',
+      address: process.env.SCHOOL_ADDRESS || 'Kediri, Jawa Timur',
+    };
+
+    res.render('admin/print_panitia_cards', {
+      title: 'Cetak Kartu Panitia',
+      panitia,
+      schoolInfo
+    });
+  } catch(e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat data cetak.');
+    res.redirect('/admin/panitia');
+  }
+});
+
 module.exports = router;
