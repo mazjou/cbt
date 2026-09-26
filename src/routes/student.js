@@ -6,6 +6,53 @@ const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 const router = express.Router();
 router.use(requireRole('STUDENT'));
 
+// ── Cache soal ujian di Redis (TTL 10 menit) ─────────────────────────────────
+// Mengurangi query DB saat banyak siswa mulai ujian bersamaan
+const EXAM_CACHE_TTL = 600; // 10 menit
+const examQuestionsCache = new Map(); // fallback in-memory
+
+async function getCachedExamQuestions(examId, shuffleQuestions, maxQuestions, redisClient) {
+  // Soal tidak di-cache jika shuffle aktif (tiap siswa dapat urutan berbeda)
+  if (shuffleQuestions) return null;
+
+  const cacheKey = `exam:q:${examId}:${maxQuestions||'all'}`;
+
+  // Coba Redis dulu
+  if (redisClient && redisClient.isReady) {
+    try {
+      const cached = await redisClient.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch (_) {}
+  }
+
+  // Coba in-memory cache
+  const mem = examQuestionsCache.get(cacheKey);
+  if (mem && Date.now() < mem.exp) return mem.data;
+
+  return null;
+}
+
+async function setCachedExamQuestions(examId, shuffleQuestions, maxQuestions, data, redisClient) {
+  if (shuffleQuestions) return; // Jangan cache soal acak
+  const cacheKey = `exam:q:${examId}:${maxQuestions||'all'}`;
+
+  if (redisClient && redisClient.isReady) {
+    try {
+      await redisClient.setEx(cacheKey, EXAM_CACHE_TTL, JSON.stringify(data));
+    } catch (_) {}
+  }
+  // Selalu simpan in-memory sebagai fallback
+  examQuestionsCache.set(cacheKey, { data, exp: Date.now() + EXAM_CACHE_TTL * 1000 });
+}
+
+// Cleanup in-memory cache setiap 15 menit
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of examQuestionsCache) {
+    if (now > v.exp) examQuestionsCache.delete(k);
+  }
+}, 900000);
+
 // Anti-cheat: jumlah pelanggaran maksimal sebelum attempt dikunci (per ujian, default 3)
 // Nilai ini sekarang diambil dari kolom max_violations di tabel exams
 
@@ -232,22 +279,40 @@ router.post('/exams/:id/start', async (req, res) => {
     );
     const attemptId = aRes.insertId;
 
-    // Ambil soal - acak jika diset
-    let [qRows] = await conn.query(
-      `SELECT id FROM questions WHERE exam_id=:eid ORDER BY ${exam.shuffle_questions ? 'RANDOM()' : 'id ASC'};`,
-      { eid: examId }
-    );
+    // Ambil soal - coba dari cache dulu (hemat query DB saat banyak siswa mulai bersamaan)
+    const redisClient = req.app.locals.redisClient;
+    let qRows = await getCachedExamQuestions(examId, exam.shuffle_questions, exam.max_questions, redisClient);
 
-    // Batasi jumlah soal jika max_questions diset
-    if (exam.max_questions && exam.max_questions > 0 && qRows.length > exam.max_questions) {
-      // Sudah teracak (RANDOM()), ambil sejumlah max_questions saja
-      qRows = qRows.slice(0, exam.max_questions);
+    if (!qRows) {
+      // Cache miss — query ke DB
+      let [fresh] = await conn.query(
+        `SELECT id FROM questions WHERE exam_id=:eid ORDER BY ${exam.shuffle_questions ? 'RANDOM()' : 'id ASC'};`,
+        { eid: examId }
+      );
+      if (exam.max_questions && exam.max_questions > 0 && fresh.length > exam.max_questions) {
+        fresh = fresh.slice(0, exam.max_questions);
+      }
+      qRows = fresh.map(q => q.id);
+      // Simpan ke cache untuk siswa berikutnya (hanya jika tidak shuffle)
+      await setCachedExamQuestions(examId, exam.shuffle_questions, exam.max_questions, qRows, redisClient);
+    } else {
+      // Cache hit — jika shuffle, acak di sini (tidak di-cache karena unik per siswa)
+      if (exam.shuffle_questions) {
+        qRows = [...qRows].sort(() => Math.random() - 0.5);
+      }
     }
 
     console.log(`[START EXAM] Questions: ${qRows.length}${exam.max_questions ? ` (max: ${exam.max_questions})` : ''}`);
 
-    for (const q of qRows) {
-      await conn.query(`INSERT INTO attempt_answers (attempt_id, question_id) VALUES (:aid,:qid);`, { aid: attemptId, qid: q.id });
+    // ── Batch insert attempt_answers (1 query, bukan loop) ──────────────────
+    // Jauh lebih cepat saat banyak siswa mulai ujian bersamaan
+    if (qRows.length > 0) {
+      const vals   = qRows.map((_, i) => `($${i * 2 + 1}, $${i * 2 + 2})`).join(',');
+      const params = qRows.flatMap(qid => [attemptId, qid]);
+      await conn.rawQuery(
+        `INSERT INTO attempt_answers (attempt_id, question_id) VALUES ${vals}`,
+        params
+      );
     }
 
     await conn.commit();

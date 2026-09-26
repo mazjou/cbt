@@ -4,6 +4,59 @@ const pool = require('../db/pool');
 
 const router = express.Router();
 
+// ── Rate limiter login — anti stampede & brute force ─────────────────────────
+// Pakai in-memory Map (fallback) atau Redis jika tersedia
+const loginAttempts = new Map();
+const LOGIN_MAX     = 10;   // max 10 percobaan per 30 detik per IP
+const LOGIN_WINDOW  = 30000; // 30 detik
+
+function getLoginRateLimiter(redisClient) {
+  return async function loginRateLimit(req, res, next) {
+    const ip = (req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+    const key = `login:rate:${ip}`;
+
+    // Mode Redis — atomic, berlaku di semua cluster instance
+    if (redisClient && redisClient.isReady) {
+      try {
+        const count = await redisClient.incr(key);
+        if (count === 1) await redisClient.expire(key, 30);
+        if (count > LOGIN_MAX) {
+          const ttl = await redisClient.ttl(key);
+          return res.status(429).render('auth/login', {
+            title: 'Login',
+            error: `Terlalu banyak percobaan login. Coba lagi dalam ${ttl} detik.`
+          });
+        }
+      } catch (_) { /* Redis error — lanjut tanpa rate limit */ }
+      return next();
+    }
+
+    // Fallback in-memory
+    const now   = Date.now();
+    const entry = loginAttempts.get(ip) || { count: 0, resetAt: now + LOGIN_WINDOW };
+    if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + LOGIN_WINDOW; }
+    entry.count++;
+    loginAttempts.set(ip, entry);
+    if (entry.count > LOGIN_MAX) {
+      const wait = Math.ceil((entry.resetAt - now) / 1000);
+      return res.status(429).render('auth/login', {
+        title: 'Login',
+        error: `Terlalu banyak percobaan login. Coba lagi dalam ${wait} detik.`
+      });
+    }
+    next();
+  };
+}
+// Cleanup in-memory setiap 5 menit
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of loginAttempts) {
+    if (now > v.resetAt + 60000) loginAttempts.delete(k);
+  }
+}, 300000);
+
+module.exports.getLoginRateLimiter = getLoginRateLimiter;
+
 router.get('/login', (req, res) => {
   if (req.session.user) return res.redirect('/dashboard');
   res.render('auth/login', { title: 'Login' });

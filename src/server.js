@@ -66,6 +66,11 @@ Object.defineProperty(app.locals, 'isRedisConnected', {
   enumerable: true,
 });
 
+Object.defineProperty(app.locals, 'redisClient', {
+  get: () => redisClient,
+  enumerable: false,
+});
+
 // ── Helpers ──────────────────────────────────────────────────
 function getClientIp(req) {
   const xRealIp      = req.headers['x-real-ip'];
@@ -304,6 +309,9 @@ function registerRoutes() {
 
   app.use(ssoRoutes);
   app.use(authRoutes);
+  // Pasang rate limiter login setelah Redis siap
+  const { getLoginRateLimiter } = require('./routes/auth');
+  app.post('/login', getLoginRateLimiter(redisClient));
   app.use('/dashboard',    dashboardRoutes);
   app.use('/profile',      profileRoutes);
   app.use('/admin',        adminRoutes);
@@ -364,6 +372,11 @@ function startAutoSubmitCron() {
     return;
   }
   autoSubmitJob = cron.schedule('*/5 * * * *', async () => {
+    // Jitter acak 0–30 detik agar tiap instance PM2 tidak submit bersamaan
+    // saat banyak ujian habis waktu di saat yang sama (submission storm)
+    const jitter = Math.floor(Math.random() * 30000);
+    await new Promise(r => setTimeout(r, jitter));
+
     const lockValue = `${APP_NAME}-${Date.now()}`;
     try {
       const hasLock = await acquireRedisLock('lock:auto-submit', lockValue, 240);

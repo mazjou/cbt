@@ -47,16 +47,26 @@ async function autoSubmitAllExpired() {
     );
 
     let processed = 0;
-    for (const a of expired) {
-      try {
-        await finalizeAttemptWithBackup(a.id, a.student_id, a.exam_id);
-        console.log(`[AUTO-SUBMIT] Attempt ${a.id} selesai`);
-        processed++;
-      } catch(e) {
-        console.error(`[AUTO-SUBMIT] Error attempt ${a.id}:`, e.message);
-        try { await pool.query(`UPDATE attempts SET submission_status='FAILED' WHERE id=:id`, { id: a.id }); } catch(_) {}
+    // Proses per batch 10 agar tidak banjiri DB sekaligus
+    const BATCH = 10;
+    for (let i = 0; i < expired.length; i += BATCH) {
+      const batch = expired.slice(i, i + BATCH);
+      await Promise.allSettled(batch.map(async (a) => {
+        try {
+          await finalizeAttemptWithBackup(a.id, a.student_id, a.exam_id);
+          console.log(`[AUTO-SUBMIT] Attempt ${a.id} selesai`);
+          processed++;
+        } catch(e) {
+          console.error(`[AUTO-SUBMIT] Error attempt ${a.id}:`, e.message);
+          try { await pool.query(`UPDATE attempts SET submission_status='FAILED' WHERE id=:id`, { id: a.id }); } catch(_) {}
+        }
+      }));
+      // Jeda 500ms antar batch agar DB tidak overload
+      if (i + BATCH < expired.length) {
+        await new Promise(r => setTimeout(r, 500));
       }
     }
+
     if (processed > 0) console.log(`[AUTO-SUBMIT] Processed ${processed}/${expired.length}`);
     return { processed, total: expired.length };
   } catch(e) {
