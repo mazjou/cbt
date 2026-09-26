@@ -3081,7 +3081,16 @@ router.get('/violations/locked', async (req, res) => {
        LEFT JOIN attempt_violations av ON av.attempt_id = a.id
        WHERE a.is_locked = true AND a.status = 'IN_PROGRESS'
        GROUP BY a.id, u.full_name, u.username, c.name, e.title, e.id
-       ORDER BY a.locked_at DESC;`
+       ORDER BY
+         CASE
+           WHEN c.name ~* '^XII' THEN 3
+           WHEN c.name ~* '^XI'  THEN 2
+           WHEN c.name ~* '^X'   THEN 1
+           ELSE 4
+         END,
+         regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+         (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+         u.full_name ASC;`
     );
     res.render('teacher/violations_locked', { title: 'Siswa Terkunci', locked });
   } catch(e) {
@@ -3927,6 +3936,7 @@ router.get('/failed-submissions', async (req, res) => {
       SELECT a.id, a.exam_id, a.student_id, a.status, a.submission_status,
              a.started_at, a.finished_at,
              u.full_name as student_name, u.username as student_username,
+             c.name as class_name,
              e.title as exam_title, e.duration_minutes,
              s.name as subject_name,
              sb.id as backup_id, sb.created_at as backup_created
@@ -3934,9 +3944,19 @@ router.get('/failed-submissions', async (req, res) => {
       JOIN users u ON u.id = a.student_id
       JOIN exams e ON e.id = a.exam_id
       JOIN subjects s ON s.id = e.subject_id
+      LEFT JOIN classes c ON c.id = u.class_id
       LEFT JOIN submission_backups sb ON sb.attempt_id = a.id AND sb.status = 'ACTIVE'
       WHERE a.submission_status = 'FAILED'
-      ORDER BY a.started_at DESC
+      ORDER BY
+        CASE
+          WHEN c.name ~* '^XII' THEN 3
+          WHEN c.name ~* '^XI'  THEN 2
+          WHEN c.name ~* '^X'   THEN 1
+          ELSE 4
+        END,
+        regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+        (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+        u.full_name ASC
     `);
 
     // 2. Attempt IN_PROGRESS yang sudah melebihi waktu + 3 menit grace period
@@ -3944,6 +3964,7 @@ router.get('/failed-submissions', async (req, res) => {
       SELECT a.id, a.exam_id, a.student_id, a.status,
              a.started_at, a.finished_at,
              u.full_name as student_name, u.username as student_username,
+             c.name as class_name,
              e.title as exam_title, e.duration_minutes, e.end_at as exam_end_at,
              s.name as subject_name,
              FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) AS minutes_elapsed
@@ -3951,12 +3972,22 @@ router.get('/failed-submissions', async (req, res) => {
       JOIN users u ON u.id = a.student_id
       JOIN exams e ON e.id = a.exam_id
       JOIN subjects s ON s.id = e.subject_id
+      LEFT JOIN classes c ON c.id = u.class_id
       WHERE a.status = 'IN_PROGRESS'
         AND (
           FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) > (e.duration_minutes + 3)
           OR (e.end_at IS NOT NULL AND NOW() > (e.end_at + INTERVAL '3 minutes'))
         )
-      ORDER BY a.started_at ASC
+      ORDER BY
+        CASE
+          WHEN c.name ~* '^XII' THEN 3
+          WHEN c.name ~* '^XI'  THEN 2
+          WHEN c.name ~* '^X'   THEN 1
+          ELSE 4
+        END,
+        regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+        (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+        u.full_name ASC
     `);
 
     res.render('admin/failed_submissions', {
