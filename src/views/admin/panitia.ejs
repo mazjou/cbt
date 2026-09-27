@@ -3,8 +3,16 @@
     <h1 class="text-3xl font-semibold tracking-tight">Panitia Ujian</h1>
     <p class="mt-1 text-slate-600">Kelola daftar guru yang bertugas sebagai panitia ujian.</p>
   </div>
-  <div class="flex gap-2">
+  <div class="flex gap-2 flex-wrap">
     <% if (panitia && panitia.length > 0) { %>
+    <a href="/admin/panitia/export"
+       class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all shadow-md flex items-center gap-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+      </svg>
+      Export Excel
+    </a>
     <a href="/admin/panitia/print-cards"
        class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-semibold transition-all shadow-md flex items-center gap-2">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,12 +26,11 @@
   </div>
 </div>
 
-<div class="mt-6 grid lg:grid-cols-3 gap-4">
+<div class="mt-6 grid lg:grid-cols-4 gap-4">
 
   <!-- Form Tambah Panitia -->
   <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5">
-    <h2 class="text-lg font-semibold text-indigo-900 mb-4">➕ Tambah Panitia</h2>
-    <% if (guruBelum && guruBelum.length > 0) { %>
+    <h2 class="text-lg font-semibold text-indigo-900 mb-4">➕ Tambah Panitia</h2>    <% if (guruBelum && guruBelum.length > 0) { %>
     <form action="/admin/panitia" method="POST" class="space-y-3">
       <div>
         <label class="text-sm font-medium text-indigo-800 block mb-1">Pilih Guru</label>
@@ -66,8 +73,30 @@
     <% } %>
   </div>
 
+  <!-- Card Import Excel -->
+  <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 p-5">
+    <h2 class="text-lg font-semibold text-teal-900 mb-1">📥 Import Excel</h2>
+    <p class="text-xs text-teal-700 mb-3">
+      Upload file Excel untuk tambah/update data panitia sekaligus.<br>
+      Kolom: <strong>NIP/Username, Nama Lengkap, Ubah Kegiatan, Jabatan Kepanitiaan, Unit Kerja</strong>
+    </p>
+    <form action="/admin/panitia/import" method="POST" enctype="multipart/form-data" class="space-y-3">
+      <input type="file" name="file" accept=".xlsx,.xls,.csv" required
+        class="w-full text-sm text-teal-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0
+               file:bg-teal-500 file:text-white file:font-semibold file:cursor-pointer
+               hover:file:bg-teal-600 cursor-pointer" />
+      <button type="submit"
+        class="w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white font-semibold py-2.5 transition-all shadow-md">
+        Upload & Import
+      </button>
+    </form>
+    <div class="mt-3 text-xs text-teal-600">
+      💡 <a href="/admin/panitia/export" class="underline font-medium">Download template</a> dari data yang sudah ada, edit, lalu upload kembali.
+    </div>
+  </div>
+
   <!-- Daftar Panitia -->
-  <div class="lg:col-span-2 rounded-2xl border border-slate-200 bg-white p-5">
+  <div class="lg:col-span-3 rounded-2xl border border-slate-200 bg-white p-5">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-lg font-semibold text-slate-800">
         Daftar Panitia

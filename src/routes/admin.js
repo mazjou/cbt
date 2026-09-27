@@ -4907,6 +4907,107 @@ router.post('/panitia/bulk-delete', async (req, res) => {
   res.redirect('/admin/panitia');
 });
 
+// GET — export Excel panitia
+router.get('/panitia/export', async (req, res) => {
+  try {
+    const [panitia] = await pq(`
+      SELECT u.username, u.full_name, p.jabatan, p.nomor_ruang, p.keterangan,
+             CASE WHEN p.is_active THEN 'Aktif' ELSE 'Nonaktif' END AS status
+      FROM panitia_ujian p
+      JOIN users u ON u.id = p.user_id
+      ORDER BY u.full_name ASC
+    `);
+
+    const data = panitia.map(p => ({
+      'NIP/Username':        p.username,
+      'Nama Lengkap':        p.full_name,
+      'Ubah Kegiatan':       p.jabatan || '',
+      'Jabatan Kepanitiaan': p.nomor_ruang || '',
+      'Unit Kerja':          p.keterangan || '',
+      'Status':              p.status
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [
+      { wch: 25 }, // NIP
+      { wch: 35 }, // Nama
+      { wch: 20 }, // Kegiatan
+      { wch: 25 }, // Jabatan
+      { wch: 30 }, // Unit Kerja
+      { wch: 12 }, // Status
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Panitia');
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Disposition', `attachment; filename="panitia_ujian_${Date.now()}.xlsx"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch(e) {
+    console.error(e);
+    req.flash('error', 'Gagal export data panitia.');
+    res.redirect('/admin/panitia');
+  }
+});
+
+// POST — import Excel panitia
+router.post('/panitia/import', uploadImport.single('file'), async (req, res) => {
+  const file = req.file;
+  if (!file) {
+    req.flash('error', 'File belum dipilih.');
+    return res.redirect('/admin/panitia');
+  }
+  try {
+    const wb = XLSX.readFile(file.path, { cellDates: true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+    try { fs.unlinkSync(file.path); } catch(_) {}
+
+    if (!rows.length) {
+      req.flash('error', 'File kosong.');
+      return res.redirect('/admin/panitia');
+    }
+
+    let inserted = 0, updated = 0, errors = 0;
+    for (const row of rows) {
+      const username = String(pickRowValue(row, ['nip/username','nip','username','user']) || '').trim();
+      const jabatan  = String(pickRowValue(row, ['ubah kegiatan','kegiatan','jabatan']) || 'Panitia').trim();
+      const nomor_ruang = String(pickRowValue(row, ['jabatan kepanitiaan','jabatan_kepanitiaan','nomor_ruang','ruang']) || '').trim();
+      const keterangan  = String(pickRowValue(row, ['unit kerja','unit_kerja','keterangan']) || '').trim();
+
+      if (!username) { errors++; continue; }
+
+      // Cari user berdasarkan username
+      const [users] = await pq(`SELECT id FROM users WHERE username=$1 AND role='TEACHER' LIMIT 1`, [username]);
+      if (!users.length) { errors++; continue; }
+
+      const userId = users[0].id;
+      // Upsert ke panitia_ujian
+      const [exist] = await pq(`SELECT id FROM panitia_ujian WHERE user_id=$1 LIMIT 1`, [userId]);
+      if (exist.length) {
+        await pq(
+          `UPDATE panitia_ujian SET jabatan=$1, nomor_ruang=$2, keterangan=$3, is_active=true WHERE user_id=$4`,
+          [jabatan, nomor_ruang||null, keterangan||null, userId]
+        );
+        updated++;
+      } else {
+        await pq(
+          `INSERT INTO panitia_ujian (user_id, jabatan, nomor_ruang, keterangan, is_active) VALUES ($1,$2,$3,$4,true)`,
+          [userId, jabatan, nomor_ruang||null, keterangan||null]
+        );
+        inserted++;
+      }
+    }
+
+    req.flash('success', `Import berhasil: ${inserted} ditambahkan, ${updated} diperbarui${errors ? `, ${errors} baris dilewati (username tidak ditemukan)` : ''}.`);
+  } catch(e) {
+    console.error(e);
+    try { fs.unlinkSync(file.path); } catch(_) {}
+    req.flash('error', 'Gagal import: ' + e.message);
+  }
+  res.redirect('/admin/panitia');
+});
+
 // GET — cetak kartu panitia
 router.get('/panitia/print-cards', async (req, res) => {
   try {
