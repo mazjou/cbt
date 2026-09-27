@@ -36,22 +36,22 @@
         </select>
       </div>
       <div>
-        <label class="text-sm font-medium text-indigo-800 block mb-1">Jabatan</label>
+        <label class="text-sm font-medium text-indigo-800 block mb-1">Ubah Kegiatan</label>
         <input name="jabatan" value="Panitia" required
           class="w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
-          placeholder="Contoh: Ketua Panitia, Pengawas, Sekretaris" />
+          placeholder="Contoh: USP, PAT, PAS, ANBK" />
       </div>
       <div>
-        <label class="text-sm font-medium text-indigo-800 block mb-1">Nomor Ruang (opsional)</label>
+        <label class="text-sm font-medium text-indigo-800 block mb-1">Jabatan Kepanitiaan</label>
         <input name="nomor_ruang"
           class="w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
-          placeholder="Contoh: R.01, Lab Komputer" />
+          placeholder="Contoh: Ketua, Sekretaris, Pengawas" />
       </div>
       <div>
-        <label class="text-sm font-medium text-indigo-800 block mb-1">Keterangan (opsional)</label>
+        <label class="text-sm font-medium text-indigo-800 block mb-1">Unit Kerja (opsional)</label>
         <textarea name="keterangan" rows="2"
           class="w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm"
-          placeholder="Catatan tambahan..."></textarea>
+          placeholder="Contoh: Guru Matematika, Wali Kelas X TKJ 1"></textarea>
       </div>
       <button type="submit"
         class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold py-2.5 transition-all shadow-md">
@@ -87,8 +87,8 @@
         <thead class="text-slate-500 border-b border-slate-200">
           <tr>
             <th class="text-left py-2">Nama Guru</th>
-            <th class="text-left py-2">Jabatan</th>
-            <th class="text-left py-2">Ruang</th>
+            <th class="text-left py-2">Kegiatan</th>
+            <th class="text-left py-2">Jabatan Kepanitiaan</th>
             <th class="text-left py-2">Status</th>
             <th class="text-right py-2">Aksi</th>
           </tr>
@@ -145,21 +145,21 @@
           class="w-full rounded-xl bg-slate-50 border border-slate-200 px-4 py-2.5 text-slate-500 text-sm" />
       </div>
       <div>
-        <label class="text-sm font-semibold text-slate-700 block mb-1">Jabatan</label>
+        <label class="text-sm font-semibold text-slate-700 block mb-1">Ubah Kegiatan</label>
         <input name="jabatan" id="ep_jabatan" required
           class="w-full rounded-xl bg-white border-2 border-slate-200 px-4 py-2.5 focus:outline-none focus:border-indigo-400 text-sm" />
       </div>
       <div>
-        <label class="text-sm font-semibold text-slate-700 block mb-1">Nomor Ruang</label>
+        <label class="text-sm font-semibold text-slate-700 block mb-1">Jabatan Kepanitiaan</label>
         <input name="nomor_ruang" id="ep_ruang"
           class="w-full rounded-xl bg-white border-2 border-slate-200 px-4 py-2.5 focus:outline-none focus:border-indigo-400 text-sm"
-          placeholder="Opsional" />
+          placeholder="Ketua, Sekretaris, Pengawas..." />
       </div>
       <div>
-        <label class="text-sm font-semibold text-slate-700 block mb-1">Keterangan</label>
+        <label class="text-sm font-semibold text-slate-700 block mb-1">Unit Kerja</label>
         <textarea name="keterangan" id="ep_ket" rows="2"
           class="w-full rounded-xl bg-white border-2 border-slate-200 px-4 py-2.5 focus:outline-none focus:border-indigo-400 text-sm"
-          placeholder="Opsional"></textarea>
+          placeholder="Contoh: Guru Matematika, Wali Kelas X TKJ 1"></textarea>
       </div>
       <div>
         <label class="text-sm font-semibold text-slate-700 block mb-1">Status</label>
