@@ -4886,6 +4886,27 @@ router.post('/panitia/:id/delete', async (req, res) => {
   res.redirect('/admin/panitia');
 });
 
+// POST — hapus massal panitia
+router.post('/panitia/bulk-delete', async (req, res) => {
+  let { panitia_ids } = req.body;
+  try {
+    if (typeof panitia_ids === 'string') panitia_ids = JSON.parse(panitia_ids);
+    const ids = (Array.isArray(panitia_ids) ? panitia_ids : [panitia_ids])
+      .map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0);
+    if (!ids.length) {
+      req.flash('error', 'Tidak ada panitia yang dipilih.');
+      return res.redirect('/admin/panitia');
+    }
+    const ph = ids.map((_, i) => `$${i+1}`).join(',');
+    await pq(`DELETE FROM panitia_ujian WHERE id IN (${ph})`, ids);
+    req.flash('success', `${ids.length} panitia berhasil dihapus.`);
+  } catch(e) {
+    console.error(e);
+    req.flash('error', 'Gagal hapus massal: ' + e.message);
+  }
+  res.redirect('/admin/panitia');
+});
+
 // GET — cetak kartu panitia
 router.get('/panitia/print-cards', async (req, res) => {
   try {
