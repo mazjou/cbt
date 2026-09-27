@@ -100,7 +100,7 @@
 
     /* Barcode/QR area — ganti foto */
     .k-barcode{
-      width:28mm;height:28mm;flex-shrink:0;
+      width:22mm;height:22mm;flex-shrink:0;
       border:1px solid #e2e8f0;border-radius:1mm;
       background:white;
       display:flex;align-items:center;justify-content:center;
@@ -132,17 +132,17 @@
     .k-unit{font-size:5.5pt;color:#64748b;text-align:center;
       width:100%;font-style:italic;line-height:1.3;}
 
-    /* ── Footer website: 11mm ────────────────────────────────────────── */
+    /* ── Footer website: 9mm ────────────────────────────────────────── */
     .k-footer{
-      height:11mm;flex-shrink:0;
+      height:9mm;flex-shrink:0;
       background:white;
       margin:0 3mm;
       border-radius:0 0 2mm 2mm;
-      border-top:1.5px solid #e2e8f0;
+      border-top:1px solid #e2e8f0;
       display:flex;align-items:center;justify-content:center;
     }
-    .k-web{font-size:7pt;font-weight:900;color:#1d4ed8;
-      letter-spacing:.3px;text-transform:lowercase;}
+    .k-web{font-size:6pt;font-weight:700;color:#1d4ed8;
+      letter-spacing:.2px;text-transform:lowercase;}
 
     /* ── Print ──────────────────────────────────────────────────────── */
     @media print{
@@ -283,7 +283,7 @@ function applySettings() {
         var txt = decodeURIComponent(el.getAttribute('data-qr')||'');
         if(!txt) continue;
         try{
-          new QRCode(el,{text:txt,width:106,height:106,
+          new QRCode(el,{text:txt,width:84,height:84,
             colorDark:'#000',colorLight:'#fff',
             correctLevel:QRCode.CorrectLevel.M});
           var c = el.querySelector('canvas');
