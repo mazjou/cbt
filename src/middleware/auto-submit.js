@@ -5,12 +5,12 @@ const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 const EXPIRED_QUERY = `
   SELECT a.id, a.student_id, a.exam_id, a.started_at,
          e.duration_minutes, e.end_at AS exam_end_time,
-         FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) AS minutes_elapsed
+         FLOOR(EXTRACT(EPOCH FROM (NOW() AT TIME ZONE 'UTC' - a.started_at AT TIME ZONE 'UTC'))/60) AS minutes_elapsed
   FROM attempts a
   JOIN exams e ON e.id = a.exam_id
   WHERE a.status = 'IN_PROGRESS'
   AND (
-    FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) > e.duration_minutes
+    FLOOR(EXTRACT(EPOCH FROM (NOW() AT TIME ZONE 'UTC' - a.started_at AT TIME ZONE 'UTC'))/60) > e.duration_minutes
     OR (e.end_at IS NOT NULL AND NOW() > e.end_at)
   )
 `;
