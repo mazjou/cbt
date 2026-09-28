@@ -440,7 +440,14 @@ router.get('/:id', async (req, res) => {
     ));
     if (!question) { req.flash('error', 'Soal tidak ditemukan'); return res.redirect('/teacher/question-bank'); }
     const [options] = await pool.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [req.params.id]);
-    const [usage] = await pool.query('SELECT qbu.*, e.title AS exam_title, e.id AS exam_id FROM question_bank_usage qbu JOIN exams e ON e.id = qbu.exam_id WHERE qbu.question_bank_id = $1 ORDER BY qbu.used_at DESC', [req.params.id]);
+    let usage = [];
+    try {
+      const [usageRows] = await pool.query(
+        'SELECT qbu.*, e.title AS exam_title, e.id AS exam_id FROM question_bank_usage qbu JOIN exams e ON e.id = qbu.exam_id WHERE qbu.question_bank_id = $1 ORDER BY qbu.id DESC',
+        [req.params.id]
+      );
+      usage = usageRows || [];
+    } catch(_) { /* tabel atau kolom belum ada */ }
     res.render('teacher/question_bank_detail', { title: 'Detail Bank Soal', question, options, usage });
   } catch (error) {
     console.error('Error:', error);
