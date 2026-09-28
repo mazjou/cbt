@@ -320,7 +320,82 @@ function registerRoutes() {
   app.use(sdmsSyncRouter);
   app.use('/teacher',      teacherRoutes);
   app.use('/teacher/question-bank', questionBankRoutes);
-  app.use('/api/question-bank',     questionBankRoutes);
+
+  // API bank soal - bisa diakses TEACHER dan ADMIN (untuk modal di halaman ujian)
+  app.get('/api/question-bank', async (req, res) => {
+    if (!req.session?.user) return res.status(401).json({ error: 'Unauthorized' });
+    const user = req.session.user;
+    if (!['TEACHER','ADMIN'].includes(user.role)) return res.status(403).json({ error: 'Forbidden' });
+    const { subject_id, difficulty, search } = req.query;
+    try {
+      const params = [];
+      // Admin lihat semua, teacher lihat milik sendiri
+      let query = `SELECT qb.id, qb.subject_id, qb.question_text, qb.points, qb.difficulty, qb.tags, qb.chapter,
+        s.name AS subject_name
+        FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id
+        WHERE 1=1`;
+      if (user.role === 'TEACHER') { params.push(user.id); query += ` AND qb.teacher_id = $${params.length}`; }
+      if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }
+      if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
+      if (search) { params.push('%' + search + '%'); query += ` AND (qb.question_text ILIKE $${params.length} OR COALESCE(qb.tags,'') ILIKE $${params.length})`; }
+      query += ' ORDER BY qb.created_at DESC LIMIT 200';
+      const pool = req.app.locals.pool || require('./db/pool');
+      const [questions] = await pool.query(query, params);
+      res.json(questions);
+    } catch (e) {
+      console.error('API question-bank error:', e.message);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // API add-to-exam dari bank soal
+  app.post('/api/question-bank/add-to-exam/:examId', async (req, res) => {
+    if (!req.session?.user) return res.status(401).json({ error: 'Unauthorized' });
+    const user = req.session.user;
+    if (!['TEACHER','ADMIN'].includes(user.role)) return res.status(403).json({ error: 'Forbidden' });
+    const examId = req.params.examId;
+    const { questionIds } = req.body;
+    if (!questionIds || !Array.isArray(questionIds) || !questionIds.length)
+      return res.status(400).json({ error: 'questionIds required' });
+    const pool = req.app.locals.pool || require('./db/pool');
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      // Cek akses ujian
+      const examWhere = user.role === 'ADMIN' ? 'id = $1' : 'id = $1 AND teacher_id = $2';
+      const examParams = user.role === 'ADMIN' ? [examId] : [examId, user.id];
+      const [[exam]] = await conn.query(`SELECT id FROM exams WHERE ${examWhere} LIMIT 1`, examParams);
+      if (!exam) { await conn.rollback(); return res.status(404).json({ error: 'Ujian tidak ditemukan' }); }
+      let added = 0;
+      for (const bankId of questionIds) {
+        const [[bq]] = await conn.query('SELECT * FROM question_bank WHERE id = $1 LIMIT 1', [bankId]);
+        if (!bq) continue;
+        const [qRes] = await conn.query(
+          'INSERT INTO questions (exam_id, question_text, question_image, question_pdf, points) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+          [examId, bq.question_text, bq.question_image, bq.question_pdf, bq.points || 1]
+        );
+        const questionId = qRes.insertId;
+        const [opts] = await conn.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [bankId]);
+        for (const opt of opts) {
+          await conn.query('INSERT INTO options (question_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
+            [questionId, opt.option_label, opt.option_text, opt.is_correct]);
+        }
+        // Catat usage (opsional, bisa gagal kalau tabel tidak ada)
+        try { await conn.query('INSERT INTO question_bank_usage (question_bank_id, question_id, exam_id) VALUES ($1,$2,$3)', [bankId, questionId, examId]); } catch(_) {}
+        added++;
+      }
+      await conn.commit();
+      res.json({ success: true, added });
+    } catch (e) {
+      await conn.rollback();
+      console.error('add-to-exam error:', e.message);
+      res.status(500).json({ error: e.message });
+    } finally {
+      conn.release();
+    }
+  });
+
+  app.use('/api/question-bank', questionBankRoutes);
   app.use('/notifications', notificationRoutes);
 
   app.use('/api/subjects', async (req, res) => {
