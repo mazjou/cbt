@@ -4438,6 +4438,38 @@ let _duCache = { uploadSize: '-', ts: 0 };
     }
 
     // Detail siswa yang sedang ujian - ringkasan per ujian (lebih ringan)
+    let expiredAttempts = [];
+    try {
+      const [expRows] = await pq(`
+        SELECT
+          a.id, a.started_at,
+          u.full_name AS student_name, u.username,
+          c.name AS class_name,
+          e.title AS exam_title, e.duration_minutes,
+          FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60)::int AS elapsed_min
+        FROM attempts a
+        JOIN users u ON u.id = a.student_id
+        JOIN exams e ON e.id = a.exam_id
+        LEFT JOIN classes c ON c.id = u.class_id
+        WHERE a.status = 'IN_PROGRESS'
+          AND FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) > e.duration_minutes
+        ORDER BY elapsed_min DESC
+        LIMIT 50
+      `);
+      expiredAttempts = (expRows || []).map(r => ({
+        id:             r.id,
+        student_name:   r.student_name,
+        username:       r.username,
+        class_name:     r.class_name || '-',
+        exam_title:     r.exam_title,
+        elapsed_min:    Number(r.elapsed_min) || 0,
+        duration:       Number(r.duration_minutes) || 0,
+        over_by:        Math.max(0, Number(r.elapsed_min) - Number(r.duration_minutes))
+      }));
+    } catch(e3) {
+      console.error('Monitoring expiredAttempts error:', e3.message);
+    }
+
     try {
       const [activeRows] = await pq(`
         SELECT
@@ -4500,7 +4532,8 @@ let _duCache = { uploadSize: '-', ts: 0 };
       db: { ...dbStats },
       dbSize,
       stats,
-      activeExams
+      activeExams,
+      expiredAttempts
     });
   } catch (e) {
     res.json({ ok: false, error: e.message });
