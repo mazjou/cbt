@@ -92,17 +92,36 @@ router.get('/export', async (req, res) => {
       if (/^https?:\/\//i.test(v)) return v;
       return path.basename(v).replace(/^\d{10,13}_/, '') || '';
     };
+    const stripHtml = (html) => {
+      if (!html) return '';
+      return String(html)
+        .replace(/<br\s*\/?>/gi, '\n')   // <br> jadi newline
+        .replace(/<[^>]+>/g, '')          // hapus semua tag HTML
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+
     const rows = questions.map(q => {
       const opts = optMap[q.id] || {};
       const correct = Object.entries(opts).find(([, v]) => v.correct);
-      const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
       return {
-        question_text: qText, image: getRef(q.question_image), points: q.points || 1,
+        question_text: stripHtml(q.question_text),
+        image: getRef(q.question_image),
+        points: q.points || 1,
         correct: correct ? correct[0] : '',
-        A: opts['A']?.text || '', B: opts['B']?.text || '',
-        C: opts['C']?.text || '', D: opts['D']?.text || '', E: opts['E']?.text || '',
-        difficulty: q.difficulty || 'MEDIUM', subject: q.subject_code || q.subject_name || '',
-        chapter: q.chapter || '', tags: q.tags || ''
+        A: stripHtml(opts['A']?.text), B: stripHtml(opts['B']?.text),
+        C: stripHtml(opts['C']?.text), D: stripHtml(opts['D']?.text),
+        E: stripHtml(opts['E']?.text),
+        difficulty: q.difficulty || 'MEDIUM',
+        subject: q.subject_code || q.subject_name || '',
+        chapter: q.chapter || '',
+        tags: q.tags || ''
       };
     });
     const wb = XLSX.utils.book_new();
@@ -349,8 +368,7 @@ router.post('/import/preview',
         }
         const validDiff = ['EASY','MEDIUM','HARD'].includes(difficulty) ? difficulty : 'MEDIUM';
         const item = { rowNo, question_text, question_image, points, correct, subject_id, subjectRaw,
-          difficulty: validDiff, chapter, tags, options: { A, B, C, D, E },
-          option_images: { A: image_a, B: image_b, C: image_c, D: image_d, E: image_e } };
+          difficulty: validDiff, chapter, tags, options: { A, B, C, D, E } };
         if (reasons.length) errors.push({ rowNo, reasons, snapshot: item });
         else preview.push(item);
       });
@@ -392,8 +410,8 @@ router.post('/import/commit', async (req, res) => {
       const bankId = res2.insertId;
       for (const lbl of ['A','B','C','D','E']) {
         await conn.query(
-          'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, option_image, is_correct) VALUES ($1,$2,$3,$4,$5)',
-          [bankId, lbl, r.options[lbl] || '', r.option_images[lbl] || null, lbl === r.correct ? true : false]
+          'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
+          [bankId, lbl, r.options[lbl] || '', lbl === r.correct ? true : false]
         );
       }
       inserted++;
