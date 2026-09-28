@@ -1,3 +1,4 @@
+'use strict';
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -28,21 +29,21 @@ router.get('/', async (req, res) => {
   const user = req.session.user;
   const { subject_id, difficulty, search } = req.query;
   try {
+    const params = [user.id];
     let query = `SELECT qb.*, s.name AS subject_name,
       (SELECT COUNT(*) FROM question_bank_usage qbu WHERE qbu.question_bank_id = qb.id) AS usage_count
       FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id
-      WHERE qb.teacher_id = :tid`;
-    const params = { tid: user.id };
-    if (subject_id) { query += ' AND qb.subject_id = :subject_id'; params.subject_id = subject_id; }
-    if (difficulty) { query += ' AND qb.difficulty = :difficulty'; params.difficulty = difficulty; }
-    if (search) { query += ' AND (qb.question_text LIKE :search OR qb.tags LIKE :search)'; params.search = '%' + search + '%'; }
-    query += ' ORDER BY qb.created_at DESC;';
+      WHERE qb.teacher_id = $1`;
+    if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }
+    if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
+    if (search) { params.push('%' + search + '%'); query += ` AND (qb.question_text ILIKE $${params.length} OR qb.tags ILIKE $${params.length})`; }
+    query += ' ORDER BY qb.created_at DESC';
     const [questions] = await pool.query(query, params);
-    const [subjects] = await pool.query('SELECT * FROM subjects ORDER BY name ASC;');
+    const [subjects] = await pool.query('SELECT * FROM subjects ORDER BY name ASC');
     res.render('teacher/question_bank', { title: 'Bank Soal', questions, subjects, filters: { subject_id, difficulty, search } });
   } catch (error) {
     console.error('Error loading question bank:', error);
-    req.flash('error', 'Gagal memuat bank soal');
+    req.flash('error', 'Gagal memuat bank soal: ' + error.message);
     res.redirect('/teacher');
   }
 });
@@ -50,7 +51,7 @@ router.get('/', async (req, res) => {
 // ===== NEW FORM =====
 router.get('/new', async (req, res) => {
   try {
-    const [subjects] = await pool.query('SELECT * FROM subjects ORDER BY name ASC;');
+    const [subjects] = await pool.query('SELECT * FROM subjects ORDER BY name ASC');
     res.render('teacher/question_bank_new', { title: 'Tambah Soal ke Bank', subjects });
   } catch (error) {
     req.flash('error', 'Gagal memuat form');
@@ -63,48 +64,46 @@ router.get('/export', async (req, res) => {
   const user = req.session.user;
   const { subject_id, difficulty } = req.query;
   try {
+    const params = [user.id];
     let query = `SELECT qb.id, qb.question_text, qb.question_image, qb.points, qb.difficulty, qb.tags, qb.chapter,
       s.name AS subject_name, s.code AS subject_code
       FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id
-      WHERE qb.teacher_id = :tid`;
-    const params = { tid: user.id };
-    if (subject_id) { query += ' AND qb.subject_id = :subject_id'; params.subject_id = subject_id; }
-    if (difficulty) { query += ' AND qb.difficulty = :difficulty'; params.difficulty = difficulty; }
-    query += ' ORDER BY s.name ASC, qb.id ASC;';
+      WHERE qb.teacher_id = $1`;
+    if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }
+    if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
+    query += ' ORDER BY s.name ASC, qb.id ASC';
     const [questions] = await pool.query(query, params);
     if (!questions.length) { req.flash('error', 'Tidak ada soal untuk diekspor.'); return res.redirect('/teacher/question-bank'); }
-    const ids = questions.map(function(q) { return q.id; });
-    const ph = ids.map(function(_, i) { return ':id' + i; }).join(',');
-    const pObj = {};
-    ids.forEach(function(id, i) { pObj['id' + i] = id; });
+
+    const ids = questions.map(q => q.id);
+    const ph = ids.map((_, i) => `$${i + 1}`).join(',');
     const [options] = await pool.query(
-      'SELECT question_bank_id, option_label, option_text, option_image, is_correct FROM question_bank_options WHERE question_bank_id IN (' + ph + ') ORDER BY question_bank_id ASC, option_label ASC;',
-      pObj
+      `SELECT question_bank_id, option_label, option_text, option_image, is_correct FROM question_bank_options WHERE question_bank_id IN (${ph}) ORDER BY question_bank_id ASC, option_label ASC`,
+      ids
     );
     const optMap = {};
     for (const o of options) {
       if (!optMap[o.question_bank_id]) optMap[o.question_bank_id] = {};
       optMap[o.question_bank_id][o.option_label] = { text: o.option_text || '', image: o.option_image || '', correct: o.is_correct };
     }
-    const getRef = function(p) {
+    const getRef = (p) => {
       if (!p) return '';
       const v = String(p).trim();
       if (/^https?:\/\//i.test(v)) return v;
       return path.basename(v).replace(/^\d{10,13}_/, '') || '';
     };
-    const rows = questions.map(function(q) {
+    const rows = questions.map(q => {
       const opts = optMap[q.id] || {};
-      const correct = Object.entries(opts).find(function(e) { return e[1].correct; });
+      const correct = Object.entries(opts).find(([, v]) => v.correct);
       const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
       return {
         question_text: qText, image: getRef(q.question_image), points: q.points || 1,
         correct: correct ? correct[0] : '',
-        A: (opts['A'] && opts['A'].text) || '', B: (opts['B'] && opts['B'].text) || '',
-        C: (opts['C'] && opts['C'].text) || '', D: (opts['D'] && opts['D'].text) || '',
-        E: (opts['E'] && opts['E'].text) || '',
-        image_a: getRef(opts['A'] && opts['A'].image), image_b: getRef(opts['B'] && opts['B'].image),
-        image_c: getRef(opts['C'] && opts['C'].image), image_d: getRef(opts['D'] && opts['D'].image),
-        image_e: getRef(opts['E'] && opts['E'].image),
+        A: opts['A']?.text || '', B: opts['B']?.text || '',
+        C: opts['C']?.text || '', D: opts['D']?.text || '', E: opts['E']?.text || '',
+        image_a: getRef(opts['A']?.image), image_b: getRef(opts['B']?.image),
+        image_c: getRef(opts['C']?.image), image_d: getRef(opts['D']?.image),
+        image_e: getRef(opts['E']?.image),
         difficulty: q.difficulty || 'MEDIUM', subject: q.subject_code || q.subject_name || '',
         chapter: q.chapter || '', tags: q.tags || ''
       };
@@ -120,7 +119,7 @@ router.get('/export', async (req, res) => {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buffer);
   } catch (e) {
-    console.error(e);
+    console.error('Export error:', e);
     req.flash('error', 'Gagal export: ' + e.message);
     res.redirect('/teacher/question-bank');
   }
@@ -128,22 +127,19 @@ router.get('/export', async (req, res) => {
 
 // ===== IMPORT HALAMAN =====
 router.get('/import', async (req, res) => {
-  const [subjects] = await pool.query('SELECT id, code, name FROM subjects ORDER BY name ASC;');
+  const [subjects] = await pool.query('SELECT id, code, name FROM subjects ORDER BY name ASC');
   res.render('teacher/question_bank_import', { title: 'Import Bank Soal', subjects });
 });
 
-// ===== UPLOAD GAMBAR SOAL BANK (belakangan) =====
+// ===== UPLOAD GAMBAR SOAL BANK =====
 router.get('/upload-images', async (req, res) => {
   try {
     const user = req.session.user;
     const [questions] = await pool.query(
-      `SELECT qb.id, qb.question_text, qb.question_image,
-              s.name AS subject_name
-       FROM question_bank qb
-       JOIN subjects s ON s.id = qb.subject_id
-       WHERE qb.teacher_id = :tid
-       ORDER BY qb.id DESC LIMIT 200;`,
-      { tid: user.id }
+      `SELECT qb.id, qb.question_text, qb.question_image, s.name AS subject_name
+       FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id
+       WHERE qb.teacher_id = $1 ORDER BY qb.id DESC LIMIT 200`,
+      [user.id]
     );
     res.render('teacher/question_bank_upload_images', { title: 'Upload Gambar Bank Soal', questions });
   } catch (e) {
@@ -156,7 +152,7 @@ router.get('/upload-images', async (req, res) => {
 router.post('/upload-images', uploadImport.any(), async (req, res) => {
   const user = req.session.user;
   try {
-    const uploadedFiles = (req.files || []).filter(function(f) { return f.mimetype.startsWith('image/'); });
+    const uploadedFiles = (req.files || []).filter(f => f.mimetype.startsWith('image/'));
     if (!uploadedFiles.length) {
       req.flash('error', 'Tidak ada file gambar yang diupload.');
       return res.redirect('/teacher/question-bank/upload-images');
@@ -169,10 +165,7 @@ router.post('/upload-images', uploadImport.any(), async (req, res) => {
       fileMap[orig.replace(/\s+/g,'_')] = stored;
       fileMap[orig.replace(/\.[^.]+$/, '')] = stored;
     }
-    const [questions] = await pool.query(
-      'SELECT id, question_image FROM question_bank WHERE teacher_id = :tid;',
-      { tid: user.id }
-    );
+    const [questions] = await pool.query('SELECT id, question_image FROM question_bank WHERE teacher_id = $1', [user.id]);
     let updated = 0;
     for (const q of questions) {
       const imgVal = (q.question_image || '').trim();
@@ -180,7 +173,7 @@ router.post('/upload-images', uploadImport.any(), async (req, res) => {
         const base = path.basename(imgVal);
         const matched = fileMap[base] || fileMap[base.replace(/\.[^.]+$/, '')] || null;
         if (matched) {
-          await pool.query('UPDATE question_bank SET question_image = :img WHERE id = :id;', { img: matched, id: q.id });
+          await pool.query('UPDATE question_bank SET question_image = $1 WHERE id = $2', [matched, q.id]);
           updated++;
         }
       }
@@ -199,46 +192,46 @@ router.post('/import/preview',
   uploadImport.fields([{ name: 'file', maxCount: 1 }, { name: 'images', maxCount: 200 }]),
   async (req, res) => {
     const user = req.session.user;
-    const file = (req.files && req.files.file || [])[0];
+    const file = (req.files?.file || [])[0];
     if (!file) { req.flash('error', 'File belum dipilih.'); return res.redirect('/teacher/question-bank/import'); }
     try {
       const wb = XLSX.readFile(file.path, { cellDates: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
       if (!rows.length) { req.flash('error', 'File kosong.'); return res.redirect('/teacher/question-bank/import'); }
-      const uploaded = (req.files && req.files.images || []).map(function(f) { return { originalname: f.originalname, filename: f.filename }; });
-      const resolveImg = function(val) {
+      const uploaded = (req.files?.images || []).map(f => ({ originalname: f.originalname, filename: f.filename }));
+      const resolveImg = (val) => {
         if (!val) return null;
         const v = String(val).trim();
         if (!v) return null;
         if (/^https?:\/\//i.test(v)) return v;
         const base = path.basename(v);
-        const hit = uploaded.find(function(u) { return u.originalname === base; }) ||
-                    uploaded.find(function(u) { return u.originalname.replace(/\s+/g,'_') === base; });
+        const hit = uploaded.find(u => u.originalname === base) ||
+                    uploaded.find(u => u.originalname.replace(/\s+/g,'_') === base);
         if (hit) return '/public/uploads/questions/' + path.basename(hit.filename);
         const absExact = path.join(uploadDir, base);
         if (fs.existsSync(absExact)) return '/public/uploads/questions/' + base;
         try {
           const files = fs.readdirSync(uploadDir);
-          const matched = files.find(function(f) { return f.replace(/^\d{10,13}_/, '') === base; });
+          const matched = files.find(f => f.replace(/^\d{10,13}_/, '') === base);
           if (matched) return '/public/uploads/questions/' + matched;
         } catch (_) {}
         return base;
       };
-      const pickVal = function(row, keys) {
+      const pickVal = (row, keys) => {
         const low = {};
         for (const k of Object.keys(row)) low[k.trim().toLowerCase()] = row[k];
         for (const k of keys) { const v = low[k.toLowerCase()]; if (v !== undefined) return v; }
         return '';
       };
-      const [subjects] = await pool.query('SELECT id, code, name FROM subjects;');
+      const [subjects] = await pool.query('SELECT id, code, name FROM subjects');
       const subjectMap = new Map();
       for (const s of subjects) {
         if (s.code) subjectMap.set(s.code.toLowerCase(), s.id);
         if (s.name) subjectMap.set(s.name.toLowerCase(), s.id);
       }
       const preview = [], errors = [];
-      rows.forEach(function(row, idx) {
+      rows.forEach((row, idx) => {
         const rowNo = idx + 2;
         const reasons = [];
         const question_text = String(pickVal(row, ['question_text','question','soal','pertanyaan'])).trim();
@@ -260,9 +253,8 @@ router.post('/import/preview',
         const image_d = resolveImg(pickVal(row, ['image_d','gambar_d','img_d']));
         const image_e = resolveImg(pickVal(row, ['image_e','gambar_e','img_e']));
         if (!question_text) reasons.push('Kolom question_text kosong');
-        if (!A || !B || !C || !D || !E) reasons.push('Opsi A-E wajib terisi');
+        if (!A || !B || !C || !D) reasons.push('Opsi A-D wajib terisi');
         if (!['A','B','C','D','E'].includes(correct)) reasons.push('Kunci harus A/B/C/D/E');
-        if (!Number.isFinite(points) || points <= 0) reasons.push('Points harus angka > 0');
         let subject_id = null;
         if (subjectRaw) {
           subject_id = subjectMap.get(subjectRaw.toLowerCase()) || null;
@@ -307,14 +299,14 @@ router.post('/import/commit', async (req, res) => {
       const sid = r.subject_id || default_subject_id || null;
       if (!sid) continue;
       const [res2] = await conn.query(
-        'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, points, difficulty, tags) VALUES (:tid, :sid, :chap, :qt, :img, :pts, :diff, :tags);',
-        { tid: user.id, sid, chap: r.chapter || null, qt: r.question_text, img: r.question_image || null, pts: r.points, diff: r.difficulty, tags: r.tags || null }
+        'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, points, difficulty, tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
+        [user.id, sid, r.chapter || null, r.question_text, r.question_image || null, r.points || 1, r.difficulty || 'MEDIUM', r.tags || null]
       );
       const bankId = res2.insertId;
       for (const lbl of ['A','B','C','D','E']) {
         await conn.query(
-          'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, option_image, is_correct) VALUES (:bid, :lbl, :txt, :img, :isc);',
-          { bid: bankId, lbl, txt: r.options[lbl] || '', img: r.option_images[lbl] || null, isc: lbl === r.correct ? 1 : 0 }
+          'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, option_image, is_correct) VALUES ($1,$2,$3,$4,$5)',
+          [bankId, lbl, r.options[lbl] || '', r.option_images[lbl] || null, lbl === r.correct ? true : false]
         );
       }
       inserted++;
@@ -322,7 +314,7 @@ router.post('/import/commit', async (req, res) => {
     await conn.commit();
   } catch (e) {
     await conn.rollback();
-    console.error(e);
+    console.error('Import commit error:', e);
     req.flash('error', 'Gagal menyimpan import: ' + e.message);
     return res.redirect('/teacher/question-bank/import');
   } finally {
@@ -337,27 +329,29 @@ router.post('/import/commit', async (req, res) => {
 router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
   const user = req.session.user;
   const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct } = req.body;
-  if (!subject_id || !question_text || !a || !b || !c || !d || !e || !correct) {
-    req.flash('error', 'Semua field wajib diisi');
+  if (!subject_id || !question_text || !a || !b || !c || !d || !correct) {
+    req.flash('error', 'Semua field wajib diisi (minimal A-D dan kunci jawaban)');
     return res.redirect('/teacher/question-bank/new');
   }
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const imageFile = req.files && req.files.image ? req.files.image[0] : null;
-    const pdfFile = req.files && req.files.pdf ? req.files.pdf[0] : null;
+    const imageFile = req.files?.image?.[0];
+    const pdfFile   = req.files?.pdf?.[0];
     const [result] = await conn.query(
-      'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, question_pdf, points, difficulty, tags) VALUES (:tid, :sid, :chap, :qt, :img, :pdf, :pts, :diff, :tags);',
-      { tid: user.id, sid: subject_id, chap: chapter || null, qt: question_text,
-        img: imageFile ? '/public/uploads/questions/' + path.basename(imageFile.filename) : null,
-        pdf: pdfFile ? '/public/uploads/questions/' + path.basename(pdfFile.filename) : null,
-        pts: Number(points || 1), diff: difficulty || 'MEDIUM', tags: tags || null }
+      'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, question_pdf, points, difficulty, tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+      [user.id, subject_id, chapter || null, question_text,
+       imageFile ? '/public/uploads/questions/' + path.basename(imageFile.filename) : null,
+       pdfFile   ? '/public/uploads/questions/' + path.basename(pdfFile.filename)   : null,
+       Number(points || 1), difficulty || 'MEDIUM', tags || null]
     );
     const bankId = result.insertId;
-    for (const opt of [{ label: 'A', text: a },{ label: 'B', text: b },{ label: 'C', text: c },{ label: 'D', text: d },{ label: 'E', text: e }]) {
+    const corr = String(correct).toUpperCase();
+    for (const opt of [['A',a],['B',b],['C',c],['D',d],['E',e||'']]) {
+      if (!opt[1]) continue;
       await conn.query(
-        'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES (:bid, :lbl, :txt, :isc);',
-        { bid: bankId, lbl: opt.label, txt: opt.text, isc: opt.label === String(correct).toUpperCase() ? 1 : 0 }
+        'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
+        [bankId, opt[0], opt[1], opt[0] === corr]
       );
     }
     await conn.commit();
@@ -379,12 +373,12 @@ router.get('/:id', async (req, res) => {
   const user = req.session.user;
   try {
     const [[question]] = await pool.query(
-      'SELECT qb.*, s.name AS subject_name, (SELECT COUNT(*) FROM question_bank_usage qbu WHERE qbu.question_bank_id = qb.id) AS usage_count FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id WHERE qb.id = :id AND qb.teacher_id = :tid LIMIT 1;',
-      { id: req.params.id, tid: user.id }
+      'SELECT qb.*, s.name AS subject_name, (SELECT COUNT(*) FROM question_bank_usage qbu WHERE qbu.question_bank_id = qb.id) AS usage_count FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id WHERE qb.id = $1 AND qb.teacher_id = $2 LIMIT 1',
+      [req.params.id, user.id]
     );
     if (!question) { req.flash('error', 'Soal tidak ditemukan'); return res.redirect('/teacher/question-bank'); }
-    const [options] = await pool.query('SELECT * FROM question_bank_options WHERE question_bank_id = :id ORDER BY option_label ASC;', { id: req.params.id });
-    const [usage] = await pool.query('SELECT qbu.*, e.title AS exam_title, e.id AS exam_id FROM question_bank_usage qbu JOIN exams e ON e.id = qbu.exam_id WHERE qbu.question_bank_id = :id ORDER BY qbu.used_at DESC;', { id: req.params.id });
+    const [options] = await pool.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [req.params.id]);
+    const [usage] = await pool.query('SELECT qbu.*, e.title AS exam_title, e.id AS exam_id FROM question_bank_usage qbu JOIN exams e ON e.id = qbu.exam_id WHERE qbu.question_bank_id = $1 ORDER BY qbu.used_at DESC', [req.params.id]);
     res.render('teacher/question_bank_detail', { title: 'Detail Bank Soal', question, options, usage });
   } catch (error) {
     console.error('Error:', error);
@@ -398,13 +392,16 @@ router.get('/:id/edit', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   try {
-    const [[question]] = await pool.query('SELECT qb.*, s.name AS subject_name FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id WHERE qb.id = :id AND qb.teacher_id = :tid LIMIT 1;', { id: req.params.id, tid: user.id });
+    const [[question]] = await pool.query(
+      'SELECT qb.*, s.name AS subject_name FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id WHERE qb.id = $1 AND qb.teacher_id = $2 LIMIT 1',
+      [req.params.id, user.id]
+    );
     if (!question) { req.flash('error', 'Soal tidak ditemukan'); return res.redirect('/teacher/question-bank'); }
-    const [options] = await pool.query('SELECT * FROM question_bank_options WHERE question_bank_id = :id ORDER BY option_label ASC;', { id: req.params.id });
+    const [options] = await pool.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [req.params.id]);
     const byLabel = {};
     let correct = 'A';
     for (const o of options) { byLabel[o.option_label] = o.option_text; if (o.is_correct) correct = o.option_label; }
-    const [subjects] = await pool.query('SELECT * FROM subjects ORDER BY name ASC;');
+    const [subjects] = await pool.query('SELECT * FROM subjects ORDER BY name ASC');
     res.render('teacher/question_bank_edit', { title: 'Edit Bank Soal', question, options: byLabel, correct_label: correct, subjects });
   } catch (error) {
     console.error('Error:', error);
@@ -418,32 +415,33 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, remove_image, remove_pdf } = req.body;
-  if (!subject_id || !question_text || !a || !b || !c || !d || !e || !correct) {
+  if (!subject_id || !question_text || !a || !b || !c || !d || !correct) {
     req.flash('error', 'Semua field wajib diisi');
     return res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
   }
-  const [[existing]] = await pool.query('SELECT * FROM question_bank WHERE id = :id AND teacher_id = :tid LIMIT 1;', { id: req.params.id, tid: user.id });
+  const [[existing]] = await pool.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [req.params.id, user.id]);
   if (!existing) { req.flash('error', 'Akses ditolak'); return res.redirect('/teacher/question-bank'); }
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const imageFile = req.files && req.files.image ? req.files.image[0] : null;
+    const imageFile = req.files?.image?.[0];
     let imageToSave = existing.question_image;
     if (remove_image) imageToSave = null;
     if (imageFile) imageToSave = '/public/uploads/questions/' + path.basename(imageFile.filename);
-    const pdfFile = req.files && req.files.pdf ? req.files.pdf[0] : null;
+    const pdfFile = req.files?.pdf?.[0];
     let pdfToSave = existing.question_pdf;
     if (remove_pdf) pdfToSave = null;
     if (pdfFile) pdfToSave = '/public/uploads/questions/' + path.basename(pdfFile.filename);
     await conn.query(
-      'UPDATE question_bank SET subject_id = :sid, chapter = :chap, question_text = :qt, question_image = :img, question_pdf = :pdf, points = :pts, difficulty = :diff, tags = :tags WHERE id = :id;',
-      { sid: subject_id, chap: chapter || null, qt: question_text, img: imageToSave, pdf: pdfToSave, pts: Number(points || 1), diff: difficulty || 'MEDIUM', tags: tags || null, id: req.params.id }
+      'UPDATE question_bank SET subject_id=$1, chapter=$2, question_text=$3, question_image=$4, question_pdf=$5, points=$6, difficulty=$7, tags=$8, updated_at=NOW() WHERE id=$9',
+      [subject_id, chapter || null, question_text, imageToSave, pdfToSave, Number(points || 1), difficulty || 'MEDIUM', tags || null, req.params.id]
     );
     const corr = String(correct).toUpperCase();
-    for (const [lbl, txt] of [['A',a],['B',b],['C',c],['D',d],['E',e]]) {
+    for (const [lbl, txt] of [['A',a],['B',b],['C',c],['D',d],['E',e||'']]) {
+      if (!txt) continue;
       await conn.query(
-        'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES (:bid, :lbl, :txt, :isc) ON CONFLICT (question_bank_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, is_correct=EXCLUDED.is_correct',
-        { bid: req.params.id, lbl, txt, isc: lbl === corr ? 1 : 0 }
+        'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4) ON CONFLICT (question_bank_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, is_correct=EXCLUDED.is_correct',
+        [req.params.id, lbl, txt, lbl === corr]
       );
     }
     await conn.commit();
@@ -464,9 +462,9 @@ router.delete('/:id', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   try {
-    const [[question]] = await pool.query('SELECT id FROM question_bank WHERE id = :id AND teacher_id = :tid LIMIT 1;', { id: req.params.id, tid: user.id });
+    const [[question]] = await pool.query('SELECT id FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [req.params.id, user.id]);
     if (!question) { req.flash('error', 'Akses ditolak'); return res.redirect('/teacher/question-bank'); }
-    await pool.query('DELETE FROM question_bank WHERE id = :id;', { id: req.params.id });
+    await pool.query('DELETE FROM question_bank WHERE id = $1', [req.params.id]);
     req.flash('success', 'Soal berhasil dihapus dari bank');
   } catch (error) {
     console.error('Error deleting question bank:', error);
@@ -483,21 +481,21 @@ router.post('/:id/use-in-exam/:examId', async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [[bankQuestion]] = await conn.query('SELECT * FROM question_bank WHERE id = :id AND teacher_id = :tid LIMIT 1;', { id: bankId, tid: user.id });
+    const [[bankQuestion]] = await conn.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [bankId, user.id]);
     if (!bankQuestion) { req.flash('error', 'Soal tidak ditemukan'); return res.redirect('/teacher/question-bank'); }
-    const [[exam]] = await conn.query('SELECT id FROM exams WHERE id = :id AND teacher_id = :tid LIMIT 1;', { id: examId, tid: user.id });
+    const [[exam]] = await conn.query('SELECT id FROM exams WHERE id = $1 AND teacher_id = $2 LIMIT 1', [examId, user.id]);
     if (!exam) { req.flash('error', 'Ujian tidak ditemukan'); return res.redirect('/teacher/question-bank'); }
     const [qResult] = await conn.query(
-      'INSERT INTO questions (exam_id, question_text, question_image, question_pdf, points) VALUES (:eid, :qt, :img, :pdf, :pts);',
-      { eid: examId, qt: bankQuestion.question_text, img: bankQuestion.question_image, pdf: bankQuestion.question_pdf, pts: bankQuestion.points }
+      'INSERT INTO questions (exam_id, question_text, question_image, question_pdf, points) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+      [examId, bankQuestion.question_text, bankQuestion.question_image, bankQuestion.question_pdf, bankQuestion.points || 1]
     );
     const questionId = qResult.insertId;
-    const [bankOptions] = await conn.query('SELECT * FROM question_bank_options WHERE question_bank_id = :bid ORDER BY option_label ASC;', { bid: bankId });
+    const [bankOptions] = await conn.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [bankId]);
     for (const opt of bankOptions) {
-      await conn.query('INSERT INTO options (question_id, option_label, option_text, is_correct) VALUES (:qid, :lbl, :txt, :isc);',
-        { qid: questionId, lbl: opt.option_label, txt: opt.option_text, isc: opt.is_correct });
+      await conn.query('INSERT INTO options (question_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
+        [questionId, opt.option_label, opt.option_text, opt.is_correct]);
     }
-    await conn.query('INSERT INTO question_bank_usage (question_bank_id, question_id, exam_id) VALUES (:bid, :qid, :eid);', { bid: bankId, qid: questionId, eid: examId });
+    await conn.query('INSERT INTO question_bank_usage (question_bank_id, question_id, exam_id) VALUES ($1,$2,$3)', [bankId, questionId, examId]);
     await conn.commit();
     req.flash('success', 'Soal berhasil ditambahkan ke ujian');
     res.redirect('/teacher/exams/' + examId);
@@ -516,12 +514,12 @@ router.get('/api', async (req, res) => {
   const user = req.session.user;
   const { subject_id, difficulty, search } = req.query;
   try {
-    let query = 'SELECT qb.id, qb.subject_id, qb.question_text, qb.points, qb.difficulty, qb.tags, s.name AS subject_name FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id WHERE qb.teacher_id = :tid';
-    const params = { tid: user.id };
-    if (subject_id) { query += ' AND qb.subject_id = :subject_id'; params.subject_id = subject_id; }
-    if (difficulty) { query += ' AND qb.difficulty = :difficulty'; params.difficulty = difficulty; }
-    if (search) { query += ' AND (qb.question_text LIKE :search OR qb.tags LIKE :search)'; params.search = '%' + search + '%'; }
-    query += ' ORDER BY qb.created_at DESC LIMIT 100;';
+    const params = [user.id];
+    let query = 'SELECT qb.id, qb.subject_id, qb.question_text, qb.points, qb.difficulty, qb.tags, s.name AS subject_name FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id WHERE qb.teacher_id = $1';
+    if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }
+    if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
+    if (search) { params.push('%' + search + '%'); query += ` AND (qb.question_text ILIKE $${params.length} OR qb.tags ILIKE $${params.length})`; }
+    query += ' ORDER BY qb.created_at DESC LIMIT 100';
     const [questions] = await pool.query(query, params);
     res.json(questions);
   } catch (error) {
@@ -530,7 +528,7 @@ router.get('/api', async (req, res) => {
   }
 });
 
-// ===== API ADD TO EXAM =====
+// ===== API ADD TO EXAM (bulk) =====
 router.post('/api/add-to-exam/:examId', async (req, res) => {
   const user = req.session.user;
   const examId = req.params.examId;
@@ -541,30 +539,30 @@ router.post('/api/add-to-exam/:examId', async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [[exam]] = await conn.query('SELECT id FROM exams WHERE id = :id AND teacher_id = :tid LIMIT 1;', { id: examId, tid: user.id });
+    const [[exam]] = await conn.query('SELECT id FROM exams WHERE id = $1 AND teacher_id = $2 LIMIT 1', [examId, user.id]);
     if (!exam) return res.status(404).json({ error: 'Exam not found' });
     let added = 0;
     for (const bankId of questionIds) {
-      const [[bankQuestion]] = await conn.query('SELECT * FROM question_bank WHERE id = :id AND teacher_id = :tid LIMIT 1;', { id: bankId, tid: user.id });
+      const [[bankQuestion]] = await conn.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [bankId, user.id]);
       if (!bankQuestion) continue;
       const [qResult] = await conn.query(
-        'INSERT INTO questions (exam_id, question_text, question_image, question_pdf, points) VALUES (:eid, :qt, :img, :pdf, :pts);',
-        { eid: examId, qt: bankQuestion.question_text, img: bankQuestion.question_image, pdf: bankQuestion.question_pdf, pts: bankQuestion.points }
+        'INSERT INTO questions (exam_id, question_text, question_image, question_pdf, points) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+        [examId, bankQuestion.question_text, bankQuestion.question_image, bankQuestion.question_pdf, bankQuestion.points || 1]
       );
       const questionId = qResult.insertId;
-      const [bankOptions] = await conn.query('SELECT * FROM question_bank_options WHERE question_bank_id = :bid ORDER BY option_label ASC;', { bid: bankId });
+      const [bankOptions] = await conn.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [bankId]);
       for (const opt of bankOptions) {
-        await conn.query('INSERT INTO options (question_id, option_label, option_text, is_correct) VALUES (:qid, :lbl, :txt, :isc);',
-          { qid: questionId, lbl: opt.option_label, txt: opt.option_text, isc: opt.is_correct });
+        await conn.query('INSERT INTO options (question_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
+          [questionId, opt.option_label, opt.option_text, opt.is_correct]);
       }
-      await conn.query('INSERT INTO question_bank_usage (question_bank_id, question_id, exam_id) VALUES (:bid, :qid, :eid);', { bid: bankId, qid: questionId, eid: examId });
+      await conn.query('INSERT INTO question_bank_usage (question_bank_id, question_id, exam_id) VALUES ($1,$2,$3)', [bankId, questionId, examId]);
       added++;
     }
     await conn.commit();
     res.json({ success: true, added });
   } catch (error) {
     await conn.rollback();
-    console.error('Error adding questions to exam:', error);
+    console.error('Error adding bulk questions from bank:', error);
     res.status(500).json({ error: error.message });
   } finally {
     conn.release();
