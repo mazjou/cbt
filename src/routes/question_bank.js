@@ -24,6 +24,25 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 const uploadImport = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } });
 
+// helper: ambil row pertama dari hasil pool.query ([rows, fields])
+const firstRow = (result) => result && result[0] && result[0][0];
+
+// strip HTML untuk export
+const stripHtml = (html) => {
+  if (!html) return '';
+  return String(html)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 // ===== LIST =====
 router.get('/', async (req, res) => {
   const user = req.session.user;
@@ -73,8 +92,10 @@ router.get('/export', async (req, res) => {
     if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
     query += ' ORDER BY s.name ASC, qb.id ASC';
     const [questions] = await pool.query(query, params);
-    if (!questions.length) { req.flash('error', 'Tidak ada soal untuk diekspor.'); return res.redirect('/teacher/question-bank'); }
-
+    if (!questions.length) {
+      req.flash('error', 'Tidak ada soal untuk diekspor.');
+      return res.redirect('/teacher/question-bank');
+    }
     const ids = questions.map(q => q.id);
     const ph = ids.map((_, i) => `$${i + 1}`).join(',');
     const [options] = await pool.query(
@@ -92,36 +113,21 @@ router.get('/export', async (req, res) => {
       if (/^https?:\/\//i.test(v)) return v;
       return path.basename(v).replace(/^\d{10,13}_/, '') || '';
     };
-    const stripHtml = (html) => {
-      if (!html) return '';
-      return String(html)
-        .replace(/<br\s*\/?>/gi, '\n')   // <br> jadi newline
-        .replace(/<[^>]+>/g, '')          // hapus semua tag HTML
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/\s+/g, ' ')
-        .trim();
-    };
-
     const rows = questions.map(q => {
       const opts = optMap[q.id] || {};
       const correct = Object.entries(opts).find(([, v]) => v.correct);
       return {
         question_text: stripHtml(q.question_text),
-        image: getRef(q.question_image),
-        points: q.points || 1,
-        correct: correct ? correct[0] : '',
+        image:         getRef(q.question_image),
+        points:        q.points || 1,
+        correct:       correct ? correct[0] : '',
         A: stripHtml(opts['A']?.text), B: stripHtml(opts['B']?.text),
         C: stripHtml(opts['C']?.text), D: stripHtml(opts['D']?.text),
         E: stripHtml(opts['E']?.text),
         difficulty: q.difficulty || 'MEDIUM',
-        subject: q.subject_code || q.subject_name || '',
-        chapter: q.chapter || '',
-        tags: q.tags || ''
+        subject:    q.subject_code || q.subject_name || '',
+        chapter:    q.chapter || '',
+        tags:       q.tags || ''
       };
     });
     const wb = XLSX.utils.book_new();
@@ -152,86 +158,44 @@ router.get('/import/template', async (req, res) => {
   try {
     const [subjects] = await pool.query('SELECT code, name FROM subjects ORDER BY name ASC');
     const subjectList = subjects.map(s => s.code || s.name).join(', ');
-
-    // Buat contoh data
     const contoh = [
-      {
-        question_text: 'Contoh soal: Ibu kota Indonesia adalah?',
-        image: '',
-        points: 1,
-        correct: 'A',
-        A: 'Jakarta',
-        B: 'Surabaya',
-        C: 'Bandung',
-        D: 'Yogyakarta',
-        E: '',
-        difficulty: 'EASY',
-        subject: subjects[0]?.code || subjects[0]?.name || 'KODE_MAPEL',
-        chapter: 'Bab 1 - Contoh',
-        tags: 'geografi, ibu kota'
-      },
-      {
-        question_text: 'Contoh soal 2: 2 + 2 = ?',
-        image: '',
-        points: 2,
-        correct: 'B',
-        A: '3',
-        B: '4',
-        C: '5',
-        D: '6',
-        E: '',
-        difficulty: 'EASY',
-        subject: subjects[0]?.code || subjects[0]?.name || 'KODE_MAPEL',
-        chapter: 'Bab 1',
-        tags: 'matematika, dasar'
-      }
+      { question_text: 'Contoh: Ibu kota Indonesia adalah?', image: '', points: 1, correct: 'A',
+        A: 'Jakarta', B: 'Surabaya', C: 'Bandung', D: 'Yogyakarta', E: '',
+        difficulty: 'EASY', subject: subjects[0]?.code || 'KODE_MAPEL', chapter: 'Bab 1', tags: 'geografi' },
+      { question_text: 'Contoh: 2 + 2 = ?', image: '', points: 2, correct: 'B',
+        A: '3', B: '4', C: '5', D: '6', E: '',
+        difficulty: 'EASY', subject: subjects[0]?.code || 'KODE_MAPEL', chapter: 'Bab 1', tags: 'matematika' }
     ];
-
     const wb = XLSX.utils.book_new();
-
-    // Sheet 1: Template isi
     const ws = XLSX.utils.json_to_sheet(contoh, {
       header: ['question_text','image','points','correct','A','B','C','D','E','difficulty','subject','chapter','tags']
     });
     ws['!cols'] = [{wch:60},{wch:25},{wch:8},{wch:8},{wch:35},{wch:35},{wch:35},{wch:35},{wch:35},{wch:10},{wch:15},{wch:20},{wch:25}];
-
-    // Warnai header
-    const headerStyle = { font: { bold: true }, fill: { fgColor: { rgb: 'D6E4F7' } } };
-    const headers = ['question_text','image','points','correct','A','B','C','D','E','difficulty','subject','chapter','tags'];
-    headers.forEach((h, i) => {
-      const cell = XLSX.utils.encode_cell({ r: 0, c: i });
-      if (ws[cell]) ws[cell].s = headerStyle;
-    });
-
     XLSX.utils.book_append_sheet(wb, ws, 'Template Soal');
-
-    // Sheet 2: Panduan
     const panduan = [
-      ['Kolom', 'Keterangan', 'Wajib', 'Contoh'],
-      ['question_text', 'Teks pertanyaan (boleh HTML)', 'Ya', 'Sebutkan ibu kota Indonesia!'],
-      ['image', 'Nama file gambar soal (upload terpisah)', 'Tidak', 'gambar1.jpg'],
-      ['points', 'Poin soal (angka, default 1)', 'Tidak', '1'],
-      ['correct', 'Kunci jawaban: A/B/C/D/E', 'Ya', 'A'],
-      ['A', 'Teks opsi A', 'Ya', 'Jakarta'],
-      ['B', 'Teks opsi B', 'Ya', 'Surabaya'],
-      ['C', 'Teks opsi C', 'Ya', 'Bandung'],
-      ['D', 'Teks opsi D', 'Ya', 'Yogyakarta'],
-      ['E', 'Teks opsi E (opsional)', 'Tidak', ''],
-      ['difficulty', 'Tingkat kesulitan: EASY/MEDIUM/HARD', 'Tidak', 'MEDIUM'],
-      ['subject', `Kode/nama mata pelajaran. Tersedia: ${subjectList}`, 'Ya', subjects[0]?.code || 'KODE_MAPEL'],
-      ['chapter', 'Bab atau topik soal', 'Tidak', 'Bab 1 - Trigonometri'],
-      ['tags', 'Tag pencarian, pisah koma', 'Tidak', 'integral, turunan'],
+      ['Kolom','Keterangan','Wajib','Contoh'],
+      ['question_text','Teks pertanyaan','Ya','Sebutkan ibu kota Indonesia!'],
+      ['image','Nama file gambar soal','Tidak','gambar1.jpg'],
+      ['points','Poin soal (default 1)','Tidak','1'],
+      ['correct','Kunci: A/B/C/D/E','Ya','A'],
+      ['A','Teks opsi A','Ya','Jakarta'],
+      ['B','Teks opsi B','Ya','Surabaya'],
+      ['C','Teks opsi C','Ya','Bandung'],
+      ['D','Teks opsi D','Ya','Yogyakarta'],
+      ['E','Teks opsi E (opsional)','Tidak',''],
+      ['difficulty','EASY/MEDIUM/HARD','Tidak','MEDIUM'],
+      ['subject', `Kode/nama mapel. Tersedia: ${subjectList}`, 'Ya', subjects[0]?.code || 'KODE_MAPEL'],
+      ['chapter','Bab/topik soal','Tidak','Bab 1'],
+      ['tags','Tag pencarian, pisah koma','Tidak','integral, turunan'],
     ];
     const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
     wsPanduan['!cols'] = [{wch:18},{wch:55},{wch:8},{wch:30}];
     XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
-
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     res.setHeader('Content-Disposition', 'attachment; filename="template_import_bank_soal.xlsx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buffer);
   } catch (e) {
-    console.error('Template error:', e);
     req.flash('error', 'Gagal membuat template: ' + e.message);
     res.redirect('/teacher/question-bank/import');
   }
@@ -249,7 +213,6 @@ router.get('/upload-images', async (req, res) => {
     );
     res.render('teacher/question_bank_upload_images', { title: 'Upload Gambar Bank Soal', questions });
   } catch (e) {
-    console.error(e);
     req.flash('error', 'Gagal memuat halaman.');
     res.redirect('/teacher/question-bank');
   }
@@ -287,7 +250,6 @@ router.post('/upload-images', uploadImport.any(), async (req, res) => {
     req.flash('success', 'Berhasil mengupdate ' + updated + ' gambar soal.');
     res.redirect('/teacher/question-bank/upload-images');
   } catch (e) {
-    console.error(e);
     req.flash('error', 'Gagal upload gambar: ' + e.message);
     res.redirect('/teacher/question-bank/upload-images');
   }
@@ -353,11 +315,6 @@ router.post('/import/preview',
         const chapter = String(pickVal(row, ['chapter','bab']) || '').trim();
         const tags = String(pickVal(row, ['tags','tag']) || '').trim();
         const question_image = resolveImg(pickVal(row, ['image','gambar','image_url','img']));
-        const image_a = resolveImg(pickVal(row, ['image_a','gambar_a','img_a']));
-        const image_b = resolveImg(pickVal(row, ['image_b','gambar_b','img_b']));
-        const image_c = resolveImg(pickVal(row, ['image_c','gambar_c','img_c']));
-        const image_d = resolveImg(pickVal(row, ['image_d','gambar_d','img_d']));
-        const image_e = resolveImg(pickVal(row, ['image_e','gambar_e','img_e']));
         if (!question_text) reasons.push('Kolom question_text kosong');
         if (!A || !B || !C || !D) reasons.push('Opsi A-D wajib terisi');
         if (!['A','B','C','D','E'].includes(correct)) reasons.push('Kunci harus A/B/C/D/E');
@@ -409,9 +366,10 @@ router.post('/import/commit', async (req, res) => {
       );
       const bankId = res2.insertId;
       for (const lbl of ['A','B','C','D','E']) {
+        if (!r.options[lbl]) continue;
         await conn.query(
           'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
-          [bankId, lbl, r.options[lbl] || '', lbl === r.correct ? true : false]
+          [bankId, lbl, r.options[lbl], lbl === r.correct ? true : false]
         );
       }
       inserted++;
@@ -452,11 +410,11 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', m
     );
     const bankId = result.insertId;
     const corr = String(correct).toUpperCase();
-    for (const opt of [['A',a],['B',b],['C',c],['D',d],['E',e||'']]) {
-      if (!opt[1]) continue;
+    for (const [lbl, txt] of [['A',a],['B',b],['C',c],['D',d],['E',e||'']]) {
+      if (!txt) continue;
       await conn.query(
         'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
-        [bankId, opt[0], opt[1], opt[0] === corr]
+        [bankId, lbl, txt, lbl === corr]
       );
     }
     await conn.commit();
@@ -464,7 +422,6 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', m
     res.redirect('/teacher/question-bank');
   } catch (error) {
     await conn.rollback();
-    console.error('Error saving to question bank:', error);
     req.flash('error', 'Gagal menyimpan soal: ' + error.message);
     res.redirect('/teacher/question-bank/new');
   } finally {
@@ -477,10 +434,10 @@ router.get('/:id', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   try {
-    const [[question]] = await pool.query(
+    const question = firstRow(await pool.query(
       'SELECT qb.*, s.name AS subject_name, (SELECT COUNT(*) FROM question_bank_usage qbu WHERE qbu.question_bank_id = qb.id) AS usage_count FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id WHERE qb.id = $1 AND qb.teacher_id = $2 LIMIT 1',
       [req.params.id, user.id]
-    );
+    ));
     if (!question) { req.flash('error', 'Soal tidak ditemukan'); return res.redirect('/teacher/question-bank'); }
     const [options] = await pool.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [req.params.id]);
     const [usage] = await pool.query('SELECT qbu.*, e.title AS exam_title, e.id AS exam_id FROM question_bank_usage qbu JOIN exams e ON e.id = qbu.exam_id WHERE qbu.question_bank_id = $1 ORDER BY qbu.used_at DESC', [req.params.id]);
@@ -497,10 +454,10 @@ router.get('/:id/edit', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   try {
-    const [[question]] = await pool.query(
+    const question = firstRow(await pool.query(
       'SELECT qb.*, s.name AS subject_name FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id WHERE qb.id = $1 AND qb.teacher_id = $2 LIMIT 1',
       [req.params.id, user.id]
-    );
+    ));
     if (!question) { req.flash('error', 'Soal tidak ditemukan'); return res.redirect('/teacher/question-bank'); }
     const [options] = await pool.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [req.params.id]);
     const byLabel = {};
@@ -524,7 +481,7 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
     req.flash('error', 'Semua field wajib diisi');
     return res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
   }
-  const [[existing]] = await pool.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [req.params.id, user.id]);
+  const existing = firstRow(await pool.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [req.params.id, user.id]));
   if (!existing) { req.flash('error', 'Akses ditolak'); return res.redirect('/teacher/question-bank'); }
   const conn = await pool.getConnection();
   try {
@@ -554,7 +511,6 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
     res.redirect('/teacher/question-bank/' + req.params.id);
   } catch (error) {
     await conn.rollback();
-    console.error('Error updating question bank:', error);
     req.flash('error', 'Gagal memperbarui soal: ' + error.message);
     res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
   } finally {
@@ -567,12 +523,11 @@ router.delete('/:id', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   try {
-    const [[question]] = await pool.query('SELECT id FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [req.params.id, user.id]);
+    const question = firstRow(await pool.query('SELECT id FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [req.params.id, user.id]));
     if (!question) { req.flash('error', 'Akses ditolak'); return res.redirect('/teacher/question-bank'); }
     await pool.query('DELETE FROM question_bank WHERE id = $1', [req.params.id]);
     req.flash('success', 'Soal berhasil dihapus dari bank');
   } catch (error) {
-    console.error('Error deleting question bank:', error);
     req.flash('error', 'Gagal menghapus soal');
   }
   res.redirect('/teacher/question-bank');
@@ -586,9 +541,9 @@ router.post('/:id/use-in-exam/:examId', async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [[bankQuestion]] = await conn.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [bankId, user.id]);
+    const bankQuestion = firstRow(await conn.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [bankId, user.id]));
     if (!bankQuestion) { req.flash('error', 'Soal tidak ditemukan'); return res.redirect('/teacher/question-bank'); }
-    const [[exam]] = await conn.query('SELECT id FROM exams WHERE id = $1 AND teacher_id = $2 LIMIT 1', [examId, user.id]);
+    const exam = firstRow(await conn.query('SELECT id FROM exams WHERE id = $1 AND teacher_id = $2 LIMIT 1', [examId, user.id]));
     if (!exam) { req.flash('error', 'Ujian tidak ditemukan'); return res.redirect('/teacher/question-bank'); }
     const [qResult] = await conn.query(
       'INSERT INTO questions (exam_id, question_text, question_image, question_pdf, points) VALUES ($1,$2,$3,$4,$5) RETURNING id',
@@ -606,7 +561,6 @@ router.post('/:id/use-in-exam/:examId', async (req, res) => {
     res.redirect('/teacher/exams/' + examId);
   } catch (error) {
     await conn.rollback();
-    console.error('Error using question from bank:', error);
     req.flash('error', 'Gagal menambahkan soal ke ujian: ' + error.message);
     res.redirect('/teacher/question-bank');
   } finally {
@@ -614,7 +568,7 @@ router.post('/:id/use-in-exam/:examId', async (req, res) => {
   }
 });
 
-// ===== API LIST =====
+// ===== API LIST (diakses dari /teacher/question-bank/api) =====
 router.get('/api', async (req, res) => {
   const user = req.session.user;
   const { subject_id, difficulty, search } = req.query;
@@ -624,11 +578,10 @@ router.get('/api', async (req, res) => {
     if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }
     if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
     if (search) { params.push('%' + search + '%'); query += ` AND (qb.question_text ILIKE $${params.length} OR qb.tags ILIKE $${params.length})`; }
-    query += ' ORDER BY qb.created_at DESC LIMIT 100';
+    query += ' ORDER BY qb.created_at DESC LIMIT 200';
     const [questions] = await pool.query(query, params);
     res.json(questions);
   } catch (error) {
-    console.error('Error loading bank soal API:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -638,36 +591,34 @@ router.post('/api/add-to-exam/:examId', async (req, res) => {
   const user = req.session.user;
   const examId = req.params.examId;
   const { questionIds } = req.body;
-  if (!questionIds || !Array.isArray(questionIds) || questionIds.length === 0) {
-    return res.status(400).json({ error: 'questionIds array required' });
-  }
+  if (!questionIds || !Array.isArray(questionIds) || !questionIds.length)
+    return res.status(400).json({ error: 'questionIds required' });
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [[exam]] = await conn.query('SELECT id FROM exams WHERE id = $1 AND teacher_id = $2 LIMIT 1', [examId, user.id]);
+    const exam = firstRow(await conn.query('SELECT id FROM exams WHERE id = $1 AND teacher_id = $2 LIMIT 1', [examId, user.id]));
     if (!exam) return res.status(404).json({ error: 'Exam not found' });
     let added = 0;
     for (const bankId of questionIds) {
-      const [[bankQuestion]] = await conn.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [bankId, user.id]);
-      if (!bankQuestion) continue;
+      const bq = firstRow(await conn.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [bankId, user.id]));
+      if (!bq) continue;
       const [qResult] = await conn.query(
         'INSERT INTO questions (exam_id, question_text, question_image, question_pdf, points) VALUES ($1,$2,$3,$4,$5) RETURNING id',
-        [examId, bankQuestion.question_text, bankQuestion.question_image, bankQuestion.question_pdf, bankQuestion.points || 1]
+        [examId, bq.question_text, bq.question_image, bq.question_pdf, bq.points || 1]
       );
       const questionId = qResult.insertId;
-      const [bankOptions] = await conn.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [bankId]);
-      for (const opt of bankOptions) {
+      const [opts] = await conn.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [bankId]);
+      for (const opt of opts) {
         await conn.query('INSERT INTO options (question_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
           [questionId, opt.option_label, opt.option_text, opt.is_correct]);
       }
-      await conn.query('INSERT INTO question_bank_usage (question_bank_id, question_id, exam_id) VALUES ($1,$2,$3)', [bankId, questionId, examId]);
+      try { await conn.query('INSERT INTO question_bank_usage (question_bank_id, question_id, exam_id) VALUES ($1,$2,$3)', [bankId, questionId, examId]); } catch(_) {}
       added++;
     }
     await conn.commit();
     res.json({ success: true, added });
   } catch (error) {
     await conn.rollback();
-    console.error('Error adding bulk questions from bank:', error);
     res.status(500).json({ error: error.message });
   } finally {
     conn.release();
