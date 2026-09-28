@@ -19,8 +19,8 @@ async function autoSubmitMiddleware(req, res, next) {
   if (!req.path.includes('/student/') || !req.session?.user) return next();
   try {
     const [expired] = await pool.query(
-      EXPIRED_QUERY + ' AND a.student_id = :sid',
-      { sid: req.session.user.id }
+      EXPIRED_QUERY + ' AND a.student_id = $1',
+      [req.session.user.id]
     );
     for (const a of expired) {
       try {
@@ -28,7 +28,7 @@ async function autoSubmitMiddleware(req, res, next) {
         if (req.flash) req.flash('info', 'Ujian Anda telah otomatis dikumpulkan karena waktu habis.');
       } catch(e) {
         console.error(`[AUTO-SUBMIT] Error attempt ${a.id}:`, e.message);
-        try { await pool.query(`UPDATE attempts SET submission_status='FAILED' WHERE id=:id`, { id: a.id }); } catch(_) {}
+        try { await pool.query(`UPDATE attempts SET submission_status='FAILED' WHERE id=$1`, [a.id]); } catch(_) {}
       }
     }
   } catch(e) {
@@ -58,7 +58,7 @@ async function autoSubmitAllExpired() {
           processed++;
         } catch(e) {
           console.error(`[AUTO-SUBMIT] Error attempt ${a.id}:`, e.message);
-          try { await pool.query(`UPDATE attempts SET submission_status='FAILED' WHERE id=:id`, { id: a.id }); } catch(_) {}
+          try { await pool.query(`UPDATE attempts SET submission_status='FAILED' WHERE id=$1`, [a.id]); } catch(_) {}
         }
       }));
       // Jeda 500ms antar batch agar DB tidak overload

@@ -17,11 +17,13 @@ const pgPool = new Pool({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   max: Number(process.env.DB_CONNECTION_LIMIT || 30),
-  min: 5,                          // Selalu siapkan 5 koneksi
+  min: 5,
   idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS || 30000),
-  connectionTimeoutMillis: 5000,   // Gagal cepat jika DB penuh
-  statement_timeout: 120000,       // Query max 120 detik (untuk bulk import)
+  connectionTimeoutMillis: 5000,
+  statement_timeout: 120000,
   query_timeout: 120000,
+  // Set timezone koneksi ke Asia/Jakarta agar NOW() konsisten dengan data yang disimpan
+  options: `-c timezone=Asia/Jakarta`,
 });
 
 pgPool.on('error', (err) => {
