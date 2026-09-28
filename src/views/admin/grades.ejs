@@ -107,6 +107,14 @@
       <a href="/admin/grades" class="bg-gradient-to-r from-slate-400 to-slate-500 hover:from-slate-500 hover:to-slate-600 text-white font-bold py-2.5 px-4 rounded-xl transition-all">
         🔄 Reset
       </a>
+      <a id="btn-download-excel"
+         href="/admin/grades/download?exam_id=<%= filters.exam_id||'' %>&class_id=<%= filters.class_id||'' %>&teacher_id=<%= filters.teacher_id||'' %>&status=<%= filters.status||'' %>&result=<%= filters.result||'' %>&q=<%= encodeURIComponent(filters.q||'') %>"
+         class="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold py-2.5 px-4 rounded-xl transition-all shadow-lg whitespace-nowrap">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Download Excel
+      </a>
     </div>
   </form>
 </div>
@@ -308,6 +316,25 @@
 </div>
 
 <script>
+// Update tombol download saat filter berubah
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.querySelector('form[action="/admin/grades"]');
+  const btnDownload = document.getElementById('btn-download-excel');
+  if (!form || !btnDownload) return;
+
+  function updateDownloadUrl() {
+    const fd = new FormData(form);
+    const params = new URLSearchParams();
+    for (const [k, v] of fd.entries()) params.set(k, v);
+    btnDownload.href = '/admin/grades/download?' + params.toString();
+  }
+
+  form.querySelectorAll('select, input').forEach(el => {
+    el.addEventListener('change', updateDownloadUrl);
+    el.addEventListener('input', updateDownloadUrl);
+  });
+});
+
 function toggleSelectAll() {
   const selectAll = document.getElementById('selectAll');
   const checkboxes = document.querySelectorAll('.attempt-checkbox');
