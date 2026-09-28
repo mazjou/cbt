@@ -4006,7 +4006,7 @@ router.get('/failed-submissions', async (req, res) => {
              c.name as class_name,
              e.title as exam_title, e.duration_minutes, e.end_at as exam_end_at,
              s.name as subject_name,
-             FLOOR(EXTRACT(EPOCH FROM (NOW() AT TIME ZONE 'UTC' - a.started_at AT TIME ZONE 'UTC'))/60) AS minutes_elapsed
+             FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) AS minutes_elapsed
       FROM attempts a
       JOIN users u ON u.id = a.student_id
       JOIN exams e ON e.id = a.exam_id
@@ -4014,7 +4014,7 @@ router.get('/failed-submissions', async (req, res) => {
       LEFT JOIN classes c ON c.id = u.class_id
       WHERE a.status = 'IN_PROGRESS'
         AND (
-          FLOOR(EXTRACT(EPOCH FROM (NOW() AT TIME ZONE 'UTC' - a.started_at AT TIME ZONE 'UTC'))/60) > (e.duration_minutes + 3)
+          FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) > (e.duration_minutes + 3)
           OR (e.end_at IS NOT NULL AND NOW() > (e.end_at + INTERVAL '3 minutes'))
         )
       ORDER BY
@@ -4445,8 +4445,8 @@ let _duCache = { uploadSize: '-', ts: 0 };
           e.title AS exam_title,
           e.duration_minutes,
           COUNT(a.id) AS student_count,
-          MIN(FLOOR(EXTRACT(EPOCH FROM (NOW() AT TIME ZONE 'UTC' - a.started_at AT TIME ZONE 'UTC'))/60))::int AS min_elapsed,
-          MAX(FLOOR(EXTRACT(EPOCH FROM (NOW() AT TIME ZONE 'UTC' - a.started_at AT TIME ZONE 'UTC'))/60))::int AS max_elapsed
+          MIN(FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60))::int AS min_elapsed,
+          MAX(FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60))::int AS max_elapsed
         FROM attempts a
         JOIN exams e ON e.id = a.exam_id
         WHERE a.status = 'IN_PROGRESS'
