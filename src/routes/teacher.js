@@ -10,6 +10,19 @@ const pool = require('../db/pool');
 const { requireRole } = require('../middleware/auth');
 const { createNotificationForClass, createNotificationForMultipleClasses } = require('../utils/notifications');
 
+// ── Invalidasi cache soal ujian di Redis + in-memory ─────────────────────────
+async function invalidateExamQuestionsCache(examId, redisClient) {
+  try {
+    if (redisClient && redisClient.isReady) {
+      const keys = await redisClient.keys(`exam:q:${examId}:*`);
+      if (keys.length > 0) await redisClient.del(keys);
+    }
+  } catch(e) {
+    console.warn('[CACHE] Gagal invalidasi cache soal exam', examId, e.message);
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const router = express.Router();
 router.use(requireRole('TEACHER', 'ADMIN'));
 
@@ -1036,6 +1049,7 @@ router.post('/exams/:id/questions', upload.any(), async (req, res) => {
 
     await conn.commit();
     req.flash('success', 'Soal ditambahkan.');
+    await invalidateExamQuestionsCache(examId, req.app.locals.redisClient);
   } catch (e) {
     await conn.rollback();
     console.error('Error adding question:', e);
@@ -1435,6 +1449,7 @@ router.post('/exams/:id/questions/import/commit', async (req, res) => {
 
   const errorCount = Array.isArray(sess.errors) ? sess.errors.length : 0;
   req.flash('success', `Import tersimpan. Berhasil menambahkan ${inserted} soal. (Gagal/terlewat: ${errorCount})`);
+  await invalidateExamQuestionsCache(examId, req.app.locals.redisClient);
   // Keep errors for download, but clear preview items to avoid double import
   req.session.importPreview = { ...sess, preview: [] };
   return res.redirect(`/teacher/exams/${examId}`);
@@ -1772,6 +1787,7 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
     }
 
     req.flash('success', `Import Word selesai. Berhasil menambahkan ${inserted} soal.`);
+    await invalidateExamQuestionsCache(examId, req.app.locals.redisClient);
     return res.redirect(`/teacher/exams/${examId}`);
   } catch (e) {
     console.error(e);
@@ -1905,6 +1921,7 @@ router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { na
 
     await conn.commit();
     req.flash('success', 'Soal berhasil diperbarui.');
+    await invalidateExamQuestionsCache(row.exam_id, req.app.locals.redisClient);
   } catch (e2) {
     await conn.rollback();
     console.error('Error updating question:', e2);
@@ -1938,6 +1955,7 @@ router.delete('/questions/:id', async (req, res) => {
   try {
     await pool.query(`DELETE FROM questions WHERE id=:id;`, { id: qId });
     req.flash('success', 'Soal dihapus.');
+    await invalidateExamQuestionsCache(row.exam_id, req.app.locals.redisClient);
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal menghapus soal.');
