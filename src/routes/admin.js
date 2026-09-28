@@ -3179,6 +3179,75 @@ router.post('/violations/unlock-bulk', async (req, res) => {
 });
 
 // ===== GRADES (NILAI) =====
+// ── Download siswa belum mengerjakan ─────────────────────────────────────────
+router.get('/grades/download-not-yet', async (req, res) => {
+  const exam_id  = (req.query.exam_id  || '').trim();
+  const class_id = (req.query.class_id || '').trim();
+  if (!exam_id) return res.redirect('/admin/grades');
+
+  try {
+    // Ambil judul ujian
+    const examRes = await pool.query(`SELECT title FROM exams WHERE id=$1 LIMIT 1`, [exam_id]);
+    const examTitle = examRes[0][0]?.title || 'ujian';
+
+    const notYetRes = await pool.query(`
+      SELECT
+        ROW_NUMBER() OVER (
+          ORDER BY
+            CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END,
+            regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+            (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+            u.full_name ASC
+        ) AS no,
+        c.name AS kelas,
+        u.full_name AS nama_siswa,
+        u.username
+      FROM exams e
+      JOIN exam_classes ec ON ec.exam_id = e.id
+      JOIN users u ON u.class_id = ec.class_id AND u.role = 'STUDENT' AND u.is_active = true
+      LEFT JOIN classes c ON c.id = u.class_id
+      WHERE e.id = $1
+        AND NOT EXISTS (SELECT 1 FROM attempts a WHERE a.exam_id = e.id AND a.student_id = u.id)
+        ${class_id ? 'AND u.class_id = $2' : ''}
+      ORDER BY
+        CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END ASC,
+        regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+        (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+        u.full_name ASC
+    `, class_id ? [exam_id, class_id] : [exam_id]);
+
+    const rows = notYetRes[0] || [];
+    if (!rows.length) {
+      req.flash('success', 'Semua siswa sudah mengerjakan ujian ini.');
+      return res.redirect(`/admin/grades?exam_id=${exam_id}`);
+    }
+
+    const data = rows.map(r => ({
+      'No':         r.no,
+      'Kelas':      r.kelas || '-',
+      'Nama Siswa': r.nama_siswa,
+      'Username':   r.username,
+      'Status':     'Belum Mengerjakan',
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws['!cols'] = [{wch:5},{wch:14},{wch:35},{wch:25},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Belum Mengerjakan');
+
+    const now    = new Date().toISOString().slice(0,10);
+    const safe   = examTitle.replace(/[^a-zA-Z0-9]/g, '_').slice(0,30);
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', `attachment; filename="belum_mengerjakan_${safe}_${now}.xlsx"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch(e) {
+    console.error('Download not-yet error:', e.message);
+    req.flash('error', 'Gagal mengunduh: ' + e.message);
+    res.redirect(`/admin/grades?exam_id=${exam_id}`);
+  }
+});
+
 // ── Download Nilai Excel ──────────────────────────────────────────────────────
 router.get('/grades/download', async (req, res) => {
   const exam_id    = (req.query.exam_id    || '').trim();
@@ -3377,6 +3446,68 @@ router.get('/grades', async (req, res) => {
     is_pass: r.status === 'SUBMITTED' ? Number(r.score) >= Number(r.pass_score) : 0
   }));
 
+  // ── Statistik & siswa belum mengerjakan (hanya jika filter exam_id dipilih) ──
+  let examStats = null;
+  let notYetRows = [];
+
+  if (exam_id) {
+    try {
+      // Statistik ringkas per ujian yang dipilih
+      const statsRes = await pool.query(`
+        SELECT
+          COUNT(DISTINCT u.id) AS total_siswa,
+          COUNT(DISTINCT a.student_id) FILTER (WHERE a.status = 'SUBMITTED') AS sudah_submit,
+          COUNT(DISTINCT a.student_id) FILTER (WHERE a.status = 'IN_PROGRESS') AS sedang_kerjakan,
+          COUNT(DISTINCT a.student_id) AS sudah_mulai,
+          ROUND(AVG(a.score) FILTER (WHERE a.status = 'SUBMITTED'), 1) AS avg_nilai,
+          COUNT(DISTINCT a.student_id) FILTER (WHERE a.status = 'SUBMITTED' AND a.score >= e.pass_score) AS lulus,
+          COUNT(DISTINCT a.student_id) FILTER (WHERE a.status = 'SUBMITTED' AND a.score < e.pass_score) AS tidak_lulus
+        FROM exams e
+        JOIN exam_classes ec ON ec.exam_id = e.id
+        JOIN users u ON u.class_id = ec.class_id AND u.role = 'STUDENT' AND u.is_active = true
+        LEFT JOIN attempts a ON a.exam_id = e.id AND a.student_id = u.id
+        WHERE e.id = $1
+      `, [exam_id]);
+
+      const st = statsRes[0][0];
+      const totalSiswa = Number(st.total_siswa) || 0;
+      const sudahMulai = Number(st.sudah_mulai) || 0;
+      examStats = {
+        total_siswa:       totalSiswa,
+        sudah_submit:      Number(st.sudah_submit) || 0,
+        sedang_kerjakan:   Number(st.sedang_kerjakan) || 0,
+        belum_mengerjakan: totalSiswa - sudahMulai,
+        avg_nilai:         st.avg_nilai ? parseFloat(st.avg_nilai) : 0,
+        lulus:             Number(st.lulus) || 0,
+        tidak_lulus:       Number(st.tidak_lulus) || 0,
+      };
+
+      // Daftar siswa yang BELUM mengerjakan (belum ada attempt sama sekali)
+      const notYetRes = await pool.query(`
+        SELECT
+          u.id, u.full_name, u.username,
+          c.name AS class_name
+        FROM exams e
+        JOIN exam_classes ec ON ec.exam_id = e.id
+        JOIN users u ON u.class_id = ec.class_id AND u.role = 'STUDENT' AND u.is_active = true
+        LEFT JOIN classes c ON c.id = u.class_id
+        WHERE e.id = $1
+          AND NOT EXISTS (
+            SELECT 1 FROM attempts a WHERE a.exam_id = e.id AND a.student_id = u.id
+          )
+          ${class_id ? `AND u.class_id = $2` : ''}
+        ORDER BY
+          CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END ASC,
+          regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+          (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+          u.full_name ASC
+      `, class_id ? [exam_id, class_id] : [exam_id]);
+      notYetRows = notYetRes[0] || [];
+    } catch(e) {
+      console.error('Grades stats error:', e.message);
+    }
+  }
+
   res.render('admin/grades', {
     title: 'Kelola Nilai',
     rows: rows2,
@@ -3389,7 +3520,9 @@ router.get('/grades', async (req, res) => {
       limit,
       total,
       totalPages: Math.ceil(total / limit)
-    }
+    },
+    examStats,
+    notYetRows
   });
 });
 
