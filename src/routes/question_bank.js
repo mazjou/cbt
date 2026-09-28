@@ -78,13 +78,13 @@ router.get('/export', async (req, res) => {
     const ids = questions.map(q => q.id);
     const ph = ids.map((_, i) => `$${i + 1}`).join(',');
     const [options] = await pool.query(
-      `SELECT question_bank_id, option_label, option_text, option_image, is_correct FROM question_bank_options WHERE question_bank_id IN (${ph}) ORDER BY question_bank_id ASC, option_label ASC`,
+      `SELECT question_bank_id, option_label, option_text, is_correct FROM question_bank_options WHERE question_bank_id IN (${ph}) ORDER BY question_bank_id ASC, option_label ASC`,
       ids
     );
     const optMap = {};
     for (const o of options) {
       if (!optMap[o.question_bank_id]) optMap[o.question_bank_id] = {};
-      optMap[o.question_bank_id][o.option_label] = { text: o.option_text || '', image: o.option_image || '', correct: o.is_correct };
+      optMap[o.question_bank_id][o.option_label] = { text: o.option_text || '', correct: o.is_correct };
     }
     const getRef = (p) => {
       if (!p) return '';
@@ -101,18 +101,15 @@ router.get('/export', async (req, res) => {
         correct: correct ? correct[0] : '',
         A: opts['A']?.text || '', B: opts['B']?.text || '',
         C: opts['C']?.text || '', D: opts['D']?.text || '', E: opts['E']?.text || '',
-        image_a: getRef(opts['A']?.image), image_b: getRef(opts['B']?.image),
-        image_c: getRef(opts['C']?.image), image_d: getRef(opts['D']?.image),
-        image_e: getRef(opts['E']?.image),
         difficulty: q.difficulty || 'MEDIUM', subject: q.subject_code || q.subject_name || '',
         chapter: q.chapter || '', tags: q.tags || ''
       };
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows, {
-      header: ['question_text','image','points','correct','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e','difficulty','subject','chapter','tags']
+      header: ['question_text','image','points','correct','A','B','C','D','E','difficulty','subject','chapter','tags']
     });
-    ws['!cols'] = [{wch:60},{wch:25},{wch:8},{wch:8},{wch:35},{wch:35},{wch:35},{wch:35},{wch:35},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25}];
+    ws['!cols'] = [{wch:60},{wch:25},{wch:8},{wch:8},{wch:35},{wch:35},{wch:35},{wch:35},{wch:35},{wch:10},{wch:15},{wch:20},{wch:25}];
     XLSX.utils.book_append_sheet(wb, ws, 'Soal');
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     res.setHeader('Content-Disposition', 'attachment; filename="bank_soal_' + Date.now() + '.xlsx"');
@@ -129,6 +126,96 @@ router.get('/export', async (req, res) => {
 router.get('/import', async (req, res) => {
   const [subjects] = await pool.query('SELECT id, code, name FROM subjects ORDER BY name ASC');
   res.render('teacher/question_bank_import', { title: 'Import Bank Soal', subjects });
+});
+
+// ===== DOWNLOAD TEMPLATE IMPORT =====
+router.get('/import/template', async (req, res) => {
+  try {
+    const [subjects] = await pool.query('SELECT code, name FROM subjects ORDER BY name ASC');
+    const subjectList = subjects.map(s => s.code || s.name).join(', ');
+
+    // Buat contoh data
+    const contoh = [
+      {
+        question_text: 'Contoh soal: Ibu kota Indonesia adalah?',
+        image: '',
+        points: 1,
+        correct: 'A',
+        A: 'Jakarta',
+        B: 'Surabaya',
+        C: 'Bandung',
+        D: 'Yogyakarta',
+        E: '',
+        difficulty: 'EASY',
+        subject: subjects[0]?.code || subjects[0]?.name || 'KODE_MAPEL',
+        chapter: 'Bab 1 - Contoh',
+        tags: 'geografi, ibu kota'
+      },
+      {
+        question_text: 'Contoh soal 2: 2 + 2 = ?',
+        image: '',
+        points: 2,
+        correct: 'B',
+        A: '3',
+        B: '4',
+        C: '5',
+        D: '6',
+        E: '',
+        difficulty: 'EASY',
+        subject: subjects[0]?.code || subjects[0]?.name || 'KODE_MAPEL',
+        chapter: 'Bab 1',
+        tags: 'matematika, dasar'
+      }
+    ];
+
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1: Template isi
+    const ws = XLSX.utils.json_to_sheet(contoh, {
+      header: ['question_text','image','points','correct','A','B','C','D','E','difficulty','subject','chapter','tags']
+    });
+    ws['!cols'] = [{wch:60},{wch:25},{wch:8},{wch:8},{wch:35},{wch:35},{wch:35},{wch:35},{wch:35},{wch:10},{wch:15},{wch:20},{wch:25}];
+
+    // Warnai header
+    const headerStyle = { font: { bold: true }, fill: { fgColor: { rgb: 'D6E4F7' } } };
+    const headers = ['question_text','image','points','correct','A','B','C','D','E','difficulty','subject','chapter','tags'];
+    headers.forEach((h, i) => {
+      const cell = XLSX.utils.encode_cell({ r: 0, c: i });
+      if (ws[cell]) ws[cell].s = headerStyle;
+    });
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Template Soal');
+
+    // Sheet 2: Panduan
+    const panduan = [
+      ['Kolom', 'Keterangan', 'Wajib', 'Contoh'],
+      ['question_text', 'Teks pertanyaan (boleh HTML)', 'Ya', 'Sebutkan ibu kota Indonesia!'],
+      ['image', 'Nama file gambar soal (upload terpisah)', 'Tidak', 'gambar1.jpg'],
+      ['points', 'Poin soal (angka, default 1)', 'Tidak', '1'],
+      ['correct', 'Kunci jawaban: A/B/C/D/E', 'Ya', 'A'],
+      ['A', 'Teks opsi A', 'Ya', 'Jakarta'],
+      ['B', 'Teks opsi B', 'Ya', 'Surabaya'],
+      ['C', 'Teks opsi C', 'Ya', 'Bandung'],
+      ['D', 'Teks opsi D', 'Ya', 'Yogyakarta'],
+      ['E', 'Teks opsi E (opsional)', 'Tidak', ''],
+      ['difficulty', 'Tingkat kesulitan: EASY/MEDIUM/HARD', 'Tidak', 'MEDIUM'],
+      ['subject', `Kode/nama mata pelajaran. Tersedia: ${subjectList}`, 'Ya', subjects[0]?.code || 'KODE_MAPEL'],
+      ['chapter', 'Bab atau topik soal', 'Tidak', 'Bab 1 - Trigonometri'],
+      ['tags', 'Tag pencarian, pisah koma', 'Tidak', 'integral, turunan'],
+    ];
+    const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
+    wsPanduan['!cols'] = [{wch:18},{wch:55},{wch:8},{wch:30}];
+    XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', 'attachment; filename="template_import_bank_soal.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (e) {
+    console.error('Template error:', e);
+    req.flash('error', 'Gagal membuat template: ' + e.message);
+    res.redirect('/teacher/question-bank/import');
+  }
 });
 
 // ===== UPLOAD GAMBAR SOAL BANK =====
