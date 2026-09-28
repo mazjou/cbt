@@ -1,0 +1,100 @@
+<div class="flex items-center justify-between gap-4 mb-6">
+  <div>
+    <div class="text-sm text-slate-500 mb-1">Bank Soal</div>
+    <h1 class="text-2xl font-bold text-indigo-900">Detail Soal</h1>
+  </div>
+  <div class="flex gap-2">
+    <a href="/teacher/question-bank/<%= question.id %>/edit"
+       class="px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold text-sm transition-all">
+      ✏️ Edit
+    </a>
+    <a href="/teacher/question-bank"
+       class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all">
+      ← Kembali
+    </a>
+  </div>
+</div>
+
+<!-- Info soal -->
+<div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-6 mb-6">
+  <div class="flex flex-wrap gap-2 mb-4">
+    <span class="px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-sm font-semibold"><%= question.subject_name %></span>
+    <% const diffMap = { EASY: {label:'Mudah', cls:'bg-green-100 text-green-700'}, MEDIUM: {label:'Sedang', cls:'bg-yellow-100 text-yellow-700'}, HARD: {label:'Sulit', cls:'bg-red-100 text-red-700'} }; %>
+    <% const diff = diffMap[question.difficulty] || diffMap.MEDIUM; %>
+    <span class="px-3 py-1 rounded-full <%= diff.cls %> text-sm font-semibold"><%= diff.label %></span>
+    <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-semibold">⭐ <%= question.points %> poin</span>
+    <% if (question.chapter) { %>
+      <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">📖 <%= question.chapter %></span>
+    <% } %>
+    <% if (question.usage_count > 0) { %>
+      <span class="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-semibold">🔗 Dipakai <%= question.usage_count %>x</span>
+    <% } %>
+  </div>
+
+  <!-- Pertanyaan -->
+  <div class="prose max-w-none text-slate-900 text-base mb-4">
+    <%- question.question_text %>
+  </div>
+
+  <% if (question.question_image) { %>
+    <img src="<%= question.question_image %>" alt="Gambar soal"
+         class="rounded-xl border border-slate-200 max-h-64 object-contain mb-4" />
+  <% } %>
+
+  <% if (question.tags) { %>
+    <div class="flex flex-wrap gap-1 mt-3">
+      <% question.tags.split(',').forEach(tag => { %>
+        <span class="px-2 py-0.5 rounded-lg bg-white/70 border border-indigo-200 text-xs text-indigo-600">#<%= tag.trim() %></span>
+      <% }) %>
+    </div>
+  <% } %>
+</div>
+
+<!-- Opsi jawaban -->
+<div class="rounded-2xl border border-slate-200 bg-white p-6 mb-6">
+  <h2 class="text-lg font-bold text-slate-800 mb-4">Pilihan Jawaban</h2>
+  <div class="space-y-3">
+    <% const optColors = { A: 'border-blue-200 bg-blue-50', B: 'border-purple-200 bg-purple-50', C: 'border-emerald-200 bg-emerald-50', D: 'border-amber-200 bg-amber-50', E: 'border-rose-200 bg-rose-50' }; %>
+    <% options.forEach(opt => { %>
+      <div class="flex items-start gap-3 p-3 rounded-xl border-2 <%= opt.is_correct ? 'border-green-400 bg-green-50' : (optColors[opt.option_label] || 'border-slate-200 bg-slate-50') %>">
+        <span class="w-8 h-8 rounded-full <%= opt.is_correct ? 'bg-green-500 text-white' : 'bg-white border-2 border-slate-300 text-slate-700' %> flex items-center justify-center font-bold text-sm flex-shrink-0">
+          <%= opt.option_label %>
+        </span>
+        <div class="flex-1">
+          <div class="text-slate-800 text-sm prose max-w-none"><%- opt.option_text %></div>
+          <% if (opt.is_correct) { %>
+            <div class="text-green-600 text-xs font-semibold mt-1">✓ Kunci Jawaban</div>
+          <% } %>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+</div>
+
+<!-- Riwayat penggunaan -->
+<% if (usage && usage.length > 0) { %>
+<div class="rounded-2xl border border-slate-200 bg-white p-6">
+  <h2 class="text-lg font-bold text-slate-800 mb-4">Riwayat Penggunaan di Ujian</h2>
+  <div class="space-y-2">
+    <% usage.forEach(u => { %>
+      <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200">
+        <div class="text-sm font-semibold text-slate-800"><%= u.exam_title %></div>
+        <a href="/teacher/exams/<%= u.exam_id %>"
+           class="px-3 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-700 text-xs font-semibold transition-all">
+          Lihat Ujian
+        </a>
+      </div>
+    <% }) %>
+  </div>
+</div>
+<% } %>
+
+<!-- Tombol hapus -->
+<div class="mt-6 flex justify-end">
+  <form action="/teacher/question-bank/<%= question.id %>?_method=DELETE" method="POST"
+        onsubmit="return confirm('Hapus soal ini dari bank? Soal yang sudah dipakai di ujian tidak akan terhapus dari ujian tersebut.')">
+    <button class="px-4 py-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 font-semibold text-sm transition-all border border-rose-200">
+      🗑️ Hapus dari Bank
+    </button>
+  </form>
+</div>
