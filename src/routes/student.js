@@ -246,6 +246,19 @@ router.post('/exams/:id/start', async (req, res) => {
     return res.redirect(`/student/exams/${examId}`);
   }
 
+  // Cegah siswa mulai ujian jika sisa waktu < 5 menit sebelum end_at
+  // Tidak adil jika siswa dapat waktu sangat sedikit dibanding durasi ujian
+  if (exam.end_at) {
+    const endAt = new Date(exam.end_at);
+    const sisaWaktuMenit = (endAt - now) / 60000;
+    const minWaktu = Math.min(5, exam.duration_minutes * 0.1); // min 5 menit atau 10% durasi
+    if (sisaWaktuMenit < minWaktu) {
+      console.log(`[START EXAM] Sisa waktu terlalu sedikit: ${sisaWaktuMenit.toFixed(1)} menit`);
+      req.flash('error', `Ujian hampir berakhir. Tidak dapat memulai karena sisa waktu kurang dari ${Math.ceil(minWaktu)} menit.`);
+      return res.redirect(`/student/exams/${examId}`);
+    }
+  }
+
   if (exam.access_code && exam.access_code.length) {
     console.log(`[START EXAM] Checking access code. Expected: ${exam.access_code}, Got: ${access_code_input}`);
     if (access_code_input.toUpperCase() !== String(exam.access_code).toUpperCase()) {
