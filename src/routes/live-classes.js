@@ -198,7 +198,7 @@ router.get('/teacher/live-classes/:id/report', requireRole('TEACHER'), async (re
       `SELECT lcp.*, u.full_name, u.username, u.class_id, c.name AS class_name,
               TIMESTAMPDIFF(MINUTE, lcp.joined_at, COALESCE(lcp.left_at, NOW())) AS duration_minutes
        FROM live_class_participants lcp
-       JOIN users u ON u.id = lcp.user_id
+       JOIN users u ON u.id = lcp.student_id
        LEFT JOIN classes c ON c.id = u.class_id
        WHERE lcp.live_class_id = :id
        ORDER BY lcp.joined_at ASC`,
@@ -207,7 +207,7 @@ router.get('/teacher/live-classes/:id/report', requireRole('TEACHER'), async (re
 
     // Calculate statistics
     const totalParticipants = participants.length;
-    const uniqueParticipants = new Set(participants.map(p => p.user_id)).size;
+    const uniqueParticipants = new Set(participants.map(p => p.student_id)).size;
     const avgDuration = participants.length > 0 
       ? Math.round(participants.reduce((sum, p) => sum + p.duration_minutes, 0) / participants.length)
       : 0;
@@ -379,7 +379,7 @@ router.get('/student/live-classes', requireRole('STUDENT'), async (req, res) => 
               (SELECT COUNT(*) FROM live_class_participants lcp 
                WHERE lcp.live_class_id = lc.id AND lcp.left_at IS NULL) AS active_participants,
               (SELECT lcp.joined_at FROM live_class_participants lcp
-               WHERE lcp.live_class_id = lc.id AND lcp.user_id = :userId
+               WHERE lcp.live_class_id = lc.id AND lcp.student_id = :userId
                LIMIT 1) AS my_joined_at
        FROM live_classes lc
        JOIN subjects s ON s.id = lc.subject_id
@@ -467,7 +467,7 @@ router.get('/api/live-classes/:id/participants', requireAuth, async (req, res) =
     const [participants] = await pool.query(
       `SELECT lcp.*, u.full_name, u.role
        FROM live_class_participants lcp
-       JOIN users u ON u.id = lcp.user_id
+       JOIN users u ON u.id = lcp.student_id
        WHERE lcp.live_class_id = :id AND lcp.left_at IS NULL
        ORDER BY lcp.joined_at ASC`,
       { id: liveClassId }
