@@ -13,16 +13,8 @@
     <link rel="icon" type="image/png" href="/public/images/logo.png" />
     <link rel="apple-touch-icon" href="/public/images/logo.png" />
     
-    <script src="/public/lib/tailwind.min.js"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            boxShadow: { soft: '0 10px 30px rgba(0,0,0,0.08)' }
-          }
-        }
-      };
-    </script>
+    <!-- Tailwind CSS (pre-built static, bukan runtime JS) -->
+    <link rel="stylesheet" href="/public/lib/tailwind.css" />
     <style>
       /* Fix Summernote list styles yang di-reset oleh Tailwind Preflight */
       .note-editable ul,

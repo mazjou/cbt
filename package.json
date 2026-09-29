@@ -4,6 +4,8 @@
   "description": "Aplikasi ujian online (CBT) untuk SMK - Node.js + MySQL + Tailwind",
   "main": "src/server.js",
   "scripts": {
+    "build:css": "tailwindcss -i src/input.css -o src/public/lib/tailwind.css --minify",
+    "dev:css": "tailwindcss -i src/input.css -o src/public/lib/tailwind.css --watch",
     "dev": "nodemon src/server.js",
     "dev:clean": "powershell -Command \"Get-Process node -EA SilentlyContinue | Stop-Process -Force; npm run dev\"",
     "start": "node src/server.js",
@@ -73,6 +75,9 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.1",
     "@jitsi/react-sdk": "^1.4.4",
-    "nodemon": "^3.1.4"
+    "@tailwindcss/cli": "^4.3.3",
+    "@tailwindcss/forms": "^0.5.11",
+    "nodemon": "^3.1.4",
+    "tailwindcss": "^4.3.3"
   }
 }
