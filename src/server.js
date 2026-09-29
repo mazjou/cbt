@@ -32,7 +32,7 @@ const questionBankRoutes = require('./routes/question_bank');
 const profileRoutes      = require('./routes/profile');
 
 const pool = require('./db/pool');
-const { autoSubmitMiddleware, autoSubmitAllExpired } = require('./middleware/auto-submit');
+const { autoSubmitMiddleware, autoSubmitAllExpired, autoPublishAndCloseExams } = require('./middleware/auto-submit');
 
 const app = express();
 
@@ -446,19 +446,26 @@ function startAutoSubmitCron() {
     console.log('⏸️ Auto-submit cron dinonaktifkan di node ini');
     return;
   }
-  autoSubmitJob = cron.schedule('*/5 * * * *', async () => {
-    // Jitter acak 0–30 detik agar tiap instance PM2 tidak submit bersamaan
-    // saat banyak ujian habis waktu di saat yang sama (submission storm)
-    const jitter = Math.floor(Math.random() * 30000);
+  autoSubmitJob = cron.schedule('* * * * *', async () => {
+    // Jitter acak 0–10 detik agar tiap instance PM2 tidak bertabrakan
+    const jitter = Math.floor(Math.random() * 10000);
     await new Promise(r => setTimeout(r, jitter));
 
     const lockValue = `${APP_NAME}-${Date.now()}`;
     try {
-      const hasLock = await acquireRedisLock('lock:auto-submit', lockValue, 240);
+      const hasLock = await acquireRedisLock('lock:auto-submit', lockValue, 120);
       if (!hasLock) return;
-      const result = await autoSubmitAllExpired();
-      if (result?.processed > 0) {
-        console.log(`[AUTO-SUBMIT] ✅ ${result.processed} attempt diproses oleh ${APP_NAME}`);
+
+      // Auto-publish / auto-close ujian berdasarkan start_at / end_at
+      await autoPublishAndCloseExams();
+
+      // Auto-submit attempt yang waktunya habis (jalankan setiap 5 menit)
+      const minute = new Date().getMinutes();
+      if (minute % 5 === 0) {
+        const result = await autoSubmitAllExpired();
+        if (result?.processed > 0) {
+          console.log(`[AUTO-SUBMIT] ✅ ${result.processed} attempt diproses oleh ${APP_NAME}`);
+        }
       }
     } catch (error) {
       console.error('[AUTO-SUBMIT] ❌ Error:', error.message);

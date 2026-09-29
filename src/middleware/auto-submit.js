@@ -75,4 +75,52 @@ async function autoSubmitAllExpired() {
   }
 }
 
-module.exports = { autoSubmitMiddleware, autoSubmitAllExpired };
+/**
+ * Auto-publish ujian yang sudah mencapai start_at dan belum end_at,
+ * dan auto-close (unpublish) ujian yang sudah melewati end_at.
+ *
+ * Aturan:
+ *  - Auto-publish: is_published=false, start_at IS NOT NULL, NOW() >= start_at,
+ *                  dan (end_at IS NULL OR NOW() < end_at)
+ *  - Auto-close  : is_published=true,  end_at IS NOT NULL, NOW() >= end_at
+ */
+async function autoPublishAndCloseExams() {
+  try {
+    // pool.query() wrapper mengembalikan [rows, fields] (pgResultToMysql2)
+    // affectedRows tersedia di resultArray.affectedRows
+
+    // 1. Auto-publish
+    const publishResult = await pool.query(
+      `UPDATE exams
+       SET is_published = true
+       WHERE is_published = false
+         AND start_at IS NOT NULL
+         AND NOW() >= start_at
+         AND (end_at IS NULL OR NOW() < end_at)`
+    );
+    const published = publishResult?.affectedRows ?? 0;
+    if (published > 0) {
+      console.log(`[AUTO-PUBLISH] ✅ ${published} ujian dipublish otomatis`);
+    }
+
+    // 2. Auto-close
+    const closeResult = await pool.query(
+      `UPDATE exams
+       SET is_published = false
+       WHERE is_published = true
+         AND end_at IS NOT NULL
+         AND NOW() >= end_at`
+    );
+    const closed = closeResult?.affectedRows ?? 0;
+    if (closed > 0) {
+      console.log(`[AUTO-CLOSE] ✅ ${closed} ujian ditutup otomatis`);
+    }
+
+    return { published, closed };
+  } catch (e) {
+    console.error('[AUTO-PUBLISH/CLOSE] Error:', e.message);
+    throw e;
+  }
+}
+
+module.exports = { autoSubmitMiddleware, autoSubmitAllExpired, autoPublishAndCloseExams };
