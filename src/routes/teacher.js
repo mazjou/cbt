@@ -1008,16 +1008,41 @@ router.get('/exams/:id', async (req, res) => {
 
 router.post('/exams/:id/questions', upload.any(), async (req, res) => {
   const user = req.session.user;
-  const { question_text, points, a, b, c, d, e, correct } = req.body;
+  const { question_text, points, a, b, c, d, e, correct, question_type } = req.body;
   const examId = req.params.id;
+  const qtype = question_type || 'MCQ';
 
-  if (!question_text || !a || !b || !c || !d || !e || !correct) {
-    req.flash('error', 'Semua field harus diisi (pertanyaan dan 5 opsi jawaban).');
+  // Validasi — TRUE_FALSE hanya butuh A dan B, COMPLEX butuh minimal A-D
+  if (!question_text) {
+    req.flash('error', 'Pertanyaan wajib diisi.');
+    return res.redirect(`/teacher/exams/${examId}`);
+  }
+  if (qtype === 'MCQ' && (!a || !b || !c || !d || !e || !correct)) {
+    req.flash('error', 'MCQ: semua opsi A-E dan kunci jawaban wajib diisi.');
+    return res.redirect(`/teacher/exams/${examId}`);
+  }
+  if (qtype === 'COMPLEX' && (!a || !b || !c || !d)) {
+    req.flash('error', 'COMPLEX: minimal opsi A-D wajib diisi.');
+    return res.redirect(`/teacher/exams/${examId}`);
+  }
+  if (qtype === 'TRUE_FALSE' && (!a || !b)) {
+    req.flash('error', 'TRUE_FALSE: opsi A (Benar) dan B (Salah) wajib diisi.');
     return res.redirect(`/teacher/exams/${examId}`);
   }
 
   const [[ok]] = await pool.query(`SELECT id FROM exams WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid);`, { id: examId, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 });
   if (!ok) { req.flash('error', 'Akses ditolak.'); return res.redirect('/teacher/exams'); }
+
+  // Kunci jawaban: untuk COMPLEX bisa array, untuk MCQ/TRUE_FALSE string
+  let correctLabels = [];
+  if (qtype === 'COMPLEX') {
+    // correct bisa berupa string 'A,B' atau array ['A','B']
+    const rawCorrect = req.body.correct;
+    if (Array.isArray(rawCorrect)) correctLabels = rawCorrect.map(s => s.toUpperCase());
+    else if (rawCorrect) correctLabels = String(rawCorrect).split(',').map(s => s.trim().toUpperCase());
+  } else {
+    correctLabels = [String(correct || 'A').toUpperCase()];
+  }
 
   const conn = await pool.getConnection();
   try {
@@ -1028,22 +1053,33 @@ router.post('/exams/:id/questions', upload.any(), async (req, res) => {
     const pdfFile = files.find(f => f.fieldname === 'pdf');
 
     const [qRes] = await conn.query(
-      `INSERT INTO questions (exam_id, question_text, question_image, question_pdf, points)
-       VALUES (:exam_id,:question_text,:question_image,:question_pdf,:points);`,
+      `INSERT INTO questions (exam_id, question_text, question_image, question_pdf, points, question_type)
+       VALUES (:exam_id,:question_text,:question_image,:question_pdf,:points,:qtype);`,
       {
         exam_id: examId,
         question_text,
         question_image: imageFile ? `/public/uploads/questions/${path.basename(imageFile.filename)}` : null,
         question_pdf: pdfFile ? `/public/uploads/questions/${path.basename(pdfFile.filename)}` : null,
-        points: Number(points || 1)
+        points: Number(points || 1),
+        qtype
       }
     );
     const questionId = qRes.insertId;
 
-    for (const [lbl, txt] of [['A',a],['B',b],['C',c],['D',d],['E',e]]) {
+    // Opsi yang akan dimasukkan berdasarkan tipe
+    let optsToInsert;
+    if (qtype === 'TRUE_FALSE') {
+      optsToInsert = [['A', a || 'Benar'], ['B', b || 'Salah']];
+    } else {
+      optsToInsert = [['A',a],['B',b],['C',c],['D',d]];
+      if (e) optsToInsert.push(['E', e]);
+    }
+
+    for (const [lbl, txt] of optsToInsert) {
+      if (!txt) continue;
       await conn.query(
         `INSERT INTO options (question_id, option_label, option_text, is_correct) VALUES (:qid,:lbl,:txt,:isc);`,
-        { qid: questionId, lbl, txt, isc: lbl === String(correct).toUpperCase() ? 1 : 0 }
+        { qid: questionId, lbl, txt, isc: correctLabels.includes(lbl) ? 1 : 0 }
       );
     }
 
@@ -1826,40 +1862,52 @@ router.get('/questions/:id/edit', async (req, res) => {
 
   const byLabel = {};
   let correct = 'A';
+  let correctLabels = []; // untuk COMPLEX
   for (const o of opts) {
     byLabel[o.option_label] = o.option_text;
-    if (o.is_correct) correct = o.option_label;
+    if (o.is_correct) {
+      correct = o.option_label; // last correct (MCQ/TRUE_FALSE)
+      correctLabels.push(o.option_label);
+    }
   }
 
   res.render('teacher/question_edit', {
     title: 'Edit Soal',
     user,
-    exam: {
-      id: q.exam_id,
-      title: q.exam_title
-    },
+    exam: { id: q.exam_id, title: q.exam_title },
     question: {
       id: q.id,
       question_text: q.question_text,
       question_image: q.question_image,
       question_pdf: q.question_pdf,
-      points: q.points
+      points: q.points,
+      question_type: q.question_type || 'MCQ'
     },
     options: byLabel,
-    correct_label: correct
+    correct_label: correct,
+    correct_labels: correctLabels
   });
 });
 
 router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }, { name: 'file', maxCount: 1 }]), async (req, res) => {
   const user = req.session.user;
   const qId = req.params.id;
-  const { question_text, points, a, b, c, d, e, correct, remove_image, remove_pdf } = req.body;
+  const { question_text, points, a, b, c, d, e, correct, remove_image, remove_pdf, question_type } = req.body;
+  const qtype = question_type || 'MCQ';
 
-  // Validate required fields
-  if (!question_text || !a || !b || !c || !d || !e || !correct) {
-    console.error('Missing required fields:', { question_text: !!question_text, a: !!a, b: !!b, c: !!c, d: !!d, e: !!e, correct: !!correct });
-    req.flash('error', 'Semua field harus diisi (pertanyaan dan 5 opsi jawaban).');
+  if (!question_text) {
+    req.flash('error', 'Pertanyaan wajib diisi.');
     return res.redirect(`/teacher/questions/${qId}/edit`);
+  }
+
+  // Kunci jawaban parsing
+  let correctLabels = [];
+  if (qtype === 'COMPLEX') {
+    const rawCorrect = req.body.correct;
+    if (Array.isArray(rawCorrect)) correctLabels = rawCorrect.map(s => s.toUpperCase());
+    else if (rawCorrect) correctLabels = String(rawCorrect).split(',').map(s => s.trim().toUpperCase());
+  } else {
+    if (correct) correctLabels = [String(correct).toUpperCase()];
   }
 
   const [[row]] = await pool.query(
@@ -1896,26 +1944,22 @@ router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { na
 
     await conn.query(
       `UPDATE questions
-       SET question_text=:qt, points=:pts, question_image=:img, question_pdf=:pdf
+       SET question_text=:qt, points=:pts, question_image=:img, question_pdf=:pdf, question_type=:qtype
        WHERE id=:qid;`,
-      { qt: question_text, pts: Number(points || 1), img: imageToSave, pdf: pdfToSave, qid: qId }
+      { qt: question_text, pts: Number(points || 1), img: imageToSave, pdf: pdfToSave, qtype, qid: qId }
     );
 
-    const opts = [
-      ['A', a],
-      ['B', b],
-      ['C', c],
-      ['D', d],
-      ['E', e]
-    ];
+    const optsToUpsert = qtype === 'TRUE_FALSE'
+      ? [['A', a || 'Benar'], ['B', b || 'Salah']]
+      : [['A',a],['B',b],['C',c],['D',d],['E', e||'']];
 
-    for (const [lbl, txt] of opts) {
-      // upsert by unique (question_id, option_label)
+    for (const [lbl, txt] of optsToUpsert) {
+      if (!txt) continue;
       await conn.query(
         `INSERT INTO options (question_id, option_label, option_text, is_correct)
          VALUES (:qid,:lbl,:txt,:isc)
          ON CONFLICT (question_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, is_correct=EXCLUDED.is_correct;`,
-        { qid: qId, lbl, txt, isc: lbl === corr ? 1 : 0 }
+        { qid: qId, lbl, txt, isc: correctLabels.includes(lbl) ? 1 : 0 }
       );
     }
 

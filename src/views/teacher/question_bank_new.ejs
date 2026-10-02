@@ -38,6 +38,26 @@
 </div>
 
 <form action="/teacher/question-bank" method="POST" enctype="multipart/form-data" class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 space-y-4" id="bankQuestionForm">
+
+  <!-- Tipe Soal -->
+  <div>
+    <label class="text-sm text-indigo-700 font-semibold mb-2 block">Tipe Soal *</label>
+    <div class="grid grid-cols-3 gap-2">
+      <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-indigo-200 bg-white cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 transition-all">
+        <input type="radio" name="question_type" value="MCQ" checked class="accent-indigo-600" onchange="updateBankForm(this.value)" />
+        <div><div class="text-sm font-semibold text-indigo-800">Pilihan Ganda</div><div class="text-xs text-slate-500">1 jawaban benar</div></div>
+      </label>
+      <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-purple-200 bg-white cursor-pointer has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50 transition-all">
+        <input type="radio" name="question_type" value="COMPLEX" class="accent-purple-600" onchange="updateBankForm(this.value)" />
+        <div><div class="text-sm font-semibold text-purple-800">Kompleks (TKA)</div><div class="text-xs text-slate-500">>1 jawaban benar</div></div>
+      </label>
+      <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-emerald-200 bg-white cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 transition-all">
+        <input type="radio" name="question_type" value="TRUE_FALSE" class="accent-emerald-600" onchange="updateBankForm(this.value)" />
+        <div><div class="text-sm font-semibold text-emerald-800">Benar/Salah</div><div class="text-xs text-slate-500">Pernyataan B/S</div></div>
+      </label>
+    </div>
+  </div>
+
   <div class="grid md:grid-cols-2 gap-4">
     <div>
       <label class="text-sm text-indigo-700 font-medium">Mata Pelajaran *</label>
@@ -62,7 +82,6 @@
     <label class="text-sm text-indigo-700 font-medium">Bab/Materi (opsional)</label>
     <input type="text" name="chapter" placeholder="Contoh: Bab 1 - Trigonometri, Materi Persamaan Linear"
       class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-    <div class="mt-1 text-xs text-indigo-600">Isi dengan bab atau topik materi untuk memudahkan pencarian</div>
   </div>
 
   <div>
@@ -74,14 +93,12 @@
     <label class="text-sm text-indigo-700 font-medium">Gambar Soal (opsional)</label>
     <input type="file" name="image" accept="image/*"
       class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200" />
-    <div class="mt-1 text-xs text-indigo-600">Max 10MB</div>
   </div>
 
   <div>
     <label class="text-sm text-indigo-700 font-medium">PDF Soal (opsional)</label>
     <input type="file" name="pdf" accept="application/pdf"
       class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
-    <div class="mt-1 text-xs text-indigo-600">Max 10MB</div>
   </div>
 
   <div class="grid md:grid-cols-2 gap-4">
@@ -90,25 +107,39 @@
       <input type="number" name="points" value="1" min="1" required
         class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
     </div>
-    <div>
+    <!-- MCQ / TRUE_FALSE: select single -->
+    <div id="bank_correct_mcq_wrap">
       <label class="text-sm text-indigo-700 font-medium">Jawaban Benar *</label>
-      <select name="correct" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+      <select name="correct" id="bank_correct_mcq" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
         <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
       </select>
     </div>
+  </div>
+
+  <!-- COMPLEX: checkbox multi-correct -->
+  <div id="bank_correct_complex_wrap" class="hidden">
+    <label class="text-sm text-purple-700 font-semibold mb-2 block">Pilih semua jawaban yang BENAR:</label>
+    <div class="flex flex-wrap gap-3">
+      <% ['A','B','C','D','E'].forEach(lbl => { %>
+      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-purple-200 bg-white cursor-pointer hover:bg-purple-50 transition-all">
+        <input type="checkbox" name="correct" value="<%= lbl %>" class="accent-purple-600 w-4 h-4" />
+        <span class="text-sm font-semibold text-purple-800">Opsi <%= lbl %></span>
+      </label>
+      <% }) %>
+    </div>
+    <p class="text-xs text-purple-500 mt-1">Poin parsial berdasarkan jumlah jawaban benar yang dipilih siswa</p>
   </div>
 
   <div>
     <label class="text-sm text-indigo-700 font-medium">Tags (opsional)</label>
     <input type="text" name="tags" placeholder="Contoh: trigonometri,sudut,sin-cos"
       class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-    <div class="mt-1 text-xs text-indigo-600">Pisahkan dengan koma untuk kategorisasi</div>
   </div>
 
-  <div class="space-y-3">
-    <% ['A','B','C','D','E'].forEach(opt => { %>
-    <div>
-      <label class="text-sm text-indigo-700 font-medium">Opsi <%= opt %> *</label>
+  <div class="space-y-3" id="bank_options_wrap">
+    <% ['A','B','C','D','E'].forEach((opt, idx) => { %>
+    <div id="bank_opt_<%= opt %>">
+      <label class="text-sm text-indigo-700 font-medium">Opsi <%= opt %> <%= idx < 4 ? '*' : '(opsional)' %></label>
       <textarea id="editor_option_<%= opt.toLowerCase() %>" name="<%= opt.toLowerCase() %>" class="summernote-editor summernote-option"></textarea>
     </div>
     <% }) %>
@@ -209,7 +240,51 @@ $sn(document).ready(function () {
         return false;
       }
     }
+    // Validasi COMPLEX harus pilih minimal 1 jawaban benar
+    var qtype = document.querySelector('input[name=question_type]:checked')?.value || 'MCQ';
+    if (qtype === 'COMPLEX') {
+      var checkedCount = document.querySelectorAll('input[name=correct]:checked').length;
+      if (checkedCount < 1) {
+        e.preventDefault();
+        alert('Pilih minimal 1 jawaban benar untuk soal COMPLEX!');
+        return false;
+      }
+    }
   });
 
 });
+
+function updateBankForm(qtype) {
+  var mcqWrap     = document.getElementById('bank_correct_mcq_wrap');
+  var complexWrap = document.getElementById('bank_correct_complex_wrap');
+  var mcqSelect   = document.getElementById('bank_correct_mcq');
+  var optE        = document.getElementById('bank_opt_E');
+  var optC        = document.getElementById('bank_opt_C');
+  var optD        = document.getElementById('bank_opt_D');
+
+  if (qtype === 'COMPLEX') {
+    mcqWrap.classList.add('hidden');
+    complexWrap.classList.remove('hidden');
+    mcqSelect.disabled = true;
+    optC.classList.remove('hidden');
+    optD.classList.remove('hidden');
+    optE.classList.remove('hidden');
+  } else if (qtype === 'TRUE_FALSE') {
+    mcqWrap.classList.remove('hidden');
+    complexWrap.classList.add('hidden');
+    mcqSelect.disabled = false;
+    optC.classList.add('hidden');
+    optD.classList.add('hidden');
+    optE.classList.add('hidden');
+    mcqSelect.innerHTML = '<option value="A">A (Benar)</option><option value="B">B (Salah)</option>';
+  } else {
+    mcqWrap.classList.remove('hidden');
+    complexWrap.classList.add('hidden');
+    mcqSelect.disabled = false;
+    optC.classList.remove('hidden');
+    optD.classList.remove('hidden');
+    optE.classList.remove('hidden');
+    mcqSelect.innerHTML = '<option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>';
+  }
+}
 </script>

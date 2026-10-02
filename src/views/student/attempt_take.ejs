@@ -140,14 +140,48 @@
         </div>
 
         <div class="space-y-3">
-          <div class="text-sm font-bold <%= color.text %> mb-2">Pilih Jawaban:</div>
-          <% q.options.forEach((o) => { %>
-            <label class="block rounded-xl border-2 <%= q.chosen_option_id === o.id ? color.border + ' bg-white shadow-lg' : 'border-slate-200 bg-white/80' %> hover:shadow-lg px-5 py-4 cursor-pointer transition-all transform hover:scale-[1.02]">
+          <% if (q.question_type === 'COMPLEX') { %>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-sm font-bold <%= color.text %>">Pilih Jawaban (boleh lebih dari satu):</span>
+              <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">Kompleks TKA</span>
+            </div>
+            <p class="text-xs text-slate-500 mb-2">Poin parsial — semakin banyak jawaban benar yang dipilih, semakin tinggi poin.</p>
+          <% } else if (q.question_type === 'TRUE_FALSE') { %>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-sm font-bold <%= color.text %>">Tentukan Benar atau Salah:</span>
+              <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">Benar/Salah</span>
+            </div>
+          <% } else { %>
+            <div class="text-sm font-bold <%= color.text %> mb-2">Pilih Jawaban:</div>
+          <% } %>
+
+          <% q.options.forEach((o) => {
+            const isChosen = q.question_type === 'COMPLEX'
+              ? (q.chosen_option_ids && q.chosen_option_ids.includes(o.id))
+              : (q.chosen_option_id === o.id);
+          %>
+            <label class="block rounded-xl border-2 <%= isChosen ? color.border + ' bg-white shadow-lg' : 'border-slate-200 bg-white/80' %> hover:shadow-lg px-5 py-4 cursor-pointer transition-all transform hover:scale-[1.02]">
               <div class="flex gap-4">
-                <input type="radio" name="ans_<%= q.id %>" value="<%= o.id %>" data-question="<%= q.id %>" class="mt-1 w-5 h-5 accent-<%= color.text.replace('text-', '') %>" <%= (q.chosen_option_id === o.id) ? 'checked' : '' %> />
+                <% if (q.question_type === 'COMPLEX') { %>
+                  <input type="checkbox"
+                    name="ans_complex_<%= q.id %>"
+                    value="<%= o.id %>"
+                    data-question="<%= q.id %>"
+                    data-type="COMPLEX"
+                    class="mt-1 w-5 h-5 accent-purple-600 complex-checkbox"
+                    <%= isChosen ? 'checked' : '' %> />
+                <% } else { %>
+                  <input type="radio"
+                    name="ans_<%= q.id %>"
+                    value="<%= o.id %>"
+                    data-question="<%= q.id %>"
+                    data-type="<%= q.question_type || 'MCQ' %>"
+                    class="mt-1 w-5 h-5 accent-<%= color.text.replace('text-', '') %>"
+                    <%= isChosen ? 'checked' : '' %> />
+                <% } %>
                 <div class="flex-1">
                   <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg <%= color.badge %> font-bold text-sm mb-2">
-                    <%= o.option_label %>
+                    <%= q.question_type === 'TRUE_FALSE' ? (o.option_label === 'A' ? '✓' : '✗') : o.option_label %>
                   </div>
                   <div class="text-slate-700 prose prose-sm max-w-none"><%- o.option_text %></div>
                 </div>
@@ -168,6 +202,7 @@
   // Save answers to LocalStorage
   function saveBackupToLocalStorage() {
     const answers = [];
+    // MCQ / TRUE_FALSE
     document.querySelectorAll('input[type=radio]:checked').forEach(radio => {
       answers.push({
         question_id: Number(radio.getAttribute('data-question')),
@@ -175,7 +210,22 @@
         answered_at: new Date().toISOString()
       });
     });
-    
+    // COMPLEX — group checkbox per question
+    const complexGroups = {};
+    document.querySelectorAll('input.complex-checkbox').forEach(cb => {
+      const qid = cb.getAttribute('data-question');
+      if (!complexGroups[qid]) complexGroups[qid] = [];
+      if (cb.checked) complexGroups[qid].push(Number(cb.value));
+    });
+    Object.entries(complexGroups).forEach(([qid, ids]) => {
+      answers.push({
+        question_id: Number(qid),
+        option_ids: ids,
+        type: 'COMPLEX',
+        answered_at: new Date().toISOString()
+      });
+    });
+
     const backup = {
       attempt_id: <%= attempt.id %>,
       student_id: <%= attempt.student_id %>,
@@ -183,10 +233,9 @@
       answers: answers,
       backup_timestamp: new Date().toISOString()
     };
-    
+
     try {
       localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
-      console.log('✅ Backup saved to LocalStorage:', answers.length, 'answers');
     } catch (e) {
       console.error('❌ Failed to save backup:', e);
     }
@@ -323,17 +372,41 @@
   window.addEventListener('scroll', updateActiveNav);
   updateActiveNav();
 
-  // Hitung answered
+  // Hitung answered (MCQ + COMPLEX)
   function updateAnswered() {
-    const answered = document.querySelectorAll('input[type=radio]:checked').length;
+    let answered = document.querySelectorAll('input[type=radio]:checked').length;
+
+    // Tambah soal COMPLEX yang sudah dipilih minimal 1
+    const complexQids = new Set(
+      Array.from(document.querySelectorAll('input.complex-checkbox'))
+        .map(cb => cb.getAttribute('data-question'))
+    );
+    complexQids.forEach(qid => {
+      const anyChecked = document.querySelector(`input.complex-checkbox[data-question="${qid}"]:checked`);
+      if (anyChecked) answered++;
+    });
+
     document.getElementById('answeredCount').textContent = answered;
-    
-    // Update nav button colors
+
+    // Update nav button — radio
     document.querySelectorAll('input[type=radio]:checked').forEach(radio => {
-      const qid = radio.getAttribute('data-question');
-      const qNo = radio.closest('section').id.replace('q-', '');
+      const section = radio.closest('section');
+      if (!section) return;
+      const qNo = section.id.replace('q-', '');
       const navBtn = document.querySelector(`[data-jump="q-${qNo}"]`);
       if (navBtn) {
+        navBtn.classList.remove('border-slate-300', 'bg-white', 'text-slate-600');
+        navBtn.classList.add('border-emerald-400', 'bg-gradient-to-br', 'from-emerald-100', 'to-teal-100', 'text-emerald-700', 'shadow-md');
+      }
+    });
+    // Update nav button — COMPLEX
+    complexQids.forEach(qid => {
+      const anyChecked = document.querySelector(`input.complex-checkbox[data-question="${qid}"]:checked`);
+      const section = document.querySelector(`input.complex-checkbox[data-question="${qid}"]`)?.closest('section');
+      if (!section) return;
+      const qNo = section.id.replace('q-', '');
+      const navBtn = document.querySelector(`[data-jump="q-${qNo}"]`);
+      if (navBtn && anyChecked) {
         navBtn.classList.remove('border-slate-300', 'bg-white', 'text-slate-600');
         navBtn.classList.add('border-emerald-400', 'bg-gradient-to-br', 'from-emerald-100', 'to-teal-100', 'text-emerald-700', 'shadow-md');
       }
@@ -341,16 +414,13 @@
   }
   updateAnswered();
 
-  // Autosave jawaban
+  // Autosave jawaban MCQ / TRUE_FALSE
   document.querySelectorAll('input[type=radio]').forEach(r => {
     r.addEventListener('change', async () => {
       const qid = r.getAttribute('data-question');
       const oid = r.value;
       updateAnswered();
-
-      // Save to LocalStorage immediately
       saveBackupToLocalStorage();
-
       try {
         await fetch('/student/attempts/<%= attempt.id %>/answer', {
           method: 'POST',
@@ -359,6 +429,30 @@
         });
       } catch (e) {
         console.error('Autosave failed:', e);
+        toast('⚠️ Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
+      }
+    });
+  });
+
+  // Autosave jawaban COMPLEX (checkbox)
+  document.querySelectorAll('input.complex-checkbox').forEach(cb => {
+    cb.addEventListener('change', async () => {
+      const qid = cb.getAttribute('data-question');
+      // Kumpulkan semua checkbox yang diceklis untuk soal ini
+      const selectedIds = Array.from(
+        document.querySelectorAll(`input.complex-checkbox[data-question="${qid}"]:checked`)
+      ).map(el => Number(el.value));
+
+      updateAnswered();
+      saveBackupToLocalStorage();
+      try {
+        await fetch('/student/attempts/<%= attempt.id %>/answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question_id: Number(qid), option_ids: selectedIds })
+        });
+      } catch (e) {
+        console.error('Autosave COMPLEX failed:', e);
         toast('⚠️ Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
       }
     });

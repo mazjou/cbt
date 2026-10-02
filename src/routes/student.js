@@ -352,7 +352,8 @@ router.get('/attempts/:id', async (req, res) => {
   }
 
   const [rows] = await pool.query(
-    `SELECT aa.question_id, aa.option_id AS chosen_option_id, q.question_text, q.question_image, q.question_pdf, q.points
+    `SELECT aa.question_id, aa.option_id AS chosen_option_id, aa.selected_option_ids,
+            q.question_text, q.question_image, q.question_pdf, q.points, q.question_type
      FROM attempt_answers aa
      JOIN questions q ON q.id=aa.question_id
      WHERE aa.attempt_id=:aid
@@ -406,7 +407,12 @@ router.get('/attempts/:id', async (req, res) => {
       image: normalizeImg(r.question_image),
       pdf: r.question_pdf,
       points: r.points,
+      question_type: r.question_type || 'MCQ',
       chosen_option_id: r.chosen_option_id,
+      chosen_option_ids: (() => {
+        try { return r.selected_option_ids ? JSON.parse(r.selected_option_ids) : []; }
+        catch(_) { return []; }
+      })(),
       options: optionsMap[r.question_id] || []
     };
   });
@@ -417,29 +423,52 @@ router.get('/attempts/:id', async (req, res) => {
 router.post('/attempts/:id/answer', async (req, res) => {
   const user = req.session.user;
   const attemptId = req.params.id;
-  const { question_id, option_id } = req.body;
+  const { question_id, option_id, option_ids } = req.body; // option_ids untuk COMPLEX
 
   const [[attempt]] = await pool.query(`SELECT id, exam_id, status FROM attempts WHERE id=:aid AND student_id=:sid LIMIT 1;`, {
-    aid: attemptId,
-    sid: user.id
+    aid: attemptId, sid: user.id
   });
   if (!attempt) return res.status(404).json({ ok: false, message: 'Attempt tidak ditemukan' });
   if (attempt.status !== 'IN_PROGRESS') return res.status(400).json({ ok: false, message: 'Attempt sudah selesai' });
 
   try {
-    const [[opt]] = await pool.query(`SELECT is_correct FROM options WHERE id=:oid AND question_id=:qid LIMIT 1;`, {
-      oid: option_id,
-      qid: question_id
-    });
-    const isCorrect = opt ? (opt.is_correct ? 1 : 0) : 0;
-
-    await pool.query(
-      `UPDATE attempt_answers
-       SET option_id=:oid, is_correct=:isc, answered_at=NOW()
-       WHERE attempt_id=:aid AND question_id=:qid;`,
-      { oid: option_id, isc: isCorrect, aid: attemptId, qid: question_id }
+    // Cek tipe soal
+    const [[q]] = await pool.query(
+      `SELECT question_type FROM questions WHERE id=:qid LIMIT 1`,
+      { qid: question_id }
     );
+    const qtype = q?.question_type || 'MCQ';
 
+    if (qtype === 'COMPLEX') {
+      // Multi-jawaban: simpan array option IDs
+      const selectedIds = Array.isArray(option_ids) ? option_ids.map(Number).filter(Boolean)
+        : (option_ids ? [Number(option_ids)].filter(Boolean) : []);
+
+      // Hitung is_correct parsial: apakah semua jawaban benar dipilih
+      // Untuk COMPLEX kita simpan selected_option_ids, kalkulasi skor saat submit
+      await pool.query(
+        `UPDATE attempt_answers
+         SET selected_option_ids=:ids, option_id=:first_id, answered_at=NOW()
+         WHERE attempt_id=:aid AND question_id=:qid`,
+        {
+          ids: JSON.stringify(selectedIds),
+          first_id: selectedIds[0] || null,
+          aid: attemptId,
+          qid: question_id
+        }
+      );
+    } else {
+      // MCQ / TRUE_FALSE: single answer
+      const [[opt]] = await pool.query(`SELECT is_correct FROM options WHERE id=:oid AND question_id=:qid LIMIT 1;`, {
+        oid: option_id, qid: question_id
+      });
+      const isCorrect = opt ? (opt.is_correct ? 1 : 0) : 0;
+      await pool.query(
+        `UPDATE attempt_answers SET option_id=:oid, is_correct=:isc, answered_at=NOW()
+         WHERE attempt_id=:aid AND question_id=:qid;`,
+        { oid: option_id, isc: isCorrect, aid: attemptId, qid: question_id }
+      );
+    }
     return res.json({ ok: true });
   } catch (e) {
     console.error(e);

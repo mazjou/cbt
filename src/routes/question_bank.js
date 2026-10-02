@@ -391,30 +391,55 @@ router.post('/import/commit', async (req, res) => {
 // ===== SAVE NEW =====
 router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
   const user = req.session.user;
-  const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct } = req.body;
-  if (!subject_id || !question_text || !a || !b || !c || !d || !correct) {
-    req.flash('error', 'Semua field wajib diisi (minimal A-D dan kunci jawaban)');
+  const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, question_type } = req.body;
+  const qtype = question_type || 'MCQ';
+
+  if (!subject_id || !question_text) {
+    req.flash('error', 'Mata pelajaran dan pertanyaan wajib diisi');
     return res.redirect('/teacher/question-bank/new');
   }
+  if (qtype !== 'TRUE_FALSE' && (!a || !b || !c || !d)) {
+    req.flash('error', 'Minimal opsi A-D wajib diisi');
+    return res.redirect('/teacher/question-bank/new');
+  }
+  if (qtype === 'TRUE_FALSE' && (!a || !b)) {
+    req.flash('error', 'Opsi A (Benar) dan B (Salah) wajib diisi');
+    return res.redirect('/teacher/question-bank/new');
+  }
+
+  // Kunci jawaban
+  let correctLabels = [];
+  if (qtype === 'COMPLEX') {
+    const rawCorrect = req.body.correct;
+    if (Array.isArray(rawCorrect)) correctLabels = rawCorrect.map(s => s.toUpperCase());
+    else if (rawCorrect) correctLabels = String(rawCorrect).split(',').map(s => s.trim().toUpperCase());
+  } else {
+    correctLabels = [String(correct || 'A').toUpperCase()];
+  }
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
     const imageFile = req.files?.image?.[0];
     const pdfFile   = req.files?.pdf?.[0];
     const [result] = await conn.query(
-      'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, question_pdf, points, difficulty, tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+      'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, question_pdf, points, difficulty, tags, question_type) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',
       [user.id, subject_id, chapter || null, question_text,
        imageFile ? '/public/uploads/questions/' + path.basename(imageFile.filename) : null,
        pdfFile   ? '/public/uploads/questions/' + path.basename(pdfFile.filename)   : null,
-       Number(points || 1), difficulty || 'MEDIUM', tags || null]
+       Number(points || 1), difficulty || 'MEDIUM', tags || null, qtype]
     );
     const bankId = result.insertId;
-    const corr = String(correct).toUpperCase();
-    for (const [lbl, txt] of [['A',a],['B',b],['C',c],['D',d],['E',e||'']]) {
+
+    const optsToInsert = qtype === 'TRUE_FALSE'
+      ? [['A', a || 'Benar'], ['B', b || 'Salah']]
+      : [['A',a],['B',b],['C',c],['D',d],['E',e||'']];
+
+    for (const [lbl, txt] of optsToInsert) {
       if (!txt) continue;
       await conn.query(
         'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
-        [bankId, lbl, txt, lbl === corr]
+        [bankId, lbl, txt, correctLabels.includes(lbl)]
       );
     }
     await conn.commit();

@@ -300,8 +300,33 @@
   </style>
 
   <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5">
-    <h2 class="text-xl font-semibold text-indigo-900">Tambah Soal (PG)</h2>
+    <h2 class="text-xl font-semibold text-indigo-900">Tambah Soal</h2>
     <form action="/teacher/exams/<%= exam.id %>/questions" method="POST" enctype="multipart/form-data" class="mt-4 space-y-3" id="questionForm">
+
+      <!-- Tipe Soal -->
+      <div class="grid grid-cols-3 gap-2">
+        <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-indigo-200 bg-white cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 transition-all">
+          <input type="radio" name="question_type" value="MCQ" checked class="accent-indigo-600" onchange="updateQuestionForm(this.value)" />
+          <div>
+            <div class="text-sm font-semibold text-indigo-800">Pilihan Ganda</div>
+            <div class="text-xs text-slate-500">1 jawaban benar</div>
+          </div>
+        </label>
+        <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-purple-200 bg-white cursor-pointer has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50 transition-all">
+          <input type="radio" name="question_type" value="COMPLEX" class="accent-purple-600" onchange="updateQuestionForm(this.value)" />
+          <div>
+            <div class="text-sm font-semibold text-purple-800">Kompleks (TKA)</div>
+            <div class="text-xs text-slate-500">>1 jawaban benar</div>
+          </div>
+        </label>
+        <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-emerald-200 bg-white cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 transition-all">
+          <input type="radio" name="question_type" value="TRUE_FALSE" class="accent-emerald-600" onchange="updateQuestionForm(this.value)" />
+          <div>
+            <div class="text-sm font-semibold text-emerald-800">Benar/Salah</div>
+            <div class="text-xs text-slate-500">Pernyataan B/S</div>
+          </div>
+        </label>
+      </div>
 
       <div>
         <label class="text-sm text-indigo-700 font-medium">Pertanyaan *</label>
@@ -311,13 +336,11 @@
       <div>
         <label class="text-sm text-indigo-700 font-medium">Gambar Soal (opsional)</label>
         <input type="file" name="image" accept="image/*" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200" />
-        <div class="mt-1 text-xs text-indigo-600">Max 5MB</div>
       </div>
 
       <div>
         <label class="text-sm text-indigo-700 font-medium">PDF Soal (opsional)</label>
         <input type="file" name="pdf" accept="application/pdf" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
-        <div class="mt-1 text-xs text-indigo-600">Max 10MB</div>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
@@ -325,18 +348,36 @@
           <label class="text-sm text-indigo-700 font-medium">Poin</label>
           <input type="number" name="points" value="1" min="1" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
-        <div>
+        <!-- Jawaban benar: MCQ/TRUE_FALSE = select, COMPLEX = checkbox -->
+        <div id="correct_mcq_wrap">
           <label class="text-sm text-indigo-700 font-medium">Jawaban Benar</label>
-          <select name="correct" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          <select name="correct" id="correct_mcq" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
           </select>
         </div>
       </div>
 
-      <div class="space-y-3">
-        <% ['A','B','C','D','E'].forEach(opt => { %>
-        <div>
-          <label class="text-sm text-indigo-700 font-medium">Opsi <%= opt %> *</label>
+      <!-- Checkbox kunci jawaban COMPLEX (disembunyikan default) -->
+      <div id="correct_complex_wrap" class="hidden">
+        <label class="text-sm text-purple-700 font-semibold mb-2 block">Pilih semua jawaban yang BENAR (boleh lebih dari satu):</label>
+        <div class="flex flex-wrap gap-3">
+          <% ['A','B','C','D','E'].forEach(lbl => { %>
+          <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-purple-200 bg-white cursor-pointer hover:bg-purple-50 transition-all">
+            <input type="checkbox" name="correct" value="<%= lbl %>" class="accent-purple-600 w-4 h-4" />
+            <span class="text-sm font-semibold text-purple-800">Opsi <%= lbl %></span>
+          </label>
+          <% }) %>
+        </div>
+        <p class="text-xs text-purple-500 mt-1">Poin parsial: dihitung proporsional dari jumlah jawaban benar yang dipilih siswa</p>
+      </div>
+
+      <!-- Opsi jawaban -->
+      <div class="space-y-3" id="options_wrap">
+        <% ['A','B','C','D','E'].forEach((opt, idx) => { %>
+        <div id="opt_row_<%= opt %>" class="<%= idx >= 2 ? 'opt-cde' : '' %>">
+          <label class="text-sm text-indigo-700 font-medium">
+            Opsi <%= opt %> <span id="opt_req_<%= opt %>" class="<%= idx < 4 ? '' : 'hidden' %>">*</span>
+          </label>
           <textarea id="sn_option_<%= opt.toLowerCase() %>" name="<%= opt.toLowerCase() %>" class="mt-1 sn-option"></textarea>
         </div>
         <% }) %>
@@ -404,16 +445,34 @@ $sn(document).ready(function () {
   });
 
   $('#questionForm').on('submit', function (e) {
-    var fields = [
-      { id: 'sn_question', name: 'Pertanyaan' },
-      { id: 'sn_option_a', name: 'Opsi A' },
-      { id: 'sn_option_b', name: 'Opsi B' },
-      { id: 'sn_option_c', name: 'Opsi C' },
-      { id: 'sn_option_d', name: 'Opsi D' },
-      { id: 'sn_option_e', name: 'Opsi E' }
-    ];
-    for (var i = 0; i < fields.length; i++) {
-      var f = fields[i];
+    var qtype = $('input[name=question_type]:checked').val() || 'MCQ';
+    var requiredFields = [{ id: 'sn_question', name: 'Pertanyaan' }];
+
+    if (qtype === 'TRUE_FALSE') {
+      requiredFields.push({ id: 'sn_option_a', name: 'Opsi A' });
+      requiredFields.push({ id: 'sn_option_b', name: 'Opsi B' });
+    } else if (qtype === 'COMPLEX') {
+      requiredFields.push({ id: 'sn_option_a', name: 'Opsi A' });
+      requiredFields.push({ id: 'sn_option_b', name: 'Opsi B' });
+      requiredFields.push({ id: 'sn_option_c', name: 'Opsi C' });
+      requiredFields.push({ id: 'sn_option_d', name: 'Opsi D' });
+      // Validasi: minimal 2 jawaban benar dipilih
+      var checkedCorrect = $('input[name=correct]:checked').length;
+      if (checkedCorrect < 1) {
+        e.preventDefault();
+        alert('Pilih minimal 1 jawaban benar untuk soal COMPLEX!');
+        return false;
+      }
+    } else {
+      requiredFields.push({ id: 'sn_option_a', name: 'Opsi A' });
+      requiredFields.push({ id: 'sn_option_b', name: 'Opsi B' });
+      requiredFields.push({ id: 'sn_option_c', name: 'Opsi C' });
+      requiredFields.push({ id: 'sn_option_d', name: 'Opsi D' });
+      requiredFields.push({ id: 'sn_option_e', name: 'Opsi E' });
+    }
+
+    for (var i = 0; i < requiredFields.length; i++) {
+      var f = requiredFields[i];
       var html = $('#' + f.id).summernote('code');
       var text = $('<div>').html(html).text().trim();
       if (!text && html.indexOf('<img') === -1) {
@@ -425,6 +484,45 @@ $sn(document).ready(function () {
     }
   });
 });
+
+// Update form berdasarkan tipe soal
+function updateQuestionForm(qtype) {
+  var complexWrap  = document.getElementById('correct_complex_wrap');
+  var mcqWrap      = document.getElementById('correct_mcq_wrap');
+  var optE         = document.getElementById('opt_row_E');
+  var optC         = document.getElementById('opt_row_C');
+  var optD         = document.getElementById('opt_row_D');
+  var mcqSelect    = document.getElementById('correct_mcq');
+
+  if (qtype === 'COMPLEX') {
+    complexWrap.classList.remove('hidden');
+    mcqWrap.classList.add('hidden');
+    // Disable MCQ select agar tidak terkirim duplikat
+    mcqSelect.disabled = true;
+    optE.classList.remove('hidden');
+    optC.classList.remove('hidden');
+    optD.classList.remove('hidden');
+  } else if (qtype === 'TRUE_FALSE') {
+    complexWrap.classList.add('hidden');
+    mcqWrap.classList.remove('hidden');
+    mcqSelect.disabled = false;
+    // TRUE_FALSE hanya A dan B
+    optC.classList.add('hidden');
+    optD.classList.add('hidden');
+    optE.classList.add('hidden');
+    // Set select hanya A atau B
+    mcqSelect.innerHTML = '<option value="A">A (Benar)</option><option value="B">B (Salah)</option>';
+  } else {
+    // MCQ default
+    complexWrap.classList.add('hidden');
+    mcqWrap.classList.remove('hidden');
+    mcqSelect.disabled = false;
+    optC.classList.remove('hidden');
+    optD.classList.remove('hidden');
+    optE.classList.remove('hidden');
+    mcqSelect.innerHTML = '<option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>';
+  }
+}
 </script>
 
 

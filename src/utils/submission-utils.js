@@ -59,39 +59,110 @@ async function createSubmissionBackup(attemptId, studentId, examId, connection =
 async function finalizeAttemptWithBackup(attemptId, studentId, examId) {
   return await retryOperation(async () => {
     const connection = await pool.getConnection();
-    
+
     try {
       await connection.beginTransaction();
-      
+
       // Step 1: Update status to SUBMITTING with lock
       await connection.query(
         `UPDATE attempts SET submission_status = 'SUBMITTING' WHERE id = :aid`,
         { aid: attemptId }
       );
-      
-      // Step 2: Create backup before processing (use same connection)
+
+      // Step 2: Create backup before processing
       await createSubmissionBackup(attemptId, studentId, examId, connection);
-      
-      // Step 3: Calculate scores (same logic as original finalizeAttempt)
-      const [[sum]] = await connection.query(
-        `SELECT
-            SUM(q.points) AS total_points,
-            SUM(CASE WHEN aa.is_correct=1 THEN q.points ELSE 0 END) AS score_points,
-            SUM(CASE WHEN aa.is_correct=1 THEN 1 ELSE 0 END) AS correct_count,
-            SUM(CASE WHEN aa.option_id IS NOT NULL AND aa.is_correct=0 THEN 1 ELSE 0 END) AS wrong_count
+
+      // Step 3: Ambil semua jawaban + tipe soal + opsi benar
+      const [answers] = await connection.query(
+        `SELECT aa.question_id, aa.option_id, aa.selected_option_ids, aa.is_correct,
+                q.points, q.question_type
          FROM attempt_answers aa
-         JOIN questions q ON q.id=aa.question_id
-         WHERE aa.attempt_id=:aid;`,
+         JOIN questions q ON q.id = aa.question_id
+         WHERE aa.attempt_id = :aid`,
         { aid: attemptId }
       );
-      
-      const total_points = Number(sum.total_points || 0);
-      const score_points = Number(sum.score_points || 0);
-      const correct_count = Number(sum.correct_count || 0);
-      const wrong_count = Number(sum.wrong_count || 0);
+
+      // Ambil semua opsi yang benar per soal (untuk kalkulasi COMPLEX)
+      const qids = [...new Set(answers.map(a => a.question_id))];
+      let correctOptionsMap = {}; // { question_id: [option_id, ...] }
+      if (qids.length > 0) {
+        const ph = qids.map((_, i) => `$${i + 1}`).join(',');
+        const [correctOpts] = await connection.query(
+          `SELECT question_id, id AS option_id FROM options WHERE question_id IN (${ph}) AND is_correct = true`,
+          qids
+        );
+        for (const o of correctOpts) {
+          if (!correctOptionsMap[o.question_id]) correctOptionsMap[o.question_id] = [];
+          correctOptionsMap[o.question_id].push(Number(o.option_id));
+        }
+      }
+
+      // Step 4: Hitung skor dengan poin parsial untuk COMPLEX
+      let total_points  = 0;
+      let score_points  = 0;
+      let correct_count = 0;
+      let wrong_count   = 0;
+
+      for (const aa of answers) {
+        const qpoints = Number(aa.points || 0);
+        total_points += qpoints;
+        const qtype = aa.question_type || 'MCQ';
+        const correctIds = correctOptionsMap[aa.question_id] || [];
+
+        if (qtype === 'COMPLEX') {
+          // Poin parsial: benar_dipilih / total_benar * poin_soal
+          let selectedIds = [];
+          try {
+            selectedIds = aa.selected_option_ids
+              ? JSON.parse(aa.selected_option_ids).map(Number)
+              : (aa.option_id ? [Number(aa.option_id)] : []);
+          } catch(_) {
+            selectedIds = aa.option_id ? [Number(aa.option_id)] : [];
+          }
+
+          const totalCorrect = correctIds.length;
+          if (totalCorrect > 0 && selectedIds.length > 0) {
+            // Hitung benar yang dipilih (intersection)
+            const correctSelected = selectedIds.filter(id => correctIds.includes(id)).length;
+            // Penalti: salah yang dipilih (pilih opsi yang tidak benar)
+            const wrongSelected = selectedIds.filter(id => !correctIds.includes(id)).length;
+            // Poin bersih: max(0, (correctSelected - wrongSelected) / totalCorrect * poin)
+            const netCorrect = Math.max(0, correctSelected - wrongSelected);
+            const partial = Math.floor((netCorrect / totalCorrect) * qpoints);
+            score_points += partial;
+
+            // Update partial_points di DB untuk referensi
+            await connection.query(
+              `UPDATE attempt_answers SET partial_points = :pp, is_correct = :isc
+               WHERE attempt_id = :aid AND question_id = :qid`,
+              {
+                pp: partial,
+                isc: correctSelected === totalCorrect && wrongSelected === 0 ? 1 : 0,
+                aid: attemptId,
+                qid: aa.question_id
+              }
+            );
+            if (partial > 0) correct_count++;
+            else if (selectedIds.length > 0) wrong_count++;
+          } else if (selectedIds.length > 0) {
+            wrong_count++;
+          }
+
+        } else {
+          // MCQ / TRUE_FALSE: all-or-nothing
+          const isCorrect = Number(aa.is_correct || 0) === 1;
+          if (isCorrect) {
+            score_points += qpoints;
+            correct_count++;
+          } else if (aa.option_id) {
+            wrong_count++;
+          }
+        }
+      }
+
       const score = total_points > 0 ? Math.round((score_points / total_points) * 100) : 0;
 
-      // Step 4: Update attempt with final results
+      // Step 5: Update attempt dengan hasil akhir
       await connection.query(
         `UPDATE attempts
          SET finished_at=NOW(), status='SUBMITTED', submission_status='SUBMITTED',
@@ -99,10 +170,10 @@ async function finalizeAttemptWithBackup(attemptId, studentId, examId) {
          WHERE id=:aid;`,
         { score, total_points, correct_count, wrong_count, aid: attemptId }
       );
-      
+
       await connection.commit();
-      console.log(`✅ Attempt ${attemptId} successfully submitted with backup`);
-      
+      console.log(`✅ Attempt ${attemptId} submitted | score=${score} (${score_points}/${total_points}pts) correct=${correct_count} wrong=${wrong_count}`);
+
     } catch (error) {
       await connection.rollback();
       console.error(`❌ Failed to finalize attempt ${attemptId}:`, error.message);
@@ -110,7 +181,7 @@ async function finalizeAttemptWithBackup(attemptId, studentId, examId) {
     } finally {
       connection.release();
     }
-  }, 3, 2000); // 3 retries with 2 second base delay
+  }, 3, 2000);
 }
 
 module.exports = {
