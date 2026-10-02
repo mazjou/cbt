@@ -77,6 +77,31 @@
               <% } %>
             </div>
             <h3 class="text-base font-bold text-slate-900 line-clamp-2"><%= e.title %></h3>
+            <%
+              const now_m = new Date();
+              const startAt_m = e.start_at ? new Date(e.start_at) : null;
+              const endAt_m   = e.end_at   ? new Date(e.end_at)   : null;
+              let schedLabel_m = null, schedCls_m = '';
+              if (startAt_m && endAt_m) {
+                if (now_m < startAt_m)            { schedLabel_m='⏳ Terjadwal';   schedCls_m='bg-blue-100 text-blue-700'; }
+                else if (now_m < endAt_m)          { schedLabel_m='🟢 Berlangsung'; schedCls_m='bg-emerald-100 text-emerald-700'; }
+                else                               { schedLabel_m='🔴 Selesai';     schedCls_m='bg-rose-100 text-rose-700'; }
+              } else if (startAt_m) {
+                schedLabel_m = now_m < startAt_m ? '⏳ Terjadwal' : '🟢 Berlangsung';
+                schedCls_m   = now_m < startAt_m ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700';
+              }
+            %>
+            <% if (schedLabel_m) { %>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full <%= schedCls_m %> text-xs font-medium mt-1">
+                <%= schedLabel_m %>
+              </span>
+            <% } %>
+            <% if (startAt_m) { %>
+              <div class="text-xs text-slate-500 mt-1">
+                Mulai: <%= startAt_m.toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %>
+                <% if (endAt_m) { %> &bull; Selesai: <%= endAt_m.toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %><% } %>
+              </div>
+            <% } %>
           </div>
         </div>
         
@@ -250,15 +275,51 @@
             
             <!-- Status -->
             <td class="px-4 py-3 text-center whitespace-nowrap">
-              <% if (e.is_published) { %>
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                  Published
-                </span>
-              <% } else { %>
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
-                  Draft
-                </span>
-              <% } %>
+              <% 
+                const now_e = new Date();
+                const startAt_e = e.start_at ? new Date(e.start_at) : null;
+                const endAt_e   = e.end_at   ? new Date(e.end_at)   : null;
+                // Tentukan status jadwal
+                let scheduleLabel_e = null;
+                let scheduleCls_e   = '';
+                if (startAt_e && endAt_e) {
+                  if (now_e < startAt_e) {
+                    scheduleLabel_e = '⏳ Terjadwal';
+                    scheduleCls_e = 'bg-blue-100 text-blue-700';
+                  } else if (now_e >= startAt_e && now_e < endAt_e) {
+                    scheduleLabel_e = '🟢 Berlangsung';
+                    scheduleCls_e = 'bg-emerald-100 text-emerald-700';
+                  } else {
+                    scheduleLabel_e = '🔴 Selesai';
+                    scheduleCls_e = 'bg-rose-100 text-rose-700';
+                  }
+                } else if (startAt_e && !endAt_e) {
+                  scheduleLabel_e = now_e < startAt_e ? '⏳ Terjadwal' : '🟢 Berlangsung';
+                  scheduleCls_e   = now_e < startAt_e ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700';
+                }
+              %>
+              <div class="flex flex-col items-center gap-1">
+                <% if (e.is_published) { %>
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
+                    Published
+                  </span>
+                <% } else { %>
+                  <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
+                    Draft
+                  </span>
+                <% } %>
+                <% if (scheduleLabel_e) { %>
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full <%= scheduleCls_e %> text-xs font-medium">
+                    <%= scheduleLabel_e %>
+                  </span>
+                <% } %>
+                <% if (startAt_e) { %>
+                  <div class="text-xs text-slate-400 mt-0.5 text-center leading-tight">
+                    <div>Mulai: <%= startAt_e.toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %></div>
+                    <% if (endAt_e) { %><div>Selesai: <%= endAt_e.toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %></div><% } %>
+                  </div>
+                <% } %>
+              </div>
             </td>
             
             <!-- Aksi -->

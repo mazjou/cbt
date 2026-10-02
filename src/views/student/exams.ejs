@@ -49,6 +49,33 @@
         <div><span class="<%= color.light %>">Durasi</span> <%= ex.duration_minutes %> mnt</div>
       </div>
       <div class="mt-3 text-xs <%= color.light %>">Attempt: <%= ex.attempts_count %>/<%= ex.max_attempts %><% if (ex.access_code) { %> • Butuh kode akses<% } %></div>
+      <%
+        const now_s   = new Date();
+        const startAt_s = ex.start_at ? new Date(ex.start_at) : null;
+        const endAt_s   = ex.end_at   ? new Date(ex.end_at)   : null;
+        let timeLabel_s = null, timeCls_s = '';
+        if (startAt_s && endAt_s) {
+          if (now_s < startAt_s)       { timeLabel_s = '⏳ Belum Dimulai'; timeCls_s = 'bg-blue-100 text-blue-700'; }
+          else if (now_s < endAt_s)    { timeLabel_s = '🟢 Sedang Berlangsung'; timeCls_s = 'bg-emerald-100 text-emerald-700'; }
+          else                         { timeLabel_s = '🔴 Sudah Berakhir'; timeCls_s = 'bg-rose-100 text-rose-700'; }
+        } else if (startAt_s) {
+          timeLabel_s = now_s < startAt_s ? '⏳ Belum Dimulai' : '🟢 Sedang Berlangsung';
+          timeCls_s   = now_s < startAt_s ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700';
+        }
+      %>
+      <% if (timeLabel_s) { %>
+        <div class="mt-2">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium <%= timeCls_s %>">
+            <%= timeLabel_s %>
+          </span>
+        </div>
+      <% } %>
+      <% if (startAt_s) { %>
+        <div class="mt-1 text-xs <%= color.light %>">
+          Mulai: <%= startAt_s.toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %>
+          <% if (endAt_s) { %> • Selesai: <%= endAt_s.toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %><% } %>
+        </div>
+      <% } %>
     </a>
   <% }) %>
 </div>

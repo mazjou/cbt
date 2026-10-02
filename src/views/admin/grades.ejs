@@ -170,7 +170,7 @@
     </a>
   </div>
   <div class="overflow-x-auto">
-    <table class="min-w-full text-sm">
+    <table class="min-w-full text-sm" id="notYetTable">
       <thead>
         <tr class="border-b border-red-200">
           <th class="text-left py-2 px-3 text-xs font-semibold text-red-700">No</th>
@@ -179,10 +179,10 @@
           <th class="text-left py-2 px-3 text-xs font-semibold text-red-700">Kelas</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody id="notYetBody">
         <% notYetRows.forEach((s, i) => { %>
-        <tr class="border-b border-red-100 hover:bg-red-100 transition-colors">
-          <td class="py-2 px-3 text-xs text-red-600"><%= i+1 %></td>
+        <tr class="border-b border-red-100 hover:bg-red-100 transition-colors not-yet-row" data-index="<%= i %>">
+          <td class="py-2 px-3 text-xs text-red-600 row-num"></td>
           <td class="py-2 px-3 font-semibold text-red-900"><%= s.full_name %></td>
           <td class="py-2 px-3 text-xs text-red-600 font-mono"><%= s.username %></td>
           <td class="py-2 px-3">
@@ -193,7 +193,69 @@
       </tbody>
     </table>
   </div>
+  <!-- Pagination -->
+  <div class="flex items-center justify-between mt-3 pt-3 border-t border-red-200">
+    <span class="text-xs text-red-600" id="notYetInfo"></span>
+    <div class="flex items-center gap-1" id="notYetPagination"></div>
+  </div>
 </div>
+<script>
+(function() {
+  const PAGE_SIZE = 10;
+  const rows = document.querySelectorAll('.not-yet-row');
+  const total = rows.length;
+  let currentPage = 1;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  function renderPage(page) {
+    currentPage = page;
+    const start = (page - 1) * PAGE_SIZE;
+    const end   = start + PAGE_SIZE;
+    rows.forEach((row, i) => {
+      row.style.display = (i >= start && i < end) ? '' : 'none';
+      if (i >= start && i < end) {
+        row.querySelector('.row-num').textContent = i + 1;
+      }
+    });
+    // Info
+    document.getElementById('notYetInfo').textContent =
+      `Menampilkan ${start + 1}–${Math.min(end, total)} dari ${total} siswa`;
+    // Pagination buttons
+    const nav = document.getElementById('notYetPagination');
+    nav.innerHTML = '';
+    const btnClass = 'px-2.5 py-1 rounded-lg text-xs font-semibold transition-all';
+    const activeClass = 'bg-red-500 text-white';
+    const inactiveClass = 'bg-red-100 text-red-700 hover:bg-red-200';
+    // Prev
+    const prev = document.createElement('button');
+    prev.textContent = '←';
+    prev.className = btnClass + ' ' + (currentPage === 1 ? 'opacity-40 cursor-not-allowed bg-red-100 text-red-400' : inactiveClass);
+    prev.disabled = currentPage === 1;
+    prev.onclick = () => renderPage(currentPage - 1);
+    nav.appendChild(prev);
+    // Pages
+    let start_p = Math.max(1, currentPage - 2);
+    let end_p   = Math.min(totalPages, start_p + 4);
+    if (end_p - start_p < 4) start_p = Math.max(1, end_p - 4);
+    for (let p = start_p; p <= end_p; p++) {
+      const btn = document.createElement('button');
+      btn.textContent = p;
+      btn.className = btnClass + ' ' + (p === currentPage ? activeClass : inactiveClass);
+      btn.onclick = (function(pg){ return () => renderPage(pg); })(p);
+      nav.appendChild(btn);
+    }
+    // Next
+    const next = document.createElement('button');
+    next.textContent = '→';
+    next.className = btnClass + ' ' + (currentPage === totalPages ? 'opacity-40 cursor-not-allowed bg-red-100 text-red-400' : inactiveClass);
+    next.disabled = currentPage === totalPages;
+    next.onclick = () => renderPage(currentPage + 1);
+    nav.appendChild(next);
+  }
+
+  renderPage(1);
+})();
+</script>
 <% } else if (examStats) { %>
 <div class="rounded-2xl border border-green-200 bg-green-50 p-4 mb-4 text-center text-green-700 font-semibold text-sm">
   ✅ Semua siswa sudah mengerjakan ujian ini
