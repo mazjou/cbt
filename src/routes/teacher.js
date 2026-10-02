@@ -1109,6 +1109,62 @@ router.post('/exams/:id/questions', upload.any(), async (req, res) => {
   res.redirect(`/teacher/exams/${examId}`);
 });
 
+// ── Download Template Import Soal Ujian ────────────────────────────────────
+router.get('/exams/:id/import/template', async (req, res) => {
+  const XLSX = require('xlsx');
+  try {
+    const contoh = [
+      { question_text: 'Contoh MCQ: Ibu kota Indonesia adalah?',
+        image: '', points: 1, correct: 'A', question_type: 'MCQ',
+        A: 'Jakarta', B: 'Surabaya', C: 'Bandung', D: 'Yogyakarta', E: '',
+        image_a: '', image_b: '', image_c: '', image_d: '', image_e: '' },
+      { question_text: 'Contoh COMPLEX: Manakah bilangan prima?',
+        image: '', points: 4, correct: 'A,C,D', question_type: 'COMPLEX',
+        A: '2', B: '4', C: '5', D: '7', E: '9',
+        image_a: '', image_b: '', image_c: '', image_d: '', image_e: '' },
+      { question_text: 'Contoh TRUE_FALSE: Air mendidih pada 100°C.',
+        image: '', points: 2, correct: 'A', question_type: 'TRUE_FALSE',
+        A: 'Benar', B: 'Salah', C: '', D: '', E: '',
+        image_a: '', image_b: '', image_c: '', image_d: '', image_e: '' },
+    ];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(contoh, {
+      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e']
+    });
+    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Template Soal');
+    const panduan = [
+      ['Kolom','Keterangan','Wajib','Contoh'],
+      ['question_text','Teks pertanyaan','Ya','Manakah yang termasuk bilangan prima?'],
+      ['image','Nama file gambar soal','Tidak','gambar1.jpg'],
+      ['points','Poin soal (default 1)','Tidak','1'],
+      ['correct','Kunci: MCQ=A, COMPLEX=A,C,D (pisah koma), TRUE_FALSE=A/B','Ya','A atau A,C,D'],
+      ['question_type','MCQ / COMPLEX / TRUE_FALSE (default MCQ)','Tidak','COMPLEX'],
+      ['A','Teks opsi A','Ya','Jakarta'],
+      ['B','Teks opsi B','Ya','Surabaya'],
+      ['C','Teks opsi C','Ya (tidak wajib TRUE_FALSE)','Bandung'],
+      ['D','Teks opsi D','Ya (tidak wajib TRUE_FALSE)','Yogyakarta'],
+      ['E','Teks opsi E','Tidak',''],
+      ['image_a - image_e','Nama file gambar per opsi','Tidak','gambar_opsi_a.jpg'],
+      ['','','',''],
+      ['--- TIPE SOAL ---','','',''],
+      ['MCQ','Pilihan ganda biasa, 1 jawaban benar','','correct: A'],
+      ['COMPLEX','Multi-jawaban (TKA), poin parsial','','correct: A,C,D'],
+      ['TRUE_FALSE','Benar/Salah, A=Benar B=Salah','','correct: A'],
+    ];
+    const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
+    wsPanduan['!cols'] = [{wch:18},{wch:55},{wch:8},{wch:25}];
+    XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', 'attachment; filename="template_import_soal_ujian.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+  } catch (e) {
+    req.flash('error', 'Gagal membuat template: ' + e.message);
+    res.redirect(`/teacher/exams/${req.params.id}/import`);
+  }
+});
+
 router.get('/exams/:id/import', async (req, res) => {
   const user = req.session.user;
   const [[exam]] = await pool.query(`SELECT id, title FROM exams WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid) LIMIT 1;`, {
