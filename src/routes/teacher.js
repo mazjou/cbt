@@ -227,7 +227,15 @@ function buildImportPreview(rows, filesImages = []) {
     const question_text = String(pickRowValue(row, ['question_text', 'question', 'soal', 'pertanyaan'])).trim();
     const pointsRaw = pickRowValue(row, ['points', 'poin', 'score']);
     const points = Number(pointsRaw || 1) || 1;
-    const correct = String(pickRowValue(row, ['correct', 'kunci', 'answer', 'jawaban_benar'])).trim().toUpperCase();
+    const correctRaw = String(pickRowValue(row, ['correct', 'kunci', 'answer', 'jawaban_benar'])).trim().toUpperCase();
+    const qtypeRaw = String(pickRowValue(row, ['question_type','tipe','type']) || 'MCQ').trim().toUpperCase();
+    const validQtype = ['MCQ','COMPLEX','TRUE_FALSE'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
+
+    // Kunci jawaban: COMPLEX bisa multi (pisah koma)
+    const correctLabels = validQtype === 'COMPLEX'
+      ? correctRaw.split(',').map(s => s.trim()).filter(s => ['A','B','C','D','E'].includes(s))
+      : (correctRaw && ['A','B','C','D','E'].includes(correctRaw) ? [correctRaw] : []);
+    const correct = correctLabels[0] || ''; // untuk backward compat
 
     const A = String(pickRowValue(row, ['A', 'a', 'opsi_a'])).trim();
     const B = String(pickRowValue(row, ['B', 'b', 'opsi_b'])).trim();
@@ -246,12 +254,17 @@ function buildImportPreview(rows, filesImages = []) {
     const image_e = resolveImg(pickRowValue(row, ['image_e', 'gambar_e', 'img_e']));
 
     if (!question_text) reasons.push('Kolom question_text/soal kosong');
-    if (!A || !B || !C || !D || !E) reasons.push('Opsi A–E wajib terisi');
-    if (!['A', 'B', 'C', 'D', 'E'].includes(correct)) reasons.push('Kunci (correct) harus A/B/C/D/E');
+    if (validQtype === 'TRUE_FALSE') {
+      if (!A || !B) reasons.push('TRUE_FALSE: opsi A dan B wajib');
+    } else {
+      if (!A || !B || !C || !D) reasons.push('Opsi A-D wajib terisi');
+    }
+    if (correctLabels.length === 0) reasons.push('Kunci jawaban tidak valid (gunakan A/B/C/D/E, COMPLEX pisahkan koma)');
     if (!Number.isFinite(points) || points <= 0) reasons.push('Points harus angka > 0');
 
     const item = {
       rowNo, question_text, question_image, points, correct,
+      correctLabels, question_type: validQtype,
       options: { A, B, C, D, E },
       option_images: { A: image_a, B: image_b, C: image_c, D: image_d, E: image_e }
     };
@@ -1110,8 +1123,6 @@ router.get('/exams/:id/import', async (req, res) => {
   const backUrl = user.role === 'ADMIN' ? `/admin/exams/${exam.id}` : `/teacher/exams/${exam.id}`;
   res.render('teacher/question_import', { title: 'Import Soal', exam, backUrl });
 });
-
-// Import soal dari Microsoft Word (.docx) dengan format baku
 router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async (req, res) => {
   const user = req.session.user;
   const examId = req.params.id;
@@ -1431,14 +1442,15 @@ router.post('/exams/:id/questions/import/commit', async (req, res) => {
     const qTexts     = rows.map(r => r.question_text);
     const qImages    = rows.map(r => r.question_image || null);
     const qPoints    = rows.map(r => Math.round(Number(r.points || 1) || 1));
+    const qTypes     = rows.map(r => r.question_type || 'MCQ');
 
     const [qRes] = await conn.rawQuery(
-      `INSERT INTO questions (exam_id, question_text, question_image, points)
-       SELECT ei::int, qt, qi, pt::int
-       FROM unnest($1::text[], $2::text[], $3::text[], $4::text[])
-         AS t(ei, qt, qi, pt)
+      `INSERT INTO questions (exam_id, question_text, question_image, points, question_type)
+       SELECT ei::int, qt, qi, pt::int, qtp
+       FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[])
+         AS t(ei, qt, qi, pt, qtp)
        RETURNING id`,
-      [qExamIds, qTexts, qImages, qPoints.map(String)]
+      [qExamIds, qTexts, qImages, qPoints.map(String), qTypes]
     );
 
     const questionIds = qRes.map(r => r.id);
@@ -1455,12 +1467,15 @@ router.post('/exams/:id/questions/import/commit', async (req, res) => {
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i];
       const qid = String(questionIds[i]);
+      // Kunci jawaban: COMPLEX bisa multi (array atau string pisah koma)
+      const correctLabels = r.correctLabels
+        || (r.correct ? String(r.correct).split(',').map(s => s.trim().toUpperCase()) : ['A']);
       for (const label of LABELS) {
         oQids.push(qid);
         oLabels.push(label);
         oTexts.push(String(r.options?.[label] || ''));
         oImages.push(r.option_images?.[label] || null);
-        oCorrect.push(label === r.correct ? 'true' : 'false');
+        oCorrect.push(correctLabels.includes(label) ? 'true' : 'false');
       }
     }
 
@@ -3513,7 +3528,10 @@ router.get('/exams/:id/questions/export', async (req, res) => {
     // Buat data dengan header SAMA PERSIS dengan template import
     const rows = questions.map((q, idx) => {
       const opts = optMap[q.id] || {};
-      const correct = Object.entries(opts).find(([,v]) => v.correct)?.[0] || '';
+      const qtype = q.question_type || 'MCQ';
+      // Kunci: COMPLEX bisa lebih dari satu
+      const correctEntries = Object.entries(opts).filter(([,v]) => v.correct).map(([lbl]) => lbl);
+      const correctStr = correctEntries.join(',');
       // Strip HTML tags dari question_text agar bisa diimport ulang
       const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g,' ').trim();
 
@@ -3529,7 +3547,8 @@ router.get('/exams/:id/questions/export', async (req, res) => {
         'question_text': qText,
         'image': getImageRef(q.question_image),
         'points': q.points || 1,
-        'correct': correct,
+        'correct': correctStr,
+        'question_type': qtype,
         'A': opts['A']?.text || '',
         'B': opts['B']?.text || '',
         'C': opts['C']?.text || '',
@@ -3545,13 +3564,14 @@ router.get('/exams/:id/questions/export', async (req, res) => {
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows, {
-      header: ['question_text','image','points','correct','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e']
+      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e']
     });
     ws['!cols'] = [
       {wch:60}, // question_text
       {wch:25}, // image
       {wch:8},  // points
-      {wch:8},  // correct
+      {wch:12}, // correct
+      {wch:12}, // question_type
       {wch:35}, // A
       {wch:35}, // B
       {wch:35}, // C
@@ -3889,3 +3909,4 @@ router.get('/exams/:id/export', async (req, res) => {
     res.redirect(`/teacher/exams/${examId}`);
   }
 });
+
