@@ -4090,7 +4090,7 @@ router.get('/question-bank/:id', async (req, res) => {
       const [u] = await pq('SELECT qbu.*, e.title AS exam_title, e.id AS exam_id FROM question_bank_usage qbu JOIN exams e ON e.id = qbu.exam_id WHERE qbu.question_bank_id = $1 ORDER BY qbu.id DESC', [req.params.id]);
       usage = u || [];
     } catch(_) {}
-    res.render('teacher/question_bank_detail', { title: 'Detail Bank Soal', question, options, usage });
+    res.render('teacher/question_bank_detail', { title: 'Detail Bank Soal', question, options, usage, backUrl: '/admin/question-bank' });
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal memuat detail soal: ' + e.message);

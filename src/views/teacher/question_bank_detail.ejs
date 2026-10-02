@@ -4,11 +4,14 @@
     <h1 class="text-2xl font-bold text-indigo-900">Detail Soal</h1>
   </div>
   <div class="flex gap-2">
-    <a href="/teacher/question-bank/<%= question.id %>/edit"
+    <% const baseUrl = typeof backUrl !== 'undefined' && backUrl.startsWith('/admin') ? '/admin' : '/teacher'; %>
+    <% if (baseUrl === '/teacher') { %>
+    <a href="<%= baseUrl %>/question-bank/<%= question.id %>/edit"
        class="px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold text-sm transition-all">
       ✏️ Edit
     </a>
-    <a href="/teacher/question-bank"
+    <% } %>
+    <a href="<%= typeof backUrl !== 'undefined' ? backUrl : '/teacher/question-bank' %>"
        class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all">
       ← Kembali
     </a>
@@ -89,7 +92,8 @@
 </div>
 <% } %>
 
-<!-- Tombol hapus -->
+<!-- Tombol hapus (hanya untuk teacher) -->
+<% if (baseUrl === '/teacher') { %>
 <div class="mt-6 flex justify-end">
   <form action="/teacher/question-bank/<%= question.id %>?_method=DELETE" method="POST"
         onsubmit="return confirm('Hapus soal ini dari bank? Soal yang sudah dipakai di ujian tidak akan terhapus dari ujian tersebut.')">
@@ -98,3 +102,4 @@
     </button>
   </form>
 </div>
+<% } %>

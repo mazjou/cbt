@@ -473,7 +473,7 @@ router.get('/:id', async (req, res) => {
       );
       usage = usageRows || [];
     } catch(_) { /* tabel atau kolom belum ada */ }
-    res.render('teacher/question_bank_detail', { title: 'Detail Bank Soal', question, options, usage });
+    res.render('teacher/question_bank_detail', { title: 'Detail Bank Soal', question, options, usage, backUrl: '/teacher/question-bank' });
   } catch (error) {
     console.error('Error:', error);
     req.flash('error', 'Gagal memuat detail soal');
