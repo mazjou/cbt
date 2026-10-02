@@ -4071,6 +4071,33 @@ router.get('/question-bank/export', async (req, res) => {
 });
 
 // GET Admin Question Bank List
+router.get('/question-bank/:id', async (req, res) => {
+  if (!/^\d+$/.test(req.params.id)) return res.redirect('/admin/question-bank');
+  try {
+    const question = (await pool.query(
+      `SELECT qb.*, s.name AS subject_name, u.full_name AS teacher_name,
+        (SELECT COUNT(*) FROM question_bank_usage qbu WHERE qbu.question_bank_id = qb.id) AS usage_count
+       FROM question_bank qb
+       JOIN subjects s ON s.id = qb.subject_id
+       JOIN users u ON u.id = qb.teacher_id
+       WHERE qb.id = $1 LIMIT 1`,
+      [req.params.id]
+    ))[0][0];
+    if (!question) { req.flash('error', 'Soal tidak ditemukan.'); return res.redirect('/admin/question-bank'); }
+    const [options] = await pq('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [req.params.id]);
+    let usage = [];
+    try {
+      const [u] = await pq('SELECT qbu.*, e.title AS exam_title, e.id AS exam_id FROM question_bank_usage qbu JOIN exams e ON e.id = qbu.exam_id WHERE qbu.question_bank_id = $1 ORDER BY qbu.id DESC', [req.params.id]);
+      usage = u || [];
+    } catch(_) {}
+    res.render('teacher/question_bank_detail', { title: 'Detail Bank Soal', question, options, usage });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat detail soal: ' + e.message);
+    res.redirect('/admin/question-bank');
+  }
+});
+
 router.get('/question-bank', async (req, res) => {
   try {
     const search = (req.query.search || '').trim();
