@@ -158,38 +158,57 @@ router.get('/import/template', async (req, res) => {
   try {
     const [subjects] = await pool.query('SELECT code, name FROM subjects ORDER BY name ASC');
     const subjectList = subjects.map(s => s.code || s.name).join(', ');
+    const firstSubject = subjects[0]?.code || subjects[0]?.name || 'KODE_MAPEL';
     const contoh = [
-      { question_text: 'Contoh: Ibu kota Indonesia adalah?', image: '', points: 1, correct: 'A',
+      // Contoh 1: MCQ biasa
+      { question_text: 'Contoh MCQ: Ibu kota Indonesia adalah?',
+        image: '', points: 1, correct: 'A', question_type: 'MCQ',
         A: 'Jakarta', B: 'Surabaya', C: 'Bandung', D: 'Yogyakarta', E: '',
-        difficulty: 'EASY', subject: subjects[0]?.code || 'KODE_MAPEL', chapter: 'Bab 1', tags: 'geografi' },
-      { question_text: 'Contoh: 2 + 2 = ?', image: '', points: 2, correct: 'B',
-        A: '3', B: '4', C: '5', D: '6', E: '',
-        difficulty: 'EASY', subject: subjects[0]?.code || 'KODE_MAPEL', chapter: 'Bab 1', tags: 'matematika' }
+        difficulty: 'EASY', subject: firstSubject, chapter: 'Bab 1', tags: 'geografi' },
+      // Contoh 2: COMPLEX (jawaban benar lebih dari satu, pisah koma)
+      { question_text: 'Contoh COMPLEX (TKA): Manakah yang termasuk bilangan prima?',
+        image: '', points: 4, correct: 'A,C,D', question_type: 'COMPLEX',
+        A: '2', B: '4', C: '5', D: '7', E: '9',
+        difficulty: 'MEDIUM', subject: firstSubject, chapter: 'Bab 2', tags: 'matematika,prima' },
+      // Contoh 3: TRUE_FALSE (A=Benar, B=Salah)
+      { question_text: 'Contoh TRUE_FALSE: Air mendidih pada 100°C pada tekanan normal.',
+        image: '', points: 2, correct: 'A', question_type: 'TRUE_FALSE',
+        A: 'Benar', B: 'Salah', C: '', D: '', E: '',
+        difficulty: 'EASY', subject: firstSubject, chapter: 'Bab 1', tags: 'IPA,suhu' },
     ];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(contoh, {
-      header: ['question_text','image','points','correct','A','B','C','D','E','difficulty','subject','chapter','tags']
+      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','difficulty','subject','chapter','tags']
     });
-    ws['!cols'] = [{wch:60},{wch:25},{wch:8},{wch:8},{wch:35},{wch:35},{wch:35},{wch:35},{wch:35},{wch:10},{wch:15},{wch:20},{wch:25}];
+    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:10},{wch:15},{wch:20},{wch:25}];
     XLSX.utils.book_append_sheet(wb, ws, 'Template Soal');
     const panduan = [
       ['Kolom','Keterangan','Wajib','Contoh'],
-      ['question_text','Teks pertanyaan','Ya','Sebutkan ibu kota Indonesia!'],
-      ['image','Nama file gambar soal','Tidak','gambar1.jpg'],
-      ['points','Poin soal (default 1)','Tidak','1'],
-      ['correct','Kunci: A/B/C/D/E','Ya','A'],
-      ['A','Teks opsi A','Ya','Jakarta'],
+      ['question_text','Teks pertanyaan (boleh HTML dari editor)','Ya','Manakah yang termasuk bilangan prima?'],
+      ['image','Nama file gambar soal (opsional, upload terpisah)','Tidak','gambar1.jpg'],
+      ['points','Poin soal (angka, default 1)','Tidak','1'],
+      ['correct','Kunci jawaban. MCQ: huruf tunggal. COMPLEX: pisah koma. TRUE_FALSE: A atau B','Ya','A atau A,C,D'],
+      ['question_type','Tipe soal: MCQ / COMPLEX / TRUE_FALSE (default: MCQ)','Tidak','COMPLEX'],
+      ['A','Teks opsi A','Ya (kecuali TRUE_FALSE sudah otomatis)','Jakarta'],
       ['B','Teks opsi B','Ya','Surabaya'],
-      ['C','Teks opsi C','Ya','Bandung'],
-      ['D','Teks opsi D','Ya','Yogyakarta'],
+      ['C','Teks opsi C','Ya (tidak wajib untuk TRUE_FALSE)','Bandung'],
+      ['D','Teks opsi D','Ya (tidak wajib untuk TRUE_FALSE)','Yogyakarta'],
       ['E','Teks opsi E (opsional)','Tidak',''],
-      ['difficulty','EASY/MEDIUM/HARD','Tidak','MEDIUM'],
-      ['subject', `Kode/nama mapel. Tersedia: ${subjectList}`, 'Ya', subjects[0]?.code || 'KODE_MAPEL'],
-      ['chapter','Bab/topik soal','Tidak','Bab 1'],
-      ['tags','Tag pencarian, pisah koma','Tidak','integral, turunan'],
+      ['difficulty','Tingkat kesulitan: EASY / MEDIUM / HARD','Tidak','MEDIUM'],
+      ['subject', `Kode/nama mata pelajaran. Tersedia: ${subjectList}`, 'Ya', firstSubject],
+      ['chapter','Bab atau topik soal','Tidak','Bab 1 - Trigonometri'],
+      ['tags','Tag pencarian, pisahkan dengan koma','Tidak','integral, turunan'],
+      ['','','',''],
+      ['--- PANDUAN TIPE SOAL ---','','',''],
+      ['MCQ','Pilihan ganda biasa. correct = 1 huruf (A/B/C/D/E)','','correct: A'],
+      ['COMPLEX','Jawaban benar lebih dari satu. correct = huruf dipisah koma','','correct: A,C,D'],
+      ['TRUE_FALSE','Pernyataan benar/salah. Opsi A=Benar, B=Salah. correct = A atau B','','correct: A'],
+      ['--- POIN PARSIAL COMPLEX ---','','',''],
+      ['','Rumus: floor((benar_dipilih - salah_dipilih) / total_benar × poin)','',''],
+      ['','Contoh: poin=4, benar ada 3 (A,C,D), siswa pilih A,C → dapat 2/3 × 4 = 2 poin','',''],
     ];
     const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
-    wsPanduan['!cols'] = [{wch:18},{wch:55},{wch:8},{wch:30}];
+    wsPanduan['!cols'] = [{wch:22},{wch:65},{wch:8},{wch:20}];
     XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     res.setHeader('Content-Disposition', 'attachment; filename="template_import_bank_soal.xlsx"');
@@ -315,16 +334,33 @@ router.post('/import/preview',
         const chapter = String(pickVal(row, ['chapter','bab']) || '').trim();
         const tags = String(pickVal(row, ['tags','tag']) || '').trim();
         const question_image = resolveImg(pickVal(row, ['image','gambar','image_url','img']));
+        const qtypeRaw = String(pickVal(row, ['question_type','tipe','type']) || 'MCQ').trim().toUpperCase();
+        const validQtype = ['MCQ','COMPLEX','TRUE_FALSE'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
         if (!question_text) reasons.push('Kolom question_text kosong');
-        if (!A || !B || !C || !D) reasons.push('Opsi A-D wajib terisi');
-        if (!['A','B','C','D','E'].includes(correct)) reasons.push('Kunci harus A/B/C/D/E');
+        // Validasi opsi sesuai tipe
+        if (validQtype === 'TRUE_FALSE') {
+          if (!A || !B) reasons.push('TRUE_FALSE: opsi A dan B wajib');
+        } else {
+          if (!A || !B || !C || !D) reasons.push('Opsi A-D wajib terisi');
+        }
+        // Validasi kunci jawaban sesuai tipe
+        const correctLabels = validQtype === 'COMPLEX'
+          ? String(correct).split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
+          : [String(correct).trim().toUpperCase()];
+        if (correctLabels.length === 0 || !correctLabels.every(l => ['A','B','C','D','E'].includes(l))) {
+          reasons.push('Kunci jawaban tidak valid (gunakan A/B/C/D/E, untuk COMPLEX pisahkan dengan koma)');
+        }
         let subject_id = null;
         if (subjectRaw) {
           subject_id = subjectMap.get(subjectRaw.toLowerCase()) || null;
           if (!subject_id) reasons.push('Mata pelajaran "' + subjectRaw + '" tidak ditemukan');
         }
         const validDiff = ['EASY','MEDIUM','HARD'].includes(difficulty) ? difficulty : 'MEDIUM';
-        const item = { rowNo, question_text, question_image, points, correct, subject_id, subjectRaw,
+        const item = { rowNo, question_text, question_image, points,
+          correct: validQtype === 'COMPLEX' ? correctLabels.join(',') : correctLabels[0],
+          correctLabels,
+          question_type: validQtype,
+          subject_id, subjectRaw,
           difficulty: validDiff, chapter, tags, options: { A, B, C, D, E } };
         if (reasons.length) errors.push({ rowNo, reasons, snapshot: item });
         else preview.push(item);
@@ -360,16 +396,19 @@ router.post('/import/commit', async (req, res) => {
     for (const r of rows) {
       const sid = r.subject_id || default_subject_id || null;
       if (!sid) continue;
+      const qtype = r.question_type || 'MCQ';
       const [res2] = await conn.query(
-        'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, points, difficulty, tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id',
-        [user.id, sid, r.chapter || null, r.question_text, r.question_image || null, r.points || 1, r.difficulty || 'MEDIUM', r.tags || null]
+        'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, points, difficulty, tags, question_type) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+        [user.id, sid, r.chapter || null, r.question_text, r.question_image || null, r.points || 1, r.difficulty || 'MEDIUM', r.tags || null, qtype]
       );
       const bankId = res2.insertId;
+      // Tentukan correctLabels
+      const correctLabels = r.correctLabels || (r.correct ? String(r.correct).split(',').map(s => s.trim().toUpperCase()) : ['A']);
       for (const lbl of ['A','B','C','D','E']) {
         if (!r.options[lbl]) continue;
         await conn.query(
           'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
-          [bankId, lbl, r.options[lbl], lbl === r.correct ? true : false]
+          [bankId, lbl, r.options[lbl], correctLabels.includes(lbl) ? true : false]
         );
       }
       inserted++;
