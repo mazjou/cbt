@@ -135,7 +135,8 @@
               </td>
               <td class="px-4 py-3">
                 <div class="text-sm text-slate-900 line-clamp-2">
-                  <%= q.question_text.substring(0, 100) %><%= q.question_text.length > 100 ? '...' : '' %>
+                  <% const plainText = q.question_text.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim(); %>
+                  <%= plainText.substring(0, 120) %><%= plainText.length > 120 ? '...' : '' %>
                 </div>
                 <% if (q.question_image) { %>
                   <span class="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800">
