@@ -84,7 +84,8 @@ router.get('/export', async (req, res) => {
   const { subject_id, difficulty } = req.query;
   try {
     const params = [user.id];
-    let query = `SELECT qb.id, qb.question_text, qb.question_image, qb.points, qb.difficulty, qb.tags, qb.chapter,
+    let query = `SELECT qb.id, qb.question_text, qb.question_image, qb.points,
+      qb.difficulty, qb.tags, qb.chapter, qb.question_type,
       s.name AS subject_name, s.code AS subject_code
       FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id
       WHERE qb.teacher_id = $1`;
@@ -115,12 +116,16 @@ router.get('/export', async (req, res) => {
     };
     const rows = questions.map(q => {
       const opts = optMap[q.id] || {};
-      const correct = Object.entries(opts).find(([, v]) => v.correct);
+      const qtype = q.question_type || 'MCQ';
+      // Kunci jawaban: COMPLEX bisa lebih dari satu, pisah koma
+      const correctEntries = Object.entries(opts).filter(([, v]) => v.correct);
+      const correctStr = correctEntries.map(([lbl]) => lbl).join(',');
       return {
         question_text: stripHtml(q.question_text),
         image:         getRef(q.question_image),
         points:        q.points || 1,
-        correct:       correct ? correct[0] : '',
+        correct:       correctStr,
+        question_type: qtype,
         A: stripHtml(opts['A']?.text), B: stripHtml(opts['B']?.text),
         C: stripHtml(opts['C']?.text), D: stripHtml(opts['D']?.text),
         E: stripHtml(opts['E']?.text),
@@ -132,9 +137,9 @@ router.get('/export', async (req, res) => {
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows, {
-      header: ['question_text','image','points','correct','A','B','C','D','E','difficulty','subject','chapter','tags']
+      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','difficulty','subject','chapter','tags']
     });
-    ws['!cols'] = [{wch:60},{wch:25},{wch:8},{wch:8},{wch:35},{wch:35},{wch:35},{wch:35},{wch:35},{wch:10},{wch:15},{wch:20},{wch:25}];
+    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:10},{wch:15},{wch:20},{wch:25}];
     XLSX.utils.book_append_sheet(wb, ws, 'Soal');
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     res.setHeader('Content-Disposition', 'attachment; filename="bank_soal_' + Date.now() + '.xlsx"');
