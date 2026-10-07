@@ -40,6 +40,9 @@ const UPLOAD_ROOT = process.env.UPLOAD_ROOT || path.join(__dirname, '..', 'publi
 const uploadDir = path.join(UPLOAD_ROOT, 'questions');
 fs.mkdirSync(uploadDir, { recursive: true });
 
+// Ekstensi berbahaya yang TIDAK boleh diupload (dipakai semua multer config)
+const DANGEROUS_EXTENSIONS = /\.(php|php3|php4|php5|php7|phtml|phar|asp|aspx|jsp|cgi|pl|py|rb|sh|bash|cmd|bat|exe|dll|so|htaccess|htpasswd)$/i;
+
 // Upload config untuk materi (DOCX -> HTML + gambar)
 const materialsDir = path.join(UPLOAD_ROOT, 'materials');
 const materialsTmpDir = path.join(materialsDir, 'tmp');
@@ -59,12 +62,24 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB per file
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per file
+  fileFilter: (req, file, cb) => {
+    if (DANGEROUS_EXTENSIONS.test(file.originalname)) {
+      return cb(new Error(`File "${file.originalname}" tidak diizinkan.`), false);
+    }
+    cb(null, true);
+  }
 });
 
 const uploadDocx = multer({
   storage,
-  limits: { fileSize: 15 * 1024 * 1024 } // 15MB docx
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB docx
+  fileFilter: (req, file, cb) => {
+    if (DANGEROUS_EXTENSIONS.test(file.originalname)) {
+      return cb(new Error(`File "${file.originalname}" tidak diizinkan.`), false);
+    }
+    cb(null, true);
+  }
 });
 
 const storageMaterialsUpload = multer.diskStorage({
@@ -81,9 +96,28 @@ const storageMaterialsUpload = multer.diskStorage({
   }
 });
 
+// Hanya izinkan PDF dan DOCX berdasarkan fieldname
 const uploadMaterials = multer({
   storage: storageMaterialsUpload,
-  limits: { fileSize: 30 * 1024 * 1024 } // 30MB (DOCX/PDF)
+  limits: { fileSize: 30 * 1024 * 1024 }, // 30MB
+  fileFilter: (req, file, cb) => {
+    // Blokir ekstensi berbahaya berdasarkan nama file
+    if (DANGEROUS_EXTENSIONS.test(file.originalname)) {
+      return cb(new Error(`File "${file.originalname}" tidak diizinkan. Hanya PDF dan DOCX yang diterima.`), false);
+    }
+    // Hanya izinkan PDF dan DOCX berdasarkan fieldname
+    if (file.fieldname === 'pdf') {
+      if (file.mimetype !== 'application/pdf' && !file.originalname.toLowerCase().endsWith('.pdf')) {
+        return cb(new Error('Hanya file PDF yang diizinkan untuk materi.'), false);
+      }
+    }
+    if (file.fieldname === 'docx') {
+      if (!file.originalname.toLowerCase().match(/\.(docx|doc)$/)) {
+        return cb(new Error('Hanya file DOCX/DOC yang diizinkan untuk konversi materi.'), false);
+      }
+    }
+    cb(null, true);
+  }
 });
 
 function toYoutubeEmbedUrl(input) {
