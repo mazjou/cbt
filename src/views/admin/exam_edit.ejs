@@ -159,7 +159,7 @@
       </div>
       <div id="anticheat_input_admin_edit" class="<%= (exam.max_violations > 0) ? '' : 'hidden' %> flex items-center gap-3">
         <input type="number" name="max_violations" id="max_violations_admin_edit"
-          min="1" max="20" value="<%= exam.max_violations || 3 %>"
+          max="20" value="<%= exam.max_violations || 3 %>"
           class="w-24 rounded-xl border border-red-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
         <span class="text-xs text-slate-500">Layar siswa terkunci setelah N pelanggaran. Buka dari halaman Siswa Terkunci.</span>
       </div>
@@ -222,19 +222,19 @@ function toggleAnticheatAdminEdit(cb) {
   if (cb.checked) {
     input.classList.remove('hidden');
     off.classList.add('hidden');
-    num.disabled = false;
+    num.removeAttribute('disabled');
     if (!num.value || num.value === '0') num.value = '3';
   } else {
     input.classList.add('hidden');
     off.classList.remove('hidden');
-    num.disabled = true;  // disable agar tidak divalidasi browser
+    num.removeAttribute('disabled'); // pastikan value 0 terkirim
     num.value = '0';
   }
 }
-// Init: pastikan disabled state sesuai kondisi awal
+// Init: set value 0 jika unchecked saat load
 document.addEventListener('DOMContentLoaded', function() {
   const cb  = document.getElementById('anticheat_enabled_admin_edit');
   const num = document.getElementById('max_violations_admin_edit');
-  if (cb && num) num.disabled = !cb.checked;
+  if (cb && num && !cb.checked) num.value = '0';
 });
 </script>
