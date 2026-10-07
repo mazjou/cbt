@@ -293,4 +293,10 @@
       numInput.value = '0';
     }
   }
+  // Init disabled state
+  document.addEventListener('DOMContentLoaded', function() {
+    const cb  = document.getElementById('anticheat_enabled_edit');
+    const num = document.getElementById('max_violations_edit');
+    if (cb && num) num.disabled = !cb.checked;
+  });
 </script>

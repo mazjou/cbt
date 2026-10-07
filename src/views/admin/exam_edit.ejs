@@ -227,8 +227,14 @@ function toggleAnticheatAdminEdit(cb) {
   } else {
     input.classList.add('hidden');
     off.classList.remove('hidden');
-    num.disabled = false;
+    num.disabled = true;  // disable agar tidak divalidasi browser
     num.value = '0';
   }
 }
+// Init: pastikan disabled state sesuai kondisi awal
+document.addEventListener('DOMContentLoaded', function() {
+  const cb  = document.getElementById('anticheat_enabled_admin_edit');
+  const num = document.getElementById('max_violations_admin_edit');
+  if (cb && num) num.disabled = !cb.checked;
+});
 </script>
