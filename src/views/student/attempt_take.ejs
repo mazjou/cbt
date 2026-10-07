@@ -267,10 +267,37 @@
     }
   }
   
-  // Timer
-  const startedAt = new Date('<%= attempt.started_at.toISOString ? attempt.started_at.toISOString() : attempt.started_at %>');
+  // Timer — hitung endAt dengan benar
+  // started_at tersimpan sebagai waktu lokal (WIB), parse dengan hati-hati
+  const startedAtRaw = '<%= attempt.started_at instanceof Date ? attempt.started_at.toISOString() : String(attempt.started_at).replace(" ", "T") %>';
   const durationMinutes = Number('<%= attempt.duration_minutes %>');
-  const endAt = new Date(startedAt.getTime() + durationMinutes * 60 * 1000);
+
+  // Jika exam punya end_at (batas waktu absolut), gunakan yang lebih kecil
+  <% const examEndAt = attempt.exam_end_at ? `new Date('${attempt.exam_end_at instanceof Date ? attempt.exam_end_at.toISOString() : String(attempt.exam_end_at).replace(" ", "T")}')` : 'null'; %>
+  const examEndAt = <%- examEndAt %>;
+
+  // Parse started_at — jika string tanpa timezone (dari DB WIB), tambahkan +07:00
+  let startedAt;
+  try {
+    const raw = startedAtRaw.trim();
+    // Jika sudah ada Z atau +, parse langsung
+    if (/Z$|[+-]\d{2}:\d{2}$/.test(raw)) {
+      startedAt = new Date(raw);
+    } else {
+      // Tidak ada timezone info — asumsikan WIB (+07:00)
+      startedAt = new Date(raw + '+07:00');
+    }
+    // Sanity check: jika tahun tidak masuk akal, fallback ke now
+    if (isNaN(startedAt.getTime()) || startedAt.getFullYear() < 2020) {
+      startedAt = new Date();
+    }
+  } catch(_) {
+    startedAt = new Date();
+  }
+
+  const endAtByDuration = new Date(startedAt.getTime() + durationMinutes * 60 * 1000);
+  // Pakai yang lebih kecil antara durasi dan end_at ujian
+  const endAt = examEndAt && examEndAt < endAtByDuration ? examEndAt : endAtByDuration;
 
   function formatMs(ms) {
     const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -586,10 +613,10 @@
     });
   });
 
-  // Anti-cheat
+  // Anti-cheat — gunakan max_violations dari ujian, bukan ENV
   const anti = {
     attemptId: <%= attempt.id %>,
-    max: Number('<%= process.env.ANTI_CHEAT_MAX_VIOLATIONS || 3 %>'),
+    max: Number('<%= attempt.max_violations || 0 %>'), // 0 = nonaktif
     sentAt: new Map(),
     localCount: 0,
     locked: false
@@ -661,6 +688,7 @@
   }
 
   async function reportViolation(type, details) {
+    if (anti.max === 0) return; // anti-cheat dinonaktifkan
     if (anti.locked) return;
     const key = type + '::' + (details || '');
     const last = anti.sentAt.get(key) || 0;
