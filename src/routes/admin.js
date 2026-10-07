@@ -157,18 +157,27 @@ router.get('/', async (req, res) => {
         COUNT(*) FILTER (WHERE role = 'TEACHER' AND is_active = true) AS total_guru
       FROM users
     `);
-    const [[total_kelas]] = await pq(`SELECT COUNT(*) AS total FROM classes`);
-    const [[total_mapel]] = await pq(`SELECT COUNT(*) AS total FROM subjects`);
+    const [[total_kelas]]   = await pq(`SELECT COUNT(*) AS total FROM classes`);
+    const [[total_mapel]]   = await pq(`SELECT COUNT(*) AS total FROM subjects`);
+    const [[total_ujian]]   = await pq(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE is_published=true) AS published FROM exams`);
+    const [[total_materi]]  = await pq(`SELECT COUNT(*) AS total FROM materials`);
+    const [[total_tugas]]   = await pq(`SELECT COUNT(*) AS total FROM assignments`);
+    const [[total_bank]]    = await pq(`SELECT COUNT(*) AS total FROM question_bank`);
     const stats = {
-      siswa:  Number(counts?.total_siswa  || 0),
-      guru:   Number(counts?.total_guru   || 0),
-      kelas:  Number(total_kelas?.total   || 0),
-      mapel:  Number(total_mapel?.total   || 0),
+      siswa:    Number(counts?.total_siswa  || 0),
+      guru:     Number(counts?.total_guru   || 0),
+      kelas:    Number(total_kelas?.total   || 0),
+      mapel:    Number(total_mapel?.total   || 0),
+      ujian:    Number(total_ujian?.total   || 0),
+      ujian_published: Number(total_ujian?.published || 0),
+      materi:   Number(total_materi?.total  || 0),
+      tugas:    Number(total_tugas?.total   || 0),
+      bank:     Number(total_bank?.total    || 0),
     };
     res.render('admin/index', { title: 'Panel Admin', stats });
   } catch(e) {
     console.error(e);
-    res.render('admin/index', { title: 'Panel Admin', stats: { siswa: 0, guru: 0, kelas: 0, mapel: 0 } });
+    res.render('admin/index', { title: 'Panel Admin', stats: { siswa: 0, guru: 0, kelas: 0, mapel: 0, ujian: 0, ujian_published: 0, materi: 0, tugas: 0, bank: 0 } });
   }
 });
 

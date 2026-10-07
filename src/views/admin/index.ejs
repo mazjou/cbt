@@ -36,23 +36,38 @@
   </a>
   <a href="/admin/exams" class="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 shadow-soft p-5 transition-all">
     <div class="text-sm text-red-600 font-medium">📝 Manajemen</div>
-    <div class="mt-1 text-xl font-semibold text-red-900">Ujian</div>
-    <div class="mt-2 text-red-700 text-sm">Kelola semua ujian dari guru.</div>
+    <div class="mt-1 flex items-end justify-between">
+      <div class="text-xl font-semibold text-red-900">Ujian</div>
+      <div class="text-right">
+        <div class="text-3xl font-bold text-red-700"><%= stats.ujian %></div>
+        <div class="text-xs text-red-500"><%= stats.ujian_published %> aktif</div>
+      </div>
+    </div>
+    <div class="mt-1 text-red-700 text-sm">Kelola semua ujian dari guru.</div>
   </a>
   <a href="/admin/materials" class="rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 shadow-soft p-5 transition-all">
     <div class="text-sm text-cyan-600 font-medium">📖 Manajemen</div>
-    <div class="mt-1 text-xl font-semibold text-cyan-900">Materi</div>
-    <div class="mt-2 text-cyan-700 text-sm">Kelola semua materi dari guru.</div>
+    <div class="mt-1 flex items-end justify-between">
+      <div class="text-xl font-semibold text-cyan-900">Materi</div>
+      <div class="text-3xl font-bold text-cyan-700"><%= stats.materi %></div>
+    </div>
+    <div class="mt-1 text-cyan-700 text-sm">Kelola semua materi dari guru.</div>
   </a>
   <a href="/admin/assignments" class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 shadow-soft p-5 transition-all">
     <div class="text-sm text-amber-600 font-medium">📋 Manajemen</div>
-    <div class="mt-1 text-xl font-semibold text-amber-900">Tugas</div>
-    <div class="mt-2 text-amber-700 text-sm">Kelola semua tugas dari guru.</div>
+    <div class="mt-1 flex items-end justify-between">
+      <div class="text-xl font-semibold text-amber-900">Tugas</div>
+      <div class="text-3xl font-bold text-amber-700"><%= stats.tugas %></div>
+    </div>
+    <div class="mt-1 text-amber-700 text-sm">Kelola semua tugas dari guru.</div>
   </a>
   <a href="/admin/question-bank" class="rounded-2xl border border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100 hover:from-pink-100 hover:to-pink-200 shadow-soft p-5 transition-all">
     <div class="text-sm text-pink-600 font-medium">🗂️ Manajemen</div>
-    <div class="mt-1 text-xl font-semibold text-pink-900">Bank Soal</div>
-    <div class="mt-2 text-pink-700 text-sm">Kelola semua bank soal dari guru.</div>
+    <div class="mt-1 flex items-end justify-between">
+      <div class="text-xl font-semibold text-pink-900">Bank Soal</div>
+      <div class="text-3xl font-bold text-pink-700"><%= stats.bank %></div>
+    </div>
+    <div class="mt-1 text-pink-700 text-sm">Kelola semua bank soal dari guru.</div>
   </a>
   <a href="/admin/grades" class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 shadow-soft p-5 transition-all">
     <div class="text-sm text-indigo-600 font-medium">🏆 Manajemen</div>
