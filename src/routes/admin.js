@@ -2466,8 +2466,15 @@ router.get('/exams', async (req, res) => {
   const exams = examsResult[0];
   
   // Calculate participation percentage for each exam
+  // Cast COUNT hasil PostgreSQL (bigint/string) ke Number
   exams.forEach(exam => {
-    exam.participation_percentage = exam.total_students > 0 ? Math.round((exam.participant_count / exam.total_students) * 100) : 0;
+    exam.participant_count = Number(exam.participant_count || 0);
+    exam.total_students    = Number(exam.total_students    || 0);
+    exam.question_count    = Number(exam.question_count    || 0);
+    exam.attempt_count     = Number(exam.attempt_count     || 0);
+    exam.participation_percentage = exam.total_students > 0
+      ? Math.round((exam.participant_count / exam.total_students) * 100)
+      : 0;
   });
 
   const totalPages = Math.ceil(total / limit);
