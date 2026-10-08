@@ -10,10 +10,13 @@
   <!-- Card Filter -->
   <div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-5">
     <h2 class="text-lg font-semibold text-indigo-900 mb-4">Filter Daftar Nilai</h2>
-    <form method="GET" action="/teacher/grades" class="grid lg:grid-cols-6 gap-3">
+    <form method="GET" action="/teacher/grades" id="gradesFilterForm" class="grid lg:grid-cols-6 gap-3">
+      <!-- Hidden limit — otomatis 999 jika kelas dipilih -->
+      <input type="hidden" name="limit" id="autoLimit" value="<%= filters.class_id ? 999 : (pagination.limit || 10) %>">
+
       <div>
         <label class="text-sm text-indigo-700 font-medium">Ujian</label>
-        <select name="exam_id" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <select name="exam_id" onchange="submitGradesFilter()" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
           <option value="">Semua</option>
           <% exams.forEach(e => { %>
             <option value="<%= e.id %>" <%= String(filters.exam_id||'')===String(e.id) ? 'selected' : '' %>><%= e.title %></option>
@@ -22,8 +25,8 @@
       </div>
 
       <div>
-        <label class="text-sm text-indigo-700 font-medium">Kelas</label>
-        <select name="class_id" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <label class="text-sm text-indigo-700 font-medium">Kelas <span class="text-xs text-indigo-400">(pilih = tampil semua)</span></label>
+        <select name="class_id" id="classSelect" onchange="onClassChange(this)" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
           <option value="">Semua</option>
           <% classes.forEach(c => { %>
             <option value="<%= c.id %>" <%= String(filters.class_id||'')===String(c.id) ? 'selected' : '' %>><%= c.name %></option>
@@ -33,7 +36,7 @@
 
       <div>
         <label class="text-sm text-indigo-700 font-medium">Status</label>
-        <select name="status" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <select name="status" onchange="submitGradesFilter()" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
           <option value="">Semua Status</option>
           <option value="SUBMITTED" <%= filters.status === 'SUBMITTED' ? 'selected' : '' %>>Selesai</option>
           <option value="IN_PROGRESS" <%= filters.status === 'IN_PROGRESS' ? 'selected' : '' %>>Sedang Dikerjakan</option>
@@ -43,7 +46,7 @@
 
       <div>
         <label class="text-sm text-indigo-700 font-medium">Keterangan</label>
-        <select name="result" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <select name="result" onchange="submitGradesFilter()" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
           <option value="">Semua</option>
           <option value="LULUS" <%= filters.result === 'LULUS' ? 'selected' : '' %>>Lulus</option>
           <option value="TIDAK_LULUS" <%= filters.result === 'TIDAK_LULUS' ? 'selected' : '' %>>Tidak Lulus</option>
@@ -52,17 +55,8 @@
 
       <div>
         <label class="text-sm text-indigo-700 font-medium">Cari nama/username</label>
-        <input name="q" value="<%= filters.q || '' %>" placeholder="contoh: Budi" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-      </div>
-
-      <div>
-        <label class="text-sm text-indigo-700 font-medium">Per halaman</label>
-        <select name="limit" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-          <option value="10" <%= pagination.limit == 10 ? 'selected' : '' %>>10 per halaman</option>
-          <option value="20" <%= pagination.limit == 20 ? 'selected' : '' %>>20 per halaman</option>
-          <option value="50" <%= pagination.limit == 50 ? 'selected' : '' %>>50 per halaman</option>
-          <option value="100" <%= pagination.limit == 100 ? 'selected' : '' %>>100 per halaman</option>
-        </select>
+        <input name="q" value="<%= filters.q || '' %>" placeholder="contoh: Budi"
+          class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
 
       <div class="lg:col-span-6 flex items-end gap-2">
@@ -70,6 +64,17 @@
         <a href="/teacher/grades" class="px-4 py-2 rounded-xl border border-indigo-300 bg-white hover:bg-indigo-50 text-indigo-800 font-medium text-sm transition-colors">Reset</a>
       </div>
     </form>
+
+    <script>
+    function onClassChange(sel) {
+      // Set limit 999 jika kelas dipilih, 10 jika tidak
+      document.getElementById('autoLimit').value = sel.value ? 999 : 10;
+      document.getElementById('gradesFilterForm').submit();
+    }
+    function submitGradesFilter() {
+      document.getElementById('gradesFilterForm').submit();
+    }
+    </script>
   </div>
 
   <!-- Card Reset Hasil (hanya muncul jika ada filter exam_id) -->
