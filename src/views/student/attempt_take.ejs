@@ -751,11 +751,21 @@
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) reportViolation('Pindah Tab/Aplikasi', 'visibilitychange');
   });
-  window.addEventListener('blur', () => reportViolation('Pindah Tab/Aplikasi', 'blur'));
+
+  // blur di HP sering terpicu saat keyboard virtual muncul/hilang — tidak laporkan
+  const isMobileDevice = navigator.maxTouchPoints > 0 || /Android|iPhone|iPad/i.test(navigator.userAgent);
+  if (!isMobileDevice) {
+    window.addEventListener('blur', () => reportViolation('Pindah Tab/Aplikasi', 'blur'));
+  }
 
   document.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    reportViolation('Klik Kanan', 'contextmenu');
+    // Di HP/mobile, contextmenu bisa muncul dari long press (bukan kecurangan)
+    // Hanya laporkan di desktop (bukan touchscreen)
+    const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (!isMobile) {
+      reportViolation('Klik Kanan', 'contextmenu');
+    }
   });
   ['copy','cut','paste'].forEach(ev => {
     document.addEventListener(ev, (e) => {
