@@ -2400,50 +2400,37 @@ router.get('/grades', async (req, res) => {
   const offset = (page - 1) * limit;
 
   const [exams] = await pool.query(
-    `SELECT id, title FROM exams WHERE teacher_id=:tid ORDER BY id DESC;`,
-    { tid: user.id }
+    `SELECT id, title FROM exams WHERE teacher_id=$1 ORDER BY id DESC`,
+    [user.id]
   );
-  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC`);
 
-  const where = ['e.teacher_id=:tid'];
-  const params = { tid: user.id };
+  const where = ['e.teacher_id=$1'];
+  const params = [user.id];
 
-  if (exam_id) {
-    where.push('e.id=:exam_id');
-    params.exam_id = exam_id;
-  }
-  if (class_id) {
-    where.push('u.class_id=:class_id');
-    params.class_id = class_id;
-  }
-  if (status) {
-    where.push('a.status=:status');
-    params.status = status;
-  }
-  if (result && result === 'LULUS') {
-    where.push('a.status="SUBMITTED" AND a.score >= e.pass_score');
-  }
-  if (result && result === 'TIDAK_LULUS') {
-    where.push('a.status="SUBMITTED" AND a.score < e.pass_score');
-  }
-  if (q) {
-    where.push('(u.full_name LIKE :q OR u.username LIKE :q)');
-    params.q = '%' + q + '%';
-  }
+  if (exam_id)  { params.push(exam_id);  where.push(`e.id=$${params.length}`); }
+  if (class_id) { params.push(class_id); where.push(`u.class_id=$${params.length}`); }
+  if (status)   { params.push(status);   where.push(`a.status=$${params.length}`); }
+  if (result === 'LULUS')       where.push(`a.status='SUBMITTED' AND a.score >= e.pass_score`);
+  if (result === 'TIDAK_LULUS') where.push(`a.status='SUBMITTED' AND a.score < e.pass_score`);
+  if (q) { params.push('%' + q + '%'); where.push(`(u.full_name ILIKE $${params.length} OR u.username ILIKE $${params.length})`); }
+
+  const whereClause = where.join(' AND ');
 
   // Count total
-  const [[{ total }]] = await pool.query(
+  const countResult = await pool.query(
     `SELECT COUNT(*) AS total
      FROM attempts a
      JOIN exams e ON e.id=a.exam_id
      JOIN users u ON u.id=a.student_id
      LEFT JOIN classes c ON c.id=u.class_id
-     WHERE ${where.join(' AND ')};`,
+     WHERE ${whereClause}`,
     params
   );
+  const total = countResult[0][0]?.total || 0;
 
   // Get paginated data
-  const [rows] = await pool.query(
+  const rowsResult = await pool.query(
     `SELECT a.id, a.score, a.status, a.started_at, a.finished_at,
             e.id AS exam_id, e.title AS exam_title, e.pass_score,
             u.full_name AS student_name, u.username,
@@ -2452,16 +2439,16 @@ router.get('/grades', async (req, res) => {
      JOIN exams e ON e.id=a.exam_id
      JOIN users u ON u.id=a.student_id
      LEFT JOIN classes c ON c.id=u.class_id
-     WHERE ${where.join(' AND ')}
+     WHERE ${whereClause}
      ORDER BY
        CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END ASC,
        regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
        (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
-       u.full_name ASC,
-       a.id DESC
-     LIMIT :limit OFFSET :offset;`,
-    { ...params, limit, offset }
+       u.full_name ASC, a.id DESC
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    [...params, limit, offset]
   );
+  const rows = rowsResult[0] || [];
 
   const rows2 = rows.map((r) => ({
     ...r,
@@ -2477,8 +2464,8 @@ router.get('/grades', async (req, res) => {
     pagination: {
       page,
       limit,
-      total,
-      totalPages: Math.ceil(total / limit)
+      total: Number(total),
+      totalPages: Math.ceil(Number(total) / limit)
     }
   });
 });
@@ -3735,21 +3722,12 @@ router.get('/grades/download', async (req, res) => {
   const class_id = (req.query.class_id || '').trim();
   const q = (req.query.q || '').trim();
 
-  const where = ['e.teacher_id=:tid'];
-  const params = { tid: user.id };
+  const where = ['e.teacher_id=$1'];
+  const params = [user.id];
 
-  if (exam_id) {
-    where.push('e.id=:exam_id');
-    params.exam_id = exam_id;
-  }
-  if (class_id) {
-    where.push('u.class_id=:class_id');
-    params.class_id = class_id;
-  }
-  if (q) {
-    where.push('(u.full_name LIKE :q OR u.username LIKE :q)');
-    params.q = '%' + q + '%';
-  }
+  if (exam_id)  { params.push(exam_id);  where.push(`e.id=$${params.length}`); }
+  if (class_id) { params.push(class_id); where.push(`u.class_id=$${params.length}`); }
+  if (q) { params.push('%' + q + '%'); where.push(`(u.full_name ILIKE $${params.length} OR u.username ILIKE $${params.length})`); }
 
   try {
     // Get all data (no pagination for export)
