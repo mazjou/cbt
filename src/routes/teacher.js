@@ -2396,7 +2396,9 @@ router.get('/grades', async (req, res) => {
   const result = (req.query.result || '').trim();
   const q = (req.query.q || '').trim();
   const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+  // Jika filter kelas dipilih, tampilkan semua sekaligus (tidak perlu paging)
+  const defaultLimit = class_id ? 999 : 10;
+  const limit = parseInt(req.query.limit) || defaultLimit;
   const offset = (page - 1) * limit;
 
   const [exams] = await pool.query(
