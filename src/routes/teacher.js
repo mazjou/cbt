@@ -2453,7 +2453,12 @@ router.get('/grades', async (req, res) => {
      JOIN users u ON u.id=a.student_id
      LEFT JOIN classes c ON c.id=u.class_id
      WHERE ${where.join(' AND ')}
-     ORDER BY a.id DESC
+     ORDER BY
+       CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END ASC,
+       regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+       (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+       u.full_name ASC,
+       a.id DESC
      LIMIT :limit OFFSET :offset;`,
     { ...params, limit, offset }
   );
@@ -3758,7 +3763,11 @@ router.get('/grades/download', async (req, res) => {
        JOIN users u ON u.id=a.student_id
        LEFT JOIN classes c ON c.id=u.class_id
        WHERE ${where.join(' AND ')}
-       ORDER BY c.name ASC, u.full_name ASC, a.id DESC;`,
+       ORDER BY
+         CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END ASC,
+         regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+         (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+         u.full_name ASC, a.id DESC;`,
       params
     );
 
