@@ -2463,7 +2463,7 @@ router.get('/exams', async (req, res) => {
        INNER JOIN exam_classes ec3 ON ec3.class_id = u2.class_id AND ec3.exam_id = e.id
        WHERE u2.role='STUDENT' AND u2.is_active=true
       ) AS total_students,
-      (SELECT COUNT(*) FROM exam_classes ec_s WHERE ec_s.exam_id = e.id AND ec_s.start_at IS NOT NULL) AS exam_class_schedule_count
+      (SELECT COUNT(*) FROM exam_classes ec_s WHERE ec_s.exam_id = e.id) AS exam_class_schedule_count
      FROM exams e
      LEFT JOIN subjects s ON s.id = e.subject_id
      LEFT JOIN users u ON u.id = e.teacher_id
