@@ -275,10 +275,10 @@ function buildImportPreview(rows, filesImages = []) {
     const points = Number(pointsRaw || 1) || 1;
     const correctRaw = String(pickRowValue(row, ['correct', 'kunci', 'answer', 'jawaban_benar'])).trim().toUpperCase();
     const qtypeRaw = String(pickRowValue(row, ['question_type','tipe','type']) || 'MCQ').trim().toUpperCase();
-    const validQtype = ['MCQ','COMPLEX','TRUE_FALSE'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
+    const validQtype = ['MCQ','COMPLEX','TRUE_FALSE','CHECKBOX'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
 
-    // Kunci jawaban: COMPLEX bisa multi (pisah koma)
-    const correctLabels = validQtype === 'COMPLEX'
+    // Kunci jawaban: COMPLEX/CHECKBOX bisa multi (pisah koma)
+    const correctLabels = (validQtype === 'COMPLEX' || validQtype === 'CHECKBOX')
       ? correctRaw.split(',').map(s => s.trim()).filter(s => ['A','B','C','D','E'].includes(s))
       : (correctRaw && ['A','B','C','D','E'].includes(correctRaw) ? [correctRaw] : []);
     const correct = correctLabels[0] || ''; // untuk backward compat
@@ -1180,6 +1180,10 @@ router.post('/exams/:id/questions', upload.any(), async (req, res) => {
     req.flash('error', 'COMPLEX: minimal opsi A-D wajib diisi.');
     return res.redirect(`/teacher/exams/${examId}`);
   }
+  if (qtype === 'CHECKBOX' && (!a || !b || !c || !d)) {
+    req.flash('error', 'CHECKBOX: minimal opsi A-D wajib diisi.');
+    return res.redirect(`/teacher/exams/${examId}`);
+  }
   if (qtype === 'TRUE_FALSE' && (!a || !b)) {
     req.flash('error', 'TRUE_FALSE: opsi A (Benar) dan B (Salah) wajib diisi.');
     return res.redirect(`/teacher/exams/${examId}`);
@@ -1188,9 +1192,9 @@ router.post('/exams/:id/questions', upload.any(), async (req, res) => {
   const [[ok]] = await pool.query(`SELECT id FROM exams WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid);`, { id: examId, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 });
   if (!ok) { req.flash('error', 'Akses ditolak.'); return res.redirect('/teacher/exams'); }
 
-  // Kunci jawaban: untuk COMPLEX bisa array, untuk MCQ/TRUE_FALSE string
+  // Kunci jawaban: untuk COMPLEX/CHECKBOX bisa array, untuk MCQ/TRUE_FALSE string
   let correctLabels = [];
-  if (qtype === 'COMPLEX') {
+  if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
     // correct bisa berupa string 'A,B' atau array ['A','B']
     const rawCorrect = req.body.correct;
     if (Array.isArray(rawCorrect)) correctLabels = rawCorrect.map(s => s.toUpperCase());
@@ -1268,6 +1272,10 @@ router.get('/exams/:id/import/template', async (req, res) => {
         image: '', points: 2, correct: 'A', question_type: 'TRUE_FALSE',
         A: 'Benar', B: 'Salah', C: '', D: '', E: '',
         image_a: '', image_b: '', image_c: '', image_d: '', image_e: '' },
+      { question_text: 'Contoh CHECKBOX: Manakah yang termasuk bilangan prima?',
+        image: '', points: 4, correct: 'A,C,D', question_type: 'CHECKBOX',
+        A: '2', B: '4', C: '5', D: '7', E: '9',
+        image_a: '', image_b: '', image_c: '', image_d: '', image_e: '' },
     ];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(contoh, {
@@ -1280,8 +1288,8 @@ router.get('/exams/:id/import/template', async (req, res) => {
       ['question_text','Teks pertanyaan','Ya','Manakah yang termasuk bilangan prima?'],
       ['image','Nama file gambar soal','Tidak','gambar1.jpg'],
       ['points','Poin soal (default 1)','Tidak','1'],
-      ['correct','Kunci: MCQ=A, COMPLEX=A,C,D (pisah koma), TRUE_FALSE=A/B','Ya','A atau A,C,D'],
-      ['question_type','MCQ / COMPLEX / TRUE_FALSE (default MCQ)','Tidak','COMPLEX'],
+      ['correct','Kunci: MCQ=A, COMPLEX=A,C,D (pisah koma), TRUE_FALSE=A/B, CHECKBOX=A,C,D (pisah koma)','Ya','A atau A,C,D'],
+      ['question_type','MCQ / COMPLEX / TRUE_FALSE / CHECKBOX (default MCQ)','Tidak','CHECKBOX'],
       ['A','Teks opsi A','Ya','Jakarta'],
       ['B','Teks opsi B','Ya','Surabaya'],
       ['C','Teks opsi C','Ya (tidak wajib TRUE_FALSE)','Bandung'],
@@ -1291,8 +1299,9 @@ router.get('/exams/:id/import/template', async (req, res) => {
       ['','','',''],
       ['--- TIPE SOAL ---','','',''],
       ['MCQ','Pilihan ganda biasa, 1 jawaban benar','','correct: A'],
-      ['COMPLEX','Multi-jawaban (TKA), poin parsial','','correct: A,C,D'],
+      ['COMPLEX','Multi-jawaban (TKA), poin proporsional tanpa penalti','','correct: A,C,D'],
       ['TRUE_FALSE','Benar/Salah, A=Benar B=Salah','','correct: A'],
+      ['CHECKBOX','Multi-jawaban, poin proporsional tanpa penalti. Skor = floor(benar_dipilih/total_benar × poin)','','correct: A,C,D'],
     ];
     const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
     wsPanduan['!cols'] = [{wch:18},{wch:55},{wch:8},{wch:25}];
@@ -2115,7 +2124,7 @@ router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { na
 
   // Kunci jawaban parsing
   let correctLabels = [];
-  if (qtype === 'COMPLEX') {
+  if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
     const rawCorrect = req.body.correct;
     if (Array.isArray(rawCorrect)) correctLabels = rawCorrect.map(s => s.toUpperCase());
     else if (rawCorrect) correctLabels = String(rawCorrect).split(',').map(s => s.trim().toUpperCase());

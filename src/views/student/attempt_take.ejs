@@ -146,6 +146,12 @@
               <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">Kompleks TKA</span>
             </div>
             <p class="text-xs text-slate-500 mb-2">Poin parsial — semakin banyak jawaban benar yang dipilih, semakin tinggi poin.</p>
+          <% } else if (q.question_type === 'CHECKBOX') { %>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-sm font-bold <%= color.text %>">Pilih Jawaban (boleh lebih dari satu):</span>
+              <span class="px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">Checkbox</span>
+            </div>
+            <p class="text-xs text-slate-500 mb-2">Poin proporsional tanpa penalti — setiap jawaban benar yang dipilih menambah poin.</p>
           <% } else if (q.question_type === 'TRUE_FALSE') { %>
             <div class="flex items-center gap-2 mb-2">
               <span class="text-sm font-bold <%= color.text %>">Tentukan Benar atau Salah:</span>
@@ -158,7 +164,9 @@
           <% q.options.forEach((o) => {
             const isChosen = q.question_type === 'COMPLEX'
               ? (q.chosen_option_ids && q.chosen_option_ids.includes(o.id))
-              : (q.chosen_option_id === o.id);
+              : (q.question_type === 'CHECKBOX'
+                ? (q.chosen_option_ids && q.chosen_option_ids.includes(o.id))
+                : (q.chosen_option_id === o.id));
           %>
             <label class="block rounded-xl border-2 <%= isChosen ? color.border + ' bg-white shadow-lg' : 'border-slate-200 bg-white/80' %> hover:shadow-lg px-5 py-4 cursor-pointer transition-all transform hover:scale-[1.02]">
               <div class="flex gap-4">
@@ -169,6 +177,14 @@
                     data-question="<%= q.id %>"
                     data-type="COMPLEX"
                     class="mt-1 w-5 h-5 accent-purple-600 complex-checkbox"
+                    <%= isChosen ? 'checked' : '' %> />
+                <% } else if (q.question_type === 'CHECKBOX') { %>
+                  <input type="checkbox"
+                    name="ans_checkbox_<%= q.id %>"
+                    value="<%= o.id %>"
+                    data-question="<%= q.id %>"
+                    data-type="CHECKBOX"
+                    class="mt-1 w-5 h-5 accent-orange-600 checkbox-answer"
                     <%= isChosen ? 'checked' : '' %> />
                 <% } else { %>
                   <input type="radio"
@@ -222,6 +238,21 @@
         question_id: Number(qid),
         option_ids: ids,
         type: 'COMPLEX',
+        answered_at: new Date().toISOString()
+      });
+    });
+    // CHECKBOX — group checkbox per question (separate class)
+    const checkboxGroups = {};
+    document.querySelectorAll('input.checkbox-answer').forEach(cb => {
+      const qid = cb.getAttribute('data-question');
+      if (!checkboxGroups[qid]) checkboxGroups[qid] = [];
+      if (cb.checked) checkboxGroups[qid].push(Number(cb.value));
+    });
+    Object.entries(checkboxGroups).forEach(([qid, ids]) => {
+      answers.push({
+        question_id: Number(qid),
+        option_ids: ids,
+        type: 'CHECKBOX',
         answered_at: new Date().toISOString()
       });
     });
@@ -399,7 +430,7 @@
   window.addEventListener('scroll', updateActiveNav);
   updateActiveNav();
 
-  // Hitung answered (MCQ + COMPLEX)
+  // Hitung answered (MCQ + COMPLEX + CHECKBOX)
   function updateAnswered() {
     let answered = document.querySelectorAll('input[type=radio]:checked').length;
 
@@ -410,6 +441,16 @@
     );
     complexQids.forEach(qid => {
       const anyChecked = document.querySelector(`input.complex-checkbox[data-question="${qid}"]:checked`);
+      if (anyChecked) answered++;
+    });
+
+    // Tambah soal CHECKBOX yang sudah dipilih minimal 1
+    const checkboxQids = new Set(
+      Array.from(document.querySelectorAll('input.checkbox-answer'))
+        .map(cb => cb.getAttribute('data-question'))
+    );
+    checkboxQids.forEach(qid => {
+      const anyChecked = document.querySelector(`input.checkbox-answer[data-question="${qid}"]:checked`);
       if (anyChecked) answered++;
     });
 
@@ -430,6 +471,18 @@
     complexQids.forEach(qid => {
       const anyChecked = document.querySelector(`input.complex-checkbox[data-question="${qid}"]:checked`);
       const section = document.querySelector(`input.complex-checkbox[data-question="${qid}"]`)?.closest('section');
+      if (!section) return;
+      const qNo = section.id.replace('q-', '');
+      const navBtn = document.querySelector(`[data-jump="q-${qNo}"]`);
+      if (navBtn && anyChecked) {
+        navBtn.classList.remove('border-slate-300', 'bg-white', 'text-slate-600');
+        navBtn.classList.add('border-emerald-400', 'bg-gradient-to-br', 'from-emerald-100', 'to-teal-100', 'text-emerald-700', 'shadow-md');
+      }
+    });
+    // Update nav button — CHECKBOX
+    checkboxQids.forEach(qid => {
+      const anyChecked = document.querySelector(`input.checkbox-answer[data-question="${qid}"]:checked`);
+      const section = document.querySelector(`input.checkbox-answer[data-question="${qid}"]`)?.closest('section');
       if (!section) return;
       const qNo = section.id.replace('q-', '');
       const navBtn = document.querySelector(`[data-jump="q-${qNo}"]`);
@@ -480,6 +533,29 @@
         });
       } catch (e) {
         console.error('Autosave COMPLEX failed:', e);
+        toast('⚠️ Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
+      }
+    });
+  });
+
+  // Autosave jawaban CHECKBOX
+  document.querySelectorAll('input.checkbox-answer').forEach(cb => {
+    cb.addEventListener('change', async () => {
+      const qid = cb.getAttribute('data-question');
+      const selectedIds = Array.from(
+        document.querySelectorAll(`input.checkbox-answer[data-question="${qid}"]:checked`)
+      ).map(el => Number(el.value));
+
+      updateAnswered();
+      saveBackupToLocalStorage();
+      try {
+        await fetch('/student/attempts/<%= attempt.id %>/answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question_id: Number(qid), option_ids: selectedIds })
+        });
+      } catch (e) {
+        console.error('Autosave CHECKBOX failed:', e);
         toast('⚠️ Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
       }
     });

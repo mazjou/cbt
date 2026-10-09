@@ -9,6 +9,8 @@
 </div>
 
 <form action="/teacher/question-bank/<%= question.id %>?_method=PUT" method="POST" enctype="multipart/form-data" class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 space-y-4" id="bankQuestionForm">
+  <!-- Hidden question_type so PUT handler receives it -->
+  <input type="hidden" name="question_type" value="<%= question.question_type || 'MCQ' %>" />
   <div class="grid md:grid-cols-2 gap-4">
     <div>
       <label class="text-sm text-indigo-700 font-medium">Mata Pelajaran *</label>
@@ -79,7 +81,7 @@
       <input type="number" name="points" value="<%= question.points %>" min="1" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
     </div>
     
-    <div>
+    <div id="edit_correct_single_wrap">
       <label class="text-sm text-indigo-700 font-medium">Jawaban Benar *</label>
       <select name="correct" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
         <option <%= correct_label === 'A' ? 'selected' : '' %>>A</option>
@@ -89,6 +91,21 @@
         <option <%= correct_label === 'E' ? 'selected' : '' %>>E</option>
       </select>
     </div>
+  </div>
+
+  <!-- COMPLEX/CHECKBOX: multi-correct checkboxes -->
+  <div id="edit_correct_complex_wrap" class="hidden">
+    <label class="text-sm text-purple-700 font-semibold mb-2 block">Pilih semua jawaban yang BENAR:</label>
+    <div class="flex flex-wrap gap-3">
+      <% ['A','B','C','D','E'].forEach(lbl => { %>
+      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-purple-200 bg-white cursor-pointer hover:bg-purple-50 transition-all">
+        <input type="checkbox" name="correct" value="<%= lbl %>" class="accent-purple-600 w-4 h-4"
+          <%= (typeof correct_labels !== 'undefined' && correct_labels.includes(lbl)) ? 'checked' : '' %> />
+        <span class="text-sm font-semibold text-purple-800">Opsi <%= lbl %></span>
+      </label>
+      <% }) %>
+    </div>
+    <p class="text-xs text-purple-500 mt-1">Poin proporsional tanpa penalti</p>
   </div>
   
   <div>
@@ -215,3 +232,19 @@
   [contenteditable] img { cursor: pointer; transition: transform 0.2s; }
   [contenteditable] img:hover { transform: scale(1.02); }
 </style>
+
+<script>
+  // Show multi-correct panel for COMPLEX/CHECKBOX questions
+  (function() {
+    const qtype = '<%= question.question_type || "MCQ" %>';
+    if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+      const singleWrap = document.getElementById('edit_correct_single_wrap');
+      const complexWrap = document.getElementById('edit_correct_complex_wrap');
+      if (singleWrap) singleWrap.classList.add('hidden');
+      if (complexWrap) complexWrap.classList.remove('hidden');
+      // Disable the single select so it doesn't interfere with form submission
+      const singleSelect = singleWrap ? singleWrap.querySelector('select') : null;
+      if (singleSelect) singleSelect.disabled = true;
+    }
+  })();
+</script>

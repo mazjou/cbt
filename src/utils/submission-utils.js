@@ -109,8 +109,8 @@ async function finalizeAttemptWithBackup(attemptId, studentId, examId) {
         const qtype = aa.question_type || 'MCQ';
         const correctIds = correctOptionsMap[aa.question_id] || [];
 
-        if (qtype === 'COMPLEX') {
-          // Poin parsial: benar_dipilih / total_benar * poin_soal
+        if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+          // Poin parsial proporsional tanpa penalti: floor(benar_dipilih / total_benar * poin)
           let selectedIds = [];
           try {
             selectedIds = aa.selected_option_ids
@@ -122,13 +122,11 @@ async function finalizeAttemptWithBackup(attemptId, studentId, examId) {
 
           const totalCorrect = correctIds.length;
           if (totalCorrect > 0 && selectedIds.length > 0) {
-            // Hitung benar yang dipilih (intersection)
+            // Hitung benar yang dipilih (intersection) — tanpa penalti
             const correctSelected = selectedIds.filter(id => correctIds.includes(id)).length;
-            // Penalti: salah yang dipilih (pilih opsi yang tidak benar)
             const wrongSelected = selectedIds.filter(id => !correctIds.includes(id)).length;
-            // Poin bersih: max(0, (correctSelected - wrongSelected) / totalCorrect * poin)
-            const netCorrect = Math.max(0, correctSelected - wrongSelected);
-            const partial = Math.floor((netCorrect / totalCorrect) * qpoints);
+            // Formula proporsional tanpa penalti
+            const partial = Math.floor((correctSelected / totalCorrect) * qpoints);
             score_points += partial;
 
             // Update partial_points di DB untuk referensi

@@ -536,7 +536,7 @@ router.post('/attempts/:id/answer', async (req, res) => {
     );
     const qtype = q?.question_type || 'MCQ';
 
-    if (qtype === 'COMPLEX') {
+    if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
       // Multi-jawaban: simpan array option IDs
       const selectedIds = Array.isArray(option_ids) ? option_ids.map(Number).filter(Boolean)
         : (option_ids ? [Number(option_ids)].filter(Boolean) : []);

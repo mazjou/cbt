@@ -29,7 +29,7 @@
       <input type="number" name="points" value="<%= question.points %>" min="1"
         class="w-full rounded-xl bg-white border-2 border-amber-200 px-4 py-2.5 focus:outline-none focus:border-amber-400 text-slate-800 font-semibold transition-all" />
     </div>
-    <div class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-4 shadow-sm">
+    <div id="correct_single_wrap" class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-4 shadow-sm">
       <label class="flex items-center gap-2 text-sm font-semibold text-emerald-700 mb-2">Jawaban Benar</label>
       <select name="correct" required
         class="w-full rounded-xl bg-white border-2 border-emerald-200 px-4 py-2.5 focus:outline-none focus:border-emerald-400 text-slate-800 font-semibold transition-all">
@@ -39,6 +39,24 @@
       </select>
     </div>
   </div>
+
+  <!-- COMPLEX/CHECKBOX: multi-correct panel -->
+  <div id="correct_complex_wrap" class="hidden rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-fuchsia-50 p-4 shadow-sm">
+    <label class="text-sm font-semibold text-purple-700 mb-2 block">Pilih semua jawaban yang BENAR:</label>
+    <div class="flex flex-wrap gap-3">
+      <% ['A','B','C','D','E'].forEach(lbl => { %>
+      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-purple-200 bg-white cursor-pointer hover:bg-purple-50 transition-all">
+        <input type="checkbox" name="correct" value="<%= lbl %>" class="accent-purple-600 w-4 h-4"
+          <%= (typeof correct_labels !== 'undefined' && correct_labels.includes(lbl)) ? 'checked' : '' %> />
+        <span class="text-sm font-semibold text-purple-800">Opsi <%= lbl %></span>
+      </label>
+      <% }) %>
+    </div>
+    <p class="text-xs text-purple-500 mt-1">Poin proporsional tanpa penalti</p>
+  </div>
+
+  <!-- Hidden question_type to preserve through edit -->
+  <input type="hidden" name="question_type" value="<%= question.question_type %>">
 
   <!-- Gambar Soal -->
   <div class="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50 p-5 shadow-sm">
@@ -233,3 +251,19 @@
   [contenteditable] img { cursor: pointer; transition: transform 0.2s; border-radius: 8px; }
   [contenteditable] img:hover { transform: scale(1.02); }
 </style>
+
+<script>
+  // Show multi-correct panel for COMPLEX/CHECKBOX questions
+  (function() {
+    const qtype = '<%= question.question_type || "MCQ" %>';
+    if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+      const singleWrap = document.getElementById('correct_single_wrap');
+      const complexWrap = document.getElementById('correct_complex_wrap');
+      if (singleWrap) singleWrap.classList.add('hidden');
+      if (complexWrap) complexWrap.classList.remove('hidden');
+      // Disable single select so it doesn't submit as 'correct'
+      const singleSelect = singleWrap ? singleWrap.querySelector('select') : null;
+      if (singleSelect) { singleSelect.disabled = true; singleSelect.removeAttribute('required'); }
+    }
+  })();
+</script>

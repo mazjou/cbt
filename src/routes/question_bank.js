@@ -180,6 +180,11 @@ router.get('/import/template', async (req, res) => {
         image: '', points: 2, correct: 'A', question_type: 'TRUE_FALSE',
         A: 'Benar', B: 'Salah', C: '', D: '', E: '',
         difficulty: 'EASY', subject: firstSubject, chapter: 'Bab 1', tags: 'IPA,suhu' },
+      // Contoh 4: CHECKBOX (multi-jawaban tanpa penalti)
+      { question_text: 'Contoh CHECKBOX: Manakah yang termasuk bilangan prima?',
+        image: '', points: 4, correct: 'A,C,D', question_type: 'CHECKBOX',
+        A: '2', B: '4', C: '5', D: '7', E: '9',
+        difficulty: 'MEDIUM', subject: firstSubject, chapter: 'Bab 2', tags: 'matematika,prima' },
     ];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(contoh, {
@@ -193,7 +198,7 @@ router.get('/import/template', async (req, res) => {
       ['image','Nama file gambar soal (opsional, upload terpisah)','Tidak','gambar1.jpg'],
       ['points','Poin soal (angka, default 1)','Tidak','1'],
       ['correct','Kunci jawaban. MCQ: huruf tunggal. COMPLEX: pisah koma. TRUE_FALSE: A atau B','Ya','A atau A,C,D'],
-      ['question_type','Tipe soal: MCQ / COMPLEX / TRUE_FALSE (default: MCQ)','Tidak','COMPLEX'],
+      ['question_type','Tipe soal: MCQ / COMPLEX / TRUE_FALSE / CHECKBOX (default: MCQ)','Tidak','COMPLEX'],
       ['A','Teks opsi A','Ya (kecuali TRUE_FALSE sudah otomatis)','Jakarta'],
       ['B','Teks opsi B','Ya','Surabaya'],
       ['C','Teks opsi C','Ya (tidak wajib untuk TRUE_FALSE)','Bandung'],
@@ -206,10 +211,11 @@ router.get('/import/template', async (req, res) => {
       ['','','',''],
       ['--- PANDUAN TIPE SOAL ---','','',''],
       ['MCQ','Pilihan ganda biasa. correct = 1 huruf (A/B/C/D/E)','','correct: A'],
-      ['COMPLEX','Jawaban benar lebih dari satu. correct = huruf dipisah koma','','correct: A,C,D'],
+      ['COMPLEX','Jawaban benar lebih dari satu. Poin proporsional tanpa penalti. correct = huruf dipisah koma','','correct: A,C,D'],
       ['TRUE_FALSE','Pernyataan benar/salah. Opsi A=Benar, B=Salah. correct = A atau B','','correct: A'],
-      ['--- POIN PARSIAL COMPLEX ---','','',''],
-      ['','Rumus: floor((benar_dipilih - salah_dipilih) / total_benar × poin)','',''],
+      ['CHECKBOX','Multi-jawaban tanpa penalti. Skor = floor(benar_dipilih / total_benar × poin)','','correct: A,C,D'],
+      ['--- POIN PARSIAL COMPLEX/CHECKBOX ---','','',''],
+      ['','Rumus: floor(benar_dipilih / total_benar × poin). Tanpa penalti untuk pilihan salah.','',''],
       ['','Contoh: poin=4, benar ada 3 (A,C,D), siswa pilih A,C → dapat 2/3 × 4 = 2 poin','',''],
     ];
     const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
@@ -340,7 +346,7 @@ router.post('/import/preview',
         const tags = String(pickVal(row, ['tags','tag']) || '').trim();
         const question_image = resolveImg(pickVal(row, ['image','gambar','image_url','img']));
         const qtypeRaw = String(pickVal(row, ['question_type','tipe','type']) || 'MCQ').trim().toUpperCase();
-        const validQtype = ['MCQ','COMPLEX','TRUE_FALSE'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
+        const validQtype = ['MCQ','COMPLEX','TRUE_FALSE','CHECKBOX'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
         if (!question_text) reasons.push('Kolom question_text kosong');
         // Validasi opsi sesuai tipe
         if (validQtype === 'TRUE_FALSE') {
@@ -349,7 +355,7 @@ router.post('/import/preview',
           if (!A || !B || !C || !D) reasons.push('Opsi A-D wajib terisi');
         }
         // Validasi kunci jawaban sesuai tipe
-        const correctLabels = validQtype === 'COMPLEX'
+        const correctLabels = (validQtype === 'COMPLEX' || validQtype === 'CHECKBOX')
           ? String(correct).split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
           : [String(correct).trim().toUpperCase()];
         if (correctLabels.length === 0 || !correctLabels.every(l => ['A','B','C','D','E'].includes(l))) {
@@ -453,7 +459,7 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', m
 
   // Kunci jawaban
   let correctLabels = [];
-  if (qtype === 'COMPLEX') {
+  if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
     const rawCorrect = req.body.correct;
     if (Array.isArray(rawCorrect)) correctLabels = rawCorrect.map(s => s.toUpperCase());
     else if (rawCorrect) correctLabels = String(rawCorrect).split(',').map(s => s.trim().toUpperCase());
@@ -538,9 +544,10 @@ router.get('/:id/edit', async (req, res) => {
     const [options] = await pool.query('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [req.params.id]);
     const byLabel = {};
     let correct = 'A';
-    for (const o of options) { byLabel[o.option_label] = o.option_text; if (o.is_correct) correct = o.option_label; }
+    const correctLabels = [];
+    for (const o of options) { byLabel[o.option_label] = o.option_text; if (o.is_correct) { correct = o.option_label; correctLabels.push(o.option_label); } }
     const [subjects] = await pool.query('SELECT * FROM subjects ORDER BY name ASC');
-    res.render('teacher/question_bank_edit', { title: 'Edit Bank Soal', question, options: byLabel, correct_label: correct, subjects });
+    res.render('teacher/question_bank_edit', { title: 'Edit Bank Soal', question, options: byLabel, correct_label: correct, correct_labels: correctLabels, subjects });
   } catch (error) {
     console.error('Error:', error);
     req.flash('error', 'Gagal memuat form edit');
@@ -552,13 +559,14 @@ router.get('/:id/edit', async (req, res) => {
 router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
-  const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, remove_image, remove_pdf } = req.body;
-  if (!subject_id || !question_text || !a || !b || !c || !d || !correct) {
+  const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, remove_image, remove_pdf, question_type } = req.body;
+  if (!subject_id || !question_text || !a || !b || !c || !d) {
     req.flash('error', 'Semua field wajib diisi');
     return res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
   }
   const existing = firstRow(await pool.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [req.params.id, user.id]));
   if (!existing) { req.flash('error', 'Akses ditolak'); return res.redirect('/teacher/question-bank'); }
+  const qtype = question_type || existing.question_type || 'MCQ';
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -574,12 +582,20 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
       'UPDATE question_bank SET subject_id=$1, chapter=$2, question_text=$3, question_image=$4, question_pdf=$5, points=$6, difficulty=$7, tags=$8, updated_at=NOW() WHERE id=$9',
       [subject_id, chapter || null, question_text, imageToSave, pdfToSave, Number(points || 1), difficulty || 'MEDIUM', tags || null, req.params.id]
     );
-    const corr = String(correct).toUpperCase();
+    // Tentukan correctLabels untuk COMPLEX/CHECKBOX (multi) atau MCQ/TRUE_FALSE (single)
+    let corrLabels = [];
+    if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+      const rawCorrect = req.body.correct;
+      if (Array.isArray(rawCorrect)) corrLabels = rawCorrect.map(s => s.toUpperCase());
+      else if (rawCorrect) corrLabels = String(rawCorrect).split(',').map(s => s.trim().toUpperCase());
+    } else {
+      corrLabels = correct ? [String(correct).toUpperCase()] : ['A'];
+    }
     for (const [lbl, txt] of [['A',a],['B',b],['C',c],['D',d],['E',e||'']]) {
       if (!txt) continue;
       await conn.query(
         'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4) ON CONFLICT (question_bank_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, is_correct=EXCLUDED.is_correct',
-        [req.params.id, lbl, txt, lbl === corr]
+        [req.params.id, lbl, txt, corrLabels.includes(lbl)]
       );
     }
     await conn.commit();
