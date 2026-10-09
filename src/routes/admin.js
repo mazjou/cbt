@@ -2635,10 +2635,17 @@ router.post('/exams', async (req, res) => {
           return res.redirect('/admin/exams/new');
         }
         const cd = classDuration[classId] ? Number(classDuration[classId]) : null;
-        await pool.query(
-          `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes) VALUES ($1,$2,$3,$4,$5)`,
-          [examId, classId, cs, ce, cd]
-        );
+        try {
+          await pool.query(
+            `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes) VALUES ($1,$2,$3,$4,$5)`,
+            [examId, classId, cs, ce, cd]
+          );
+        } catch (e) {
+          await pool.query(
+            `INSERT INTO exam_classes (exam_id, class_id) VALUES ($1,$2)`,
+            [examId, classId]
+          );
+        }
       }
     }
 
@@ -2760,10 +2767,19 @@ router.put('/exams/:id', async (req, res) => {
           return res.redirect(`/admin/exams/${examId}/edit`);
         }
         const cd = classDuration[classId] ? Number(classDuration[classId]) : null;
-        await pool.query(
-          `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes) VALUES ($1,$2,$3,$4,$5)`,
-          [examId, classId, cs, ce, cd]
-        );
+        // Coba INSERT dengan kolom schedule; fallback ke tanpa kolom schedule jika belum ada
+        try {
+          await pool.query(
+            `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes) VALUES ($1,$2,$3,$4,$5)`,
+            [examId, classId, cs, ce, cd]
+          );
+        } catch (e) {
+          // Kolom schedule belum ada di DB (migrasi belum jalan) — insert tanpa schedule
+          await pool.query(
+            `INSERT INTO exam_classes (exam_id, class_id) VALUES ($1,$2)`,
+            [examId, classId]
+          );
+        }
       }
     }
 

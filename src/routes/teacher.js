@@ -757,11 +757,18 @@ router.post('/exams', async (req, res) => {
           return res.redirect('/teacher/exams');
         }
         const cd = classDuration[classId] ? Number(classDuration[classId]) : null;
-        await pool.query(
-          `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
-           VALUES (:exam_id, :class_id, :start_at, :end_at, :duration_minutes);`,
-          { exam_id: examId, class_id: classId, start_at: cs, end_at: ce, duration_minutes: cd }
-        );
+        try {
+          await pool.query(
+            `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
+             VALUES (:exam_id, :class_id, :start_at, :end_at, :duration_minutes);`,
+            { exam_id: examId, class_id: classId, start_at: cs, end_at: ce, duration_minutes: cd }
+          );
+        } catch (insertErr) {
+          await pool.query(
+            `INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`,
+            { exam_id: examId, class_id: classId }
+          );
+        }
       }
     }
     req.flash('success', 'Ujian dibuat. Silakan tambahkan soal.');
@@ -928,11 +935,18 @@ router.put('/exams/:id', async (req, res) => {
           return res.redirect(`/teacher/exams/${examId}/edit`);
         }
         const cd = classDuration[cid] ? Number(classDuration[cid]) : null;
-        await pool.query(
-          `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
-           VALUES (:exam_id, :class_id, :start_at, :end_at, :duration_minutes);`,
-          { exam_id: examId, class_id: cid, start_at: cs, end_at: ce, duration_minutes: cd }
-        );
+        try {
+          await pool.query(
+            `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
+             VALUES (:exam_id, :class_id, :start_at, :end_at, :duration_minutes);`,
+            { exam_id: examId, class_id: cid, start_at: cs, end_at: ce, duration_minutes: cd }
+          );
+        } catch (insertErr) {
+          await pool.query(
+            `INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`,
+            { exam_id: examId, class_id: cid }
+          );
+        }
       }
     }
 
