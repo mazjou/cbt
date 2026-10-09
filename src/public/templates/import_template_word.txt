@@ -71,16 +71,51 @@ KUNCI: C
 NILAI: 1
 
 
+FORMAT CHECKBOX (MULTI JAWABAN, TANPA PENALTI):
+--------------------------------------------------
+Gunakan TIPE: CHECKBOX dan KUNCI: dengan huruf dipisah koma.
+Skor = floor(benar_dipilih / total_benar x poin). Tanpa penalti.
+
+6. Manakah yang termasuk bilangan prima?
+A. 2
+B. 4
+C. 5
+D. 7
+E. 9
+KUNCI: A,C,D
+TIPE: CHECKBOX
+NILAI: 4
+
+
+FORMAT COMPLEX (MULTI JAWABAN, POIN PROPORSIONAL):
+----------------------------------------------------
+Gunakan TIPE: COMPLEX dan KUNCI: dengan huruf dipisah koma.
+Sama seperti CHECKBOX: skor proporsional tanpa penalti.
+
+7. Manakah yang termasuk sistem operasi?
+A. Windows
+B. Python
+C. Linux
+D. Java
+E. macOS
+KUNCI: A,C,E
+TIPE: COMPLEX
+NILAI: 3
+
+
 ===================================================
 ATURAN PENTING:
 ===================================================
 1. Nomor soal diawali angka diikuti titik atau kurung: "1." atau "1)"
 2. Opsi diawali huruf A-E diikuti titik atau kurung: "A." atau "A)"
-3. Kunci jawaban: KUNCI: B (huruf kapital)
+3. Kunci jawaban: KUNCI: B (huruf kapital, 1 jawaban)
 4. Poin soal: NILAI: 2 (opsional, default 1)
 5. Gambar disisipkan langsung di dokumen Word (Insert > Picture)
 6. Gambar soal: letakkan setelah nomor soal, sebelum opsi A
 7. Gambar opsi: letakkan tepat setelah teks opsi tersebut
 8. Opsi boleh hanya berisi gambar (teks kosong)
-9. Setiap soal harus punya opsi A, B, C, D, E dan KUNCI
+9. Untuk MCQ: setiap soal harus punya opsi A, B, C, D, E dan KUNCI
+10. Untuk CHECKBOX/COMPLEX multi-jawaban: KUNCI: A,C,D (huruf dipisah koma)
+11. Tambahkan TIPE: CHECKBOX atau TIPE: COMPLEX untuk soal multi-jawaban
+12. Tipe yang didukung: MCQ (default), COMPLEX, TRUE_FALSE, CHECKBOX
 ===================================================

@@ -1400,6 +1400,8 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
         extra_q_imgs: imgs.slice(1),
         points: 1,
         correct: null,
+        correctLabels: [],
+        question_type: 'MCQ',
         options: { A: '', B: '', C: '', D: '', E: '' },
         option_images: { A: null, B: null, C: null, D: null, E: null }
       };
@@ -1447,9 +1449,19 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
         continue;
       }
 
-      // KUNCI:
-      const mKey = t.match(/^\s*KUNCI\s*[:=]\s*([A-E])\s*$/i);
-      if (mKey) { cur.correct = mKey[1].toUpperCase(); lastLabel = null; continue; }
+      // KUNCI: supports single letter (MCQ) and comma-separated (COMPLEX/CHECKBOX)
+      const mKey = t.match(/^\s*KUNCI\s*[:=]\s*([A-E,\s]+)\s*$/i);
+      if (mKey) {
+        const correctStr = mKey[1].replace(/\s/g, '').toUpperCase();
+        cur.correct = correctStr;
+        cur.correctLabels = correctStr.split(',').filter(Boolean);
+        lastLabel = null;
+        continue;
+      }
+
+      // TIPE:
+      const mType = t.match(/^\s*TIPE\s*[:=]\s*(MCQ|COMPLEX|TRUE_FALSE|CHECKBOX)\s*$/i);
+      if (mType) { cur.question_type = mType[1].toUpperCase(); lastLabel = null; continue; }
 
       // NILAI/POIN:
       const mPts = t.match(/^\s*(NILAI|POIN|POINTS?)\s*[:=]\s*(\d+(?:\.\d+)?)\s*$/i);
@@ -1478,7 +1490,9 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
     parsed.forEach((q, idx) => {
       const reasons = [];
       const qt = String(q.question_text || '').trim();
+      const qtype = String(q.question_type || 'MCQ').toUpperCase();
       const corr = String(q.correct || '').trim().toUpperCase();
+      const correctLabels = q.correctLabels && q.correctLabels.length ? q.correctLabels : (corr ? corr.split(',').filter(Boolean) : []);
       const A = String(q.options.A || '').trim();
       const B = String(q.options.B || '').trim();
       const C = String(q.options.C || '').trim();
@@ -1486,15 +1500,28 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
       const E = String(q.options.E || '').trim();
 
       if (!qt && !q.question_image) reasons.push('Teks soal kosong');
-      if (!A || !B || !C || !D || !E) reasons.push('Opsi A–E wajib terisi (boleh gambar saja jika ada)');
-      if (!['A','B','C','D','E'].includes(corr)) reasons.push('KUNCI harus A/B/C/D/E');
+
+      if (qtype === 'TRUE_FALSE') {
+        if (!A || !B) reasons.push('Opsi A dan B wajib untuk TRUE_FALSE');
+        if (!correctLabels.length || !['A','B'].includes(correctLabels[0])) reasons.push('KUNCI harus A atau B untuk TRUE_FALSE');
+      } else if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+        if (!A || !B) reasons.push('Minimal opsi A dan B wajib untuk COMPLEX/CHECKBOX');
+        if (!correctLabels.length) reasons.push('KUNCI wajib diisi (pisah koma, contoh: A,C,D)');
+        if (!correctLabels.every(l => ['A','B','C','D','E'].includes(l))) reasons.push('KUNCI hanya boleh huruf A-E');
+      } else {
+        // MCQ
+        if (!A || !B || !C || !D || !E) reasons.push('Opsi A–E wajib terisi untuk MCQ (boleh gambar saja jika ada)');
+        if (!correctLabels.length || !['A','B','C','D','E'].includes(correctLabels[0])) reasons.push('KUNCI harus A/B/C/D/E');
+      }
 
       const item = {
         rowNo: idx + 1,
         question_text: qt || '(gambar)',
         question_image: q.question_image,
         points: q.points,
-        correct: corr,
+        correct: correctLabels.join(',') || corr,
+        correctLabels,
+        question_type: qtype,
         options: { A, B, C, D, E },
         option_images: q.option_images
       };

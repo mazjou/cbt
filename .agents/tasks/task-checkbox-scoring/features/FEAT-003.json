@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Update both import templates to include CHECKBOX examples. (1) Excel template for exam import: generated in src/routes/teacher.js GET /exams/:id/import/template — add a CHECKBOX row and update the Panduan sheet. (2) Excel template for question bank import: generated in src/routes/question_bank.js GET /import/template — add a CHECKBOX row and update the Panduan sheet. (3) Word template text file: src/public/templates/import_template_word.txt — add a section explaining CHECKBOX format. FEAT-003 is independent of FEAT-001 and FEAT-002; it only adds template examples.",
+  "status": "completed",
+  "steps": [
+    "STEP 1 — Update the exam import Excel template in src/routes/teacher.js (GET /exams/:id/import/template, around line 1255). In the `contoh` array, add a 4th row after the TRUE_FALSE example: { question_text: 'Contoh CHECKBOX: Manakah yang termasuk bilangan prima?', image: '', points: 4, correct: 'A,C,D', question_type: 'CHECKBOX', A: '2', B: '4', C: '5', D: '7', E: '9', image_a: '', image_b: '', image_c: '', image_d: '', image_e: '' }. In the `panduan` array, update the question_type row to list: 'MCQ / COMPLEX / TRUE_FALSE / CHECKBOX (default MCQ)'. Add two new rows in the panduan table: ['CHECKBOX','Checkbox multi-jawaban tanpa penalti. Skor = benar_dipilih / total_benar × poin','','correct: A,C,D'] and ['','Berbeda dari COMPLEX: tidak ada pengurangan poin untuk jawaban salah','',''].",
+
+    "STEP 2 — Update the question bank import Excel template in src/routes/question_bank.js (GET /import/template, around line 155). In the `contoh` array, add a 4th row after TRUE_FALSE: { question_text: 'Contoh CHECKBOX: Manakah pernyataan yang benar tentang Python?', image: '', points: 3, correct: 'A,B,D', question_type: 'CHECKBOX', A: 'Python adalah bahasa interpreted', B: 'Python mendukung OOP', C: 'Python hanya untuk web', D: 'Python memiliki indentasi wajib', E: '', difficulty: 'MEDIUM', subject: firstSubject, chapter: 'Bab 3', tags: 'python,pemrograman' }. In the panduan array: update question_type row to include CHECKBOX. Add explanation rows: ['CHECKBOX','Multi-jawaban tanpa penalti. Skor = floor(benar_dipilih / total_benar × poin)','','correct: A,B,D'] and remove or update the '--- POIN PARSIAL COMPLEX ---' section to also mention CHECKBOX.",
+
+    "STEP 3 — Update the static Word template file src/public/templates/import_template_word.txt. Add a new section near the end (before 'ATURAN PENTING') titled 'FORMAT CHECKBOX (MULTI JAWABAN TANPA PENALTI):'. Include a sample question numbered to follow the existing examples (number it 6). Use this format:\n6. Manakah yang termasuk bilangan prima?\nA. 2\nB. 4\nC. 5\nD. 7\nE. 9\nKUNCI: A,C,D\nTIPE: CHECKBOX\nNILAI: 4\nAlso add 'TIPE: CHECKBOX' and 'TIPE: COMPLEX' as recognized meta-lines to the ATURAN PENTING section. NOTE: The Word import parser in teacher.js currently does NOT parse TIPE: lines — add parsing support for it in the Word import handler (POST /exams/:id/questions/import-word). Find the regex section around line 1905 and add: `const typeRe = /^\\s*TIPE\\s*[:=]\\s*(MCQ|COMPLEX|TRUE_FALSE|CHECKBOX)\\s*$/i;` and in the parsing loop handle it: `const mType = text.match(typeRe); if (mType) { cur.question_type = mType[1].toUpperCase(); ... }`. Also update the KUNCI regex to support multi-answer: change `keyRe` to `/^\\s*KUNCI\\s*[:=]\\s*([A-E,]+)\\s*$/i` and parse correctLabels as split array for COMPLEX/CHECKBOX. Update the insert query to include question_type and pass correctLabels per option's is_correct."
+  ],
+  "acceptance_criteria": [
+    "Downloading the exam import Excel template produces a file with a CHECKBOX example row.",
+    "Downloading the question bank import Excel template produces a file with a CHECKBOX example row.",
+    "The Word template .txt file contains a CHECKBOX format example with TIPE: CHECKBOX and KUNCI: A,C,D.",
+    "Importing a Word file with TIPE: CHECKBOX and KUNCI: A,C,D correctly creates a CHECKBOX question.",
+    "Server starts without errors."
+  ],
+  "verification": [
+    "Run `npm run dev`, log in as teacher, go to any exam → Import → Download Template → open Excel and verify CHECKBOX row exists.",
+    "Go to Question Bank → Import → Download Template → open Excel and verify CHECKBOX row exists.",
+    "Open src/public/templates/import_template_word.txt and verify the CHECKBOX section is present.",
+    "Create a .docx file using the template format with TIPE: CHECKBOX and KUNCI: A,C, import it → verify question_type=CHECKBOX in DB."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
