@@ -87,6 +87,7 @@ CHANGED_FILES=$(git diff HEAD..origin/$BRANCH --name-only 2>/dev/null)
 PKG_CHANGED=$(echo "$CHANGED_FILES" | grep "package.json" || true)
 SCHEMA_CHANGED=$(echo "$CHANGED_FILES" | grep "sql/schema_pg.sql" || true)
 INDEX_CHANGED=$(echo "$CHANGED_FILES" | grep "sql/add_indexes.sql" || true)
+MIGRATION_CHANGED=$(echo "$CHANGED_FILES" | grep -E "src/db/setup\.js|sql/add_" || true)
 
 # ── 5. Pull kode terbaru ──────────────────────────────────
 git reset --hard origin/$BRANCH 2>&1 | tee -a $LOG_FILE
@@ -103,8 +104,8 @@ else
 fi
 
 # ── 7. Jalankan migrasi database jika schema berubah ──────
-if [ -n "$SCHEMA_CHANGED" ]; then
-  warn "Schema database berubah! Menjalankan migrasi..."
+if [ -n "$SCHEMA_CHANGED" ] || [ -n "$MIGRATION_CHANGED" ]; then
+  warn "Schema/migrasi database berubah! Menjalankan migrasi..."
   node src/db/setup.js 2>&1 | tee -a $LOG_FILE
   log "Migrasi database selesai"
 fi
