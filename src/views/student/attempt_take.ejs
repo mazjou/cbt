@@ -257,13 +257,23 @@
   // Save answers to LocalStorage
   function saveBackupToLocalStorage() {
     const answers = [];
-    // MCQ / TRUE_FALSE
-    document.querySelectorAll('input[type=radio]:checked').forEach(radio => {
+    // MCQ — radio biasa (exclude tf-radio agar tidak duplikat)
+    document.querySelectorAll('input[type=radio]:not(.tf-radio):checked').forEach(radio => {
       answers.push({
         question_id: Number(radio.getAttribute('data-question')),
         option_id: Number(radio.value),
         answered_at: new Date().toISOString()
       });
+    });
+    // TRUE_FALSE — dari dropdown select
+    document.querySelectorAll('select.tf-select').forEach(sel => {
+      if (sel.value) {
+        answers.push({
+          question_id: Number(sel.getAttribute('data-question')),
+          option_id: Number(sel.value),
+          answered_at: new Date().toISOString()
+        });
+      }
     });
     // COMPLEX — group checkbox per question
     const complexGroups = {};
@@ -471,7 +481,13 @@
 
   // Hitung answered (MCQ + COMPLEX + CHECKBOX)
   function updateAnswered() {
-    let answered = document.querySelectorAll('input[type=radio]:checked').length;
+    // Hitung answered: radio biasa (MCQ) — exclude tf-radio agar tidak double count
+    let answered = document.querySelectorAll('input[type=radio]:not(.tf-radio):checked').length;
+
+    // Tambah soal TRUE_FALSE yang sudah dipilih via dropdown
+    document.querySelectorAll('select.tf-select').forEach(sel => {
+      if (sel.value) answered++;
+    });
 
     // Tambah soal COMPLEX yang sudah dipilih minimal 1
     const complexQids = new Set(
@@ -495,8 +511,8 @@
 
     document.getElementById('answeredCount').textContent = answered;
 
-    // Update nav button — radio
-    document.querySelectorAll('input[type=radio]:checked').forEach(radio => {
+    // Update nav button — MCQ radio biasa (bukan tf-radio)
+    document.querySelectorAll('input[type=radio]:not(.tf-radio):checked').forEach(radio => {
       const section = radio.closest('section');
       if (!section) return;
       const qNo = section.id.replace('q-', '');
@@ -506,6 +522,20 @@
         navBtn.classList.add('border-emerald-400', 'bg-gradient-to-br', 'from-emerald-100', 'to-teal-100', 'text-emerald-700', 'shadow-md');
       }
     });
+
+    // Update nav button — TRUE_FALSE dropdown
+    document.querySelectorAll('select.tf-select').forEach(sel => {
+      if (!sel.value) return;
+      const section = sel.closest('section');
+      if (!section) return;
+      const qNo = section.id.replace('q-', '');
+      const navBtn = document.querySelector(`[data-jump="q-${qNo}"]`);
+      if (navBtn) {
+        navBtn.classList.remove('border-slate-300', 'bg-white', 'text-slate-600');
+        navBtn.classList.add('border-emerald-400', 'bg-gradient-to-br', 'from-emerald-100', 'to-teal-100', 'text-emerald-700', 'shadow-md');
+      }
+    });
+
     // Update nav button — COMPLEX
     complexQids.forEach(qid => {
       const anyChecked = document.querySelector(`input.complex-checkbox[data-question="${qid}"]:checked`);
