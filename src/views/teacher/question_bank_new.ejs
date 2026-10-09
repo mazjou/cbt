@@ -42,22 +42,18 @@
   <!-- Tipe Soal -->
   <div>
     <label class="text-sm text-indigo-700 font-semibold mb-2 block">Tipe Soal *</label>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+    <div class="grid grid-cols-3 gap-2">
       <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-indigo-200 bg-white cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 transition-all">
         <input type="radio" name="question_type" value="MCQ" checked class="accent-indigo-600" onchange="updateBankForm(this.value)" />
         <div><div class="text-sm font-semibold text-indigo-800">Pilihan Ganda</div><div class="text-xs text-slate-500">1 jawaban benar</div></div>
       </label>
-      <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-purple-200 bg-white cursor-pointer has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50 transition-all">
-        <input type="radio" name="question_type" value="COMPLEX" class="accent-purple-600" onchange="updateBankForm(this.value)" />
-        <div><div class="text-sm font-semibold text-purple-800">Kompleks (TKA)</div><div class="text-xs text-slate-500">>1 jawaban benar</div></div>
+      <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-orange-200 bg-white cursor-pointer has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 transition-all">
+        <input type="radio" name="question_type" value="CHECKBOX" class="accent-orange-600" onchange="updateBankForm(this.value)" />
+        <div><div class="text-sm font-semibold text-orange-800">Checkbox</div><div class="text-xs text-slate-500">Pilih ≥1 jawaban benar</div></div>
       </label>
       <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-emerald-200 bg-white cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 transition-all">
         <input type="radio" name="question_type" value="TRUE_FALSE" class="accent-emerald-600" onchange="updateBankForm(this.value)" />
         <div><div class="text-sm font-semibold text-emerald-800">Benar/Salah</div><div class="text-xs text-slate-500">Pernyataan B/S</div></div>
-      </label>
-      <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-orange-200 bg-white cursor-pointer has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 transition-all">
-        <input type="radio" name="question_type" value="CHECKBOX" class="accent-orange-600" onchange="updateBankForm(this.value)" />
-        <div><div class="text-sm font-semibold text-orange-800">Checkbox</div><div class="text-xs text-slate-500">Poin prop. (tanpa penalti)</div></div>
       </label>
     </div>
   </div>

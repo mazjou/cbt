@@ -163,32 +163,40 @@
           <% } %>
 
           <% if (q.question_type === 'TRUE_FALSE') { %>
-            <!-- TRUE_FALSE: render as two large side-by-side buttons -->
-            <div class="grid grid-cols-2 gap-4 mt-2">
-              <% [q.options[0], q.options[1]].filter(Boolean).forEach((o) => {
-                const isChosen = (q.chosen_option_id === o.id);
-                const isBenar = (o.option_label === 'A');
-              %>
-                <label class="flex flex-col items-center justify-center gap-3 rounded-2xl border-4 px-6 py-8 cursor-pointer transition-all transform hover:scale-[1.02] shadow-md
-                  <%= isChosen
-                    ? (isBenar
-                      ? 'border-emerald-500 bg-gradient-to-br from-emerald-400 to-green-500 text-white shadow-emerald-200 shadow-lg'
-                      : 'border-rose-500 bg-gradient-to-br from-rose-400 to-red-500 text-white shadow-rose-200 shadow-lg')
-                    : (isBenar
-                      ? 'border-emerald-200 bg-white hover:border-emerald-400 hover:bg-emerald-50 text-emerald-800'
-                      : 'border-rose-200 bg-white hover:border-rose-400 hover:bg-rose-50 text-rose-800') %>">
-                  <input type="radio"
-                    name="ans_<%= q.id %>"
-                    value="<%= o.id %>"
-                    data-question="<%= q.id %>"
-                    data-type="TRUE_FALSE"
-                    class="sr-only"
-                    <%= isChosen ? 'checked' : '' %> />
-                  <span class="text-5xl"><%= isBenar ? '✅' : '❌' %></span>
-                  <span class="text-xl font-bold"><%= isBenar ? 'BENAR' : 'SALAH' %></span>
-                  <span class="text-sm opacity-80"><%- o.option_text %></span>
-                </label>
-              <% }) %>
+            <!-- TRUE_FALSE: dropdown select ringkas -->
+            <%
+              const optA = q.options.find(o => o.option_label === 'A');
+              const optB = q.options.find(o => o.option_label === 'B');
+              const chosenTF = q.chosen_option_id;
+            %>
+            <div class="flex items-center gap-3 mt-2">
+              <select
+                id="tf_select_<%= q.id %>"
+                data-question="<%= q.id %>"
+                data-type="TRUE_FALSE"
+                data-opta="<%= optA ? optA.id : '' %>"
+                data-optb="<%= optB ? optB.id : '' %>"
+                class="tf-select w-48 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200 transition-all cursor-pointer">
+                <option value="" <%= !chosenTF ? 'selected' : '' %>>— Pilih jawaban —</option>
+                <option value="<%= optA ? optA.id : '' %>" <%= chosenTF === (optA && optA.id) ? 'selected' : '' %>>✅ Benar</option>
+                <option value="<%= optB ? optB.id : '' %>" <%= chosenTF === (optB && optB.id) ? 'selected' : '' %>>❌ Salah</option>
+              </select>
+              <!-- Hidden radio inputs agar autosave tetap jalan -->
+              <% if (optA) { %>
+                <input type="radio" name="ans_<%= q.id %>" value="<%= optA.id %>"
+                  data-question="<%= q.id %>" data-type="TRUE_FALSE" class="sr-only tf-radio"
+                  id="tf_radio_<%= q.id %>_a" <%= chosenTF === optA.id ? 'checked' : '' %> />
+              <% } %>
+              <% if (optB) { %>
+                <input type="radio" name="ans_<%= q.id %>" value="<%= optB.id %>"
+                  data-question="<%= q.id %>" data-type="TRUE_FALSE" class="sr-only tf-radio"
+                  id="tf_radio_<%= q.id %>_b" <%= chosenTF === optB.id ? 'checked' : '' %> />
+              <% } %>
+              <% if (chosenTF) { %>
+                <span class="text-sm font-semibold <%= chosenTF === (optA && optA.id) ? 'text-emerald-600' : 'text-rose-600' %>">
+                  <%= chosenTF === (optA && optA.id) ? '✅ Terpilih: Benar' : '❌ Terpilih: Salah' %>
+                </span>
+              <% } %>
             </div>
           <% } else { %>
             <% q.options.forEach((o) => {
@@ -525,8 +533,8 @@
   }
   updateAnswered();
 
-  // Autosave jawaban MCQ / TRUE_FALSE
-  document.querySelectorAll('input[type=radio]').forEach(r => {
+  // Autosave jawaban MCQ / TRUE_FALSE (radio biasa)
+  document.querySelectorAll('input[type=radio]:not(.tf-radio)').forEach(r => {
     r.addEventListener('change', async () => {
       const qid = r.getAttribute('data-question');
       const oid = r.value;
@@ -540,6 +548,43 @@
         });
       } catch (e) {
         console.error('Autosave failed:', e);
+        toast('⚠️ Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
+      }
+    });
+  });
+
+  // Autosave jawaban TRUE_FALSE via dropdown select
+  document.querySelectorAll('select.tf-select').forEach(sel => {
+    sel.addEventListener('change', async () => {
+      const qid = sel.getAttribute('data-question');
+      const oid = Number(sel.value);
+      if (!oid) return; // pilih "— Pilih jawaban —"
+
+      // Sync ke hidden radio input agar updateAnswered() bekerja
+      const radios = document.querySelectorAll(`input.tf-radio[data-question="${qid}"]`);
+      radios.forEach(r => { r.checked = (Number(r.value) === oid); });
+
+      // Update label terpilih di sebelah dropdown
+      const optA = Number(sel.getAttribute('data-opta'));
+      const isBenar = (oid === optA);
+      // Hapus span status lama lalu buat baru
+      const existing = sel.parentElement.querySelector('.tf-status');
+      if (existing) existing.remove();
+      const span = document.createElement('span');
+      span.className = 'tf-status text-sm font-semibold ' + (isBenar ? 'text-emerald-600' : 'text-rose-600');
+      span.textContent = isBenar ? '✅ Terpilih: Benar' : '❌ Terpilih: Salah';
+      sel.parentElement.appendChild(span);
+
+      updateAnswered();
+      saveBackupToLocalStorage();
+      try {
+        await fetch('/student/attempts/<%= attempt.id %>/answer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question_id: Number(qid), option_id: oid })
+        });
+      } catch (e) {
+        console.error('Autosave TF failed:', e);
         toast('⚠️ Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
       }
     });

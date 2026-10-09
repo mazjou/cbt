@@ -378,17 +378,18 @@
       <!-- Tipe Soal -->
       <div class="grid grid-cols-3 gap-2">
         <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-indigo-200 bg-white cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 transition-all">
+        <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-indigo-200 bg-white cursor-pointer has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-50 transition-all">
           <input type="radio" name="question_type" value="MCQ" checked class="accent-indigo-600" onchange="updateQuestionForm(this.value)" />
           <div>
             <div class="text-sm font-semibold text-indigo-800">Pilihan Ganda</div>
             <div class="text-xs text-slate-500">1 jawaban benar</div>
           </div>
         </label>
-        <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-purple-200 bg-white cursor-pointer has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50 transition-all">
-          <input type="radio" name="question_type" value="COMPLEX" class="accent-purple-600" onchange="updateQuestionForm(this.value)" />
+        <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-orange-200 bg-white cursor-pointer has-[:checked]:border-orange-500 has-[:checked]:bg-orange-50 transition-all">
+          <input type="radio" name="question_type" value="CHECKBOX" class="accent-orange-600" onchange="updateQuestionForm(this.value)" />
           <div>
-            <div class="text-sm font-semibold text-purple-800">Kompleks (TKA)</div>
-            <div class="text-xs text-slate-500">>1 jawaban benar</div>
+            <div class="text-sm font-semibold text-orange-800">Checkbox</div>
+            <div class="text-xs text-slate-500">Pilih ≥1 jawaban benar</div>
           </div>
         </label>
         <label class="flex items-center gap-2 p-3 rounded-xl border-2 border-emerald-200 bg-white cursor-pointer has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50 transition-all">
