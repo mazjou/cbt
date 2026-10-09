@@ -773,12 +773,14 @@ router.post('/exams', async (req, res) => {
         try {
           await pool.query(
             `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
-             VALUES (:exam_id, :class_id, :start_at, :end_at, :duration_minutes);`,
-            { exam_id: examId, class_id: classId, start_at: cs, end_at: ce, duration_minutes: cd }
+             VALUES (:exam_id, :class_id, :start_at::timestamptz, :end_at::timestamptz, :duration_minutes::int);`,
+            { exam_id: examId, class_id: classId, start_at: cs || null, end_at: ce || null, duration_minutes: cd || null }
           );
         } catch (insertErr) {
+          console.warn('exam_classes insert with schedule failed, fallback:', insertErr.message);
           await pool.query(
-            `INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`,
+            `INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id)
+             ON CONFLICT (exam_id, class_id) DO NOTHING;`,
             { exam_id: examId, class_id: classId }
           );
         }
@@ -952,12 +954,14 @@ router.put('/exams/:id', async (req, res) => {
         try {
           await pool.query(
             `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
-             VALUES (:exam_id, :class_id, :start_at, :end_at, :duration_minutes);`,
-            { exam_id: examId, class_id: cid, start_at: cs, end_at: ce, duration_minutes: cd }
+             VALUES (:exam_id, :class_id, :start_at::timestamptz, :end_at::timestamptz, :duration_minutes::int);`,
+            { exam_id: examId, class_id: cid, start_at: cs || null, end_at: ce || null, duration_minutes: cd || null }
           );
         } catch (insertErr) {
+          console.warn('exam_classes insert with schedule failed, fallback:', insertErr.message);
           await pool.query(
-            `INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`,
+            `INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id)
+             ON CONFLICT (exam_id, class_id) DO NOTHING;`,
             { exam_id: examId, class_id: cid }
           );
         }
