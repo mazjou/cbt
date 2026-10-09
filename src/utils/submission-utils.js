@@ -124,7 +124,6 @@ async function finalizeAttemptWithBackup(attemptId, studentId, examId) {
           if (totalCorrect > 0 && selectedIds.length > 0) {
             // Hitung benar yang dipilih (intersection) — tanpa penalti
             const correctSelected = selectedIds.filter(id => correctIds.includes(id)).length;
-            const wrongSelected = selectedIds.filter(id => !correctIds.includes(id)).length;
             // Formula proporsional tanpa penalti
             const partial = Math.floor((correctSelected / totalCorrect) * qpoints);
             score_points += partial;
@@ -135,7 +134,7 @@ async function finalizeAttemptWithBackup(attemptId, studentId, examId) {
                WHERE attempt_id = :aid AND question_id = :qid`,
               {
                 pp: partial,
-                isc: correctSelected === totalCorrect && wrongSelected === 0 ? 1 : 0,
+                isc: correctSelected === totalCorrect && selectedIds.every(id => correctIds.includes(id)) ? 1 : 0,
                 aid: attemptId,
                 qid: aa.question_id
               }

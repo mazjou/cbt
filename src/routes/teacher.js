@@ -1203,6 +1203,11 @@ router.post('/exams/:id/questions', upload.any(), async (req, res) => {
     correctLabels = [String(correct || 'A').toUpperCase()];
   }
 
+  if ((qtype === 'COMPLEX' || qtype === 'CHECKBOX') && correctLabels.length === 0) {
+    req.flash('error', 'Soal ' + qtype + ' harus memiliki minimal 1 jawaban benar.');
+    return res.redirect(`/teacher/exams/${examId}`);
+  }
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();

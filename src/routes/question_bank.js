@@ -467,6 +467,11 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', m
     correctLabels = [String(correct || 'A').toUpperCase()];
   }
 
+  if ((qtype === 'COMPLEX' || qtype === 'CHECKBOX') && correctLabels.length === 0) {
+    req.flash('error', 'Soal ' + qtype + ' harus memiliki minimal 1 jawaban benar');
+    return res.redirect('/teacher/question-bank/new');
+  }
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -590,6 +595,12 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
       else if (rawCorrect) corrLabels = String(rawCorrect).split(',').map(s => s.trim().toUpperCase());
     } else {
       corrLabels = correct ? [String(correct).toUpperCase()] : ['A'];
+    }
+    if ((qtype === 'COMPLEX' || qtype === 'CHECKBOX') && corrLabels.length === 0) {
+      await conn.rollback();
+      conn.release();
+      req.flash('error', 'Soal ' + qtype + ' harus memiliki minimal 1 jawaban benar');
+      return res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
     }
     for (const [lbl, txt] of [['A',a],['B',b],['C',c],['D',d],['E',e||'']]) {
       if (!txt) continue;

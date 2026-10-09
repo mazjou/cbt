@@ -1,0 +1,7 @@
+{
+  "task_id": "task-checkbox-scoring",
+  "task_description": "Add CHECKBOX question type with proportional scoring (no penalty), redesign True/False as large selection buttons, and update Excel/Word import templates to include CHECKBOX examples.",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}
