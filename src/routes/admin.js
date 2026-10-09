@@ -488,7 +488,7 @@ router.get('/classes', async (req, res) => {
 // Download classes as Excel
 router.get('/classes/download', async (req, res) => {
   try {
-    const [classes] = await pq(`SELECT code, name FROM classes ORDER BY name ASC;`);
+    const [classes] = await pq(`SELECT code, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
     
     const data = classes.map(c => ({
       'code': c.code,
@@ -1583,7 +1583,7 @@ router.get('/users/print-cards', async (req, res) => {
       return res.redirect('/admin/users');
     }
     
-    const [classes] = await pq('SELECT id, name FROM classes ORDER BY name ASC;');
+    const [classes] = await pq('SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};');
     
     const schoolInfo = {
       name: process.env.SCHOOL_NAME || 'SMK Negeri 1 Kras',
@@ -1675,7 +1675,7 @@ router.post('/users/:id/ajax-update', async (req, res) => {
 // ===== EDIT PENGGUNA (terutama siswa) =====
 router.get('/users/:id/edit', async (req, res) => {
   try {
-    const classResult = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC`);
+    const classResult = await pool.query(`SELECT id, code, name FROM classes ORDER BY ${CLASS_ORDER_SQL}`);
     const classes = classResult[0];
     const userResult = await pool.query(
       `SELECT id, username, full_name, role, class_id, is_active, nomor_peserta FROM users WHERE id=$1 LIMIT 1`,
@@ -1734,7 +1734,7 @@ router.post('/users/:id/edit', async (req, res) => {
 
 // ===== IMPORT SISWA (MASS UPLOAD) =====
 router.get('/users/import', async (req, res) => {
-  const [classes] = await pq(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pq(`SELECT id, code, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
   res.render('admin/users_import', { title: 'Import Masal Siswa', classes });
 });
 
@@ -2400,7 +2400,7 @@ router.get('/exams', async (req, res) => {
   // Get filter options
   const [subjects] = await pq(`SELECT id, code, name FROM subjects ORDER BY name ASC;`);
   const [teachers] = await pq(`SELECT id, username, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
-  const [classes] = await pq(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pq(`SELECT id, code, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
 
   // Build WHERE clause - PostgreSQL style
   let whereConditions = [];
@@ -2576,7 +2576,7 @@ router.get('/exams/new', async (req, res) => {
   try {
     const [subjects] = await pq(`SELECT * FROM subjects ORDER BY name ASC;`);
     const [teachers] = await pq(`SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC;`);
-    const [classes] = await pq(`SELECT * FROM classes ORDER BY name ASC;`);
+    const [classes] = await pq(`SELECT * FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
     
     res.render('admin/exam_new', { 
       title: 'Buat Ujian Baru', 
@@ -2700,7 +2700,7 @@ router.get('/exams/:id/edit', async (req, res) => {
 
     const subjectsResult = await pool.query(`SELECT * FROM subjects ORDER BY name ASC`);
     const teachersResult = await pool.query(`SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC`);
-    const classesResult  = await pool.query(`SELECT * FROM classes ORDER BY name ASC`);
+    const classesResult  = await pool.query(`SELECT * FROM classes ORDER BY ${CLASS_ORDER_SQL}`);
 
     res.render('admin/exam_edit', { 
       title: `Edit Ujian: ${exam.title}`, 
@@ -2994,7 +2994,7 @@ router.get('/materials', async (req, res) => {
   // Get filter options
   const [subjects] = await pq(`SELECT id, code, name FROM subjects ORDER BY name ASC;`);
   const [teachers] = await pq(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
-  const [classes] = await pq(`SELECT id, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pq(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
 
   // Build WHERE clause - PostgreSQL style
   let whereConditions = [];
@@ -3466,7 +3466,7 @@ router.get('/grades', async (req, res) => {
 
   // Get filter options
   const [exams] = await pq(`SELECT id, title FROM exams ORDER BY title ASC;`);
-  const [classes] = await pq(`SELECT id, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pq(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
   const [teachers] = await pq(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
 
   const where = ['1=1'];
@@ -3840,7 +3840,7 @@ router.get('/assignments/monitoring', async (req, res) => {
      FROM assignments a JOIN users u ON u.id=a.teacher_id
      ORDER BY a.created_at DESC;`
   );
-  const [classes] = await pq(`SELECT id, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pq(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
   const [teachers] = await pq(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
 
   let submissions = [];

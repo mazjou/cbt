@@ -26,6 +26,18 @@ async function invalidateExamQuestionsCache(examId, redisClient) {
 const router = express.Router();
 router.use(requireRole('TEACHER', 'ADMIN'));
 
+// SQL untuk urut kelas: tingkat (X < XI < XII) lalu jurusan alfabet lalu nomor
+const CLASS_ORDER_SQL = `
+  CASE
+    WHEN name ~* '^XII' THEN 3
+    WHEN name ~* '^XI'  THEN 2
+    WHEN name ~* '^X'   THEN 1
+    ELSE 4
+  END,
+  regexp_replace(upper(name), '^(XII|XI|X)\\s+', '') ASC,
+  (regexp_match(name, '(\\d+)\\s*$'))[1]::int NULLS LAST
+`;
+
 // Helper: admin bisa akses semua data, teacher hanya miliknya sendiri
 // Gunakan di query: WHERE (:isAdmin=1 OR e.teacher_id=:tid)
 function teacherFilter(user) {
@@ -378,7 +390,7 @@ router.get('/materials', async (req, res) => {
 
 router.get('/materials/new', async (req, res) => {
   const [subjects] = await pool.query(`SELECT * FROM subjects ORDER BY name ASC;`);
-  const [classes] = await pool.query(`SELECT * FROM classes ORDER BY name ASC;`);
+  const [classes] = await pool.query(`SELECT * FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
   res.render('teacher/material_new', { title: 'Buat Materi', subjects, classes });
 });
 
@@ -536,7 +548,7 @@ router.get('/materials/:id/edit', async (req, res) => {
   if (!material) return res.status(404).render('error', { title: 'Tidak ditemukan', message: 'Materi tidak ditemukan.', user });
 
   const [subjects] = await pool.query(`SELECT * FROM subjects ORDER BY name ASC;`);
-  const [classes] = await pool.query(`SELECT * FROM classes ORDER BY name ASC;`);
+  const [classes] = await pool.query(`SELECT * FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
   res.render('teacher/material_edit', { title: `Edit Materi: ${material.title}`, material, subjects, classes });
 });
 
@@ -704,7 +716,7 @@ router.get('/exams', async (req, res) => {
 
 router.get('/exams/new', async (req, res) => {
   const [subjects] = await pool.query(`SELECT * FROM subjects ORDER BY name ASC;`);
-  const [classes] = await pool.query(`SELECT * FROM classes ORDER BY name ASC;`);
+  const [classes] = await pool.query(`SELECT * FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
   res.render('teacher/exam_new', { title: 'Buat Ujian', subjects, classes });
 });
 
@@ -830,7 +842,7 @@ router.get('/exams/:id/edit', async (req, res) => {
 
     // Get subjects and classes
     const [subjects] = await pool.query(`SELECT * FROM subjects ORDER BY name ASC;`);
-    const [classes] = await pool.query(`SELECT * FROM classes ORDER BY name ASC;`);
+    const [classes] = await pool.query(`SELECT * FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
 
     // Get selected classes for this exam — defensive: kolom schedule mungkin belum ada
     let examClasses;
@@ -2499,7 +2511,7 @@ router.get('/grades', async (req, res) => {
     `SELECT id, title FROM exams WHERE teacher_id=$1 ORDER BY id DESC`,
     [user.id]
   );
-  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC`);
+  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL}`);
 
   const where = ['e.teacher_id=$1'];
   const params = [user.id];
@@ -2671,7 +2683,7 @@ router.get('/material-views', async (req, res) => {
     `SELECT id, title FROM materials WHERE teacher_id=:tid ORDER BY id DESC;`,
     { tid: user.id }
   );
-  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
 
   const where = ['m.teacher_id=:tid', 'mv.completed_at IS NOT NULL'];
   const params = { tid: user.id };
@@ -2866,7 +2878,7 @@ router.get('/material-not-viewed', async (req, res) => {
       `SELECT id, title FROM materials WHERE teacher_id=:tid ORDER BY id DESC;`,
       { tid: user.id }
     );
-    const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC;`);
+    const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
 
     console.log('Teacher ID:', user.id);
     console.log('Materials count:', materials.length);
@@ -3009,7 +3021,7 @@ router.get('/assignments/monitoring', async (req, res) => {
     `SELECT a.id, a.title FROM assignments a WHERE a.teacher_id=:tid ORDER BY a.created_at DESC;`,
     { tid: user.id }
   );
-  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY name ASC;`);
+  const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
 
   let submissions = [];
   if (assignment_id) {
@@ -3090,7 +3102,7 @@ router.get('/assignments', async (req, res) => {
 router.get('/assignments/new', async (req, res) => {
   try {
     const [subjects] = await pool.query(`SELECT id, code, name FROM subjects ORDER BY name ASC;`);
-    const [classes] = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
+    const [classes] = await pool.query(`SELECT id, code, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
     
     res.render('teacher/assignment_new', {
       title: 'Buat Tugas Baru',
@@ -3289,7 +3301,7 @@ router.get('/assignments/:id/edit', async (req, res) => {
     assignment.selected_class_ids = selectedClasses.map(sc => sc.class_id);
     
     const [subjects] = await pool.query(`SELECT id, code, name FROM subjects ORDER BY name ASC;`);
-    const [classes] = await pool.query(`SELECT id, code, name FROM classes ORDER BY name ASC;`);
+    const [classes] = await pool.query(`SELECT id, code, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
     
     res.render('teacher/assignment_edit', {
       title: `Edit: ${assignment.title}`,
