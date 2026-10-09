@@ -97,7 +97,7 @@
               </span>
             <% } %>
             <%
-              const hasSchedule_m = startAt_m !== null || (e.exam_class_count > 0);
+              const hasSchedule_m = startAt_m !== null || (e.exam_class_schedule_count > 0);
               const modeLabel_m   = hasSchedule_m ? 'Otomatis' : 'Manual';
               const modeCls_m     = hasSchedule_m ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500';
             %>
@@ -322,7 +322,7 @@
                   </span>
                 <% } %>
                 <%
-                  const hasSchedule_e = startAt_e !== null || (e.exam_class_count > 0);
+                  const hasSchedule_e = startAt_e !== null || (e.exam_class_schedule_count > 0);
                   const modeLabel_e   = hasSchedule_e ? 'Otomatis' : 'Manual';
                   const modeCls_e     = hasSchedule_e ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500';
                 %>

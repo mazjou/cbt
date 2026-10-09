@@ -358,6 +358,7 @@
                   if (hasAutoA) {
                     if (examStartA && nowA < examStartA)               { autoLabelA = '⏳ Terjadwal';    autoCls_a = 'bg-blue-100 text-blue-700'; }
                     else if (examEndA && nowA > examEndA)              { autoLabelA = '🔴 Selesai';      autoCls_a = 'bg-rose-100 text-rose-700'; }
+                    else if (!examStartA)                              { autoLabelA = '📋 Per Kelas';    autoCls_a = 'bg-purple-100 text-purple-700'; }
                     else                                               { autoLabelA = '🟢 Berlangsung'; autoCls_a = 'bg-emerald-100 text-emerald-700'; }
                   }
                 %>

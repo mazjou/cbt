@@ -655,7 +655,8 @@ router.get('/exams', async (req, res) => {
     `SELECT e.*, s.name AS subject_name,
             COUNT(DISTINCT q.id) AS question_count,
             STRING_AGG(DISTINCT c.name, ', ' ORDER BY c.name) AS class_names,
-            COUNT(DISTINCT ec2.class_id) AS exam_class_count
+            COUNT(DISTINCT ec2.class_id) AS exam_class_count,
+            COUNT(DISTINCT CASE WHEN ec2.start_at IS NOT NULL THEN ec2.class_id END) AS exam_class_schedule_count
      FROM exams e
      JOIN subjects s ON s.id=e.subject_id
      LEFT JOIN questions q ON q.exam_id=e.id
