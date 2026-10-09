@@ -743,8 +743,19 @@ router.post('/exams', async (req, res) => {
     const examId = result.insertId;
     if (class_ids && class_ids.length > 0) {
       const classIdsArray = Array.isArray(class_ids) ? class_ids : [class_ids];
+      const classStartAt = req.body.class_start_at || {};
+      const classEndAt   = req.body.class_end_at   || {};
+      const classDuration = req.body.class_duration  || {};
       for (const classId of classIdsArray) {
-        if (classId) await pool.query(`INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`, { exam_id: examId, class_id: classId });
+        if (!classId) continue;
+        const cs = classStartAt[classId]  || null;
+        const ce = classEndAt[classId]    || null;
+        const cd = classDuration[classId] ? Number(classDuration[classId]) : null;
+        await pool.query(
+          `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
+           VALUES (:exam_id, :class_id, :start_at, :end_at, :duration_minutes);`,
+          { exam_id: examId, class_id: classId, start_at: cs, end_at: ce, duration_minutes: cd }
+        );
       }
     }
     req.flash('success', 'Ujian dibuat. Silakan tambahkan soal.');
@@ -810,17 +821,26 @@ router.get('/exams/:id/edit', async (req, res) => {
 
     // Get selected classes for this exam
     const [examClasses] = await pool.query(
-      `SELECT class_id FROM exam_classes WHERE exam_id=:exam_id;`,
+      `SELECT class_id, start_at, end_at, duration_minutes FROM exam_classes WHERE exam_id=:exam_id;`,
       { exam_id: examId }
     );
     const selectedClassIds = examClasses.map(ec => ec.class_id);
+    const examClassSchedules = {};
+    for (const ec of examClasses) {
+      examClassSchedules[ec.class_id] = {
+        start_at: ec.start_at,
+        end_at: ec.end_at,
+        duration_minutes: ec.duration_minutes
+      };
+    }
 
     res.render('teacher/exam_edit', {
       title: 'Edit Ujian',
       exam,
       subjects,
       classes,
-      selectedClassIds
+      selectedClassIds,
+      examClassSchedules
     });
   } catch (e) {
     console.error(e);
@@ -877,8 +897,19 @@ router.put('/exams/:id', async (req, res) => {
     await pool.query(`DELETE FROM exam_classes WHERE exam_id=:exam_id;`, { exam_id: examId });
     if (class_ids && class_ids.length > 0) {
       const arr = Array.isArray(class_ids) ? class_ids : [class_ids];
+      const classStartAt = req.body.class_start_at || {};
+      const classEndAt   = req.body.class_end_at   || {};
+      const classDuration = req.body.class_duration  || {};
       for (const cid of arr) {
-        if (cid) await pool.query(`INSERT INTO exam_classes (exam_id, class_id) VALUES (:exam_id, :class_id);`, { exam_id: examId, class_id: cid });
+        if (!cid) continue;
+        const cs = classStartAt[cid]  || null;
+        const ce = classEndAt[cid]    || null;
+        const cd = classDuration[cid] ? Number(classDuration[cid]) : null;
+        await pool.query(
+          `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
+           VALUES (:exam_id, :class_id, :start_at, :end_at, :duration_minutes);`,
+          { exam_id: examId, class_id: cid, start_at: cs, end_at: ce, duration_minutes: cd }
+        );
       }
     }
 
@@ -1049,6 +1080,18 @@ router.get('/exams/:id', async (req, res) => {
   
   exam.completed_students = completedStudents;
   exam.not_completed_students = notCompletedStudents;
+
+  // Ambil jadwal per kelas
+  const [classSchedules] = await pool.query(
+    `SELECT ec.class_id, c.name AS class_name,
+            ec.start_at, ec.end_at, ec.duration_minutes
+     FROM exam_classes ec
+     JOIN classes c ON c.id=ec.class_id
+     WHERE ec.exam_id=:exam_id
+     ORDER BY c.name ASC;`,
+    { exam_id: exam.id }
+  );
+  exam.class_schedules = classSchedules;
 
   res.render('teacher/exam_detail', { title: `Ujian: ${exam.title}`, exam, questions });
 });

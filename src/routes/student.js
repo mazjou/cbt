@@ -192,6 +192,22 @@ router.get('/exams/:id', async (req, res) => {
   );
   if (!exam) return res.status(404).render('error', { title: 'Tidak ditemukan', message: 'Ujian tidak tersedia.', user });
   
+  // Override waktu ujian dengan jadwal kelas siswa jika ada
+  if (user.class_id) {
+    const [[classSchedule]] = await pool.query(
+      `SELECT start_at, end_at, duration_minutes
+       FROM exam_classes
+       WHERE exam_id=:exam_id AND class_id=:class_id
+       LIMIT 1;`,
+      { exam_id: req.params.id, class_id: user.class_id }
+    );
+    if (classSchedule) {
+      if (classSchedule.start_at)         exam.start_at = classSchedule.start_at;
+      if (classSchedule.end_at)           exam.end_at   = classSchedule.end_at;
+      if (classSchedule.duration_minutes) exam.duration_minutes = classSchedule.duration_minutes;
+    }
+  }
+
   // Fetch attempt results if max attempts reached
   let attemptResults = [];
   if (exam.attempts_count >= exam.max_attempts) {
@@ -233,6 +249,22 @@ router.post('/exams/:id/start', async (req, res) => {
   }
 
   console.log(`[START EXAM] Exam found: ${exam.title}`);
+
+  // Override waktu ujian dengan jadwal kelas siswa jika ada
+  if (user.class_id) {
+    const [[classSchedule]] = await pool.query(
+      `SELECT start_at, end_at, duration_minutes
+       FROM exam_classes
+       WHERE exam_id=:id AND class_id=:class_id
+       LIMIT 1;`,
+      { id: examId, class_id: user.class_id }
+    );
+    if (classSchedule) {
+      if (classSchedule.start_at)         exam.start_at = classSchedule.start_at;
+      if (classSchedule.end_at)           exam.end_at   = classSchedule.end_at;
+      if (classSchedule.duration_minutes) exam.duration_minutes = classSchedule.duration_minutes;
+    }
+  }
 
   const now = new Date();
   if (exam.start_at && now < new Date(exam.start_at)) {
@@ -363,6 +395,21 @@ router.get('/attempts/:id', async (req, res) => {
 
   if (attempt.status !== 'IN_PROGRESS') {
     return res.redirect(`/student/attempts/${attemptId}/result`);
+  }
+
+  // Override waktu ujian dengan jadwal kelas siswa jika ada
+  if (user.class_id) {
+    const [[classSchedule]] = await pool.query(
+      `SELECT start_at, end_at, duration_minutes
+       FROM exam_classes
+       WHERE exam_id=:exam_id AND class_id=:class_id
+       LIMIT 1;`,
+      { exam_id: attempt.exam_id, class_id: user.class_id }
+    );
+    if (classSchedule) {
+      if (classSchedule.end_at)           attempt.exam_end_at = classSchedule.end_at;
+      if (classSchedule.duration_minutes) attempt.duration_minutes = classSchedule.duration_minutes;
+    }
   }
 
   const [rows] = await pool.query(

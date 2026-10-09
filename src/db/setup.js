@@ -70,6 +70,10 @@ async function main() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       UNIQUE (attempt_id)
     )`,
+    // Jadwal ujian per kelas (multi-waktu)
+    `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS start_at TIMESTAMP NULL`,
+    `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS end_at TIMESTAMP NULL`,
+    `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS duration_minutes INT NULL`,
   ];
   for (const sql of migrations) {
     try { await conn.query(sql); } catch(e) { /* abaikan jika sudah ada */ }
