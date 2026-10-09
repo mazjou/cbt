@@ -747,7 +747,8 @@ router.post('/exams', async (req, res) => {
         access_code: access_code || null,
         show_score_to_student: show_score_to_student ? true : false,
         show_review_to_student: show_review_to_student ? true : false,
-        is_published: false,
+        // Auto-publish jika ada jadwal waktu global
+        is_published: (start_at) ? true : false,
         max_questions: max_questions ? Number(max_questions) : null,
         max_violations: max_violations ? Number(max_violations) : 3
       }
@@ -912,7 +913,8 @@ router.put('/exams/:id', async (req, res) => {
         shuffle_questions=:shuffle_questions, shuffle_options=:shuffle_options,
         access_code=:access_code, show_score_to_student=:show_score_to_student,
         show_review_to_student=:show_review_to_student, max_questions=:max_questions,
-        max_violations=:max_violations
+        max_violations=:max_violations,
+        is_published = CASE WHEN :start_at IS NOT NULL THEN true ELSE is_published END
        WHERE id=:id;`,
       {
         id: examId, subject_id, title,

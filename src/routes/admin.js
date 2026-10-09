@@ -2604,7 +2604,7 @@ router.post('/exams', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO exams
         (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published, max_questions, max_violations)
-       VALUES ($1,$2,$3,$4,NULL,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,false,$15,$16)
+       VALUES ($1,$2,$3,$4,NULL,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING id`,
       [
         subject_id, teacher_id, title, description || null,
@@ -2613,6 +2613,8 @@ router.post('/exams', async (req, res) => {
         shuffle_questions ? true : false, shuffle_options ? true : false,
         access_code || null,
         show_score_to_student ? true : false, show_review_to_student ? true : false,
+        // Auto-publish jika ada jadwal waktu global
+        start_at ? true : false,
         max_questions ? Number(max_questions) : null,
         max_violations !== undefined ? Number(max_violations) : 3
       ]
@@ -2735,7 +2737,8 @@ router.put('/exams/:id', async (req, res) => {
         pass_score=$8, max_attempts=$9,
         shuffle_questions=$10, shuffle_options=$11,
         access_code=$12, show_score_to_student=$13,
-        show_review_to_student=$14, max_questions=$15, max_violations=$16
+        show_review_to_student=$14, max_questions=$15, max_violations=$16,
+        is_published = CASE WHEN $5 IS NOT NULL THEN true ELSE is_published END
        WHERE id=$17`,
       [
         subject_id, teacher_id, title, description || null,
