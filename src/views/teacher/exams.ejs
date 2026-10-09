@@ -188,174 +188,127 @@
     <table class="min-w-full divide-y divide-slate-200">
       <thead class="bg-slate-50">
         <tr>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">ID</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Judul Ujian</th>
-          <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kelas</th>
-          <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Soal</th>
-          <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Durasi</th>
-          <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Pengerjaan</th>
-          <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Kode</th>
-          <th class="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider">Status</th>
-          <th class="px-4 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider">Aksi</th>
+          <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider w-12">ID</th>
+          <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Judul Ujian</th>
+          <th class="px-3 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">Kelas</th>
+          <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-14">Soal</th>
+          <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-20">Durasi</th>
+          <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-24">Pengerjaan</th>
+          <th class="px-3 py-3 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider w-28">Status</th>
+          <th class="px-3 py-3 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider w-44">Aksi</th>
         </tr>
       </thead>
       <tbody class="bg-white divide-y divide-slate-100">
         <% exams.forEach((e, index) => { 
-          // Parse class names and limit to 3
           const classNames = e.class_names ? e.class_names.split(', ') : [];
-          const displayClasses = classNames.slice(0, 3);
-          const remainingCount = classNames.length - 3;
+          const displayClasses = classNames.slice(0, 2);
+          const remainingCount = classNames.length - 2;
+          const now_e   = new Date();
+          const startAt_e = e.start_at ? new Date(e.start_at) : null;
+          const endAt_e   = e.end_at   ? new Date(e.end_at)   : null;
+          let scheduleLabel_e = null, scheduleCls_e = '';
+          if (startAt_e && endAt_e) {
+            if (now_e < startAt_e)                           { scheduleLabel_e='Terjadwal';    scheduleCls_e='bg-blue-100 text-blue-700'; }
+            else if (now_e >= startAt_e && now_e < endAt_e)  { scheduleLabel_e='Berlangsung';  scheduleCls_e='bg-emerald-100 text-emerald-700'; }
+            else                                              { scheduleLabel_e='Selesai';      scheduleCls_e='bg-rose-100 text-rose-700'; }
+          } else if (startAt_e && !endAt_e) {
+            scheduleLabel_e = now_e < startAt_e ? 'Terjadwal' : 'Berlangsung';
+            scheduleCls_e   = now_e < startAt_e ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700';
+          }
+          const hasSchedule_e = startAt_e !== null || (e.exam_class_schedule_count > 0);
         %>
           <tr class="hover:bg-slate-50 transition-colors">
             <!-- ID -->
-            <td class="px-4 py-3 whitespace-nowrap">
+            <td class="px-3 py-3 whitespace-nowrap">
               <span class="inline-flex items-center px-2 py-1 rounded-md bg-slate-100 text-slate-700 text-xs font-mono font-semibold">
                 #<%= e.id %>
               </span>
             </td>
             
-            <!-- Judul -->
-            <td class="px-4 py-3">
-              <div>
-                <p class="text-sm font-semibold text-slate-900 truncate"><%= e.title %></p>
-                <p class="text-xs text-slate-500 mt-0.5"><%= e.subject_name %></p>
-              </div>
+            <!-- Judul + jadwal -->
+            <td class="px-3 py-3 max-w-xs">
+              <p class="text-sm font-semibold text-slate-900 truncate"><%= e.title %></p>
+              <p class="text-xs text-slate-500 truncate"><%= e.subject_name %></p>
+              <% if (startAt_e) { %>
+                <p class="text-xs text-slate-400 mt-0.5">
+                  <%= startAt_e.toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %>
+                  <% if (endAt_e) { %>– <%= endAt_e.toLocaleString('id-ID',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %><% } %>
+                </p>
+              <% } %>
             </td>
             
             <!-- Kelas -->
-            <td class="px-4 py-3">
+            <td class="px-3 py-3 max-w-[140px]">
               <% if (classNames.length === 0) { %>
-                <span class="text-sm text-slate-700">Semua Kelas</span>
-              <% } else if (classNames.length <= 3) { %>
-                <span class="text-sm text-slate-700"><%= e.class_names %></span>
+                <span class="text-xs text-slate-500 italic">Semua Kelas</span>
               <% } else { %>
-                <span class="text-sm text-slate-700"><%= displayClasses.join(', ') %></span>
-                <button 
-                  type="button" 
-                  onclick="alert('Semua Kelas:\\n<%= classNames.join('\\n') %>')"
-                  class="ml-1 inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 text-xs font-semibold hover:bg-indigo-200 transition-colors"
-                  title="<%= e.class_names %>"
-                >
-                  +<%= remainingCount %>
-                </button>
+                <span class="text-xs text-slate-700"><%= displayClasses.join(', ') %></span>
+                <% if (remainingCount > 0) { %>
+                  <button type="button"
+                    onclick="alert('Semua Kelas:\n<%= classNames.join('\n') %>')"
+                    class="ml-1 px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 text-xs font-semibold hover:bg-indigo-200"
+                    title="<%= e.class_names %>">+<%= remainingCount %></button>
+                <% } %>
               <% } %>
             </td>
             
             <!-- Soal -->
-            <td class="px-4 py-3 text-center whitespace-nowrap">
+            <td class="px-3 py-3 text-center whitespace-nowrap">
               <span class="inline-flex items-center px-2 py-1 rounded-md <%= e.question_count > 0 ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500' %> text-xs font-semibold">
                 <%= e.question_count %>
               </span>
             </td>
             
             <!-- Durasi -->
-            <td class="px-4 py-3 text-center whitespace-nowrap">
-              <span class="text-xs text-slate-600"><%= e.duration_minutes %> menit</span>
+            <td class="px-3 py-3 text-center whitespace-nowrap">
+              <span class="text-xs text-slate-600"><%= e.duration_minutes %>'</span>
             </td>
             
             <!-- Pengerjaan -->
-            <td class="px-4 py-3 text-center whitespace-nowrap">
+            <td class="px-3 py-3 text-center whitespace-nowrap">
               <div class="flex flex-col items-center gap-1">
-                <div class="flex items-center gap-2">
-                  <div class="w-12 h-2 bg-slate-200 rounded-full overflow-hidden">
-                    <div class="h-full bg-gradient-to-r from-emerald-500 to-green-600 rounded-full transition-all duration-300" style="width: <%= e.participation_percentage %>%"></div>
+                <div class="flex items-center gap-1.5">
+                  <div class="w-10 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-500 rounded-full" style="width:<%= e.participation_percentage %>%"></div>
                   </div>
-                  <span class="text-xs font-semibold <%= e.participation_percentage >= 80 ? 'text-emerald-700' : e.participation_percentage >= 50 ? 'text-amber-700' : 'text-slate-600' %>">
-                    <%= e.participation_percentage %>%
-                  </span>
+                  <span class="text-xs font-semibold text-slate-700"><%= e.participation_percentage %>%</span>
                 </div>
-                <div class="text-xs text-slate-500">
-                  <%= e.completed_count %>/<%= e.total_students %>
-                </div>
+                <span class="text-xs text-slate-400"><%= e.completed_count %>/<%= e.total_students %></span>
               </div>
             </td>
             
-            <!-- Kode -->
-            <td class="px-4 py-3 text-center whitespace-nowrap">
-              <% if (e.access_code) { %>
-                <span class="inline-flex items-center px-2 py-1 rounded-md bg-amber-100 text-amber-700 text-xs font-mono font-bold">
-                  <%= e.access_code %>
-                </span>
-              <% } else { %>
-                <span class="text-xs text-slate-400">—</span>
-              <% } %>
-            </td>
-            
-            <!-- Status -->
-            <td class="px-4 py-3 text-center whitespace-nowrap">
-              <% 
-                const now_e = new Date();
-                const startAt_e = e.start_at ? new Date(e.start_at) : null;
-                const endAt_e   = e.end_at   ? new Date(e.end_at)   : null;
-                // Tentukan status jadwal
-                let scheduleLabel_e = null;
-                let scheduleCls_e   = '';
-                if (startAt_e && endAt_e) {
-                  if (now_e < startAt_e) {
-                    scheduleLabel_e = '⏳ Terjadwal';
-                    scheduleCls_e = 'bg-blue-100 text-blue-700';
-                  } else if (now_e >= startAt_e && now_e < endAt_e) {
-                    scheduleLabel_e = '🟢 Berlangsung';
-                    scheduleCls_e = 'bg-emerald-100 text-emerald-700';
-                  } else {
-                    scheduleLabel_e = '🔴 Selesai';
-                    scheduleCls_e = 'bg-rose-100 text-rose-700';
-                  }
-                } else if (startAt_e && !endAt_e) {
-                  scheduleLabel_e = now_e < startAt_e ? '⏳ Terjadwal' : '🟢 Berlangsung';
-                  scheduleCls_e   = now_e < startAt_e ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700';
-                }
-              %>
+            <!-- Status — hanya Published/Draft + jadwal status -->
+            <td class="px-3 py-3 text-center whitespace-nowrap">
               <div class="flex flex-col items-center gap-1">
-                <% if (e.is_published) { %>
-                  <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">
-                    Published
-                  </span>
-                <% } else { %>
-                  <span class="inline-flex items-center px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
-                    Draft
-                  </span>
-                <% } %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full <%= e.is_published ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500' %> text-xs font-semibold">
+                  <%= e.is_published ? 'Published' : 'Draft' %>
+                </span>
                 <% if (scheduleLabel_e) { %>
                   <span class="inline-flex items-center px-2 py-0.5 rounded-full <%= scheduleCls_e %> text-xs font-medium">
                     <%= scheduleLabel_e %>
                   </span>
                 <% } %>
-                <%
-                  const hasSchedule_e = startAt_e !== null || (e.exam_class_schedule_count > 0);
-                  const modeLabel_e   = hasSchedule_e ? 'Otomatis' : 'Manual';
-                  const modeCls_e     = hasSchedule_e ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500';
-                %>
-                <span class="inline-flex items-center px-2 py-0.5 rounded-full <%= modeCls_e %> text-xs font-medium">
-                  <%= hasSchedule_e ? '🕐' : '🔧' %> <%= modeLabel_e %>
-                </span>
-                <% if (startAt_e) { %>
-                  <div class="text-xs text-slate-400 mt-0.5 text-center leading-tight">
-                    <div>Mulai: <%= startAt_e.toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %></div>
-                    <% if (endAt_e) { %><div>Selesai: <%= endAt_e.toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %></div><% } %>
-                  </div>
+                <% if (hasSchedule_e) { %>
+                  <span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-teal-100 text-teal-700 text-xs">🕐 Auto</span>
                 <% } %>
               </div>
             </td>
             
             <!-- Aksi -->
-            <td class="px-4 py-3 text-right whitespace-nowrap">
-              <div class="flex items-center justify-end gap-2">
-                <a href="/teacher/exams/<%= e.id %>" class="inline-flex items-center px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium transition-all" title="Lihat Detail">
+            <td class="px-3 py-3 text-right whitespace-nowrap">
+              <div class="flex items-center justify-end gap-1.5">
+                <a href="/teacher/exams/<%= e.id %>" class="px-2.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-medium transition-all">
                   Detail
                 </a>
-                
-                <a href="/teacher/grades?exam_id=<%= e.id %>" class="inline-flex items-center px-3 py-1.5 rounded-lg border border-indigo-300 hover:bg-indigo-50 text-indigo-700 text-xs font-medium transition-all" title="Lihat Nilai">
+                <a href="/teacher/grades?exam_id=<%= e.id %>" class="px-2.5 py-1.5 rounded-lg border border-indigo-300 hover:bg-indigo-50 text-indigo-700 text-xs font-medium transition-all">
                   Nilai
                 </a>
-                
-                <a href="/teacher/exams/<%= e.id %>/edit" class="inline-flex items-center px-3 py-1.5 rounded-lg border border-amber-300 hover:bg-amber-50 text-amber-700 text-xs font-medium transition-all" title="Edit Ujian">
+                <a href="/teacher/exams/<%= e.id %>/edit" class="px-2.5 py-1.5 rounded-lg border border-amber-300 hover:bg-amber-50 text-amber-700 text-xs font-medium transition-all">
                   Edit
                 </a>
-                
                 <form action="/teacher/exams/<%= e.id %>/toggle-publish" method="POST" class="inline">
-                  <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-lg <%= e.is_published ? 'bg-slate-500 hover:bg-slate-600' : 'bg-emerald-500 hover:bg-emerald-600' %> text-white text-xs font-semibold transition-all" title="<%= e.is_published ? 'Unpublish' : 'Publish' %>">
-                    <%= e.is_published ? 'Unpublish' : 'Publish' %>
+                  <button type="submit" class="px-2.5 py-1.5 rounded-lg <%= e.is_published ? 'bg-slate-500 hover:bg-slate-600' : 'bg-emerald-500 hover:bg-emerald-600' %> text-white text-xs font-semibold transition-all">
+                    <%= e.is_published ? 'Unp.' : 'Pub.' %>
                   </button>
                 </form>
               </div>
