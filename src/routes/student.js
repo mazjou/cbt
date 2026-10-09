@@ -150,12 +150,10 @@ router.get('/exams', async (req, res) => {
   const user = req.session.user;
   const [exams] = await pool.query(
     `SELECT e.id, e.title, e.description,
-            COALESCE(ec_mine.start_at, e.start_at) AS start_at,
-            COALESCE(ec_mine.end_at, e.end_at) AS end_at,
-            COALESCE(ec_mine.duration_minutes, e.duration_minutes) AS duration_minutes,
+            e.start_at, e.end_at, e.duration_minutes,
             e.pass_score, e.max_attempts, e.access_code,
             s.name AS subject_name, u.full_name AS teacher_name,
-            (SELECT GROUP_CONCAT(c.name SEPARATOR ', ')
+            (SELECT STRING_AGG(c.name, ', ')
              FROM exam_classes ec
              JOIN classes c ON c.id=ec.class_id
              WHERE ec.exam_id=e.id) AS class_names,
@@ -164,7 +162,6 @@ router.get('/exams', async (req, res) => {
      FROM exams e
      JOIN subjects s ON s.id=e.subject_id
      JOIN users u ON u.id=e.teacher_id
-     LEFT JOIN exam_classes ec_mine ON ec_mine.exam_id=e.id AND ec_mine.class_id=:class_id
      WHERE e.is_published = true
        AND (
          NOT EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id)
@@ -177,26 +174,20 @@ router.get('/exams', async (req, res) => {
            AND NOT EXISTS (
              SELECT 1 FROM exam_classes ec2
              WHERE ec2.exam_id = e.id
-             AND (ec2.start_at IS NOT NULL OR ec2.end_at IS NOT NULL)
            )
          )
          OR
-         -- Kasus 2: Ada jadwal per kelas untuk kelas siswa ini — cek waktu per kelas
-         EXISTS (
-           SELECT 1 FROM exam_classes ec3
-           WHERE ec3.exam_id = e.id AND ec3.class_id = :class_id
-           AND (ec3.start_at IS NULL OR NOW() >= ec3.start_at)
-           AND (ec3.end_at IS NULL OR NOW() <= ec3.end_at)
-         )
-         OR
-         -- Kasus 3: Ada jadwal global dan kelas siswa tidak punya jadwal khusus — cek jadwal global
+         -- Kasus 2: Ada jadwal global — cek waktu global
          (
            (e.start_at IS NULL OR NOW() >= e.start_at)
            AND (e.end_at IS NULL OR NOW() <= e.end_at)
-           AND NOT EXISTS (
-             SELECT 1 FROM exam_classes ec4
-             WHERE ec4.exam_id = e.id AND ec4.class_id = :class_id AND ec4.start_at IS NOT NULL
-           )
+           AND (e.start_at IS NOT NULL OR e.end_at IS NOT NULL)
+         )
+         OR
+         -- Kasus 3: Tidak ada jadwal global tapi ada kelas — tampil jika published (jadwal per kelas dihandle setelah migrasi)
+         (
+           e.start_at IS NULL AND e.end_at IS NULL
+           AND EXISTS (SELECT 1 FROM exam_classes ec5 WHERE ec5.exam_id=e.id AND ec5.class_id=:class_id)
          )
        )
      ORDER BY e.id DESC;`,
@@ -222,33 +213,12 @@ router.get('/exams/:id', async (req, res) => {
          OR EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id AND ec.class_id=:class_id)
        )
        AND (
-         -- Kasus 1: Tidak ada jadwal sama sekali — selalu bisa akses
-         (
-           e.start_at IS NULL AND e.end_at IS NULL
-           AND NOT EXISTS (
-             SELECT 1 FROM exam_classes ec2
-             WHERE ec2.exam_id=e.id
-             AND (ec2.start_at IS NOT NULL OR ec2.end_at IS NOT NULL)
-           )
-         )
-         OR
-         -- Kasus 2: Ada jadwal per kelas — cek waktu per kelas
-         EXISTS (
-           SELECT 1 FROM exam_classes ec3
-           WHERE ec3.exam_id=e.id AND ec3.class_id=:class_id
-           AND (ec3.start_at IS NULL OR NOW() >= ec3.start_at)
-           AND (ec3.end_at IS NULL OR NOW() <= ec3.end_at)
-         )
-         OR
-         -- Kasus 3: Ada jadwal global, kelas siswa tidak punya jadwal khusus — cek jadwal global
-         (
-           (e.start_at IS NULL OR NOW() >= e.start_at)
-           AND (e.end_at IS NULL OR NOW() <= e.end_at)
-           AND NOT EXISTS (
-             SELECT 1 FROM exam_classes ec4
-             WHERE ec4.exam_id=e.id AND ec4.class_id=:class_id AND ec4.start_at IS NOT NULL
-           )
-         )
+         e.start_at IS NULL
+         OR NOW() >= e.start_at
+       )
+       AND (
+         e.end_at IS NULL
+         OR NOW() <= e.end_at
        )
      LIMIT 1;`,
     { id: req.params.id, sid: user.id, class_id: user.class_id || 0 }
@@ -302,35 +272,8 @@ router.post('/exams/:id/start', async (req, res) => {
          NOT EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=:id)
          OR EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=:id AND ec.class_id=:class_id)
        )
-       AND (
-         -- Kasus 1: Tidak ada jadwal sama sekali — selalu bisa akses
-         (
-           start_at IS NULL AND end_at IS NULL
-           AND NOT EXISTS (
-             SELECT 1 FROM exam_classes ec2
-             WHERE ec2.exam_id=:id
-             AND (ec2.start_at IS NOT NULL OR ec2.end_at IS NOT NULL)
-           )
-         )
-         OR
-         -- Kasus 2: Ada jadwal per kelas — cek waktu per kelas
-         EXISTS (
-           SELECT 1 FROM exam_classes ec3
-           WHERE ec3.exam_id=:id AND ec3.class_id=:class_id
-           AND (ec3.start_at IS NULL OR NOW() >= ec3.start_at)
-           AND (ec3.end_at IS NULL OR NOW() <= ec3.end_at)
-         )
-         OR
-         -- Kasus 3: Ada jadwal global, kelas siswa tidak punya jadwal khusus — cek jadwal global
-         (
-           (start_at IS NULL OR NOW() >= start_at)
-           AND (end_at IS NULL OR NOW() <= end_at)
-           AND NOT EXISTS (
-             SELECT 1 FROM exam_classes ec4
-             WHERE ec4.exam_id=:id AND ec4.class_id=:class_id AND ec4.start_at IS NOT NULL
-           )
-         )
-       )
+       AND (start_at IS NULL OR NOW() >= start_at)
+       AND (end_at IS NULL OR NOW() <= end_at)
      LIMIT 1;`,
     { id: examId, class_id: user.class_id || 0 }
   );
