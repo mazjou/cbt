@@ -89,8 +89,8 @@ NILAI: 4
 
 FORMAT COMPLEX (MULTI JAWABAN, POIN PROPORSIONAL):
 ----------------------------------------------------
-Gunakan TIPE: COMPLEX dan KUNCI: dengan huruf dipisah koma.
-Sama seperti CHECKBOX: skor proporsional tanpa penalti.
+Catatan: Tipe COMPLEX sama persis dengan CHECKBOX. Gunakan CHECKBOX untuk soal baru.
+COMPLEX masih didukung untuk kompatibilitas data lama.
 
 7. Manakah yang termasuk sistem operasi?
 A. Windows
@@ -115,7 +115,8 @@ ATURAN PENTING:
 7. Gambar opsi: letakkan tepat setelah teks opsi tersebut
 8. Opsi boleh hanya berisi gambar (teks kosong)
 9. Untuk MCQ: setiap soal harus punya opsi A, B, C, D, E dan KUNCI
-10. Untuk CHECKBOX/COMPLEX multi-jawaban: KUNCI: A,C,D (huruf dipisah koma)
-11. Tambahkan TIPE: CHECKBOX atau TIPE: COMPLEX untuk soal multi-jawaban
-12. Tipe yang didukung: MCQ (default), COMPLEX, TRUE_FALSE, CHECKBOX
+10. Untuk CHECKBOX multi-jawaban: KUNCI: A,C,D (huruf dipisah koma)
+11. Tambahkan TIPE: CHECKBOX untuk soal multi-jawaban (pilih ≥1 jawaban benar)
+12. Tipe yang didukung: MCQ (default), CHECKBOX, TRUE_FALSE
+    (COMPLEX masih didukung = sama dengan CHECKBOX)
 ===================================================

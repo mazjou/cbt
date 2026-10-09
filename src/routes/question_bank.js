@@ -170,9 +170,9 @@ router.get('/import/template', async (req, res) => {
         image: '', points: 1, correct: 'A', question_type: 'MCQ',
         A: 'Jakarta', B: 'Surabaya', C: 'Bandung', D: 'Yogyakarta', E: '',
         difficulty: 'EASY', subject: firstSubject, chapter: 'Bab 1', tags: 'geografi' },
-      // Contoh 2: COMPLEX (jawaban benar lebih dari satu, pisah koma)
-      { question_text: 'Contoh COMPLEX (TKA): Manakah yang termasuk bilangan prima?',
-        image: '', points: 4, correct: 'A,C,D', question_type: 'COMPLEX',
+      // Contoh 2: CHECKBOX (jawaban benar lebih dari satu, tanpa penalti)
+      { question_text: 'Contoh CHECKBOX: Manakah yang termasuk bilangan prima?',
+        image: '', points: 4, correct: 'A,C,D', question_type: 'CHECKBOX',
         A: '2', B: '4', C: '5', D: '7', E: '9',
         difficulty: 'MEDIUM', subject: firstSubject, chapter: 'Bab 2', tags: 'matematika,prima' },
       // Contoh 3: TRUE_FALSE (A=Benar, B=Salah)
@@ -180,11 +180,11 @@ router.get('/import/template', async (req, res) => {
         image: '', points: 2, correct: 'A', question_type: 'TRUE_FALSE',
         A: 'Benar', B: 'Salah', C: '', D: '', E: '',
         difficulty: 'EASY', subject: firstSubject, chapter: 'Bab 1', tags: 'IPA,suhu' },
-      // Contoh 4: CHECKBOX (multi-jawaban tanpa penalti)
-      { question_text: 'Contoh CHECKBOX: Manakah yang termasuk bilangan prima?',
-        image: '', points: 4, correct: 'A,C,D', question_type: 'CHECKBOX',
-        A: '2', B: '4', C: '5', D: '7', E: '9',
-        difficulty: 'MEDIUM', subject: firstSubject, chapter: 'Bab 2', tags: 'matematika,prima' },
+      // Contoh 4: CHECKBOX multi-jawaban lain
+      { question_text: 'Contoh CHECKBOX: Manakah yang termasuk perangkat input?',
+        image: '', points: 3, correct: 'A,C,E', question_type: 'CHECKBOX',
+        A: 'Keyboard', B: 'Monitor', C: 'Mouse', D: 'Speaker', E: 'Touchpad',
+        difficulty: 'MEDIUM', subject: firstSubject, chapter: 'Bab 2', tags: 'hardware,input' },
     ];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(contoh, {
@@ -197,8 +197,8 @@ router.get('/import/template', async (req, res) => {
       ['question_text','Teks pertanyaan (boleh HTML dari editor)','Ya','Manakah yang termasuk bilangan prima?'],
       ['image','Nama file gambar soal (opsional, upload terpisah)','Tidak','gambar1.jpg'],
       ['points','Poin soal (angka, default 1)','Tidak','1'],
-      ['correct','Kunci jawaban. MCQ: huruf tunggal. COMPLEX: pisah koma. TRUE_FALSE: A atau B','Ya','A atau A,C,D'],
-      ['question_type','Tipe soal: MCQ / COMPLEX / TRUE_FALSE / CHECKBOX (default: MCQ)','Tidak','COMPLEX'],
+      ['correct','Kunci jawaban. MCQ: huruf tunggal. CHECKBOX: pisah koma. TRUE_FALSE: A atau B','Ya','A atau A,C,D'],
+      ['question_type','Tipe soal: MCQ / CHECKBOX / TRUE_FALSE (default: MCQ)','Tidak','CHECKBOX'],
       ['A','Teks opsi A','Ya (kecuali TRUE_FALSE sudah otomatis)','Jakarta'],
       ['B','Teks opsi B','Ya','Surabaya'],
       ['C','Teks opsi C','Ya (tidak wajib untuk TRUE_FALSE)','Bandung'],
@@ -211,9 +211,8 @@ router.get('/import/template', async (req, res) => {
       ['','','',''],
       ['--- PANDUAN TIPE SOAL ---','','',''],
       ['MCQ','Pilihan ganda biasa. correct = 1 huruf (A/B/C/D/E)','','correct: A'],
-      ['COMPLEX','Jawaban benar lebih dari satu. Poin proporsional tanpa penalti. correct = huruf dipisah koma','','correct: A,C,D'],
+      ['CHECKBOX','Multi-jawaban. Tiap jawaban benar = poin proporsional tanpa penalti. correct = huruf dipisah koma','','correct: A,C,D'],
       ['TRUE_FALSE','Pernyataan benar/salah. Opsi A=Benar, B=Salah. correct = A atau B','','correct: A'],
-      ['CHECKBOX','Multi-jawaban tanpa penalti. Skor = floor(benar_dipilih / total_benar × poin)','','correct: A,C,D'],
       ['--- POIN PARSIAL COMPLEX/CHECKBOX ---','','',''],
       ['','Rumus: floor(benar_dipilih / total_benar × poin). Tanpa penalti untuk pilihan salah.','',''],
       ['','Contoh: poin=4, benar ada 3 (A,C,D), siswa pilih A,C → dapat 2/3 × 4 = 2 poin','',''],
