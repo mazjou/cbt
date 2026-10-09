@@ -157,53 +157,84 @@
               <span class="text-sm font-bold <%= color.text %>">Tentukan Benar atau Salah:</span>
               <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">Benar/Salah</span>
             </div>
+            <p class="text-xs text-slate-500 mb-2">Klik tombol di bawah untuk memilih jawaban.</p>
           <% } else { %>
             <div class="text-sm font-bold <%= color.text %> mb-2">Pilih Jawaban:</div>
           <% } %>
 
-          <% q.options.forEach((o) => {
-            const isChosen = q.question_type === 'COMPLEX'
-              ? (q.chosen_option_ids && q.chosen_option_ids.includes(o.id))
-              : (q.question_type === 'CHECKBOX'
-                ? (q.chosen_option_ids && q.chosen_option_ids.includes(o.id))
-                : (q.chosen_option_id === o.id));
-          %>
-            <label class="block rounded-xl border-2 <%= isChosen ? color.border + ' bg-white shadow-lg' : 'border-slate-200 bg-white/80' %> hover:shadow-lg px-5 py-4 cursor-pointer transition-all transform hover:scale-[1.02]">
-              <div class="flex gap-4">
-                <% if (q.question_type === 'COMPLEX') { %>
-                  <input type="checkbox"
-                    name="ans_complex_<%= q.id %>"
-                    value="<%= o.id %>"
-                    data-question="<%= q.id %>"
-                    data-type="COMPLEX"
-                    class="mt-1 w-5 h-5 accent-purple-600 complex-checkbox"
-                    <%= isChosen ? 'checked' : '' %> />
-                <% } else if (q.question_type === 'CHECKBOX') { %>
-                  <input type="checkbox"
-                    name="ans_checkbox_<%= q.id %>"
-                    value="<%= o.id %>"
-                    data-question="<%= q.id %>"
-                    data-type="CHECKBOX"
-                    class="mt-1 w-5 h-5 accent-orange-600 checkbox-answer"
-                    <%= isChosen ? 'checked' : '' %> />
-                <% } else { %>
+          <% if (q.question_type === 'TRUE_FALSE') { %>
+            <!-- TRUE_FALSE: render as two large side-by-side buttons -->
+            <div class="grid grid-cols-2 gap-4 mt-2">
+              <% [q.options[0], q.options[1]].filter(Boolean).forEach((o) => {
+                const isChosen = (q.chosen_option_id === o.id);
+                const isBenar = (o.option_label === 'A');
+              %>
+                <label class="flex flex-col items-center justify-center gap-3 rounded-2xl border-4 px-6 py-8 cursor-pointer transition-all transform hover:scale-[1.02] shadow-md
+                  <%= isChosen
+                    ? (isBenar
+                      ? 'border-emerald-500 bg-gradient-to-br from-emerald-400 to-green-500 text-white shadow-emerald-200 shadow-lg'
+                      : 'border-rose-500 bg-gradient-to-br from-rose-400 to-red-500 text-white shadow-rose-200 shadow-lg')
+                    : (isBenar
+                      ? 'border-emerald-200 bg-white hover:border-emerald-400 hover:bg-emerald-50 text-emerald-800'
+                      : 'border-rose-200 bg-white hover:border-rose-400 hover:bg-rose-50 text-rose-800') %>">
                   <input type="radio"
                     name="ans_<%= q.id %>"
                     value="<%= o.id %>"
                     data-question="<%= q.id %>"
-                    data-type="<%= q.question_type || 'MCQ' %>"
-                    class="mt-1 w-5 h-5 accent-<%= color.text.replace('text-', '') %>"
+                    data-type="TRUE_FALSE"
+                    class="sr-only"
                     <%= isChosen ? 'checked' : '' %> />
-                <% } %>
-                <div class="flex-1">
-                  <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg <%= color.badge %> font-bold text-sm mb-2">
-                    <%= q.question_type === 'TRUE_FALSE' ? (o.option_label === 'A' ? '✓' : '✗') : o.option_label %>
+                  <span class="text-5xl"><%= isBenar ? '✅' : '❌' %></span>
+                  <span class="text-xl font-bold"><%= isBenar ? 'BENAR' : 'SALAH' %></span>
+                  <span class="text-sm opacity-80"><%- o.option_text %></span>
+                </label>
+              <% }) %>
+            </div>
+          <% } else { %>
+            <% q.options.forEach((o) => {
+              const isChosen = q.question_type === 'COMPLEX'
+                ? (q.chosen_option_ids && q.chosen_option_ids.includes(o.id))
+                : (q.question_type === 'CHECKBOX'
+                  ? (q.chosen_option_ids && q.chosen_option_ids.includes(o.id))
+                  : (q.chosen_option_id === o.id));
+            %>
+              <label class="block rounded-xl border-2 <%= isChosen ? color.border + ' bg-white shadow-lg' : 'border-slate-200 bg-white/80' %> hover:shadow-lg px-5 py-4 cursor-pointer transition-all transform hover:scale-[1.02]">
+                <div class="flex gap-4">
+                  <% if (q.question_type === 'COMPLEX') { %>
+                    <input type="checkbox"
+                      name="ans_complex_<%= q.id %>"
+                      value="<%= o.id %>"
+                      data-question="<%= q.id %>"
+                      data-type="COMPLEX"
+                      class="mt-1 w-5 h-5 accent-purple-600 complex-checkbox"
+                      <%= isChosen ? 'checked' : '' %> />
+                  <% } else if (q.question_type === 'CHECKBOX') { %>
+                    <input type="checkbox"
+                      name="ans_checkbox_<%= q.id %>"
+                      value="<%= o.id %>"
+                      data-question="<%= q.id %>"
+                      data-type="CHECKBOX"
+                      class="mt-1 w-5 h-5 accent-orange-600 checkbox-answer"
+                      <%= isChosen ? 'checked' : '' %> />
+                  <% } else { %>
+                    <input type="radio"
+                      name="ans_<%= q.id %>"
+                      value="<%= o.id %>"
+                      data-question="<%= q.id %>"
+                      data-type="<%= q.question_type || 'MCQ' %>"
+                      class="mt-1 w-5 h-5 accent-<%= color.text.replace('text-', '') %>"
+                      <%= isChosen ? 'checked' : '' %> />
+                  <% } %>
+                  <div class="flex-1">
+                    <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg <%= color.badge %> font-bold text-sm mb-2">
+                      <%= o.option_label %>
+                    </div>
+                    <div class="text-slate-700 prose prose-sm max-w-none"><%- o.option_text %></div>
                   </div>
-                  <div class="text-slate-700 prose prose-sm max-w-none"><%- o.option_text %></div>
                 </div>
-              </div>
-            </label>
-          <% }) %>
+              </label>
+            <% }) %>
+          <% } %>
         </div>
       </section>
     <% }) %>

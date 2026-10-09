@@ -1,0 +1,33 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Redesign the True/False question UI in the student exam page (attempt_take.ejs). Instead of two small radio-button label rows, render two large buttons side-by-side: a green 'Benar' button and a red 'Salah' button. Clicking a button selects it (radio behavior). This is purely a UI change in one file; the underlying radio input and autosave logic stays the same.",
+  "status": "completed",
+  "steps": [
+    "STEP 1 — Read the current TRUE_FALSE rendering in src/views/student/attempt_take.ejs (lines ~155–210 in the options forEach loop). Currently it renders all options (including TRUE_FALSE) as identical `<label>` rows with a radio input and the option text. The only difference is the badge label swaps A→✓ and B→✗.",
+
+    "STEP 2 — In src/views/student/attempt_take.ejs, inside the `q.options.forEach` loop, add a conditional branch for TRUE_FALSE. When `q.question_type === 'TRUE_FALSE'`, skip the generic label render and instead render a two-button layout. Use this structure: a `<div class='grid grid-cols-2 gap-4 mt-2'>` containing two `<label>` elements. Button A ('Benar'): large, rounded, green gradient (bg-gradient-to-br from-emerald-400 to-green-500), white text, checkmark icon ✅, bold label. Button B ('Salah'): large, rounded, red gradient (bg-gradient-to-br from-rose-400 to-red-500), white text, X icon ❌. Each label wraps a hidden radio input (same name/value/data-question/data-type attributes as before, so existing autosave JS still fires). The chosen/selected state: add a visible 'selected' ring — when `isChosen` is true, add `ring-4 ring-offset-2` with matching color ring. Non-chosen buttons should be muted (opacity-70 or a lighter gradient).",
+
+    "STEP 3 — Ensure the existing autosave JS still works. The autosave listener is `document.querySelectorAll('input[type=radio]').forEach(...)` — since the hidden radio inside the button still fires onChange when the label is clicked, this requires no JS changes. Verify by tracing the click path: click label → hidden radio checked → onChange fires → autosave fetch.",
+
+    "STEP 4 — Ensure the navigation button highlight still works for TRUE_FALSE. The updateAnswered() function counts `input[type=radio]:checked` — since the radio is still inside the label, this works unchanged.",
+
+    "STEP 5 — The TRUE_FALSE section header currently says 'Tentukan Benar atau Salah' with a badge. Keep this header but update its description to reflect the new button UI (e.g., 'Klik tombol di bawah untuk memilih'). This is already in the ejs at the `else if (q.question_type === 'TRUE_FALSE')` block above the options loop."
+  ],
+  "acceptance_criteria": [
+    "TRUE_FALSE questions render as two large side-by-side buttons (not radio list rows).",
+    "Clicking 'Benar' or 'Salah' visually highlights the selected button with a colored ring.",
+    "The selected answer is still saved via autosave (POST /answer) without changes to the JS logic.",
+    "MCQ and COMPLEX question rendering is completely unchanged.",
+    "Server starts without errors."
+  ],
+  "verification": [
+    "Run `npm run dev` and navigate to a student exam that contains a TRUE_FALSE question.",
+    "Confirm the question shows two large buttons instead of two labeled radio rows.",
+    "Click 'Benar' — confirm it gets the selected ring and the navigation button turns green.",
+    "Reload the page — confirm the previously selected button still appears selected (loaded from server state).",
+    "Submit the exam — confirm TRUE_FALSE scoring is unchanged (still all-or-nothing MCQ logic)."
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
