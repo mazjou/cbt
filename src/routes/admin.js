@@ -2835,15 +2835,27 @@ router.get('/exams/:id', async (req, res) => {
     exam.class_names = examClassesResult[0].map(ec => ec.name).join(', ') || 'Semua Kelas';
 
     // Populate class_schedules for auto-publish info box in view
-    const classSchedulesResult = await pool.query(
-      `SELECT ec.class_id, c.name AS class_name,
-              ec.start_at, ec.end_at, ec.duration_minutes
-       FROM exam_classes ec
-       JOIN classes c ON c.id = ec.class_id
-       WHERE ec.exam_id = $1
-       ORDER BY c.name`,
-      [examId]
-    );
+    let classSchedulesResult;
+    try {
+      classSchedulesResult = await pool.query(
+        `SELECT ec.class_id, c.name AS class_name,
+                ec.start_at, ec.end_at, ec.duration_minutes
+         FROM exam_classes ec
+         JOIN classes c ON c.id = ec.class_id
+         WHERE ec.exam_id = $1
+         ORDER BY c.name`,
+        [examId]
+      );
+    } catch (e) {
+      classSchedulesResult = await pool.query(
+        `SELECT ec.class_id, c.name AS class_name
+         FROM exam_classes ec
+         JOIN classes c ON c.id = ec.class_id
+         WHERE ec.exam_id = $1
+         ORDER BY c.name`,
+        [examId]
+      );
+    }
     exam.class_schedules = classSchedulesResult[0];
     exam.class_names = exam.class_schedules.map(ec => ec.class_name).join(', ') || 'Semua Kelas';
 
