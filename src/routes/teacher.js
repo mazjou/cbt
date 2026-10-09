@@ -750,6 +750,11 @@ router.post('/exams', async (req, res) => {
         if (!classId) continue;
         const cs = classStartAt[classId]  || null;
         const ce = classEndAt[classId]    || null;
+        // Validasi: start_at harus sebelum end_at jika keduanya diisi
+        if (cs && ce && new Date(cs) >= new Date(ce)) {
+          req.flash('error', 'Waktu mulai kelas harus lebih awal dari waktu selesai.');
+          return res.redirect('/teacher/exams');
+        }
         const cd = classDuration[classId] ? Number(classDuration[classId]) : null;
         await pool.query(
           `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
@@ -904,6 +909,11 @@ router.put('/exams/:id', async (req, res) => {
         if (!cid) continue;
         const cs = classStartAt[cid]  || null;
         const ce = classEndAt[cid]    || null;
+        // Validasi: start_at harus sebelum end_at jika keduanya diisi
+        if (cs && ce && new Date(cs) >= new Date(ce)) {
+          req.flash('error', 'Waktu mulai kelas harus lebih awal dari waktu selesai.');
+          return res.redirect(`/teacher/exams/${examId}/edit`);
+        }
         const cd = classDuration[cid] ? Number(classDuration[cid]) : null;
         await pool.query(
           `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)

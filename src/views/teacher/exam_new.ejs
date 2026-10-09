@@ -59,7 +59,7 @@
             <% classes.forEach(c => { %>
               <div class="class-item-wrap">
                 <label class="flex items-center gap-2 p-2 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 rounded-lg cursor-pointer transition-all class-checkbox-label">
-                  <input type="checkbox" name="class_ids" value="<%= c.id %>" class="rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-5 h-5 class-checkbox" data-class-id="<%= c.id %>" />
+                  <input type="checkbox" name="class_ids[]" value="<%= c.id %>" class="rounded border-blue-300 text-blue-600 focus:ring-blue-500 w-5 h-5 class-checkbox" data-class-id="<%= c.id %>" />
                   <span class="text-sm text-slate-700"><%= c.name %></span>
                 </label>
                 <div class="class-schedule-block hidden ml-7 mt-1 mb-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200 grid grid-cols-2 gap-3"
