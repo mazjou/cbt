@@ -96,6 +96,14 @@
                 <%= schedLabel_m %>
               </span>
             <% } %>
+            <%
+              const hasSchedule_m = startAt_m !== null || (e.exam_class_count > 0);
+              const modeLabel_m   = hasSchedule_m ? 'Otomatis' : 'Manual';
+              const modeCls_m     = hasSchedule_m ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500';
+            %>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full <%= modeCls_m %> text-xs font-medium mt-1">
+              <%= hasSchedule_m ? '🕐' : '🔧' %> <%= modeLabel_m %>
+            </span>
             <% if (startAt_m) { %>
               <div class="text-xs text-slate-500 mt-1">
                 Mulai: <%= startAt_m.toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %>
@@ -313,6 +321,14 @@
                     <%= scheduleLabel_e %>
                   </span>
                 <% } %>
+                <%
+                  const hasSchedule_e = startAt_e !== null || (e.exam_class_count > 0);
+                  const modeLabel_e   = hasSchedule_e ? 'Otomatis' : 'Manual';
+                  const modeCls_e     = hasSchedule_e ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-500';
+                %>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full <%= modeCls_e %> text-xs font-medium">
+                  <%= hasSchedule_e ? '🕐' : '🔧' %> <%= modeLabel_e %>
+                </span>
                 <% if (startAt_e) { %>
                   <div class="text-xs text-slate-400 mt-0.5 text-center leading-tight">
                     <div>Mulai: <%= startAt_e.toLocaleString('id-ID', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) %></div>
