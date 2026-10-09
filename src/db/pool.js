@@ -132,7 +132,16 @@ function convertNamedToPositional(sql, params) {
   const values = [];
   const paramMap = {};
 
-  const text = sql.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (match, name) => {
+  // Kolom timestamp: cast eksplisit agar PostgreSQL tahu tipe meski nilainya NULL
+  const TIMESTAMP_PARAMS = new Set([
+    'start_at','end_at','started_at','finished_at','locked_at',
+    'submitted_at','created_at','updated_at','answered_at','graded_at',
+    'published_at','cs','ce'
+  ]);
+
+  // Regex: cocokkan :nama tapi jangan ikutkan ::cast yang mungkin menyusul
+  // Pola (?!:) memastikan tidak menangkap :: (cast PostgreSQL)
+  const text = sql.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)(?!:)/g, (match, name) => {
     if (!(name in paramMap)) {
       let val = params[name] !== undefined ? params[name] : null;
       // Konversi 0/1 ke boolean untuk semua param yang dikenal sebagai boolean
@@ -140,7 +149,10 @@ function convertNamedToPositional(sql, params) {
       values.push(val);
       paramMap[name] = values.length;
     }
-    return `$${paramMap[name]}`;
+    const pos = `$${paramMap[name]}`;
+    // Tambahkan cast eksplisit untuk kolom timestamp agar NULL tidak ambigu
+    if (TIMESTAMP_PARAMS.has(name)) return `${pos}::timestamptz`;
+    return pos;
   });
 
   return { text, values };
