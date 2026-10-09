@@ -353,12 +353,12 @@
                   const examStartA = exam.start_at ? new Date(exam.start_at) : null;
                   const examEndA   = exam.end_at   ? new Date(exam.end_at)   : null;
                   const nowA       = new Date();
-                  const hasAutoA   = examStartA !== null;
+                  const hasAutoA   = examStartA !== null || exam.exam_class_schedule_count > 0;
                   let autoLabelA = '', autoCls_a = '';
                   if (hasAutoA) {
-                    if (nowA < examStartA)                              { autoLabelA = '⏳ Terjadwal';    autoCls_a = 'bg-blue-100 text-blue-700'; }
-                    else if (!examEndA || nowA <= examEndA)             { autoLabelA = '🟢 Berlangsung'; autoCls_a = 'bg-emerald-100 text-emerald-700'; }
-                    else                                                { autoLabelA = '🔴 Selesai';      autoCls_a = 'bg-rose-100 text-rose-700'; }
+                    if (examStartA && nowA < examStartA)               { autoLabelA = '⏳ Terjadwal';    autoCls_a = 'bg-blue-100 text-blue-700'; }
+                    else if (examEndA && nowA > examEndA)              { autoLabelA = '🔴 Selesai';      autoCls_a = 'bg-rose-100 text-rose-700'; }
+                    else                                               { autoLabelA = '🟢 Berlangsung'; autoCls_a = 'bg-emerald-100 text-emerald-700'; }
                   }
                 %>
                 <% if (hasAutoA) { %>

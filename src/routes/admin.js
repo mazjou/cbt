@@ -2462,7 +2462,8 @@ router.get('/exams', async (req, res) => {
       (SELECT COUNT(DISTINCT u2.id) FROM users u2
        INNER JOIN exam_classes ec3 ON ec3.class_id = u2.class_id AND ec3.exam_id = e.id
        WHERE u2.role='STUDENT' AND u2.is_active=true
-      ) AS total_students
+      ) AS total_students,
+      (SELECT COUNT(*) FROM exam_classes ec_s WHERE ec_s.exam_id = e.id AND ec_s.start_at IS NOT NULL) AS exam_class_schedule_count
      FROM exams e
      LEFT JOIN subjects s ON s.id = e.subject_id
      LEFT JOIN users u ON u.id = e.teacher_id
@@ -2477,10 +2478,11 @@ router.get('/exams', async (req, res) => {
   // Calculate participation percentage for each exam
   // Cast COUNT hasil PostgreSQL (bigint/string) ke Number
   exams.forEach(exam => {
-    exam.participant_count = Number(exam.participant_count || 0);
-    exam.total_students    = Number(exam.total_students    || 0);
-    exam.question_count    = Number(exam.question_count    || 0);
-    exam.attempt_count     = Number(exam.attempt_count     || 0);
+    exam.participant_count           = Number(exam.participant_count            || 0);
+    exam.total_students              = Number(exam.total_students               || 0);
+    exam.question_count              = Number(exam.question_count               || 0);
+    exam.attempt_count               = Number(exam.attempt_count                || 0);
+    exam.exam_class_schedule_count   = Number(exam.exam_class_schedule_count    || 0);
     exam.participation_percentage = exam.total_students > 0
       ? Math.round((exam.participant_count / exam.total_students) * 100)
       : 0;

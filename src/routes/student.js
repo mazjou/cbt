@@ -189,13 +189,13 @@ router.get('/exams', async (req, res) => {
            AND (ec3.end_at IS NULL OR NOW() <= ec3.end_at)
          )
          OR
-         -- Kasus 3: Ada jadwal global dan tidak ada jadwal per kelas dengan waktu — cek jadwal global
+         -- Kasus 3: Ada jadwal global dan kelas siswa tidak punya jadwal khusus — cek jadwal global
          (
            (e.start_at IS NULL OR NOW() >= e.start_at)
            AND (e.end_at IS NULL OR NOW() <= e.end_at)
            AND NOT EXISTS (
              SELECT 1 FROM exam_classes ec4
-             WHERE ec4.exam_id = e.id AND ec4.start_at IS NOT NULL
+             WHERE ec4.exam_id = e.id AND ec4.class_id = :class_id AND ec4.start_at IS NOT NULL
            )
          )
        )
@@ -240,13 +240,13 @@ router.get('/exams/:id', async (req, res) => {
            AND (ec3.end_at IS NULL OR NOW() <= ec3.end_at)
          )
          OR
-         -- Kasus 3: Ada jadwal global, tidak ada jadwal per kelas dengan waktu — cek jadwal global
+         -- Kasus 3: Ada jadwal global, kelas siswa tidak punya jadwal khusus — cek jadwal global
          (
            (e.start_at IS NULL OR NOW() >= e.start_at)
            AND (e.end_at IS NULL OR NOW() <= e.end_at)
            AND NOT EXISTS (
              SELECT 1 FROM exam_classes ec4
-             WHERE ec4.exam_id=e.id AND ec4.start_at IS NOT NULL
+             WHERE ec4.exam_id=e.id AND ec4.class_id=:class_id AND ec4.start_at IS NOT NULL
            )
          )
        )
@@ -321,13 +321,13 @@ router.post('/exams/:id/start', async (req, res) => {
            AND (ec3.end_at IS NULL OR NOW() <= ec3.end_at)
          )
          OR
-         -- Kasus 3: Ada jadwal global, tidak ada jadwal per kelas dengan waktu — cek jadwal global
+         -- Kasus 3: Ada jadwal global, kelas siswa tidak punya jadwal khusus — cek jadwal global
          (
            (start_at IS NULL OR NOW() >= start_at)
            AND (end_at IS NULL OR NOW() <= end_at)
            AND NOT EXISTS (
              SELECT 1 FROM exam_classes ec4
-             WHERE ec4.exam_id=:id AND ec4.start_at IS NOT NULL
+             WHERE ec4.exam_id=:id AND ec4.class_id=:class_id AND ec4.start_at IS NOT NULL
            )
          )
        )
