@@ -12,6 +12,18 @@ const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 const router = express.Router();
 router.use(requireRole('ADMIN'));
 
+// SQL untuk urut kelas natural: X < XI < XII, lalu jurusan alfabet, lalu nomor
+const CLASS_ORDER_SQL = `
+  CASE
+    WHEN name ~* '^XII' THEN 3
+    WHEN name ~* '^XI'  THEN 2
+    WHEN name ~* '^X'   THEN 1
+    ELSE 4
+  END,
+  regexp_replace(upper(name), '^(XII|XI|X)\\s+', '') ASC,
+  (regexp_match(name, '(\\d+)\\s*$'))[1]::int NULLS LAST
+`;
+
 // pool.js sudah handle konversi MySQL→PostgreSQL dan return [rows, fields]
 // Semua query: const [rows] = await pool.query(...) atau xResult[0][0] untuk single row
 const pq = pool.query.bind(pool);
@@ -463,7 +475,7 @@ router.get('/classes', async (req, res) => {
   const total = countResult[0][0].total;
 
   const classesResult = await pool.query(
-    `SELECT * FROM classes ${whereClause} ORDER BY id DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
+    `SELECT * FROM classes ${whereClause} ORDER BY ${CLASS_ORDER_SQL} LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
     [...queryParams, limit, offset]
   );
   const classes = classesResult[0];
@@ -778,7 +790,7 @@ router.get('/subjects', async (req, res) => {
   const total = subjectCountResult[0][0].total;
 
   const subjectsResult = await pool.query(
-    `SELECT * FROM subjects ${whereClause} ORDER BY id DESC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
+    `SELECT * FROM subjects ${whereClause} ORDER BY name ASC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
     [...queryParams, limit, offset]
   );
   const subjects = subjectsResult[0];
@@ -1381,18 +1393,6 @@ router.post('/subjects/bulk-delete', async (req, res) => {
 });
 
 // ===== USERS =====
-// SQL ekspresi untuk natural sort nama kelas: X < XI < XII, lalu jurusan alfabet, lalu nomor kelas
-const CLASS_ORDER_SQL = `
-  CASE
-    WHEN name ~* '^XII' THEN 3
-    WHEN name ~* '^XI'  THEN 2
-    WHEN name ~* '^X'   THEN 1
-    ELSE 4
-  END,
-  regexp_replace(upper(name), '^(XII|XI|X)\s+', '') ASC,
-  (regexp_match(name, '(\d+)\s*$'))[1]::int NULLS LAST
-`;
-
 router.get('/users', async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
