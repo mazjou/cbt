@@ -2099,7 +2099,7 @@ router.get('/questions/:id/edit', async (req, res) => {
   const isAdmin = user.role === 'ADMIN';
 
   const [[q]] = await pool.query(
-    `SELECT q.id, q.exam_id, q.question_text, q.question_image, q.question_pdf, q.points, e.title AS exam_title
+    `SELECT q.id, q.exam_id, q.question_text, q.question_image, q.question_pdf, q.points, q.question_type, e.title AS exam_title
      FROM questions q
      JOIN exams e ON e.id=q.exam_id
      WHERE q.id=:qid AND (:isAdmin=1 OR e.teacher_id=:tid)

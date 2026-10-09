@@ -3,7 +3,17 @@
   <div>
     <div class="text-sm text-slate-500 mb-1">Edit Soal</div>
     <h1 class="text-2xl font-bold bg-gradient-to-r from-violet-600 to-pink-500 bg-clip-text text-transparent"><%= exam.title %></h1>
-    <p class="mt-1 text-slate-500 text-sm">Perbarui teks soal, gambar, poin, dan kunci jawaban (Aï¿½E).</p>
+    <p class="mt-1 text-slate-500 text-sm">Perbarui teks soal, gambar, poin, dan kunci jawaban.</p>
+    <div class="mt-2">
+      <% const qtBadge = question.question_type || 'MCQ'; %>
+      <% if (qtBadge === 'CHECKBOX' || qtBadge === 'COMPLEX') { %>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">☑ Tipe: Checkbox (multi-jawaban)</span>
+      <% } else if (qtBadge === 'TRUE_FALSE') { %>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">✓✗ Tipe: Benar/Salah</span>
+      <% } else { %>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">◉ Tipe: Pilihan Ganda (MCQ)</span>
+      <% } %>
+    </div>
   </div>
   <a href="/teacher/exams/<%= exam.id %>" class="text-sm px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-700 font-medium transition-all shadow-sm">Kembali</a>
 </div>
@@ -41,18 +51,35 @@
   </div>
 
   <!-- COMPLEX/CHECKBOX: multi-correct panel -->
-  <div id="correct_complex_wrap" class="hidden rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-fuchsia-50 p-4 shadow-sm">
-    <label class="text-sm font-semibold text-purple-700 mb-2 block">Pilih semua jawaban yang BENAR:</label>
+  <div id="correct_complex_wrap" class="hidden rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
+    <label class="text-sm font-semibold text-orange-700 mb-2 block">Pilih semua jawaban yang BENAR:</label>
     <div class="flex flex-wrap gap-3">
       <% ['A','B','C','D','E'].forEach(lbl => { %>
-      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-purple-200 bg-white cursor-pointer hover:bg-purple-50 transition-all">
-        <input type="checkbox" name="correct" value="<%= lbl %>" class="accent-purple-600 w-4 h-4"
+      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-orange-200 bg-white cursor-pointer hover:bg-orange-50 transition-all">
+        <input type="checkbox" name="correct" value="<%= lbl %>" class="accent-orange-600 w-4 h-4"
           <%= (typeof correct_labels !== 'undefined' && correct_labels.includes(lbl)) ? 'checked' : '' %> />
-        <span class="text-sm font-semibold text-purple-800">Opsi <%= lbl %></span>
+        <span class="text-sm font-semibold text-orange-800">Opsi <%= lbl %></span>
       </label>
       <% }) %>
     </div>
-    <p class="text-xs text-purple-500 mt-1">Poin proporsional tanpa penalti</p>
+    <p class="text-xs text-orange-500 mt-1">Poin proporsional — tiap jawaban benar yang dipilih siswa menambah poin</p>
+  </div>
+
+  <!-- TRUE_FALSE: info panel -->
+  <div id="correct_trufalse_wrap" class="hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50 p-4 shadow-sm">
+    <label class="text-sm font-semibold text-emerald-700 mb-2 block">Jawaban Benar</label>
+    <div class="flex gap-3">
+      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-emerald-200 bg-white cursor-pointer hover:bg-emerald-50 transition-all">
+        <input type="radio" name="correct" value="A" class="accent-emerald-600 w-4 h-4"
+          <%= correct_label === 'A' ? 'checked' : '' %> />
+        <span class="text-sm font-semibold text-emerald-800">✅ Benar (A)</span>
+      </label>
+      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-rose-200 bg-white cursor-pointer hover:bg-rose-50 transition-all">
+        <input type="radio" name="correct" value="B" class="accent-rose-600 w-4 h-4"
+          <%= correct_label === 'B' ? 'checked' : '' %> />
+        <span class="text-sm font-semibold text-rose-800">❌ Salah (B)</span>
+      </label>
+    </div>
   </div>
 
   <!-- Hidden question_type to preserve through edit -->
@@ -125,7 +152,7 @@
     </div>
 
     <!-- Opsi C - Lime -->
-    <div class="rounded-2xl border border-lime-200 bg-gradient-to-br from-lime-50 to-green-50 p-4 shadow-sm">
+    <div id="opt_wrap_c" class="rounded-2xl border border-lime-200 bg-gradient-to-br from-lime-50 to-green-50 p-4 shadow-sm">
       <label class="flex items-center gap-2 text-sm font-semibold text-lime-700 mb-2">
         <span class="w-6 h-6 rounded-full bg-lime-500 text-white text-xs flex items-center justify-center font-bold">C</span> Opsi C
       </label>
@@ -136,7 +163,7 @@
     </div>
 
     <!-- Opsi D - Sky -->
-    <div class="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50 p-4 shadow-sm">
+    <div id="opt_wrap_d" class="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50 p-4 shadow-sm">
       <label class="flex items-center gap-2 text-sm font-semibold text-sky-700 mb-2">
         <span class="w-6 h-6 rounded-full bg-sky-500 text-white text-xs flex items-center justify-center font-bold">D</span> Opsi D
       </label>
@@ -147,7 +174,7 @@
     </div>
 
     <!-- Opsi E - Violet -->
-    <div class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-4 shadow-sm">
+    <div id="opt_wrap_e" class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-4 shadow-sm">
       <label class="flex items-center gap-2 text-sm font-semibold text-violet-700 mb-2">
         <span class="w-6 h-6 rounded-full bg-violet-500 text-white text-xs flex items-center justify-center font-bold">E</span> Opsi E
       </label>
@@ -256,14 +283,27 @@
   // Show multi-correct panel for COMPLEX/CHECKBOX questions
   (function() {
     const qtype = '<%= question.question_type || "MCQ" %>';
+    const singleWrap   = document.getElementById('correct_single_wrap');
+    const complexWrap  = document.getElementById('correct_complex_wrap');
+    const tfWrap       = document.getElementById('correct_trufalse_wrap');
+    const optC = document.getElementById('opt_wrap_c');
+    const optD = document.getElementById('opt_wrap_d');
+    const optE = document.getElementById('opt_wrap_e');
+
     if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
-      const singleWrap = document.getElementById('correct_single_wrap');
-      const complexWrap = document.getElementById('correct_complex_wrap');
       if (singleWrap) singleWrap.classList.add('hidden');
       if (complexWrap) complexWrap.classList.remove('hidden');
-      // Disable single select so it doesn't submit as 'correct'
-      const singleSelect = singleWrap ? singleWrap.querySelector('select') : null;
-      if (singleSelect) { singleSelect.disabled = true; singleSelect.removeAttribute('required'); }
+      const sel = singleWrap ? singleWrap.querySelector('select') : null;
+      if (sel) { sel.disabled = true; sel.removeAttribute('required'); }
+    } else if (qtype === 'TRUE_FALSE') {
+      if (singleWrap) singleWrap.classList.add('hidden');
+      if (tfWrap) tfWrap.classList.remove('hidden');
+      const sel = singleWrap ? singleWrap.querySelector('select') : null;
+      if (sel) { sel.disabled = true; sel.removeAttribute('required'); }
+      // Sembunyikan opsi C, D, E untuk TRUE_FALSE
+      if (optC) optC.classList.add('hidden');
+      if (optD) optD.classList.add('hidden');
+      if (optE) optE.classList.add('hidden');
     }
   })();
 </script>
