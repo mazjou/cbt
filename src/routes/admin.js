@@ -2663,20 +2663,30 @@ router.get('/exams/:id/edit', async (req, res) => {
       return res.redirect('/admin/exams');
     }
 
-    // Get exam classes
-    const examClassesResult = await pool.query(
-      `SELECT class_id, start_at, end_at, duration_minutes FROM exam_classes WHERE exam_id = $1`, [examId]
-    );
+    // Get exam classes — defensive: kolom schedule mungkin belum ada di DB lama
+    let examClassesResult;
+    try {
+      examClassesResult = await pool.query(
+        `SELECT class_id, start_at, end_at, duration_minutes FROM exam_classes WHERE exam_id = $1`, [examId]
+      );
+    } catch (e) {
+      // Fallback jika kolom schedule belum ada (migrasi belum dijalankan)
+      examClassesResult = await pool.query(
+        `SELECT class_id FROM exam_classes WHERE exam_id = $1`, [examId]
+      );
+    }
     exam.selected_classes = examClassesResult[0].map(ec => ec.class_id);
 
     // Build examClassSchedules object keyed by class_id
     const examClassSchedules = {};
     examClassesResult[0].forEach(ec => {
-      examClassSchedules[ec.class_id] = {
-        start_at: ec.start_at,
-        end_at: ec.end_at,
-        duration_minutes: ec.duration_minutes
-      };
+      if (ec.start_at || ec.end_at || ec.duration_minutes) {
+        examClassSchedules[ec.class_id] = {
+          start_at: ec.start_at || null,
+          end_at: ec.end_at || null,
+          duration_minutes: ec.duration_minutes || null
+        };
+      }
     });
 
     const subjectsResult = await pool.query(`SELECT * FROM subjects ORDER BY name ASC`);

@@ -824,19 +824,31 @@ router.get('/exams/:id/edit', async (req, res) => {
     const [subjects] = await pool.query(`SELECT * FROM subjects ORDER BY name ASC;`);
     const [classes] = await pool.query(`SELECT * FROM classes ORDER BY name ASC;`);
 
-    // Get selected classes for this exam
-    const [examClasses] = await pool.query(
-      `SELECT class_id, start_at, end_at, duration_minutes FROM exam_classes WHERE exam_id=:exam_id;`,
-      { exam_id: examId }
-    );
+    // Get selected classes for this exam — defensive: kolom schedule mungkin belum ada
+    let examClasses;
+    try {
+      [examClasses] = await pool.query(
+        `SELECT class_id, start_at, end_at, duration_minutes FROM exam_classes WHERE exam_id=:exam_id;`,
+        { exam_id: examId }
+      );
+    } catch (e) {
+      // Fallback jika kolom belum ada (migrasi belum dijalankan di VPS)
+      const [rows] = await pool.query(
+        `SELECT class_id FROM exam_classes WHERE exam_id=:exam_id;`,
+        { exam_id: examId }
+      );
+      examClasses = rows;
+    }
     const selectedClassIds = examClasses.map(ec => ec.class_id);
     const examClassSchedules = {};
     for (const ec of examClasses) {
-      examClassSchedules[ec.class_id] = {
-        start_at: ec.start_at,
-        end_at: ec.end_at,
-        duration_minutes: ec.duration_minutes
-      };
+      if (ec.start_at || ec.end_at || ec.duration_minutes) {
+        examClassSchedules[ec.class_id] = {
+          start_at: ec.start_at || null,
+          end_at: ec.end_at || null,
+          duration_minutes: ec.duration_minutes || null
+        };
+      }
     }
 
     res.render('teacher/exam_edit', {
@@ -1091,16 +1103,30 @@ router.get('/exams/:id', async (req, res) => {
   exam.completed_students = completedStudents;
   exam.not_completed_students = notCompletedStudents;
 
-  // Ambil jadwal per kelas
-  const [classSchedules] = await pool.query(
-    `SELECT ec.class_id, c.name AS class_name,
-            ec.start_at, ec.end_at, ec.duration_minutes
-     FROM exam_classes ec
-     JOIN classes c ON c.id=ec.class_id
-     WHERE ec.exam_id=:exam_id
-     ORDER BY c.name ASC;`,
-    { exam_id: exam.id }
-  );
+  // Ambil jadwal per kelas — defensive: kolom schedule mungkin belum ada
+  let classSchedules = [];
+  try {
+    const [rows] = await pool.query(
+      `SELECT ec.class_id, c.name AS class_name,
+              ec.start_at, ec.end_at, ec.duration_minutes
+       FROM exam_classes ec
+       JOIN classes c ON c.id=ec.class_id
+       WHERE ec.exam_id=:exam_id
+       ORDER BY c.name ASC;`,
+      { exam_id: exam.id }
+    );
+    classSchedules = rows;
+  } catch (e) {
+    const [rows] = await pool.query(
+      `SELECT ec.class_id, c.name AS class_name
+       FROM exam_classes ec
+       JOIN classes c ON c.id=ec.class_id
+       WHERE ec.exam_id=:exam_id
+       ORDER BY c.name ASC;`,
+      { exam_id: exam.id }
+    );
+    classSchedules = rows;
+  }
   exam.class_schedules = classSchedules;
 
   res.render('teacher/exam_detail', { title: `Ujian: ${exam.title}`, exam, questions });
