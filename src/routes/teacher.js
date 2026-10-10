@@ -263,8 +263,6 @@ function buildImportPreview(rows, filesImages = []) {
     // 4. Simpan nama file mentah — akan di-resolve saat upload gambar terpisah
     return base;
   }
-    return base;
-  }
 
   rows.forEach((row, idx) => {
     const rowNo = idx + 2;
