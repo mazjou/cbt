@@ -137,9 +137,9 @@ router.get('/export', async (req, res) => {
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows, {
-      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','difficulty','subject','chapter','tags']
+      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e','difficulty','subject','chapter','tags']
     });
-    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:10},{wch:15},{wch:20},{wch:25}];
+    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25}];
     XLSX.utils.book_append_sheet(wb, ws, 'Soal');
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     res.setHeader('Content-Disposition', 'attachment; filename="bank_soal_' + Date.now() + '.xlsx"');
@@ -188,9 +188,9 @@ router.get('/import/template', async (req, res) => {
     ];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(contoh, {
-      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','difficulty','subject','chapter','tags']
+      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e','difficulty','subject','chapter','tags']
     });
-    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:10},{wch:15},{wch:20},{wch:25}];
+    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25}];
     XLSX.utils.book_append_sheet(wb, ws, 'Template Soal');
     const panduan = [
       ['Kolom','Keterangan','Wajib','Contoh'],
@@ -262,21 +262,70 @@ router.post('/upload-images', uploadImport.any(), async (req, res) => {
       fileMap[orig] = stored;
       fileMap[orig.replace(/\s+/g,'_')] = stored;
       fileMap[orig.replace(/\.[^.]+$/, '')] = stored;
+      fileMap[orig.toLowerCase()] = stored;
     }
-    const [questions] = await pool.query('SELECT id, question_image FROM question_bank WHERE teacher_id = $1', [user.id]);
     let updated = 0;
+
+    // 1. Cocokkan gambar soal (question_image)
+    const [questions] = await pool.query('SELECT id, question_image FROM question_bank WHERE teacher_id = $1', [user.id]);
     for (const q of questions) {
       const imgVal = (q.question_image || '').trim();
-      if (imgVal && !imgVal.startsWith('http') && !imgVal.startsWith('/public/')) {
-        const base = path.basename(imgVal);
-        const matched = fileMap[base] || fileMap[base.replace(/\.[^.]+$/, '')] || null;
-        if (matched) {
-          await pool.query('UPDATE question_bank SET question_image = $1 WHERE id = $2', [matched, q.id]);
-          updated++;
-        }
+      if (!imgVal || imgVal.startsWith('http') || imgVal.startsWith('/public/')) continue;
+      const base = path.basename(imgVal);
+      const matched = fileMap[base] || fileMap[base.replace(/\.[^.]+$/, '')] || fileMap[base.toLowerCase()] || null;
+      if (matched) {
+        await pool.query('UPDATE question_bank SET question_image = $1 WHERE id = $2', [matched, q.id]);
+        updated++;
       }
     }
-    req.flash('success', 'Berhasil mengupdate ' + updated + ' gambar soal.');
+
+    // 2. Cocokkan gambar opsi (option_image)
+    const [opts] = await pool.query(
+      `SELECT qbo.id, qbo.option_image, qbo.option_label, qbo.question_bank_id
+       FROM question_bank_options qbo
+       JOIN question_bank qb ON qb.id = qbo.question_bank_id
+       WHERE qb.teacher_id = $1
+       ORDER BY qbo.question_bank_id ASC, qbo.option_label ASC`,
+      [user.id]
+    );
+
+    // Kelompokkan per question_bank_id untuk pola q{N}_{label}
+    const qbOptsMap = {};
+    for (const o of opts) {
+      if (!qbOptsMap[o.question_bank_id]) qbOptsMap[o.question_bank_id] = {};
+      qbOptsMap[o.question_bank_id][o.option_label] = o;
+    }
+    const qbIds = Object.keys(qbOptsMap);
+
+    // Cocokkan option_image yang berisi nama file mentah
+    for (const opt of opts) {
+      const imgVal = (opt.option_image || '').trim();
+      if (!imgVal || imgVal.startsWith('http') || imgVal.startsWith('/public/')) continue;
+      const base = path.basename(imgVal);
+      const matched = fileMap[base] || fileMap[base.replace(/\.[^.]+$/, '')] || fileMap[base.toLowerCase()] || null;
+      if (matched) {
+        await pool.query('UPDATE question_bank_options SET option_image = $1 WHERE id = $2', [matched, opt.id]);
+        updated++;
+      }
+    }
+
+    // Cocokkan pola q{N}_{label}.ext
+    for (const [origName, storedPath] of Object.entries(fileMap)) {
+      if (!origName.includes('.')) continue;
+      const mQ = origName.match(/^q(\d+)[_-]?([a-eA-E])\.[^.]+$/i);
+      if (!mQ) continue;
+      const qIdx = parseInt(mQ[1]) - 1;
+      const lbl = mQ[2].toUpperCase();
+      const qbid = qbIds[qIdx];
+      if (qbid && qbOptsMap[qbid]?.[lbl] && !qbOptsMap[qbid][lbl].option_image?.startsWith('/public/')) {
+        await pool.query('UPDATE question_bank_options SET option_image = $1 WHERE id = $2', [
+          storedPath, qbOptsMap[qbid][lbl].id
+        ]);
+        updated++;
+      }
+    }
+
+    req.flash('success', 'Berhasil mengupdate ' + updated + ' gambar soal/opsi.');
     res.redirect('/teacher/question-bank/upload-images');
   } catch (e) {
     req.flash('error', 'Gagal upload gambar: ' + e.message);
@@ -344,14 +393,22 @@ router.post('/import/preview',
         const chapter = String(pickVal(row, ['chapter','bab']) || '').trim();
         const tags = String(pickVal(row, ['tags','tag']) || '').trim();
         const question_image = resolveImg(pickVal(row, ['image','gambar','image_url','img']));
+        // Gambar per opsi (sama seperti import ujian)
+        const image_a = resolveImg(pickVal(row, ['image_a','gambar_a','img_a']));
+        const image_b = resolveImg(pickVal(row, ['image_b','gambar_b','img_b']));
+        const image_c = resolveImg(pickVal(row, ['image_c','gambar_c','img_c']));
+        const image_d = resolveImg(pickVal(row, ['image_d','gambar_d','img_d']));
+        const image_e = resolveImg(pickVal(row, ['image_e','gambar_e','img_e']));
         const qtypeRaw = String(pickVal(row, ['question_type','tipe','type']) || 'MCQ').trim().toUpperCase();
         const validQtype = ['MCQ','COMPLEX','TRUE_FALSE','CHECKBOX'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
         if (!question_text) reasons.push('Kolom question_text kosong');
-        // Validasi opsi sesuai tipe
+        // Validasi opsi — boleh kosong jika ada gambar
         if (validQtype === 'TRUE_FALSE') {
           if (!A || !B) reasons.push('TRUE_FALSE: opsi A dan B wajib');
         } else {
-          if (!A || !B || !C || !D) reasons.push('Opsi A-D wajib terisi');
+          if ((!A && !image_a) || (!B && !image_b) || (!C && !image_c) || (!D && !image_d)) {
+            reasons.push('Opsi A-D wajib terisi (teks atau gambar di image_a-image_d)');
+          }
         }
         // Validasi kunci jawaban sesuai tipe
         const correctLabels = (validQtype === 'COMPLEX' || validQtype === 'CHECKBOX')
@@ -371,7 +428,10 @@ router.post('/import/preview',
           correctLabels,
           question_type: validQtype,
           subject_id, subjectRaw,
-          difficulty: validDiff, chapter, tags, options: { A, B, C, D, E } };
+          difficulty: validDiff, chapter, tags,
+          options: { A, B, C, D, E },
+          option_images: { A: image_a, B: image_b, C: image_c, D: image_d, E: image_e }
+        };
         if (reasons.length) errors.push({ rowNo, reasons, snapshot: item });
         else preview.push(item);
       });
@@ -415,10 +475,12 @@ router.post('/import/commit', async (req, res) => {
       // Tentukan correctLabels
       const correctLabels = r.correctLabels || (r.correct ? String(r.correct).split(',').map(s => s.trim().toUpperCase()) : ['A']);
       for (const lbl of ['A','B','C','D','E']) {
-        if (!r.options[lbl]) continue;
+        const optText = r.options?.[lbl] || '';
+        const optImg = r.option_images?.[lbl] || null;
+        if (!optText && !optImg) continue;
         await conn.query(
-          'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
-          [bankId, lbl, r.options[lbl], correctLabels.includes(lbl) ? true : false]
+          'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, option_image, is_correct) VALUES ($1,$2,$3,$4,$5)',
+          [bankId, lbl, optText, optImg, correctLabels.includes(lbl) ? true : false]
         );
       }
       inserted++;
