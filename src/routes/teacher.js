@@ -2271,7 +2271,7 @@ router.delete('/questions/:id', async (req, res) => {
   const qId = req.params.id;
 
   const [[row]] = await pool.query(
-    `SELECT q.id, q.exam_id
+    `SELECT q.id, q.exam_id, q.question_image, q.question_pdf
      FROM questions q
      JOIN exams e ON e.id=q.exam_id
      WHERE q.id=:qid AND (:isAdmin=1 OR e.teacher_id=:tid)
@@ -2284,8 +2284,27 @@ router.delete('/questions/:id', async (req, res) => {
     return res.redirect('/teacher/exams');
   }
 
+  // Ambil gambar opsi sebelum dihapus
+  const [oImages] = await pool.query(
+    `SELECT option_image FROM options WHERE question_id=:qid`, { qid: qId }
+  );
+
   try {
     await pool.query(`DELETE FROM questions WHERE id=:id;`, { id: qId });
+
+    // Hapus file gambar dari disk
+    const UPLOAD_ROOT = process.env.UPLOAD_ROOT || path.join(__dirname, '..', 'public', 'uploads');
+    const deleteFile = (filePath) => {
+      if (!filePath || !filePath.startsWith('/public/')) return;
+      try {
+        const abs = path.join(UPLOAD_ROOT, '..', filePath);
+        if (fs.existsSync(abs)) fs.unlinkSync(abs);
+      } catch (_) {}
+    };
+    deleteFile(row.question_image);
+    deleteFile(row.question_pdf);
+    for (const o of oImages) deleteFile(o.option_image);
+
     req.flash('success', 'Soal dihapus.');
     await invalidateExamQuestionsCache(row.exam_id, req.app.locals.redisClient);
   } catch (e) {

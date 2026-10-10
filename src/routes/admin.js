@@ -2560,7 +2560,35 @@ router.post('/exams/:id/toggle-publish', async (req, res) => {
 // Delete exam
 router.delete('/exams/:id', async (req, res) => {
   try {
+    // Ambil semua gambar soal & opsi sebelum dihapus
+    const [qImages] = await pool.query(
+      `SELECT question_image, question_pdf FROM questions WHERE exam_id=$1`, [req.params.id]
+    );
+    const [oImages] = await pool.query(
+      `SELECT o.option_image FROM options o
+       JOIN questions q ON q.id=o.question_id
+       WHERE q.exam_id=$1`, [req.params.id]
+    );
+
     await pool.query(`DELETE FROM exams WHERE id=$1`, [req.params.id]);
+
+    // Hapus file gambar/PDF dari disk
+    const UPLOAD_ROOT = process.env.UPLOAD_ROOT || path.join(__dirname, '..', 'public', 'uploads');
+    const deleteFile = (filePath) => {
+      if (!filePath || !filePath.startsWith('/public/')) return;
+      try {
+        const abs = path.join(UPLOAD_ROOT, '..', filePath);
+        if (fs.existsSync(abs)) fs.unlinkSync(abs);
+      } catch (_) {}
+    };
+    for (const q of qImages) {
+      deleteFile(q.question_image);
+      deleteFile(q.question_pdf);
+    }
+    for (const o of oImages) {
+      deleteFile(o.option_image);
+    }
+
     req.flash('success', 'Ujian berhasil dihapus.');
   } catch (e) {
     console.error(e);
@@ -2954,12 +2982,28 @@ router.post('/exams/bulk-delete', async (req, res) => {
 
   const client = await pool.getConnection();
   let deleted = 0;
-  
+  const UPLOAD_ROOT = process.env.UPLOAD_ROOT || path.join(__dirname, '..', 'public', 'uploads');
+  const deleteFile = (filePath) => {
+    if (!filePath || !filePath.startsWith('/public/')) return;
+    try {
+      const abs = path.join(UPLOAD_ROOT, '..', filePath);
+      if (fs.existsSync(abs)) fs.unlinkSync(abs);
+    } catch (_) {}
+  };
+
   try {
-    // begin (no-transaction);
-    
     const placeholders = validIds.map((_, i) => `$${i + 1}`).join(',');
-    
+
+    // Kumpulkan gambar sebelum dihapus
+    const [qImages] = await pool.query(
+      `SELECT question_image, question_pdf FROM questions WHERE exam_id IN (${placeholders})`, validIds
+    );
+    const [oImages] = await pool.query(
+      `SELECT o.option_image FROM options o
+       JOIN questions q ON q.id=o.question_id
+       WHERE q.exam_id IN (${placeholders})`, validIds
+    );
+
     // Delete related data
     await pool.query(`DELETE FROM attempts WHERE exam_id IN (${placeholders})`, validIds);
     await pool.query(`DELETE FROM questions WHERE exam_id IN (${placeholders})`, validIds);
@@ -2968,8 +3012,11 @@ router.post('/exams/bulk-delete', async (req, res) => {
     // Delete exams
     const result = await pool.query(`DELETE FROM exams WHERE id IN (${placeholders})`, validIds);
     deleted = result.affectedRows || 0;
-    
-    // commit done (no-transaction);
+
+    // Hapus file gambar dari disk
+    for (const q of qImages) { deleteFile(q.question_image); deleteFile(q.question_pdf); }
+    for (const o of oImages) { deleteFile(o.option_image); }
+
     req.flash('success', `Berhasil menghapus ${deleted} ujian dan data terkait.`);
   } catch (e) {
     // rollback done (no-transaction);
