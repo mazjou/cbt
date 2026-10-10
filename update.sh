@@ -131,19 +131,25 @@ fi
 
 # ── 10. Verifikasi aplikasi berjalan ──────────────────────
 info "Menunggu aplikasi siap..."
-sleep 20
+sleep 15
 
-# Retry hingga 3x dengan interval 10 detik
+# Cek apakah PM2 process online
 VERIFIED=0
-for i in 1 2 3; do
-  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 http://localhost:3000/ 2>/dev/null || echo "000")
-  if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "301" ]; then
-    VERIFIED=1
-    break
-  fi
-  warn "Cek ke-$i gagal (HTTP $HTTP_CODE), tunggu 10 detik..."
-  sleep 10
-done
+if pm2 list --no-color 2>/dev/null | grep "$APP_NAME" | grep -q "online"; then
+  VERIFIED=1
+  log "Aplikasi online via PM2 ✅"
+else
+  # Retry curl ke beberapa kemungkinan alamat
+  for i in 1 2 3; do
+    HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 http://localhost:3000/ 2>/dev/null || echo "000")
+    if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "301" ]; then
+      VERIFIED=1
+      break
+    fi
+    warn "Cek ke-$i gagal (HTTP $HTTP_CODE), tunggu 10 detik..."
+    sleep 10
+  done
+fi
 
 if [ "$VERIFIED" = "1" ]; then
   log "Aplikasi berjalan normal ✅ (HTTP 200)"
