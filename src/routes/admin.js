@@ -2632,7 +2632,7 @@ router.post('/exams', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO exams
         (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published, max_questions, max_violations)
-       VALUES ($1,$2,$3,$4,NULL,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+       VALUES ($1,$2,$3,$4,NULL,$5::timestamptz,$6::timestamptz,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
        RETURNING id`,
       [
         subject_id, teacher_id, title, description || null,
@@ -2667,12 +2667,13 @@ router.post('/exams', async (req, res) => {
         const cd = classDuration[classId] ? Number(classDuration[classId]) : null;
         try {
           await pool.query(
-            `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes) VALUES ($1,$2,$3,$4,$5)`,
-            [examId, classId, cs, ce, cd]
+            `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
+             VALUES ($1,$2,$3::timestamptz,$4::timestamptz,$5::int)`,
+            [examId, classId, cs || null, ce || null, cd || null]
           );
         } catch (e) {
           await pool.query(
-            `INSERT INTO exam_classes (exam_id, class_id) VALUES ($1,$2)`,
+            `INSERT INTO exam_classes (exam_id, class_id) VALUES ($1,$2) ON CONFLICT (exam_id, class_id) DO NOTHING`,
             [examId, classId]
           );
         }
@@ -2761,7 +2762,7 @@ router.put('/exams/:id', async (req, res) => {
     await pool.query(
       `UPDATE exams SET
         subject_id=$1, teacher_id=$2, title=$3, description=$4,
-        start_at=$5, end_at=$6, duration_minutes=$7,
+        start_at=$5::timestamptz, end_at=$6::timestamptz, duration_minutes=$7,
         pass_score=$8, max_attempts=$9,
         shuffle_questions=$10, shuffle_options=$11,
         access_code=$12, show_score_to_student=$13,
@@ -2798,16 +2799,16 @@ router.put('/exams/:id', async (req, res) => {
           return res.redirect(`/admin/exams/${examId}/edit`);
         }
         const cd = classDuration[classId] ? Number(classDuration[classId]) : null;
-        // Coba INSERT dengan kolom schedule; fallback ke tanpa kolom schedule jika belum ada
         try {
           await pool.query(
-            `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes) VALUES ($1,$2,$3,$4,$5)`,
-            [examId, classId, cs, ce, cd]
+            `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
+             VALUES ($1,$2,$3::timestamptz,$4::timestamptz,$5::int)`,
+            [examId, classId, cs || null, ce || null, cd || null]
           );
         } catch (e) {
-          // Kolom schedule belum ada di DB (migrasi belum jalan) — insert tanpa schedule
+          // Fallback tanpa schedule
           await pool.query(
-            `INSERT INTO exam_classes (exam_id, class_id) VALUES ($1,$2)`,
+            `INSERT INTO exam_classes (exam_id, class_id) VALUES ($1,$2) ON CONFLICT (exam_id, class_id) DO NOTHING`,
             [examId, classId]
           );
         }
