@@ -1,35 +1,30 @@
 // Service Worker for Offline Support
-const CACHE_NAME = 'lms-smkn1kras-v2';
+const CACHE_NAME = 'lms-smkn1kras-v3';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache on install
 const PRECACHE_ASSETS = [
   '/',
-  '/public/images/logo.png',
-  '/public/lib/tailwind.min.js'
+  '/public/images/logo.png'
 ];
 
 // Install event - cache essential assets
 self.addEventListener('install', (event) => {
-  console.log('[ServiceWorker] Install');
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[ServiceWorker] Caching app shell');
       return cache.addAll(PRECACHE_ASSETS);
-    })
+    }).catch(() => {}) // jangan gagal install hanya karena cache
   );
   self.skipWaiting();
 });
 
 // Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
-  console.log('[ServiceWorker] Activate');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('[ServiceWorker] Removing old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -39,40 +34,33 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - serve from cache, fallback to network
+// Fetch event - network first, fallback to cache
 self.addEventListener('fetch', (event) => {
   // Skip cross-origin requests
-  if (!event.request.url.startsWith(self.location.origin)) {
-    return;
-  }
-
-  // Skip API requests from cache
-  if (event.request.url.includes('/api/')) {
-    return;
-  }
+  if (!event.request.url.startsWith(self.location.origin)) return;
+  // Skip API, auth, upload requests — selalu dari network
+  if (event.request.url.match(/\/(api|attempts|submit|answer|upload)\//)) return;
+  // Skip POST requests
+  if (event.request.method !== 'GET') return;
 
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
-      }
-
-      return fetch(event.request).then((response) => {
-        // Don't cache if not a success response
-        if (!response || response.status !== 200 || response.type !== 'basic') {
-          return response;
+    fetch(event.request).then((response) => {
+      // Cache hanya response sukses untuk asset statik
+      if (response && response.status === 200 && response.type === 'basic') {
+        const url = event.request.url;
+        if (url.includes('/public/')) {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-
-        // Clone the response
-        const responseToCache = response.clone();
-
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
-        return response;
-      }).catch(() => {
-        // Return offline page for navigation requests
+      }
+      return response;
+    }).catch(() => {
+      // Fallback ke cache
+      return caches.match(event.request).then((cached) => {
+        if (cached) return cached;
+        // Fallback offline page untuk navigasi
         if (event.request.mode === 'navigate') {
           return caches.match(OFFLINE_URL);
         }
@@ -81,54 +69,15 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Background sync for pending data
+// Background sync
 self.addEventListener('sync', (event) => {
-  console.log('[ServiceWorker] Background sync:', event.tag);
-  
   if (event.tag === 'sync-pending-data') {
-    event.waitUntil(syncPendingData());
+    event.waitUntil(Promise.resolve()); // placeholder
   }
 });
 
-async function syncPendingData() {
-  // Get pending data from IndexedDB or localStorage
-  // Send to server when online
-  console.log('[ServiceWorker] Syncing pending data...');
-  
-  try {
-    // Example: sync pending exam submissions
-    const pendingSubmissions = await getPendingSubmissions();
-    
-    for (const submission of pendingSubmissions) {
-      await fetch('/api/exams/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submission)
-      });
-    }
-    
-    // Clear pending submissions after successful sync
-    await clearPendingSubmissions();
-    
-    console.log('[ServiceWorker] Sync completed');
-  } catch (error) {
-    console.error('[ServiceWorker] Sync failed:', error);
-    throw error; // Retry sync
-  }
-}
-
-async function getPendingSubmissions() {
-  // Implement IndexedDB or localStorage retrieval
-  return [];
-}
-
-async function clearPendingSubmissions() {
-  // Implement clearing logic
-}
-
 // Push notification handling
 self.addEventListener('push', (event) => {
-  console.log('[ServiceWorker] Push received:', event);
   
   let data = {};
   if (event.data) {
@@ -170,7 +119,6 @@ self.addEventListener('push', (event) => {
 
 // Notification click handling
 self.addEventListener('notificationclick', (event) => {
-  console.log('[ServiceWorker] Notification click:', event);
   
   event.notification.close();
 
@@ -209,4 +157,3 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
-console.log('[ServiceWorker] Loaded');

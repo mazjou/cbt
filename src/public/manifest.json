@@ -12,38 +12,49 @@
       "src": "/public/images/logo.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/public/images/logo.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/public/images/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "categories": ["education", "productivity"],
-  "screenshots": [],
   "shortcuts": [
     {
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "Buka dashboard",
       "url": "/dashboard",
-      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "Materi",
       "short_name": "Materi",
       "description": "Lihat materi pembelajaran",
       "url": "/student/materials",
-      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "Ujian",
       "short_name": "Ujian",
       "description": "Lihat ujian tersedia",
       "url": "/student/exams",
-      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96" }]
+      "icons": [{ "src": "/public/images/logo.png", "sizes": "96x96", "type": "image/png" }]
     }
   ]
 }
