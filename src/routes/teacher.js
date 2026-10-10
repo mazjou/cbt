@@ -1005,7 +1005,7 @@ router.get('/exams/:id', async (req, res) => {
   // Get options for each question
   for (const q of questions) {
     const [options] = await pool.query(
-      `SELECT id, option_label, option_text, is_correct
+      `SELECT id, option_label, option_text, option_image, is_correct
        FROM options
        WHERE question_id=:qid
        ORDER BY option_label ASC;`,

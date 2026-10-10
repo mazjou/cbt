@@ -2854,6 +2854,16 @@ router.get('/exams/:id', async (req, res) => {
     );
     const questions = questionsResult[0];
 
+    // Populate options per question (termasuk option_image)
+    for (const q of questions) {
+      const [opts] = await pool.query(
+        `SELECT id, option_label, option_text, option_image, is_correct
+         FROM options WHERE question_id=$1 ORDER BY option_label ASC`,
+        [q.id]
+      );
+      q.options = opts;
+    }
+
     // Get exam classes
     const examClassesResult = await pool.query(
       `SELECT c.name 
