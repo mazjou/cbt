@@ -139,21 +139,22 @@ function convertNamedToPositional(sql, params) {
     'published_at','cs','ce'
   ]);
 
-  // Regex: cocokkan :nama tapi jangan ikutkan ::cast yang mungkin menyusul
-  // Pola (?!:) memastikan tidak menangkap :: (cast PostgreSQL)
-  const text = sql.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)(?!:)/g, (match, name) => {
+  // Hapus dulu ::cast yang sudah ada di SQL agar tidak mengganggu regex param
+  // Contoh: :start_at::timestamptz → kita ganti :start_at dulu, cast ditambah pool
+  const sqlNoCast = sql.replace(/::([a-zA-Z]+(\[\])?)/g, '##CAST##$1##');
+
+  const text = sqlNoCast.replace(/:([a-zA-Z_][a-zA-Z0-9_]*)/g, (match, name) => {
     if (!(name in paramMap)) {
       let val = params[name] !== undefined ? params[name] : null;
-      // Konversi 0/1 ke boolean untuk semua param yang dikenal sebagai boolean
       if (BOOL_PARAMS.has(name)) val = toBool(val);
       values.push(val);
       paramMap[name] = values.length;
     }
     const pos = `$${paramMap[name]}`;
-    // Tambahkan cast eksplisit untuk kolom timestamp agar NULL tidak ambigu
     if (TIMESTAMP_PARAMS.has(name)) return `${pos}::timestamptz`;
     return pos;
-  });
+  // Kembalikan ::cast yang tadi disembunyikan
+  }).replace(/##CAST##([a-zA-Z]+(\[\])?)##/g, '::$1');
 
   return { text, values };
 }

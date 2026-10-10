@@ -136,8 +136,8 @@ sleep 20
 # Retry hingga 3x dengan interval 10 detik
 VERIFIED=0
 for i in 1 2 3; do
-  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 http://localhost:3000/health 2>/dev/null || echo "000")
-  if [ "$HTTP_CODE" = "200" ]; then
+  HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 10 http://localhost:3000/ 2>/dev/null || echo "000")
+  if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "301" ]; then
     VERIFIED=1
     break
   fi

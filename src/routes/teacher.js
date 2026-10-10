@@ -773,7 +773,7 @@ router.post('/exams', async (req, res) => {
         try {
           await pool.query(
             `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
-             VALUES (:exam_id, :class_id, :start_at::timestamptz, :end_at::timestamptz, :duration_minutes::int);`,
+             VALUES (:exam_id, :class_id, :start_at, :end_at, :duration_minutes);`,
             { exam_id: examId, class_id: classId, start_at: cs || null, end_at: ce || null, duration_minutes: cd || null }
           );
         } catch (insertErr) {
@@ -954,7 +954,7 @@ router.put('/exams/:id', async (req, res) => {
         try {
           await pool.query(
             `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
-             VALUES (:exam_id, :class_id, :start_at::timestamptz, :end_at::timestamptz, :duration_minutes::int);`,
+             VALUES (:exam_id, :class_id, :start_at, :end_at, :duration_minutes);`,
             { exam_id: examId, class_id: cid, start_at: cs || null, end_at: ce || null, duration_minutes: cd || null }
           );
         } catch (insertErr) {
@@ -1835,55 +1835,7 @@ router.post('/exams/:id/questions/upload-images',
       }
 
       // Update gambar opsi jawaban (option_image)
-      // Cocokkan jika option_image berisi nama file mentah (belum /public/...)
-      const [options] = await pool.query(
-        `SELECT o.id, o.option_image, o.option_label FROM options o
-         JOIN questions q ON q.id = o.question_id
-         WHERE q.exam_id=:eid;`,
-        { eid: examId }
-      );
-      for (const opt of options) {
-        const imgVal = (opt.option_image || '').trim();
-        if (!imgVal || imgVal.startsWith('http') || imgVal.startsWith('/public/')) continue;
-        const basename = path.basename(imgVal);
-        const matchedPath = fileMap[basename]
-          || fileMap[basename.replace(/\.[^.]+$/, '')]
-          || fileMap[basename.toLowerCase()]
-          || null;
-        if (matchedPath) {
-          await pool.query(`UPDATE options SET option_image=:img WHERE id=:id;`, { img: matchedPath, id: opt.id });
-          updated++;
-        }
-      }
-
-      // === TAMBAHAN: Jika option_image masih null, coba cocokkan berdasarkan nama file ===
-      // Upload file dengan nama: topologi_jaringan.png → dicari ke seluruh opsi yang null
-      // dan cocokkan dengan nama yang ada di kolom image_a/b/c/d/e Excel (disimpan mentah)
-      // Karena null, kita pakai pendekatan: file yang diupload langsung di-set ke opsi
-      // berdasarkan nama file yang cocok dengan pola apapun
-      for (const opt of allOpts) {
-        if (opt.option_image && opt.option_image.startsWith('/public/')) continue;
-        if (!opt.option_image) continue; // masih null, tidak ada referensi nama file
-        const base = path.basename(opt.option_image);
-        const matchedPath = fileMap[base]
-          || fileMap[base.replace(/\.[^.]+$/, '')]
-          || fileMap[base.toLowerCase()]
-          || null;
-        if (matchedPath) {
-          await pool.query(`UPDATE options SET option_image=:img WHERE id=:id;`, {
-            img: matchedPath, id: opt.id
-          });
-          updated++;
-        }
-      }
-
-      // Cocokkan gambar langsung ke opsi berdasarkan nama file yang diupload
-      // Pola: nama_file_opsi_a.png → opsi A, nama_file_opsi_b.png → opsi B, dst.
-      // Juga cocokkan nama file persis dengan option_image yang null
-      // Format yang didukung:
-      //   topologi_jaringan.png       → dicari cocok dengan option_image yg bernilai persis itu
-      //   opsi_a_namafile.png         → opsi A dari soal yg belum punya gambar opsi A
-      //   q1_a.png, q1a.png           → soal ke-1 opsi A
+      // Ambil semua opsi ujian ini sekaligus
       const [allOpts] = await pool.query(
         `SELECT o.id, o.option_image, o.option_label, o.question_id
          FROM options o
@@ -1892,7 +1844,8 @@ router.post('/exams/:id/questions/upload-images',
          ORDER BY o.question_id ASC, o.option_label ASC;`,
         { eid: examId }
       );
-      // Kelompokkan per question_id
+
+      // Kelompokkan per question_id untuk pola q{N}_{label}
       const qOptsMap = {};
       for (const o of allOpts) {
         if (!qOptsMap[o.question_id]) qOptsMap[o.question_id] = {};
@@ -1900,49 +1853,38 @@ router.post('/exams/:id/questions/upload-images',
       }
       const qIds = Object.keys(qOptsMap);
 
-      for (const [origName, storedPath] of Object.entries(fileMap)) {
-        // Skip jika bukan nama file asli (entry tanpa ekstensi)
-        if (!origName.includes('.')) continue;
-
-        // Coba cocokkan pola: q{N}_{label} atau q{N}{label}
-        const mQ = origName.match(/^q(\d+)[_-]?([a-eA-E])\.[^.]+$/i);
-        if (mQ) {
-          const qIdx = parseInt(mQ[1]) - 1;
-          const lbl = mQ[2].toUpperCase();
-          const qid = qIds[qIdx];
-          if (qid && qOptsMap[qid]?.[lbl] && !qOptsMap[qid][lbl].option_image?.startsWith('/public/')) {
-            await pool.query(`UPDATE options SET option_image=:img WHERE id=:id;`, {
-              img: storedPath, id: qOptsMap[qid][lbl].id
-            });
-            updated++;
-            continue;
-          }
-        }
-
-      // === FALLBACK: Cocokkan nama file yg diupload langsung ke opsi null ===
-      // Jika option_image null tapi ada file diupload dengan nama yg sama persis
-      // maka langsung set option_image ke path tersimpan
-      // Ini mengatasi kasus soal bergambar opsi di mana option_image tidak tersimpan saat import
+      // 1. Cocokkan option_image yang sudah berisi nama file mentah
       for (const opt of allOpts) {
-        if (opt.option_image && opt.option_image.startsWith('/public/')) continue; // sudah ada
-        const origName = Object.keys(fileMap).find(k =>
-          k.includes('.') && (
-            // Cocokkan nama file yang sudah ada di option_image (belum resolve)
-            (opt.option_image && (
-              k === path.basename(opt.option_image) ||
-              k.replace(/\.[^.]+$/, '') === opt.option_image.replace(/\.[^.]+$/, '')
-            ))
-          )
-        );
-        if (origName && fileMap[origName]) {
+        const imgVal = (opt.option_image || '').trim();
+        if (!imgVal || imgVal.startsWith('http') || imgVal.startsWith('/public/')) continue;
+        const base = path.basename(imgVal);
+        const matchedPath = fileMap[base]
+          || fileMap[base.replace(/\.[^.]+$/, '')]
+          || fileMap[base.toLowerCase()]
+          || null;
+        if (matchedPath) {
+          await pool.query(`UPDATE options SET option_image=:img WHERE id=:id;`, { img: matchedPath, id: opt.id });
+          updated++;
+        }
+      }
+
+      // 2. Cocokkan pola nama file: q{N}_{label}.ext atau q{N}{label}.ext
+      for (const [origName, storedPath] of Object.entries(fileMap)) {
+        if (!origName.includes('.')) continue; // skip entry tanpa ekstensi
+        const mQ = origName.match(/^q(\d+)[_-]?([a-eA-E])\.[^.]+$/i);
+        if (!mQ) continue;
+        const qIdx = parseInt(mQ[1]) - 1;
+        const lbl = mQ[2].toUpperCase();
+        const qid = qIds[qIdx];
+        if (qid && qOptsMap[qid]?.[lbl] && !qOptsMap[qid][lbl].option_image?.startsWith('/public/')) {
           await pool.query(`UPDATE options SET option_image=:img WHERE id=:id;`, {
-            img: fileMap[origName], id: opt.id
+            img: storedPath, id: qOptsMap[qid][lbl].id
           });
           updated++;
         }
       }
 
-      // Cocokkan berdasarkan pola nomor urut untuk soal tanpa gambar
+      // Cocokkan berdasarkan pola nomor urut untuk gambar soal (question_image)
       const [allQ] = await pool.query(
         `SELECT id, question_image FROM questions WHERE exam_id=:eid ORDER BY id ASC;`,
         { eid: examId }
