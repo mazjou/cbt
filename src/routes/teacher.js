@@ -301,7 +301,11 @@ function buildImportPreview(rows, filesImages = []) {
     if (validQtype === 'TRUE_FALSE') {
       if (!A || !B) reasons.push('TRUE_FALSE: opsi A dan B wajib');
     } else {
-      if (!A || !B || !C || !D) reasons.push('Opsi A-D wajib terisi');
+      // Opsi boleh kosong jika ada gambar di image_a-image_e
+      const hasImgA = !!image_a, hasImgB = !!image_b, hasImgC = !!image_c, hasImgD = !!image_d;
+      if ((!A && !hasImgA) || (!B && !hasImgB) || (!C && !hasImgC) || (!D && !hasImgD)) {
+        reasons.push('Opsi A-D wajib terisi (teks atau gambar di kolom image_a-image_d)');
+      }
     }
     if (correctLabels.length === 0) reasons.push('Kunci jawaban tidak valid (gunakan A/B/C/D/E, COMPLEX pisahkan koma)');
     if (!Number.isFinite(points) || points <= 0) reasons.push('Points harus angka > 0');
@@ -1297,12 +1301,13 @@ router.get('/exams/:id/import/template', async (req, res) => {
       ['points','Poin soal (default 1)','Tidak','1'],
       ['correct','Kunci: MCQ=A, CHECKBOX=A,C,D (pisah koma), TRUE_FALSE=A/B','Ya','A atau A,C,D'],
       ['question_type','MCQ / CHECKBOX / TRUE_FALSE (default MCQ)','Tidak','CHECKBOX'],
-      ['A','Teks opsi A','Ya','Jakarta'],
-      ['B','Teks opsi B','Ya','Surabaya'],
-      ['C','Teks opsi C','Ya (tidak wajib TRUE_FALSE)','Bandung'],
-      ['D','Teks opsi D','Ya (tidak wajib TRUE_FALSE)','Yogyakarta'],
-      ['E','Teks opsi E','Tidak',''],
-      ['image_a - image_e','Nama file gambar per opsi','Tidak','gambar_opsi_a.jpg'],
+      ['A','Teks opsi A. Boleh kosong jika gambar diisi di image_a','Ya*','Jakarta atau (kosong)'],
+      ['B','Teks opsi B. Boleh kosong jika gambar diisi di image_b','Ya*','Surabaya atau (kosong)'],
+      ['C','Teks opsi C. Boleh kosong jika gambar diisi di image_c','Ya*','Bandung atau (kosong)'],
+      ['D','Teks opsi D. Boleh kosong jika gambar diisi di image_d','Ya*','Yogyakarta atau (kosong)'],
+      ['E','Teks opsi E (opsional)','Tidak',''],
+      ['image_a - image_e','Nama file gambar per opsi. Jika diisi, kolom A-E boleh kosong','Tidak','diagram_iot.png'],
+      ['','*) Wajib salah satu: teks ATAU gambar','',''],
       ['','','',''],
       ['--- TIPE SOAL ---','','',''],
       ['MCQ','Pilihan ganda biasa, 1 jawaban benar','','correct: A'],
