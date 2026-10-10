@@ -3811,7 +3811,8 @@ router.get('/exams/:id/questions/export', async (req, res) => {
       if (!imgSeen.has(base)) {
         imgSeen.add(base);
         const displayName = base.replace(/^\d{10,13}_/, '');
-        const downloadUrl = `https://psaj.smkn1kras.sch.id/public/uploads/questions/${base}`;
+        const appUrl = process.env.APP_URL || process.env.CLIENT_URL || 'http://localhost:3000';
+        const downloadUrl = `${appUrl}/public/uploads/questions/${base}`;
         imgList.push([displayName, downloadUrl, usedIn]);
       }
     };
