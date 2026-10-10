@@ -100,13 +100,13 @@ router.get('/export', async (req, res) => {
     const ids = questions.map(q => q.id);
     const ph = ids.map((_, i) => `$${i + 1}`).join(',');
     const [options] = await pool.query(
-      `SELECT question_bank_id, option_label, option_text, is_correct FROM question_bank_options WHERE question_bank_id IN (${ph}) ORDER BY question_bank_id ASC, option_label ASC`,
+      `SELECT question_bank_id, option_label, option_text, option_image, is_correct FROM question_bank_options WHERE question_bank_id IN (${ph}) ORDER BY question_bank_id ASC, option_label ASC`,
       ids
     );
     const optMap = {};
     for (const o of options) {
       if (!optMap[o.question_bank_id]) optMap[o.question_bank_id] = {};
-      optMap[o.question_bank_id][o.option_label] = { text: o.option_text || '', correct: o.is_correct };
+      optMap[o.question_bank_id][o.option_label] = { text: o.option_text || '', image: o.option_image || '', correct: o.is_correct };
     }
     const getRef = (p) => {
       if (!p) return '';
@@ -114,12 +114,35 @@ router.get('/export', async (req, res) => {
       if (/^https?:\/\//i.test(v)) return v;
       return path.basename(v).replace(/^\d{10,13}_/, '') || '';
     };
-    const rows = questions.map(q => {
+
+    // Sheet Daftar Gambar
+    const appUrl = process.env.APP_URL || process.env.CLIENT_URL || 'http://localhost:3000';
+    const imgList = [['Nama File (isi di Excel)', 'URL Download Gambar', 'Dipakai di']];
+    const imgSeen = new Set();
+    const addImg = (storedPath, usedIn) => {
+      if (!storedPath) return;
+      const v = String(storedPath).trim();
+      if (!v || /^https?:\/\//i.test(v)) return;
+      const base = path.basename(v);
+      if (!imgSeen.has(base)) {
+        imgSeen.add(base);
+        const displayName = base.replace(/^\d{10,13}_/, '');
+        imgList.push([displayName, `${appUrl}/public/uploads/questions/${base}`, usedIn]);
+      }
+    };
+
+    const rows = questions.map((q, idx) => {
       const opts = optMap[q.id] || {};
       const qtype = q.question_type || 'MCQ';
-      // Kunci jawaban: COMPLEX bisa lebih dari satu, pisah koma
       const correctEntries = Object.entries(opts).filter(([, v]) => v.correct);
       const correctStr = correctEntries.map(([lbl]) => lbl).join(',');
+
+      // Kumpulkan gambar
+      if (q.question_image) addImg(q.question_image, `Soal no.${idx+1}`);
+      ['A','B','C','D','E'].forEach(lbl => {
+        if (opts[lbl]?.image) addImg(opts[lbl].image, `Soal no.${idx+1} opsi ${lbl}`);
+      });
+
       return {
         question_text: stripHtml(q.question_text),
         image:         getRef(q.question_image),
@@ -129,6 +152,11 @@ router.get('/export', async (req, res) => {
         A: stripHtml(opts['A']?.text), B: stripHtml(opts['B']?.text),
         C: stripHtml(opts['C']?.text), D: stripHtml(opts['D']?.text),
         E: stripHtml(opts['E']?.text),
+        image_a: getRef(opts['A']?.image),
+        image_b: getRef(opts['B']?.image),
+        image_c: getRef(opts['C']?.image),
+        image_d: getRef(opts['D']?.image),
+        image_e: getRef(opts['E']?.image),
         difficulty: q.difficulty || 'MEDIUM',
         subject:    q.subject_code || q.subject_name || '',
         chapter:    q.chapter || '',
@@ -141,6 +169,36 @@ router.get('/export', async (req, res) => {
     });
     ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25}];
     XLSX.utils.book_append_sheet(wb, ws, 'Soal');
+
+    // Tambahkan sheet Daftar Gambar jika ada
+    if (imgList.length > 1) {
+      const wsImg = XLSX.utils.aoa_to_sheet(imgList);
+      wsImg['!cols'] = [{wch:35},{wch:70},{wch:25}];
+      XLSX.utils.book_append_sheet(wb, wsImg, 'Daftar Gambar');
+    }
+
+    // Sheet Panduan
+    const panduan = [
+      ['PANDUAN IMPORT BANK SOAL'],[''],
+      ['Kolom','Keterangan'],
+      ['question_text','Teks soal (wajib)'],
+      ['image','Nama file gambar soal (opsional)'],
+      ['points','Poin soal (default: 1)'],
+      ['correct','Kunci jawaban: A/B/C/D/E (wajib)'],
+      ['question_type','MCQ / CHECKBOX / TRUE_FALSE (default MCQ)'],
+      ['A - E','Teks opsi. Boleh kosong jika ada gambar di image_a-image_e'],
+      ['image_a - image_e','Nama file gambar per opsi (opsional)'],
+      ['difficulty','EASY / MEDIUM / HARD'],
+      ['subject','Kode/nama mata pelajaran'],
+      ['chapter','Bab/materi'],
+      ['tags','Tag pencarian, pisah koma'],
+      [''],['Catatan:'],
+      ['- Lihat sheet "Daftar Gambar" untuk download gambar'],
+      ['- Upload gambar via menu "Upload Gambar Bank Soal" setelah import'],
+    ];
+    const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
+    wsPanduan['!cols'] = [{wch:15},{wch:70}];
+    XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     res.setHeader('Content-Disposition', 'attachment; filename="bank_soal_' + Date.now() + '.xlsx"');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
