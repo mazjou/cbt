@@ -274,6 +274,9 @@ function buildImportPreview(rows, filesImages = []) {
     const correctRaw = String(pickRowValue(row, ['correct', 'kunci', 'answer', 'jawaban_benar'])).trim().toUpperCase();
     const qtypeRaw = String(pickRowValue(row, ['question_type','tipe','type']) || 'MCQ').trim().toUpperCase();
     const validQtype = ['MCQ','COMPLEX','TRUE_FALSE','CHECKBOX'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
+    if (qtypeRaw && qtypeRaw !== 'MCQ' && !['MCQ','COMPLEX','TRUE_FALSE','CHECKBOX'].includes(qtypeRaw)) {
+      reasons.push(`Tipe soal "${qtypeRaw}" tidak dikenal. Gunakan: MCQ, CHECKBOX, TRUE_FALSE`);
+    }
 
     // Kunci jawaban: COMPLEX/CHECKBOX bisa multi (pisah koma)
     const correctLabels = (validQtype === 'COMPLEX' || validQtype === 'CHECKBOX')
