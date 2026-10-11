@@ -16,7 +16,7 @@ const pgPool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  max: Number(process.env.DB_CONNECTION_LIMIT || 45), // 4 worker × 45 = 180, aman di max_connections 200
+  max: Number(process.env.DB_CONNECTION_LIMIT || 70), // 4 worker × 70 = 280, aman di max_connections 300
   min: 5,
   idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS || 30000),
   connectionTimeoutMillis: 8000,
