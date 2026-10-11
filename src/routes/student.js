@@ -396,6 +396,36 @@ router.post('/exams/:id/start', async (req, res) => {
       );
     }
 
+    // ── Simpan urutan opsi acak jika shuffle_options aktif ──────────────────
+    if (exam.shuffle_options && qRows.length > 0) {
+      const ph = qRows.map((_, i) => `$${i + 1}`).join(',');
+      const [allOpts] = await conn.rawQuery(
+        `SELECT id, question_id FROM options WHERE question_id IN (${ph}) ORDER BY question_id ASC, option_label ASC`,
+        qRows
+      );
+      // Kelompokkan per question
+      const optsByQ = {};
+      for (const o of allOpts) {
+        if (!optsByQ[o.question_id]) optsByQ[o.question_id] = [];
+        optsByQ[o.question_id].push(o.id);
+      }
+      // Fisher-Yates shuffle per soal, simpan mapping {option_id: label}
+      const labels = ['A','B','C','D','E'];
+      for (const qid of Object.keys(optsByQ)) {
+        const ids = optsByQ[qid];
+        for (let i = ids.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [ids[i], ids[j]] = [ids[j], ids[i]];
+        }
+        const orderMap = {};
+        ids.forEach((id, idx) => { orderMap[id] = labels[idx] || String(idx + 1); });
+        await conn.query(
+          `UPDATE attempt_answers SET option_order=:order WHERE attempt_id=:aid AND question_id=:qid`,
+          { order: JSON.stringify(orderMap), aid: attemptId, qid: Number(qid) }
+        );
+      }
+    }
+
     await conn.commit();
     return res.redirect(`/student/attempts/${attemptId}`);
   } catch (e) {
@@ -450,6 +480,7 @@ router.get('/attempts/:id', async (req, res) => {
 
   const [rows] = await pool.query(
     `SELECT aa.question_id, aa.option_id AS chosen_option_id, aa.selected_option_ids,
+            aa.option_order,
             q.question_text, q.question_image, q.question_pdf, q.points, q.question_type
      FROM attempt_answers aa
      JOIN questions q ON q.id=aa.question_id
@@ -462,28 +493,46 @@ router.get('/attempts/:id', async (req, res) => {
   let optionsMap = {};
   if (questionIds.length) {
     const placeholders = questionIds.map((_, i) => `$${i + 1}`).join(',');
+    // Selalu ambil dalam urutan label ASC — urutan tampilan ditentukan oleh option_order
     const [opts] = await pool.query(
-      `SELECT id, question_id, option_label, option_text
+      `SELECT id, question_id, option_label, option_text, option_image
        FROM options
        WHERE question_id IN (${placeholders})
-       ORDER BY question_id ASC, ${attempt.shuffle_options ? 'RANDOM()' : 'option_label ASC'};`,
+       ORDER BY question_id ASC, option_label ASC;`,
       questionIds
     );
-    
+
     // Group options by question_id
     for (const o of opts) {
       if (!optionsMap[o.question_id]) optionsMap[o.question_id] = [];
       optionsMap[o.question_id].push(o);
     }
-    
-    // If shuffle_options is enabled, reassign labels A, B, C, D, E in order
-    if (attempt.shuffle_options) {
-      const labels = ['A', 'B', 'C', 'D', 'E'];
-      for (const qid in optionsMap) {
-        optionsMap[qid].forEach((opt, idx) => {
-          opt.option_label = labels[idx] || opt.option_label;
+
+    // Terapkan urutan dari option_order jika ada (shuffle persisten)
+    // Fallback ke urutan label ASC untuk attempt lama tanpa option_order
+    const orderByRow = {};
+    for (const r of rows) {
+      if (r.option_order) {
+        try { orderByRow[r.question_id] = JSON.parse(r.option_order); } catch(_) {}
+      }
+    }
+
+    const labels = ['A','B','C','D','E'];
+    for (const qid in optionsMap) {
+      const orderMap = orderByRow[qid]; // { option_id: display_label }
+      if (orderMap) {
+        // Urutkan opsi sesuai urutan yang tersimpan
+        optionsMap[qid].sort((a, b) => {
+          const la = labels.indexOf(orderMap[a.id]);
+          const lb = labels.indexOf(orderMap[b.id]);
+          return la - lb;
+        });
+        // Assign label tampilan dari penyimpanan
+        optionsMap[qid].forEach(opt => {
+          opt.option_label = orderMap[opt.id] || opt.option_label;
         });
       }
+      // else: gunakan urutan ASC yang sudah ada (fallback)
     }
   }
 
