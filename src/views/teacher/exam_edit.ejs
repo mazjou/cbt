@@ -26,43 +26,32 @@
       
       <div>
         <label class="block text-sm font-medium text-blue-800 mb-2">Kelas yang Dapat Mengerjakan</label>
-        <div class="relative">
-          <div id="classSelector" class="w-full rounded-xl border border-blue-200 bg-white px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors">
-            <span id="selectedClassesText" class="text-slate-600">Pilih kelas...</span>
-          </div>
-          <div id="classDropdown" class="hidden absolute z-10 mt-2 w-full rounded-xl border border-blue-200 bg-white shadow-lg max-h-64 overflow-y-auto">
-            <div class="p-3 border-b border-blue-100">
-              <label class="flex items-center gap-2 cursor-pointer hover:bg-blue-50 p-2 rounded-lg">
-                <input type="checkbox" id="selectAllClasses" class="w-4 h-4 accent-blue-500" />
-                <span class="text-sm font-semibold text-blue-900">Pilih Semua</span>
-              </label>
-              <!-- Tombol seleksi cepat per tingkat -->
-              <div class="flex flex-wrap gap-1 px-2 pb-1">
-                <button type="button" onclick="selectByLevelEdit('X')"
-                  class="px-2 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-semibold border border-blue-200">X</button>
-                <button type="button" onclick="selectByLevelEdit('XI')"
-                  class="px-2 py-0.5 rounded bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-semibold border border-indigo-200">XI</button>
-                <button type="button" onclick="selectByLevelEdit('XII')"
-                  class="px-2 py-0.5 rounded bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs font-semibold border border-purple-200">XII</button>
-                <button type="button" onclick="selectByLevelEdit('none')"
-                  class="px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold border border-slate-200">✕</button>
-              </div>
-            </div>
-            <div class="p-2">
-              <% classes.forEach(c => { %>
-                <div class="class-item-wrap">
-                  <label class="flex items-center gap-2 cursor-pointer hover:bg-blue-50 p-2 rounded-lg">
-                    <input type="checkbox" name="class_ids[]" value="<%= c.id %>"
-                           class="class-checkbox w-4 h-4 accent-blue-500"
-                           data-class-id="<%= c.id %>"
-                           data-class-name="<%= c.name %>"
-                           <%= selectedClassIds.includes(c.id) ? 'checked' : '' %> />
-                    <span class="text-sm text-slate-700"><%= c.name %></span>
-                  </label>
-                </div>
-              <% }) %>
-            </div>
-          </div>
+        <!-- Tombol seleksi cepat -->
+        <div class="flex flex-wrap gap-1.5 mb-2">
+          <button type="button" onclick="selectByLevelEdit('all')"
+            class="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">✅ Semua</button>
+          <button type="button" onclick="selectByLevelEdit('X')"
+            class="px-3 py-1 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-semibold border border-blue-200">Kelas X</button>
+          <button type="button" onclick="selectByLevelEdit('XI')"
+            class="px-3 py-1 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-semibold border border-indigo-200">Kelas XI</button>
+          <button type="button" onclick="selectByLevelEdit('XII')"
+            class="px-3 py-1 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-800 text-xs font-semibold border border-purple-200">Kelas XII</button>
+          <button type="button" onclick="selectByLevelEdit('none')"
+            class="px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold border border-slate-200">✕ Hapus</button>
+          <span id="classCountBadge" class="ml-1 self-center text-xs text-blue-700 font-semibold"></span>
+        </div>
+        <!-- Grid kelas — selalu di DOM agar checkbox tersubmit -->
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 rounded-xl border border-blue-200 bg-white">
+          <% classes.forEach(c => { %>
+            <label class="flex items-center gap-2 p-2 rounded-lg cursor-pointer hover:bg-blue-50 transition-all border border-transparent has-[:checked]:border-blue-400 has-[:checked]:bg-blue-50">
+              <input type="checkbox" name="class_ids[]" value="<%= c.id %>"
+                     class="class-checkbox w-4 h-4 accent-blue-500"
+                     data-class-id="<%= c.id %>"
+                     data-class-name="<%= c.name %>"
+                     <%= selectedClassIds.includes(c.id) ? 'checked' : '' %> />
+              <span class="text-sm text-slate-700"><%= c.name %></span>
+            </label>
+          <% }) %>
         </div>
         <div id="selectedClassesTags" class="mt-2 flex flex-wrap gap-2"></div>
       </div>
@@ -277,81 +266,39 @@
 </form>
 
 <script>
-  // Class selector functionality
-  const classSelector = document.getElementById('classSelector');
-  const classDropdown = document.getElementById('classDropdown');
-  const selectAllCheckbox = document.getElementById('selectAllClasses');
+  // Kelas selector — grid terbuka (bukan dropdown) agar selalu tersubmit
   const classCheckboxes = document.querySelectorAll('.class-checkbox');
-  const selectedClassesText = document.getElementById('selectedClassesText');
   const selectedClassesTags = document.getElementById('selectedClassesTags');
   const schedulesWrapper = document.getElementById('class-schedules-wrapper');
 
-  // Toggle dropdown
-  classSelector.addEventListener('click', () => {
-    classDropdown.classList.toggle('hidden');
-  });
+  function updateClassUI() {
+    const selected = Array.from(classCheckboxes).filter(cb => cb.checked);
+    const count = selected.length;
+    const badge = document.getElementById('classCountBadge');
+    if (badge) badge.textContent = count > 0 ? count + ' kelas dipilih' : '';
+    schedulesWrapper.classList.toggle('hidden', count === 0);
 
-  // Close dropdown when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!classSelector.contains(e.target) && !classDropdown.contains(e.target)) {
-      classDropdown.classList.add('hidden');
+    const colors = ['bg-blue-100 text-blue-700','bg-purple-100 text-purple-700',
+      'bg-pink-100 text-pink-700','bg-emerald-100 text-emerald-700',
+      'bg-amber-100 text-amber-700','bg-rose-100 text-rose-700'];
+    if (selectedClassesTags) {
+      selectedClassesTags.innerHTML = selected.map((cb, idx) => {
+        const label = cb.dataset.className || '';
+        return `<span class="px-3 py-1 rounded-full text-xs font-semibold ${colors[idx % colors.length]}">${label}</span>`;
+      }).join('');
     }
-  });
+  }
 
-  // Select all functionality
-  selectAllCheckbox.addEventListener('change', () => {
-    classCheckboxes.forEach(cb => {
-      cb.checked = selectAllCheckbox.checked;
-      const cid = cb.dataset.classId;
-      const schedBlock = document.getElementById('sched_' + cid);
-      if (schedBlock) schedBlock.style.display = cb.checked ? 'block' : 'none';
-    });
-    updateSelectedClasses();
-  });
-
-  // Individual checkbox change
   classCheckboxes.forEach(cb => {
     cb.addEventListener('change', () => {
       const cid = cb.dataset.classId;
       const schedBlock = document.getElementById('sched_' + cid);
       if (schedBlock) schedBlock.style.display = cb.checked ? 'block' : 'none';
-      updateSelectedClasses();
-      selectAllCheckbox.checked = Array.from(classCheckboxes).every(c => c.checked);
+      updateClassUI();
     });
   });
 
-  // Update selected classes display
-  function updateSelectedClasses() {
-    const selected = Array.from(classCheckboxes).filter(cb => cb.checked);
-    const count = selected.length;
-    
-    if (count === 0) {
-      selectedClassesText.textContent = 'Pilih kelas...';
-      selectedClassesTags.innerHTML = '';
-      schedulesWrapper.classList.add('hidden');
-    } else {
-      selectedClassesText.textContent = `${count} kelas dipilih`;
-      schedulesWrapper.classList.remove('hidden');
-      
-      const colors = [
-        'bg-blue-100 text-blue-700',
-        'bg-purple-100 text-purple-700',
-        'bg-pink-100 text-pink-700',
-        'bg-emerald-100 text-emerald-700',
-        'bg-amber-100 text-amber-700',
-        'bg-rose-100 text-rose-700'
-      ];
-      
-      selectedClassesTags.innerHTML = selected.map((cb, idx) => {
-        const label = cb.dataset.className || cb.parentElement.querySelector('span').textContent;
-        const colorClass = colors[idx % colors.length];
-        return `<span class="px-3 py-1 rounded-full text-xs font-semibold ${colorClass}">${label}</span>`;
-      }).join('');
-    }
-  }
-
-  // Initialize on page load
-  updateSelectedClasses();
+  updateClassUI();
 
   function toggleAnticheatEdit(cb) {
     const input = document.getElementById('anticheat_input_edit');
@@ -388,8 +335,6 @@
       else if (level === 'X')   checked = name.startsWith('X') && !name.startsWith('XI') && !name.startsWith('XII');
       if (cb.checked !== checked) { cb.checked = checked; cb.dispatchEvent(new Event('change')); }
     });
-    const selectAll = document.getElementById('selectAllClasses');
-    if (selectAll) selectAll.checked = document.querySelectorAll('.class-checkbox:checked').length === cbs.length;
-    updateSelected();
+    updateClassUI();
   }
 </script>
