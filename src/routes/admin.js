@@ -2650,9 +2650,13 @@ router.post('/exams', async (req, res) => {
 
     const examId = result[0][0].id;
 
+    // class_ids bisa datang sebagai 'class_ids[]' (bracket HTML) atau 'class_ids'
+    const rawCidsNew = req.body['class_ids[]'] || req.body['class_ids'] || [];
+    const classIdsNew = Array.isArray(rawCidsNew) ? rawCidsNew : (rawCidsNew ? [rawCidsNew] : []);
+
     // Insert exam_classes if class_ids provided
-    if (class_ids && class_ids.length > 0) {
-      const classIdsArray = Array.isArray(class_ids) ? class_ids : [class_ids];
+    if (classIdsNew.length > 0) {
+      const classIdsArray = classIdsNew;
       const classStartAt  = req.body.class_start_at  || {};
       const classEndAt    = req.body.class_end_at    || {};
       const classDuration = req.body.class_duration  || {};
@@ -2785,8 +2789,12 @@ router.put('/exams/:id', async (req, res) => {
     // Update exam_classes
     await pool.query(`DELETE FROM exam_classes WHERE exam_id=$1`, [examId]);
 
-    if (class_ids && class_ids.length > 0) {
-      const classIdsArray = Array.isArray(class_ids) ? class_ids : [class_ids];
+    // class_ids bisa datang sebagai 'class_ids[]' (bracket HTML) atau 'class_ids'
+    const rawCidsEdit = req.body['class_ids[]'] || req.body['class_ids'] || [];
+    const classIdsEdit = Array.isArray(rawCidsEdit) ? rawCidsEdit : (rawCidsEdit ? [rawCidsEdit] : []);
+
+    if (classIdsEdit.length > 0) {
+      const classIdsArray = classIdsEdit;
       const classStartAt  = req.body.class_start_at  || {};
       const classEndAt    = req.body.class_end_at    || {};
       const classDuration = req.body.class_duration  || {};

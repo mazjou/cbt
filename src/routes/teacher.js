@@ -760,16 +760,17 @@ router.post('/exams', async (req, res) => {
     );
 
     const examId = result.insertId;
-    if (class_ids && class_ids.length > 0) {
-      const classIdsArray = Array.isArray(class_ids) ? class_ids : [class_ids];
-      const classStartAt = req.body.class_start_at || {};
-      const classEndAt   = req.body.class_end_at   || {};
+    // class_ids bisa datang sebagai 'class_ids[]' (bracket dari HTML) atau 'class_ids'
+    const rawCids = req.body['class_ids[]'] || req.body['class_ids'] || [];
+    const classIdsForNew = Array.isArray(rawCids) ? rawCids : (rawCids ? [rawCids] : []);
+    if (classIdsForNew.length > 0) {
+      const classStartAt  = req.body.class_start_at  || {};
+      const classEndAt    = req.body.class_end_at    || {};
       const classDuration = req.body.class_duration  || {};
-      for (const classId of classIdsArray) {
+      for (const classId of classIdsForNew) {
         if (!classId) continue;
         const cs = classStartAt[classId]  || null;
         const ce = classEndAt[classId]    || null;
-        // Validasi: start_at harus sebelum end_at jika keduanya diisi
         if (cs && ce && new Date(cs) >= new Date(ce)) {
           req.flash('error', 'Waktu mulai kelas harus lebih awal dari waktu selesai.');
           return res.redirect('/teacher/exams');
@@ -941,16 +942,19 @@ router.put('/exams/:id', async (req, res) => {
     );
 
     await pool.query(`DELETE FROM exam_classes WHERE exam_id=:exam_id;`, { exam_id: examId });
-    if (class_ids && class_ids.length > 0) {
-      const arr = Array.isArray(class_ids) ? class_ids : [class_ids];
-      const classStartAt = req.body.class_start_at || {};
-      const classEndAt   = req.body.class_end_at   || {};
+
+    // class_ids bisa datang sebagai 'class_ids[]' (dari form HTML) atau 'class_ids'
+    const rawClassIds = req.body['class_ids[]'] || req.body['class_ids'] || [];
+    const classIdsArr = Array.isArray(rawClassIds) ? rawClassIds : (rawClassIds ? [rawClassIds] : []);
+
+    if (classIdsArr.length > 0) {
+      const classStartAt  = req.body.class_start_at  || {};
+      const classEndAt    = req.body.class_end_at    || {};
       const classDuration = req.body.class_duration  || {};
-      for (const cid of arr) {
+      for (const cid of classIdsArr) {
         if (!cid) continue;
         const cs = classStartAt[cid]  || null;
         const ce = classEndAt[cid]    || null;
-        // Validasi: start_at harus sebelum end_at jika keduanya diisi
         if (cs && ce && new Date(cs) >= new Date(ce)) {
           req.flash('error', 'Waktu mulai kelas harus lebih awal dari waktu selesai.');
           return res.redirect(`/teacher/exams/${examId}/edit`);
