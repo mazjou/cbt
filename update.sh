@@ -11,6 +11,9 @@ BRANCH="main"
 LOG_FILE="/cbt/logs/update.log"
 DB_USER="lmsuser"
 DB_NAME="cbt_smk"
+# Baca DB_HOST dari .env agar psql bisa koneksi ke DB terpisah
+DB_HOST=$(grep -E '^DB_HOST=' /cbt/.env 2>/dev/null | cut -d'=' -f2 | tr -d '[:space:]' || echo "localhost")
+DB_PORT=$(grep -E '^DB_PORT=' /cbt/.env 2>/dev/null | cut -d'=' -f2 | tr -d '[:space:]' || echo "5432")
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -113,7 +116,8 @@ fi
 # ── 8. Update indexes jika berubah ────────────────────────
 if [ -n "$INDEX_CHANGED" ]; then
   info "Indexes berubah, update indexes database..."
-  psql -U $DB_USER -d $DB_NAME -f sql/add_indexes.sql 2>&1 | tee -a $LOG_FILE
+  PGPASSWORD=$(grep -E '^DB_PASSWORD=' /cbt/.env 2>/dev/null | cut -d'=' -f2 | tr -d '[:space:]') \
+    psql -U $DB_USER -h $DB_HOST -p $DB_PORT -d $DB_NAME -f sql/add_indexes.sql 2>&1 | tee -a $LOG_FILE
   log "Indexes diupdate"
 fi
 
