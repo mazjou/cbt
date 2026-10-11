@@ -23,8 +23,8 @@ module.exports = {
         NODE_ENV: 'production',
         TZ: 'Asia/Jakarta',
         PORT: 3000,
-        // Pool DB dinaikkan sesuai RAM — 4 worker × 75 = 300 koneksi ke DB
-        DB_CONNECTION_LIMIT: '75',
+        // Pool DB 45 per worker × 4 worker = 180, aman di max_connections 200
+        DB_CONNECTION_LIMIT: '45',
         // Rate limit autosave lebih longgar
         ONLINE_TTL_SECONDS: '300'
       }
