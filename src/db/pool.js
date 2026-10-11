@@ -16,11 +16,11 @@ const pgPool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  max: Number(process.env.DB_CONNECTION_LIMIT || 30),
+  max: Number(process.env.DB_CONNECTION_LIMIT || 50), // dinaikkan dari 30 → 50
   min: 5,
   idleTimeoutMillis: Number(process.env.DB_IDLE_TIMEOUT_MS || 30000),
-  connectionTimeoutMillis: 5000,
-  statement_timeout: 120000,
+  connectionTimeoutMillis: 8000, // dinaikkan dari 5s → 8s agar tidak prematur timeout
+  statement_timeout: 30000,      // turunkan dari 120s → 30s agar query lambat tidak blok koneksi
   query_timeout: 120000,
   // Set timezone koneksi ke Asia/Jakarta agar NOW() konsisten dengan data yang disimpan
   options: `-c timezone=Asia/Jakarta`,

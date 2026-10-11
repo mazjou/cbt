@@ -10,6 +10,7 @@ router.use(requireRole('STUDENT'));
 // Mengurangi query DB saat banyak siswa mulai ujian bersamaan
 const EXAM_CACHE_TTL = 600; // 10 menit
 const examQuestionsCache = new Map(); // fallback in-memory
+const examOptionsCache   = new Map(); // cache opsi soal (tidak berubah selama ujian)
 
 async function getCachedExamQuestions(examId, shuffleQuestions, maxQuestions, redisClient) {
   // Soal tidak di-cache jika shuffle aktif (tiap siswa dapat urutan berbeda)
@@ -50,6 +51,9 @@ setInterval(() => {
   const now = Date.now();
   for (const [k, v] of examQuestionsCache) {
     if (now > v.exp) examQuestionsCache.delete(k);
+  }
+  for (const [k, v] of examOptionsCache) {
+    if (now > v.exp) examOptionsCache.delete(k);
   }
 }, 900000);
 
@@ -506,14 +510,31 @@ router.get('/attempts/:id', async (req, res) => {
   let optionsMap = {};
   if (questionIds.length) {
     const placeholders = questionIds.map((_, i) => `$${i + 1}`).join(',');
-    // Selalu ambil dalam urutan label ASC — urutan tampilan ditentukan oleh option_order
-    const [opts] = await pool.query(
-      `SELECT id, question_id, option_label, option_text, option_image
-       FROM options
-       WHERE question_id IN (${placeholders})
-       ORDER BY question_id ASC, option_label ASC;`,
-      questionIds
-    );
+
+    // Cache opsi soal per exam — opsi tidak berubah selama ujian berlangsung
+    const examId = attempt.exam_id;
+    const optCacheKey = `exam:opts:${examId}`;
+    let opts;
+    const cached = examOptionsCache.get(optCacheKey);
+    if (cached && Date.now() < cached.exp) {
+      // Filter dari cache hanya untuk soal yang ada di attempt ini
+      const qidSet = new Set(questionIds.map(String));
+      opts = cached.data.filter(o => qidSet.has(String(o.question_id)));
+    } else {
+      // Query semua opsi untuk exam ini sekaligus (bukan per soal)
+      const [allExamOpts] = await pool.query(
+        `SELECT o.id, o.question_id, o.option_label, o.option_text, o.option_image
+         FROM options o
+         JOIN questions q ON q.id = o.question_id
+         WHERE q.exam_id=:eid
+         ORDER BY o.question_id ASC, o.option_label ASC;`,
+        { eid: examId }
+      );
+      // Simpan semua opsi exam ke cache
+      examOptionsCache.set(optCacheKey, { data: allExamOpts, exp: Date.now() + EXAM_CACHE_TTL * 1000 });
+      const qidSet = new Set(questionIds.map(String));
+      opts = allExamOpts.filter(o => qidSet.has(String(o.question_id)));
+    }
 
     // Group options by question_id
     for (const o of opts) {
@@ -584,27 +605,24 @@ router.post('/attempts/:id/answer', async (req, res) => {
   const attemptId = req.params.id;
   const { question_id, option_id, option_ids } = req.body; // option_ids untuk COMPLEX
 
-  const [[attempt]] = await pool.query(`SELECT id, exam_id, status FROM attempts WHERE id=:aid AND student_id=:sid LIMIT 1;`, {
-    aid: attemptId, sid: user.id
-  });
-  if (!attempt) return res.status(404).json({ ok: false, message: 'Attempt tidak ditemukan' });
-  if (attempt.status !== 'IN_PROGRESS') return res.status(400).json({ ok: false, message: 'Attempt sudah selesai' });
+  // 1 query: validasi attempt + ambil tipe soal sekaligus
+  const [[attemptQ]] = await pool.query(
+    `SELECT a.id, a.exam_id, a.status, q.question_type
+     FROM attempts a
+     JOIN questions q ON q.id=:qid
+     WHERE a.id=:aid AND a.student_id=:sid LIMIT 1;`,
+    { aid: attemptId, sid: user.id, qid: question_id }
+  );
+  if (!attemptQ) return res.status(404).json({ ok: false, message: 'Attempt tidak ditemukan' });
+  if (attemptQ.status !== 'IN_PROGRESS') return res.status(400).json({ ok: false, message: 'Attempt sudah selesai' });
 
   try {
-    // Cek tipe soal
-    const [[q]] = await pool.query(
-      `SELECT question_type FROM questions WHERE id=:qid LIMIT 1`,
-      { qid: question_id }
-    );
-    const qtype = q?.question_type || 'MCQ';
+    const qtype = attemptQ.question_type || 'MCQ';
 
     if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
-      // Multi-jawaban: simpan array option IDs
       const selectedIds = Array.isArray(option_ids) ? option_ids.map(Number).filter(Boolean)
         : (option_ids ? [Number(option_ids)].filter(Boolean) : []);
 
-      // Hitung is_correct parsial: apakah semua jawaban benar dipilih
-      // Untuk COMPLEX kita simpan selected_option_ids, kalkulasi skor saat submit
       await pool.query(
         `UPDATE attempt_answers
          SET selected_option_ids=:ids, option_id=:first_id, answered_at=NOW()
@@ -617,15 +635,15 @@ router.post('/attempts/:id/answer', async (req, res) => {
         }
       );
     } else {
-      // MCQ / TRUE_FALSE: single answer
-      const [[opt]] = await pool.query(`SELECT is_correct FROM options WHERE id=:oid AND question_id=:qid LIMIT 1;`, {
-        oid: option_id, qid: question_id
-      });
-      const isCorrect = opt ? (opt.is_correct ? 1 : 0) : 0;
+      // MCQ / TRUE_FALSE: ambil is_correct sekaligus dengan UPDATE RETURNING
+      // atau pakai subquery agar 1 query saja
       await pool.query(
-        `UPDATE attempt_answers SET option_id=:oid, is_correct=:isc, answered_at=NOW()
+        `UPDATE attempt_answers
+         SET option_id=:oid,
+             is_correct=(SELECT is_correct FROM options WHERE id=:oid AND question_id=:qid LIMIT 1),
+             answered_at=NOW()
          WHERE attempt_id=:aid AND question_id=:qid;`,
-        { oid: option_id, isc: isCorrect, aid: attemptId, qid: question_id }
+        { oid: option_id, aid: attemptId, qid: question_id }
       );
     }
     return res.json({ ok: true });

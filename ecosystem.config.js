@@ -6,10 +6,10 @@ module.exports = {
       // Cluster mode: pakai semua CPU core (untuk VPS 2 core = 2 instance)
       instances: 'max',
       exec_mode: 'cluster',
-      node_args: '--max-old-space-size=512',  // 512MB heap per instance
+      node_args: '--max-old-space-size=768',  // dinaikkan dari 512MB → 768MB per instance
       watch: false,
       autorestart: true,
-      max_memory_restart: '600M',  // Restart jika 1 instance > 600MB (di atas heap limit)
+      max_memory_restart: '850M',  // dinaikkan sesuai heap
       kill_timeout: 10000,
       listen_timeout: 10000,
       restart_delay: 5000,          // Tunggu 5 detik sebelum restart (bukan 2 detik)

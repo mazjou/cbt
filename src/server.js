@@ -187,7 +187,8 @@ app.use('/student/attempts', (req, res, next) => {
     const key = `rate:answer:${userId}`;
     redisClient.multi().incr(key).expire(key, 10).exec()
       .then(([count]) => {
-        if (count > 30) return res.status(429).json({ ok: false, message: 'Terlalu banyak request.' });
+        // 60 request per 10 detik per user (cukup untuk autosave aktif ujian)
+        if (count > 60) return res.status(429).json({ ok: false, message: 'Terlalu banyak request.' });
         next();
       })
       .catch(() => next());
@@ -198,7 +199,7 @@ app.use('/student/attempts', (req, res, next) => {
   if (now > entry.resetAt) { entry.count = 0; entry.resetAt = now + 10000; }
   entry.count++;
   answerRateMap.set(userId, entry);
-  if (entry.count > 30) return res.status(429).json({ ok: false, message: 'Terlalu banyak request.' });
+  if (entry.count > 60) return res.status(429).json({ ok: false, message: 'Terlalu banyak request.' });
   next();
 });
 
