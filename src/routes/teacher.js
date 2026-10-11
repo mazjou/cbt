@@ -764,18 +764,19 @@ router.post('/exams', async (req, res) => {
     const rawCids = req.body['class_ids[]'] || req.body['class_ids'] || [];
     const classIdsForNew = Array.isArray(rawCids) ? rawCids : (rawCids ? [rawCids] : []);
     if (classIdsForNew.length > 0) {
-      const classStartAt  = req.body.class_start_at  || {};
-      const classEndAt    = req.body.class_end_at    || {};
-      const classDuration = req.body.class_duration  || {};
+      const rawStart    = req.body.class_start_at  || {};
+      const rawEnd      = req.body.class_end_at    || {};
+      const rawDuration = req.body.class_duration  || {};
+      const getVal = (obj, id) => obj[`c_${id}`] !== undefined ? obj[`c_${id}`] : (obj[id] || null);
       for (const classId of classIdsForNew) {
         if (!classId) continue;
-        const cs = classStartAt[classId]  || null;
-        const ce = classEndAt[classId]    || null;
+        const cs = getVal(rawStart, classId)    || null;
+        const ce = getVal(rawEnd, classId)      || null;
         if (cs && ce && new Date(cs) >= new Date(ce)) {
           req.flash('error', 'Waktu mulai kelas harus lebih awal dari waktu selesai.');
           return res.redirect('/teacher/exams');
         }
-        const cd = classDuration[classId] ? Number(classDuration[classId]) : null;
+        const cd = getVal(rawDuration, classId) ? Number(getVal(rawDuration, classId)) : null;
         try {
           await pool.query(
             `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
@@ -955,18 +956,22 @@ router.put('/exams/:id', async (req, res) => {
     const classIdsArr = Array.isArray(rawClassIds) ? rawClassIds : (rawClassIds ? [rawClassIds] : []);
 
     if (classIdsArr.length > 0) {
-      const classStartAt  = req.body.class_start_at  || {};
-      const classEndAt    = req.body.class_end_at    || {};
-      const classDuration = req.body.class_duration  || {};
+      // class_start_at dikirim sebagai object dengan key 'c_{id}' untuk hindari parse array numerik
+      const rawStart    = req.body.class_start_at  || {};
+      const rawEnd      = req.body.class_end_at    || {};
+      const rawDuration = req.body.class_duration  || {};
+      // Normalize: coba key 'c_{id}' dulu, fallback ke '{id}'
+      const getVal = (obj, id) => obj[`c_${id}`] !== undefined ? obj[`c_${id}`] : (obj[id] || null);
+
       for (const cid of classIdsArr) {
         if (!cid) continue;
-        const cs = classStartAt[cid]  || null;
-        const ce = classEndAt[cid]    || null;
+        const cs = getVal(rawStart, cid)    || null;
+        const ce = getVal(rawEnd, cid)      || null;
+        const cd = getVal(rawDuration, cid) ? Number(getVal(rawDuration, cid)) : null;
         if (cs && ce && new Date(cs) >= new Date(ce)) {
           req.flash('error', 'Waktu mulai kelas harus lebih awal dari waktu selesai.');
           return res.redirect(`/teacher/exams/${examId}/edit`);
         }
-        const cd = classDuration[cid] ? Number(classDuration[cid]) : null;
         try {
           await pool.query(
             `INSERT INTO exam_classes (exam_id, class_id, start_at, end_at, duration_minutes)
