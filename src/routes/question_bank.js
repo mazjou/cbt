@@ -199,10 +199,44 @@ router.get('/export', async (req, res) => {
     const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
     wsPanduan['!cols'] = [{wch:15},{wch:70}];
     XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    res.setHeader('Content-Disposition', 'attachment; filename="bank_soal_' + Date.now() + '.xlsx"');
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.send(buffer);
+
+    const xlsxBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    // Jika ada gambar → ZIP berisi Excel + folder gambar
+    if (imgSeen.size > 0) {
+      const JSZip = require('jszip');
+      const zip = new JSZip();
+      zip.file('bank_soal.xlsx', xlsxBuffer);
+      const imgFolder = zip.folder('gambar');
+      for (const base of imgSeen) {
+        const absPath = path.join(uploadDir, base);
+        if (fs.existsSync(absPath)) {
+          const displayName = base.replace(/^\d{10,13}_/, '');
+          imgFolder.file(displayName, fs.readFileSync(absPath));
+        }
+      }
+      zip.file('PANDUAN_IMPORT.txt',
+        `PANDUAN IMPORT BANK SOAL DENGAN GAMBAR\n` +
+        `=========================================\n\n` +
+        `1. File Excel: bank_soal.xlsx\n` +
+        `   - Kolom image, image_a-image_e berisi nama file gambar\n\n` +
+        `2. Folder gambar/\n` +
+        `   - Berisi semua file gambar yang dipakai soal\n\n` +
+        `CARA IMPORT:\n` +
+        `1. Import file bank_soal.xlsx ke Bank Soal\n` +
+        `2. Buka menu "Upload Gambar Bank Soal"\n` +
+        `3. Pilih semua file dari folder gambar/ dan upload sekaligus\n` +
+        `4. Sistem akan mencocokkan gambar secara otomatis\n`
+      );
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+      res.setHeader('Content-Disposition', 'attachment; filename="bank_soal_dengan_gambar.zip"');
+      res.setHeader('Content-Type', 'application/zip');
+      res.send(zipBuffer);
+    } else {
+      res.setHeader('Content-Disposition', 'attachment; filename="bank_soal.xlsx"');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.send(xlsxBuffer);
+    }
   } catch (e) {
     console.error('Export error:', e);
     req.flash('error', 'Gagal export: ' + e.message);

@@ -3927,12 +3927,53 @@ router.get('/exams/:id/questions/export', async (req, res) => {
     }
     XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
 
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const xlsxBuffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     const safeName = exam.title.replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'_').slice(0,50);
-    const filename = `soal_${safeName}_${Date.now()}.xlsx`;
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.send(buffer);
+
+    // Jika ada gambar → buat ZIP berisi Excel + folder gambar
+    if (imgSeen.size > 0) {
+      const JSZip = require('jszip');
+      const zip = new JSZip();
+      const xlsxName = `soal_${safeName}.xlsx`;
+      zip.file(xlsxName, xlsxBuffer);
+
+      // Tambahkan setiap file gambar ke folder 'gambar/' dalam ZIP
+      const imgFolder = zip.folder('gambar');
+      for (const base of imgSeen) {
+        const absPath = path.join(uploadDir, base);
+        if (fs.existsSync(absPath)) {
+          const displayName = base.replace(/^\d{10,13}_/, '');
+          imgFolder.file(displayName, fs.readFileSync(absPath));
+        }
+      }
+
+      // Tambahkan README panduan import
+      zip.file('PANDUAN_IMPORT.txt',
+        `PANDUAN IMPORT SOAL DENGAN GAMBAR\n` +
+        `===================================\n\n` +
+        `1. File Excel: ${xlsxName}\n` +
+        `   - Kolom image, image_a-image_e berisi nama file gambar\n\n` +
+        `2. Folder gambar/\n` +
+        `   - Berisi semua file gambar yang dipakai soal\n\n` +
+        `CARA IMPORT:\n` +
+        `1. Import file Excel ke ujian/bank soal yang diinginkan\n` +
+        `2. Buka menu "Upload Gambar Soal"\n` +
+        `3. Pilih semua file dari folder gambar/ dan upload sekaligus\n` +
+        `4. Sistem akan mencocokkan gambar secara otomatis\n`
+      );
+
+      const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' });
+      const zipName = `soal_${safeName}_dengan_gambar.zip`;
+      res.setHeader('Content-Disposition', `attachment; filename="${zipName}"`);
+      res.setHeader('Content-Type', 'application/zip');
+      res.send(zipBuffer);
+    } else {
+      // Tidak ada gambar → kirim Excel saja
+      const filename = `soal_${safeName}.xlsx`;
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.send(xlsxBuffer);
+    }
   } catch(e) {
     console.error(e);
     req.flash('error', 'Gagal export soal: ' + e.message);
