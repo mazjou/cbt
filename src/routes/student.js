@@ -152,7 +152,44 @@ router.post('/materials/:id/complete', async (req, res) => {
 
 router.get('/exams', async (req, res) => {
   const user = req.session.user;
-  const [exams] = await pool.query(
+
+  // Cache daftar ujian per kelas di Redis (TTL 30 detik) — saat 1000 siswa buka bersamaan
+  // hanya 1 query ke DB per kelas per 30 detik
+  const redisClient = req.app.locals.redisClient;
+  const classId = user.class_id || 0;
+  const examListCacheKey = `student:exams:${classId}:${user.id}`;
+  // Cache per user karena attempts_count berbeda per siswa — tapi cache exam metadata per kelas
+  const examMetaCacheKey = `student:exams:meta:${classId}`;
+  let exams = null;
+
+  // Coba cache metadata exam (tanpa attempts_count) dari Redis
+  if (redisClient && redisClient.isReady) {
+    try {
+      const cached = await redisClient.get(examMetaCacheKey);
+      if (cached) {
+        const cachedExams = JSON.parse(cached);
+        // Tambahkan attempts_count per siswa secara terpisah (1 query ringan)
+        const examIds = cachedExams.map(e => e.id);
+        if (examIds.length > 0) {
+          const ph = examIds.map((_, i) => `$${i + 1}`).join(',');
+          const [attRows] = await pool.query(
+            `SELECT exam_id, COUNT(*) AS cnt FROM attempts
+             WHERE student_id=:sid AND exam_id IN (${ph})
+             GROUP BY exam_id`,
+            { sid: user.id, ...Object.fromEntries(examIds.map((id, i) => [i, id])) }
+          );
+          const attMap = {};
+          for (const r of attRows) attMap[r.exam_id] = Number(r.cnt);
+          exams = cachedExams.map(e => ({ ...e, attempts_count: attMap[e.id] || 0 }));
+        } else {
+          exams = cachedExams;
+        }
+      }
+    } catch (_) {}
+  }
+
+  if (!exams) {
+    const [fresh] = await pool.query(
     `SELECT e.id, e.title, e.description,
             e.start_at, e.end_at, e.duration_minutes,
             e.pass_score, e.max_attempts, e.access_code,
@@ -172,7 +209,6 @@ router.get('/exams', async (req, res) => {
          OR EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id AND ec.class_id=:class_id)
        )
        AND (
-         -- Kasus 1: Tidak ada jadwal sama sekali — tampil jika published
          (
            e.start_at IS NULL AND e.end_at IS NULL
            AND NOT EXISTS (
@@ -181,22 +217,29 @@ router.get('/exams', async (req, res) => {
            )
          )
          OR
-         -- Kasus 2: Ada jadwal global — cek waktu global
          (
            (e.start_at IS NULL OR NOW() >= e.start_at)
            AND (e.end_at IS NULL OR NOW() <= e.end_at)
            AND (e.start_at IS NOT NULL OR e.end_at IS NOT NULL)
          )
          OR
-         -- Kasus 3: Tidak ada jadwal global tapi ada kelas — tampil jika published (jadwal per kelas dihandle setelah migrasi)
          (
            e.start_at IS NULL AND e.end_at IS NULL
            AND EXISTS (SELECT 1 FROM exam_classes ec5 WHERE ec5.exam_id=e.id AND ec5.class_id=:class_id)
          )
        )
      ORDER BY e.id DESC;`,
-    { sid: user.id, class_id: user.class_id || 0 }
+    { sid: user.id, class_id: classId }
   );
+    exams = fresh;
+    // Simpan ke cache tanpa attempts_count untuk sharing antar siswa sekelas
+    if (redisClient && redisClient.isReady) {
+      try {
+        const metaOnly = fresh.map(e => ({ ...e, attempts_count: 0 }));
+        await redisClient.setEx(examMetaCacheKey, 30, JSON.stringify(metaOnly)); // 30 detik
+      } catch (_) {}
+    }
+  }
 
   res.render('student/exams', { title: 'Daftar Ujian', exams });
 });

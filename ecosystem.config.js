@@ -3,17 +3,18 @@ module.exports = {
     {
       name: 'lms-smkn1kras',
       script: 'src/server.js',
-      // Cluster mode: pakai semua CPU core (untuk VPS 2 core = 2 instance)
+      // 4 CPU core → 4 worker (pakai semua core)
       instances: 'max',
       exec_mode: 'cluster',
-      node_args: '--max-old-space-size=768',  // dinaikkan dari 512MB → 768MB per instance
+      // 16GB RAM → tiap worker bisa dapat 2GB heap
+      node_args: '--max-old-space-size=2048',
       watch: false,
       autorestart: true,
-      max_memory_restart: '850M',  // dinaikkan sesuai heap
-      kill_timeout: 10000,
-      listen_timeout: 10000,
-      restart_delay: 5000,          // Tunggu 5 detik sebelum restart (bukan 2 detik)
-      exp_backoff_restart_delay: 200, // Backoff lebih panjang jika terus crash
+      max_memory_restart: '2500M', // restart jika worker > 2.5GB
+      kill_timeout: 15000,
+      listen_timeout: 15000,
+      restart_delay: 3000,
+      exp_backoff_restart_delay: 100,
       merge_logs: true,
       out_file: '/cbt/logs/pm2-out.log',
       error_file: '/cbt/logs/pm2-error.log',
@@ -21,7 +22,11 @@ module.exports = {
       env_production: {
         NODE_ENV: 'production',
         TZ: 'Asia/Jakarta',
-        PORT: 3000
+        PORT: 3000,
+        // Pool DB dinaikkan sesuai RAM — 4 worker × 75 = 300 koneksi ke DB
+        DB_CONNECTION_LIMIT: '75',
+        // Rate limit autosave lebih longgar
+        ONLINE_TTL_SECONDS: '300'
       }
     }
   ]
