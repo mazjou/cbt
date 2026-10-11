@@ -2641,8 +2641,10 @@ router.post('/exams', async (req, res) => {
         shuffle_questions ? true : false, shuffle_options ? true : false,
         access_code || null,
         show_score_to_student ? true : false, show_review_to_student ? true : false,
-        // Auto-publish jika ada jadwal waktu global
-        start_at ? true : false,
+        // Auto-publish: hanya jika start_at dalam 15 menit ke depan atau sudah lewat
+        start_at
+          ? (new Date(start_at).getTime() - Date.now() <= 15 * 60 * 1000)
+          : false,
         max_questions ? Number(max_questions) : null,
         max_violations !== undefined ? Number(max_violations) : 3
       ]
@@ -2772,7 +2774,7 @@ router.put('/exams/:id', async (req, res) => {
         shuffle_questions=$10, shuffle_options=$11,
         access_code=$12, show_score_to_student=$13,
         show_review_to_student=$14, max_questions=$15, max_violations=$16,
-        is_published = CASE WHEN $5 IS NOT NULL THEN true ELSE is_published END
+        is_published = is_published
        WHERE id=$17`,
       [
         subject_id, teacher_id, title, description || null,

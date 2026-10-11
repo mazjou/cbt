@@ -143,8 +143,10 @@
     <div class="mb-6 px-4 py-3 rounded-xl bg-teal-50 border border-teal-300 text-sm text-teal-900">
       <p class="font-bold mb-1">✨ Cara Kerja Jadwal Ujian</p>
       <ul class="list-disc list-inside space-y-1 text-xs text-teal-800">
-        <li>Isi jadwal di sini, lalu <strong>Publish manual</strong> dengan tombol Pub. di daftar ujian.</li>
-        <li>Setelah di-Publish, ujian otomatis <strong>muncul</strong> ke siswa saat Waktu Mulai tiba.</li>
+        <li>Ujian tersimpan sebagai <strong>Draft</strong> jika Waktu Mulai lebih dari 15 menit dari sekarang.</li>
+        <li>Sistem <strong>auto-publish 15 menit sebelum</strong> Waktu Mulai secara otomatis.</li>
+        <li>Jika Waktu Mulai ≤ 15 menit dari sekarang → ujian langsung <strong>Published</strong>.</li>
+        <li>Setelah Published, ujian otomatis <strong>muncul</strong> ke siswa saat Waktu Mulai tiba.</li>
         <li>Ujian otomatis <strong>hilang</strong> dari daftar siswa setelah Waktu Selesai lewat.</li>
         <li>Tombol <strong>Unpublish</strong> bisa digunakan kapan saja untuk menyembunyikan paksa.</li>
         <li>Jika tidak mengisi jadwal, ujian hanya muncul jika di-Publish secara manual.</li>

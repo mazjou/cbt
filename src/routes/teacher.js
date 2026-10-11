@@ -752,8 +752,11 @@ router.post('/exams', async (req, res) => {
         access_code: access_code || null,
         show_score_to_student: show_score_to_student ? true : false,
         show_review_to_student: show_review_to_student ? true : false,
-        // Auto-publish jika ada jadwal waktu global
-        is_published: (start_at) ? true : false,
+        // Auto-publish: hanya jika start_at dalam 15 menit ke depan atau sudah lewat
+        // Jika start_at lebih dari 15 menit dari sekarang → simpan sebagai Draft
+        is_published: start_at
+          ? (new Date(start_at).getTime() - Date.now() <= 15 * 60 * 1000)
+          : false,
         max_questions: max_questions ? Number(max_questions) : null,
         max_violations: max_violations ? Number(max_violations) : 3
       }
@@ -923,7 +926,7 @@ router.put('/exams/:id', async (req, res) => {
         access_code=:access_code, show_score_to_student=:show_score_to_student,
         show_review_to_student=:show_review_to_student, max_questions=:max_questions,
         max_violations=:max_violations,
-        is_published = CASE WHEN :start_at IS NOT NULL THEN true ELSE is_published END
+        is_published = is_published
        WHERE id=:id;`,
       {
         id: examId, subject_id, title,

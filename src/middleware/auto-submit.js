@@ -80,27 +80,25 @@ async function autoSubmitAllExpired() {
  * dan auto-close (unpublish) ujian yang sudah melewati end_at.
  *
  * Aturan:
- *  - Auto-publish: is_published=false, start_at IS NOT NULL, NOW() >= start_at,
+ *  - Auto-publish: is_published=false, start_at IS NOT NULL,
+ *                  NOW() >= start_at - 15 menit (publish 15 menit sebelum mulai),
  *                  dan (end_at IS NULL OR NOW() < end_at)
  *  - Auto-close  : is_published=true,  end_at IS NOT NULL, NOW() >= end_at
  */
 async function autoPublishAndCloseExams() {
   try {
-    // pool.query() wrapper mengembalikan [rows, fields] (pgResultToMysql2)
-    // affectedRows tersedia di resultArray.affectedRows
-
-    // 1. Auto-publish
+    // 1. Auto-publish 15 menit sebelum start_at
     const publishResult = await pool.query(
       `UPDATE exams
        SET is_published = true
        WHERE is_published = false
          AND start_at IS NOT NULL
-         AND NOW() >= start_at
+         AND NOW() >= (start_at - INTERVAL '15 minutes')
          AND (end_at IS NULL OR NOW() < end_at)`
     );
     const published = publishResult?.affectedRows ?? 0;
     if (published > 0) {
-      console.log(`[AUTO-PUBLISH] ✅ ${published} ujian dipublish otomatis`);
+      console.log(`[AUTO-PUBLISH] ✅ ${published} ujian dipublish otomatis (15 mnt sebelum mulai)`);
     }
 
     // 2. Auto-close
