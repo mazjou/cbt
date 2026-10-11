@@ -409,8 +409,11 @@ router.post('/exams/:id/start', async (req, res) => {
         if (!optsByQ[o.question_id]) optsByQ[o.question_id] = [];
         optsByQ[o.question_id].push(o.id);
       }
-      // Fisher-Yates shuffle per soal, simpan mapping {option_id: label}
+      // Fisher-Yates shuffle per soal, buat bulk UPDATE sekali jalan
       const labels = ['A','B','C','D','E'];
+      // Bangun CASE WHEN ... END untuk bulk update 1 query
+      const caseWhen = [];
+      const qidParams = [];
       for (const qid of Object.keys(optsByQ)) {
         const ids = optsByQ[qid];
         for (let i = ids.length - 1; i > 0; i--) {
@@ -419,9 +422,19 @@ router.post('/exams/:id/start', async (req, res) => {
         }
         const orderMap = {};
         ids.forEach((id, idx) => { orderMap[id] = labels[idx] || String(idx + 1); });
-        await conn.query(
-          `UPDATE attempt_answers SET option_order=:order WHERE attempt_id=:aid AND question_id=:qid`,
-          { order: JSON.stringify(orderMap), aid: attemptId, qid: Number(qid) }
+        caseWhen.push({ qid: Number(qid), order: JSON.stringify(orderMap) });
+        qidParams.push(Number(qid));
+      }
+      // 1 UPDATE dengan CASE WHEN — jauh lebih efisien dari N UPDATE
+      if (caseWhen.length > 0) {
+        const caseSql = caseWhen.map((_, i) => `WHEN question_id=$${i * 2 + 1} THEN $${i * 2 + 2}::text`).join(' ');
+        const caseParams = caseWhen.flatMap(c => [c.qid, c.order]);
+        const qph = qidParams.map((_, i) => `$${caseWhen.length * 2 + i + 1}`).join(',');
+        await conn.rawQuery(
+          `UPDATE attempt_answers SET option_order = CASE ${caseSql} END
+           WHERE attempt_id=$${caseWhen.length * 2 + qidParams.length + 1}
+             AND question_id IN (${qph})`,
+          [...caseParams, ...qidParams, attemptId]
         );
       }
     }
