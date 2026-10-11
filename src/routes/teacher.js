@@ -944,13 +944,6 @@ router.put('/exams/:id', async (req, res) => {
 
     await pool.query(`DELETE FROM exam_classes WHERE exam_id=:exam_id;`, { exam_id: examId });
 
-    // DEBUG — hapus setelah masalah selesai
-    console.log('[EXAM EDIT] body keys:', Object.keys(req.body));
-    console.log('[EXAM EDIT] class_ids:', req.body['class_ids[]'], '|', req.body['class_ids']);
-    console.log('[EXAM EDIT] class_start_at:', JSON.stringify(req.body.class_start_at));
-    console.log('[EXAM EDIT] class_end_at:', JSON.stringify(req.body.class_end_at));
-    console.log('[EXAM EDIT] class_duration:', JSON.stringify(req.body.class_duration));
-
     // class_ids bisa datang sebagai 'class_ids[]' (dari form HTML) atau 'class_ids'
     const rawClassIds = req.body['class_ids[]'] || req.body['class_ids'] || [];
     const classIdsArr = Array.isArray(rawClassIds) ? rawClassIds : (rawClassIds ? [rawClassIds] : []);

@@ -209,23 +209,43 @@ router.get('/exams', async (req, res) => {
          OR EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id AND ec.class_id=:class_id)
        )
        AND (
+         -- Kasus 1: Tidak ada jadwal sama sekali (global maupun per kelas) — tampil langsung
          (
            e.start_at IS NULL AND e.end_at IS NULL
+           AND NOT EXISTS (SELECT 1 FROM exam_classes ec2 WHERE ec2.exam_id = e.id)
+         )
+         OR
+         -- Kasus 2: Ada jadwal global dan tidak ada jadwal per kelas — cek waktu global
+         (
+           (e.start_at IS NOT NULL OR e.end_at IS NOT NULL)
+           AND (e.start_at IS NULL OR NOW() >= e.start_at)
+           AND (e.end_at   IS NULL OR NOW() <= e.end_at)
            AND NOT EXISTS (
-             SELECT 1 FROM exam_classes ec2
-             WHERE ec2.exam_id = e.id
+             SELECT 1 FROM exam_classes ec3
+             WHERE ec3.exam_id=e.id AND ec3.class_id=:class_id
+               AND (ec3.start_at IS NOT NULL OR ec3.end_at IS NOT NULL)
            )
          )
          OR
+         -- Kasus 3: Ada jadwal per kelas untuk kelas siswa ini — cek waktu per kelas
          (
-           (e.start_at IS NULL OR NOW() >= e.start_at)
-           AND (e.end_at IS NULL OR NOW() <= e.end_at)
-           AND (e.start_at IS NOT NULL OR e.end_at IS NOT NULL)
+           EXISTS (
+             SELECT 1 FROM exam_classes ec4
+             WHERE ec4.exam_id=e.id AND ec4.class_id=:class_id
+               AND (ec4.start_at IS NOT NULL OR ec4.end_at IS NOT NULL)
+               AND (ec4.start_at IS NULL OR NOW() >= ec4.start_at)
+               AND (ec4.end_at   IS NULL OR NOW() <= ec4.end_at)
+           )
          )
          OR
+         -- Kasus 4: Ada kelas tapi tidak ada jadwal per kelas, pakai waktu global
          (
            e.start_at IS NULL AND e.end_at IS NULL
-           AND EXISTS (SELECT 1 FROM exam_classes ec5 WHERE ec5.exam_id=e.id AND ec5.class_id=:class_id)
+           AND EXISTS (
+             SELECT 1 FROM exam_classes ec5
+             WHERE ec5.exam_id=e.id AND ec5.class_id=:class_id
+               AND ec5.start_at IS NULL AND ec5.end_at IS NULL
+           )
          )
        )
      ORDER BY e.id DESC;`,
