@@ -1,4 +1,29 @@
-﻿<!-- Header -->
+﻿<!-- KaTeX offline -->
+<link rel="stylesheet" href="/public/lib/katex/katex.min.css">
+<!-- Summernote offline -->
+<link rel="stylesheet" href="/public/lib/summernote/summernote-lite.min.css">
+
+<style>
+@font-face {
+  font-family: 'summernote';
+  src: url('/public/lib/summernote/font/summernote.woff2') format('woff2'),
+       url('/public/lib/summernote/font/summernote.woff') format('woff'),
+       url('/public/lib/summernote/font/summernote.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+.note-editor.note-frame { border-radius: 12px !important; border: 2px solid #c7d2fe !important; }
+.note-editor.note-frame.focus { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important; }
+.note-toolbar { background: #f0f4ff !important; border-bottom: 1px solid #c7d2fe !important; border-radius: 10px 10px 0 0 !important; padding: 6px !important; }
+.note-btn { border-radius: 6px !important; }
+.note-editable { min-height: 120px !important; font-size: 15px !important; }
+.math-formula { display: inline-block; vertical-align: middle; padding: 0 2px; cursor: pointer; }
+.math-formula:hover { background: #ede9fe; border-radius: 4px; }
+.math-formula-block { margin: 8px 0; }
+.math-icon { font-style: normal; font-size: 16px; font-weight: bold; font-family: serif; }
+</style>
+
+<!-- Header -->
 <div class="flex items-center justify-between gap-4 mb-6">
   <div>
     <div class="text-sm text-slate-500 mb-1">Edit Soal</div>
@@ -22,14 +47,8 @@
 
   <!-- Pertanyaan -->
   <div class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-5 shadow-sm">
-    <label class="flex items-center gap-2 text-sm font-semibold text-violet-700 mb-2">
-      Pertanyaan
-    </label>
-    <div id="question_editor" contenteditable="true"
-      class="w-full min-h-[140px] rounded-xl bg-white border-2 border-violet-200 px-4 py-3 focus:outline-none focus:border-violet-400 overflow-auto text-slate-800 transition-all"
-      style="max-height:400px"><%- question.question_text %></div>
-    <div class="mt-1.5 text-xs text-violet-500">Ctrl+V untuk paste gambar dari clipboard</div>
-    <input type="hidden" name="question_text" id="question_text_input" />
+    <label class="flex items-center gap-2 text-sm font-semibold text-violet-700 mb-2">Pertanyaan</label>
+    <textarea id="editor_question" name="question_text" class="summernote-editor"><%- question.question_text %></textarea>
   </div>
 
   <!-- Poin & Jawaban Benar -->
@@ -129,59 +148,44 @@
   <div class="space-y-3">
     <div class="text-sm font-semibold text-slate-600 flex items-center gap-2">Opsi Jawaban</div>
 
-    <!-- Opsi A - Rose -->
+    <!-- Opsi A -->
     <div class="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 p-4 shadow-sm">
       <label class="flex items-center gap-2 text-sm font-semibold text-rose-700 mb-2">
         <span class="w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center font-bold">A</span> Opsi A
       </label>
-      <div id="option_a_editor" contenteditable="true"
-        class="w-full min-h-[70px] rounded-xl bg-white border-2 border-rose-200 px-4 py-3 focus:outline-none focus:border-rose-400 overflow-auto text-slate-800 transition-all"
-        style="max-height:250px"><%- options.A || '' %></div>
-      <input type="hidden" name="a" id="option_a_input" />
+      <textarea id="editor_option_a" name="a" class="summernote-option"><%- options.A || '' %></textarea>
     </div>
 
-    <!-- Opsi B - Orange -->
+    <!-- Opsi B -->
     <div class="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
       <label class="flex items-center gap-2 text-sm font-semibold text-orange-700 mb-2">
         <span class="w-6 h-6 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-bold">B</span> Opsi B
       </label>
-      <div id="option_b_editor" contenteditable="true"
-        class="w-full min-h-[70px] rounded-xl bg-white border-2 border-orange-200 px-4 py-3 focus:outline-none focus:border-orange-400 overflow-auto text-slate-800 transition-all"
-        style="max-height:250px"><%- options.B || '' %></div>
-      <input type="hidden" name="b" id="option_b_input" />
+      <textarea id="editor_option_b" name="b" class="summernote-option"><%- options.B || '' %></textarea>
     </div>
 
-    <!-- Opsi C - Lime -->
+    <!-- Opsi C -->
     <div id="opt_wrap_c" class="rounded-2xl border border-lime-200 bg-gradient-to-br from-lime-50 to-green-50 p-4 shadow-sm">
       <label class="flex items-center gap-2 text-sm font-semibold text-lime-700 mb-2">
         <span class="w-6 h-6 rounded-full bg-lime-500 text-white text-xs flex items-center justify-center font-bold">C</span> Opsi C
       </label>
-      <div id="option_c_editor" contenteditable="true"
-        class="w-full min-h-[70px] rounded-xl bg-white border-2 border-lime-200 px-4 py-3 focus:outline-none focus:border-lime-400 overflow-auto text-slate-800 transition-all"
-        style="max-height:250px"><%- options.C || '' %></div>
-      <input type="hidden" name="c" id="option_c_input" />
+      <textarea id="editor_option_c" name="c" class="summernote-option"><%- options.C || '' %></textarea>
     </div>
 
-    <!-- Opsi D - Sky -->
+    <!-- Opsi D -->
     <div id="opt_wrap_d" class="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50 p-4 shadow-sm">
       <label class="flex items-center gap-2 text-sm font-semibold text-sky-700 mb-2">
         <span class="w-6 h-6 rounded-full bg-sky-500 text-white text-xs flex items-center justify-center font-bold">D</span> Opsi D
       </label>
-      <div id="option_d_editor" contenteditable="true"
-        class="w-full min-h-[70px] rounded-xl bg-white border-2 border-sky-200 px-4 py-3 focus:outline-none focus:border-sky-400 overflow-auto text-slate-800 transition-all"
-        style="max-height:250px"><%- options.D || '' %></div>
-      <input type="hidden" name="d" id="option_d_input" />
+      <textarea id="editor_option_d" name="d" class="summernote-option"><%- options.D || '' %></textarea>
     </div>
 
-    <!-- Opsi E - Violet -->
+    <!-- Opsi E -->
     <div id="opt_wrap_e" class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-4 shadow-sm">
       <label class="flex items-center gap-2 text-sm font-semibold text-violet-700 mb-2">
         <span class="w-6 h-6 rounded-full bg-violet-500 text-white text-xs flex items-center justify-center font-bold">E</span> Opsi E
       </label>
-      <div id="option_e_editor" contenteditable="true"
-        class="w-full min-h-[70px] rounded-xl bg-white border-2 border-violet-200 px-4 py-3 focus:outline-none focus:border-violet-400 overflow-auto text-slate-800 transition-all"
-        style="max-height:250px"><%- options.E || '' %></div>
-      <input type="hidden" name="e" id="option_e_input" />
+      <textarea id="editor_option_e" name="e" class="summernote-option"><%- options.E || '' %></textarea>
     </div>
   </div>
 
@@ -199,108 +203,135 @@
 
 </form>
 
+<!-- jQuery + Summernote + KaTeX + Math Plugin (semua offline) -->
+<script src="/public/lib/jquery/jquery.min.js"></script>
+<script>var $sn = jQuery.noConflict(true);</script>
+<script src="/public/lib/katex/katex.min.js"></script>
+<script>window.$ = window.jQuery = $sn;</script>
+<script src="/public/lib/summernote/summernote-lite.min.js"></script>
+<script src="/public/lib/summernote/summernote-math.js"></script>
+
 <script>
-  const editorMap = {
-    question_text_input: 'question_editor',
-    option_a_input: 'option_a_editor',
-    option_b_input: 'option_b_editor',
-    option_c_input: 'option_c_editor',
-    option_d_input: 'option_d_editor',
-    option_e_input: 'option_e_editor'
+$sn(document).ready(function () {
+  var $ = $sn;
+
+  var toolbarQuestion = [
+    ['style', ['bold', 'italic', 'underline', 'strikethrough', 'clear']],
+    ['font', ['superscript', 'subscript']],
+    ['color', ['color']],
+    ['para', ['ul', 'ol']],
+    ['insert', ['picture', 'math']],
+    ['view', ['codeview']]
+  ];
+
+  var toolbarOption = [
+    ['style', ['bold', 'italic', 'underline', 'clear']],
+    ['font', ['superscript', 'subscript']],
+    ['color', ['color']],
+    ['insert', ['picture', 'math']]
+  ];
+
+  var commonConfig = {
+    lang: 'en-US',
+    disableDragAndDrop: false,
+    callbacks: {
+      onImageUpload: function (files) {
+        var editor = this;
+        Array.from(files).forEach(function (file) {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            var img = $('<img>').attr('src', e.target.result)
+              .css({ maxWidth: '100%', height: 'auto', borderRadius: '8px', margin: '4px 0' });
+            $(editor).summernote('insertNode', img[0]);
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    },
+    plugins: ['math']
   };
 
-  // Paste image handler
-  Object.values(editorMap).forEach(editorId => {
-    const editor = document.getElementById(editorId);
-    if (!editor) return;
-    editor.addEventListener('paste', function(e) {
-      e.preventDefault();
-      const items = e.clipboardData.items;
-      let hasImage = false;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          hasImage = true;
-          const reader = new FileReader();
-          reader.onload = ev => {
-            const img = document.createElement('img');
-            img.src = ev.target.result;
-            img.style.cssText = 'max-width:100%;height:auto;margin:8px 0;border-radius:8px;border:2px solid #e0e7ff;';
-            const sel = window.getSelection();
-            if (sel.rangeCount > 0) {
-              const range = sel.getRangeAt(0);
-              range.deleteContents();
-              range.insertNode(img);
-              range.setStartAfter(img);
-              range.setEndAfter(img);
-              sel.removeAllRanges();
-              sel.addRange(range);
-            } else {
-              editor.appendChild(img);
-            }
-          };
-          reader.readAsDataURL(items[i].getAsFile());
-        }
-      }
-      if (!hasImage) document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
-    });
-  });
+  // Init editor pertanyaan
+  $('#editor_question').summernote($.extend({}, commonConfig, {
+    height: 160,
+    placeholder: 'Ketik pertanyaan... Klik ∑ untuk rumus matematika',
+    toolbar: toolbarQuestion
+  }));
 
-  // Form submit
-  document.getElementById('editQuestionForm').addEventListener('submit', function(e) {
-    for (const [inputId, editorId] of Object.entries(editorMap)) {
-      const input = document.getElementById(inputId);
-      const editor = document.getElementById(editorId);
-      if (input && editor) input.value = editor.innerHTML;
-    }
-    const checks = [
-      { id: 'question_editor', name: 'Pertanyaan' },
-      { id: 'option_a_editor', name: 'Opsi A' },
-      { id: 'option_b_editor', name: 'Opsi B' },
-      { id: 'option_c_editor', name: 'Opsi C' },
-      { id: 'option_d_editor', name: 'Opsi D' },
-      { id: 'option_e_editor', name: 'Opsi E' }
+  // Init editor opsi A-E
+  $('.summernote-option').summernote($.extend({}, commonConfig, {
+    height: 90,
+    placeholder: 'Ketik opsi jawaban...',
+    toolbar: toolbarOption
+  }));
+
+  // Validasi & submit
+  $('#editQuestionForm').on('submit', function (e) {
+    var fields = [
+      { id: 'editor_question', name: 'Pertanyaan' },
+      { id: 'editor_option_a', name: 'Opsi A' },
+      { id: 'editor_option_b', name: 'Opsi B' },
+      { id: 'editor_option_c', name: 'Opsi C' },
+      { id: 'editor_option_d', name: 'Opsi D' },
+      { id: 'editor_option_e', name: 'Opsi E' }
     ];
-    for (const f of checks) {
-      const ed = document.getElementById(f.id);
-      if (ed && ed.textContent.trim() === '' && ed.querySelectorAll('img').length === 0) {
+
+    // Skip C/D/E validation for TRUE_FALSE
+    var qtype = '<%= question.question_type || "MCQ" %>';
+    if (qtype === 'TRUE_FALSE') {
+      fields = fields.filter(function(f) {
+        return ['editor_question','editor_option_a','editor_option_b'].indexOf(f.id) !== -1;
+      });
+    }
+
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i];
+      var content = $('#' + f.id).summernote('code');
+      var text = $('<div>').html(content).text().trim();
+      var hasImg = content.indexOf('<img') !== -1;
+      if (!text && !hasImg) {
         e.preventDefault();
-        alert(`${f.name} tidak boleh kosong!`);
-        ed.focus();
+        alert(f.name + ' tidak boleh kosong!');
+        $('#' + f.id).summernote('focus');
+        return false;
+      }
+    }
+
+    // Validasi COMPLEX/CHECKBOX harus pilih minimal 1
+    if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+      var checkedCount = document.querySelectorAll('input[name=correct]:checked').length;
+      if (checkedCount < 1) {
+        e.preventDefault();
+        alert('Pilih minimal 1 jawaban benar!');
         return false;
       }
     }
   });
+
+});
 </script>
 
-<style>
-  [contenteditable] { outline: none; }
-  [contenteditable]:focus { box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
-  [contenteditable] img { cursor: pointer; transition: transform 0.2s; border-radius: 8px; }
-  [contenteditable] img:hover { transform: scale(1.02); }
-</style>
-
 <script>
-  // Show multi-correct panel for COMPLEX/CHECKBOX questions
+  // Show/hide correct panels based on question type
   (function() {
-    const qtype = '<%= question.question_type || "MCQ" %>';
-    const singleWrap   = document.getElementById('correct_single_wrap');
-    const complexWrap  = document.getElementById('correct_complex_wrap');
-    const tfWrap       = document.getElementById('correct_trufalse_wrap');
-    const optC = document.getElementById('opt_wrap_c');
-    const optD = document.getElementById('opt_wrap_d');
-    const optE = document.getElementById('opt_wrap_e');
+    var qtype = '<%= question.question_type || "MCQ" %>';
+    var singleWrap  = document.getElementById('correct_single_wrap');
+    var complexWrap = document.getElementById('correct_complex_wrap');
+    var tfWrap      = document.getElementById('correct_trufalse_wrap');
+    var optC = document.getElementById('opt_wrap_c');
+    var optD = document.getElementById('opt_wrap_d');
+    var optE = document.getElementById('opt_wrap_e');
 
     if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
       if (singleWrap) singleWrap.classList.add('hidden');
       if (complexWrap) complexWrap.classList.remove('hidden');
-      const sel = singleWrap ? singleWrap.querySelector('select') : null;
+      var sel = singleWrap ? singleWrap.querySelector('select') : null;
       if (sel) { sel.disabled = true; sel.removeAttribute('required'); }
     } else if (qtype === 'TRUE_FALSE') {
       if (singleWrap) singleWrap.classList.add('hidden');
       if (tfWrap) tfWrap.classList.remove('hidden');
-      const sel = singleWrap ? singleWrap.querySelector('select') : null;
+      var sel = singleWrap ? singleWrap.querySelector('select') : null;
       if (sel) { sel.disabled = true; sel.removeAttribute('required'); }
-      // Sembunyikan opsi C, D, E untuk TRUE_FALSE
       if (optC) optC.classList.add('hidden');
       if (optD) optD.classList.add('hidden');
       if (optE) optE.classList.add('hidden');

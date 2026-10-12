@@ -1,7 +1,42 @@
+<!-- KaTeX offline -->
+<link rel="stylesheet" href="/public/lib/katex/katex.min.css">
+<!-- Summernote offline -->
+<link rel="stylesheet" href="/public/lib/summernote/summernote-lite.min.css">
+
+<style>
+@font-face {
+  font-family: 'summernote';
+  src: url('/public/lib/summernote/font/summernote.woff2') format('woff2'),
+       url('/public/lib/summernote/font/summernote.woff') format('woff'),
+       url('/public/lib/summernote/font/summernote.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+.note-editor.note-frame { border-radius: 12px !important; border: 2px solid #c7d2fe !important; }
+.note-editor.note-frame.focus { border-color: #6366f1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important; }
+.note-toolbar { background: #f0f4ff !important; border-bottom: 1px solid #c7d2fe !important; border-radius: 10px 10px 0 0 !important; padding: 6px !important; }
+.note-btn { border-radius: 6px !important; }
+.note-editable { min-height: 120px !important; font-size: 15px !important; }
+.math-formula { display: inline-block; vertical-align: middle; padding: 0 2px; cursor: pointer; }
+.math-formula:hover { background: #ede9fe; border-radius: 4px; }
+.math-formula-block { margin: 8px 0; }
+.math-icon { font-style: normal; font-size: 16px; font-weight: bold; font-family: serif; }
+</style>
+
 <div class="flex items-center justify-between gap-4 mb-6">
   <div>
     <h1 class="text-3xl font-bold text-indigo-900">Edit Bank Soal</h1>
     <p class="mt-1 text-slate-600">Perbarui soal yang tersimpan di bank soal</p>
+    <div class="mt-2">
+      <% const qtBadge = question.question_type || 'MCQ'; %>
+      <% if (qtBadge === 'CHECKBOX' || qtBadge === 'COMPLEX') { %>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">☑ Tipe: Checkbox (multi-jawaban)</span>
+      <% } else if (qtBadge === 'TRUE_FALSE') { %>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">✓✗ Tipe: Benar/Salah</span>
+      <% } else { %>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">◉ Tipe: Pilihan Ganda (MCQ)</span>
+      <% } %>
+    </div>
   </div>
   <a href="/teacher/question-bank" class="px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">
     ← Kembali
@@ -9,8 +44,10 @@
 </div>
 
 <form action="/teacher/question-bank/<%= question.id %>?_method=PUT" method="POST" enctype="multipart/form-data" class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 space-y-4" id="bankQuestionForm">
-  <!-- Hidden question_type so PUT handler receives it -->
+
+  <!-- Hidden question_type -->
   <input type="hidden" name="question_type" value="<%= question.question_type || 'MCQ' %>" />
+
   <div class="grid md:grid-cols-2 gap-4">
     <div>
       <label class="text-sm text-indigo-700 font-medium">Mata Pelajaran *</label>
@@ -21,30 +58,30 @@
         <% }) %>
       </select>
     </div>
-    
     <div>
       <label class="text-sm text-indigo-700 font-medium">Tingkat Kesulitan *</label>
       <select name="difficulty" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <option value="EASY" <%= question.difficulty === 'EASY' ? 'selected' : '' %>>Mudah</option>
+        <option value="EASY"   <%= question.difficulty === 'EASY'   ? 'selected' : '' %>>Mudah</option>
         <option value="MEDIUM" <%= question.difficulty === 'MEDIUM' ? 'selected' : '' %>>Sedang</option>
-        <option value="HARD" <%= question.difficulty === 'HARD' ? 'selected' : '' %>>Sulit</option>
+        <option value="HARD"   <%= question.difficulty === 'HARD'   ? 'selected' : '' %>>Sulit</option>
       </select>
     </div>
   </div>
-  
+
   <div>
     <label class="text-sm text-indigo-700 font-medium">Bab/Materi (opsional)</label>
-    <input type="text" name="chapter" value="<%= question.chapter || '' %>" placeholder="Contoh: Bab 1 - Trigonometri, Materi Persamaan Linear" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-    <div class="mt-1 text-xs text-indigo-600">Isi dengan bab atau topik materi untuk memudahkan pencarian</div>
+    <input type="text" name="chapter" value="<%= question.chapter || '' %>"
+      placeholder="Contoh: Bab 1 - Trigonometri, Materi Persamaan Linear"
+      class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
   </div>
-  
+
+  <!-- Pertanyaan -->
   <div>
     <label class="text-sm text-indigo-700 font-medium">Pertanyaan *</label>
-    <div id="question_editor" contenteditable="true" class="mt-1 w-full min-h-[150px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 400px;"><%- question.question_text %></div>
-    <div class="mt-1 text-xs text-indigo-600">Tekan Ctrl+V untuk paste gambar dari clipboard</div>
-    <input type="hidden" name="question_text" id="question_text_input" required />
+    <textarea id="editor_question" name="question_text" class="summernote-editor"><%- question.question_text %></textarea>
   </div>
-  
+
+  <!-- Gambar Soal -->
   <div>
     <label class="text-sm text-indigo-700 font-medium">Gambar Soal (opsional)</label>
     <% if (question.question_image) { %>
@@ -56,10 +93,12 @@
         </label>
       </div>
     <% } %>
-    <input type="file" name="image" accept="image/*" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200" />
+    <input type="file" name="image" accept="image/*"
+      class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200" />
     <div class="mt-1 text-xs text-indigo-600">Max 10MB</div>
   </div>
-  
+
+  <!-- PDF Soal -->
   <div>
     <label class="text-sm text-indigo-700 font-medium">PDF Soal (opsional)</label>
     <% if (question.question_pdf) { %>
@@ -71,180 +110,223 @@
         </label>
       </div>
     <% } %>
-    <input type="file" name="pdf" accept="application/pdf" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
+    <input type="file" name="pdf" accept="application/pdf"
+      class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-purple-100 file:text-purple-700 hover:file:bg-purple-200" />
     <div class="mt-1 text-xs text-indigo-600">Max 10MB</div>
   </div>
-  
+
+  <!-- Poin & Jawaban Benar -->
   <div class="grid md:grid-cols-2 gap-4">
     <div>
       <label class="text-sm text-indigo-700 font-medium">Poin *</label>
-      <input type="number" name="points" value="<%= question.points %>" min="1" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <input type="number" name="points" value="<%= question.points %>" min="1" required
+        class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
     </div>
-    
     <div id="edit_correct_single_wrap">
       <label class="text-sm text-indigo-700 font-medium">Jawaban Benar *</label>
       <select name="correct" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-        <option <%= correct_label === 'A' ? 'selected' : '' %>>A</option>
-        <option <%= correct_label === 'B' ? 'selected' : '' %>>B</option>
-        <option <%= correct_label === 'C' ? 'selected' : '' %>>C</option>
-        <option <%= correct_label === 'D' ? 'selected' : '' %>>D</option>
-        <option <%= correct_label === 'E' ? 'selected' : '' %>>E</option>
+        <% ;['A','B','C','D','E'].forEach(lbl => { %>
+          <option value="<%= lbl %>" <%= correct_label === lbl ? 'selected' : '' %>><%= lbl %></option>
+        <% }) %>
       </select>
     </div>
   </div>
 
-  <!-- COMPLEX/CHECKBOX: multi-correct checkboxes -->
+  <!-- COMPLEX/CHECKBOX: multi-correct -->
   <div id="edit_correct_complex_wrap" class="hidden">
-    <label class="text-sm text-purple-700 font-semibold mb-2 block">Pilih semua jawaban yang BENAR:</label>
+    <label class="text-sm text-orange-700 font-semibold mb-2 block">Pilih semua jawaban yang BENAR:</label>
     <div class="flex flex-wrap gap-3">
       <% ['A','B','C','D','E'].forEach(lbl => { %>
-      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-purple-200 bg-white cursor-pointer hover:bg-purple-50 transition-all">
-        <input type="checkbox" name="correct" value="<%= lbl %>" class="accent-purple-600 w-4 h-4"
+      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-orange-200 bg-white cursor-pointer hover:bg-orange-50 transition-all">
+        <input type="checkbox" name="correct" value="<%= lbl %>" class="accent-orange-600 w-4 h-4"
           <%= (typeof correct_labels !== 'undefined' && correct_labels.includes(lbl)) ? 'checked' : '' %> />
-        <span class="text-sm font-semibold text-purple-800">Opsi <%= lbl %></span>
+        <span class="text-sm font-semibold text-orange-800">Opsi <%= lbl %></span>
       </label>
       <% }) %>
     </div>
-    <p class="text-xs text-purple-500 mt-1">Poin proporsional tanpa penalti</p>
+    <p class="text-xs text-orange-500 mt-1">Poin proporsional berdasarkan jawaban benar yang dipilih siswa</p>
   </div>
-  
+
+  <!-- TRUE_FALSE panel -->
+  <div id="edit_correct_trufalse_wrap" class="hidden">
+    <label class="text-sm font-semibold text-emerald-700 mb-2 block">Jawaban Benar</label>
+    <div class="flex gap-3">
+      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-emerald-200 bg-white cursor-pointer hover:bg-emerald-50 transition-all">
+        <input type="radio" name="correct" value="A" class="accent-emerald-600 w-4 h-4" <%= correct_label === 'A' ? 'checked' : '' %> />
+        <span class="text-sm font-semibold text-emerald-800">✅ Benar (A)</span>
+      </label>
+      <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-rose-200 bg-white cursor-pointer hover:bg-rose-50 transition-all">
+        <input type="radio" name="correct" value="B" class="accent-rose-600 w-4 h-4" <%= correct_label === 'B' ? 'checked' : '' %> />
+        <span class="text-sm font-semibold text-rose-800">❌ Salah (B)</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Tags -->
   <div>
     <label class="text-sm text-indigo-700 font-medium">Tags (opsional)</label>
-    <input type="text" name="tags" value="<%= question.tags || '' %>" placeholder="Contoh: trigonometri,sudut,sin-cos" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+    <input type="text" name="tags" value="<%= question.tags || '' %>"
+      placeholder="Contoh: trigonometri,sudut,sin-cos"
+      class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
     <div class="mt-1 text-xs text-indigo-600">Pisahkan dengan koma untuk kategorisasi</div>
   </div>
-  
+
+  <!-- Opsi Jawaban -->
   <div class="space-y-3">
+    <div class="text-sm font-semibold text-indigo-700">Opsi Jawaban</div>
+
     <div>
       <label class="text-sm text-indigo-700 font-medium">Opsi A *</label>
-      <div id="option_a_editor" contenteditable="true" class="mt-1 w-full min-h-[80px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 300px;"><%- options.A || '' %></div>
-      <input type="hidden" name="a" id="option_a_input" required />
+      <textarea id="editor_option_a" name="a" class="summernote-option"><%- options.A || '' %></textarea>
     </div>
     <div>
       <label class="text-sm text-indigo-700 font-medium">Opsi B *</label>
-      <div id="option_b_editor" contenteditable="true" class="mt-1 w-full min-h-[80px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 300px;"><%- options.B || '' %></div>
-      <input type="hidden" name="b" id="option_b_input" required />
+      <textarea id="editor_option_b" name="b" class="summernote-option"><%- options.B || '' %></textarea>
     </div>
-    <div>
+    <div id="bank_edit_opt_c">
       <label class="text-sm text-indigo-700 font-medium">Opsi C *</label>
-      <div id="option_c_editor" contenteditable="true" class="mt-1 w-full min-h-[80px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 300px;"><%- options.C || '' %></div>
-      <input type="hidden" name="c" id="option_c_input" required />
+      <textarea id="editor_option_c" name="c" class="summernote-option"><%- options.C || '' %></textarea>
     </div>
-    <div>
+    <div id="bank_edit_opt_d">
       <label class="text-sm text-indigo-700 font-medium">Opsi D *</label>
-      <div id="option_d_editor" contenteditable="true" class="mt-1 w-full min-h-[80px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 300px;"><%- options.D || '' %></div>
-      <input type="hidden" name="d" id="option_d_input" required />
+      <textarea id="editor_option_d" name="d" class="summernote-option"><%- options.D || '' %></textarea>
     </div>
-    <div>
-      <label class="text-sm text-indigo-700 font-medium">Opsi E *</label>
-      <div id="option_e_editor" contenteditable="true" class="mt-1 w-full min-h-[80px] rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 overflow-auto" style="max-height: 300px;"><%- options.E || '' %></div>
-      <input type="hidden" name="e" id="option_e_input" required />
+    <div id="bank_edit_opt_e">
+      <label class="text-sm text-indigo-700 font-medium">Opsi E (opsional)</label>
+      <textarea id="editor_option_e" name="e" class="summernote-option"><%- options.E || '' %></textarea>
     </div>
   </div>
-  
+
   <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-3 transition-all">
     💾 Update Bank Soal
   </button>
 </form>
 
+<!-- jQuery + Summernote + KaTeX + Math Plugin (semua offline) -->
+<script src="/public/lib/jquery/jquery.min.js"></script>
+<script>var $sn = jQuery.noConflict(true);</script>
+<script src="/public/lib/katex/katex.min.js"></script>
+<script>window.$ = window.jQuery = $sn;</script>
+<script src="/public/lib/summernote/summernote-lite.min.js"></script>
+<script src="/public/lib/summernote/summernote-math.js"></script>
+
 <script>
-  // Setup paste image handler
-  const editors = ['question_editor', 'option_a_editor', 'option_b_editor', 'option_c_editor', 'option_d_editor', 'option_e_editor'];
-  
-  editors.forEach(editorId => {
-    const editor = document.getElementById(editorId);
-    editor.addEventListener('paste', function(e) {
-      e.preventDefault();
-      const items = e.clipboardData.items;
-      let hasImage = false;
-      
-      for (let i = 0; i < items.length; i++) {
-        if (items[i].type.indexOf('image') !== -1) {
-          hasImage = true;
-          const blob = items[i].getAsFile();
-          const reader = new FileReader();
-          reader.onload = function(event) {
-            const img = document.createElement('img');
-            img.src = event.target.result;
-            img.style.maxWidth = '100%';
-            img.style.height = 'auto';
-            img.style.margin = '10px 0';
-            img.style.borderRadius = '8px';
-            img.style.border = '2px solid #e0e7ff';
-            const selection = window.getSelection();
-            if (selection.rangeCount > 0) {
-              const range = selection.getRangeAt(0);
-              range.deleteContents();
-              range.insertNode(img);
-              range.setStartAfter(img);
-              range.setEndAfter(img);
-              selection.removeAllRanges();
-              selection.addRange(range);
-            } else {
-              editor.appendChild(img);
-            }
+$sn(document).ready(function () {
+  var $ = $sn;
+
+  var toolbarQuestion = [
+    ['style', ['bold', 'italic', 'underline', 'strikethrough', 'clear']],
+    ['font', ['superscript', 'subscript']],
+    ['color', ['color']],
+    ['para', ['ul', 'ol']],
+    ['insert', ['picture', 'math']],
+    ['view', ['codeview']]
+  ];
+
+  var toolbarOption = [
+    ['style', ['bold', 'italic', 'underline', 'clear']],
+    ['font', ['superscript', 'subscript']],
+    ['color', ['color']],
+    ['insert', ['picture', 'math']]
+  ];
+
+  var commonConfig = {
+    lang: 'en-US',
+    disableDragAndDrop: false,
+    callbacks: {
+      onImageUpload: function (files) {
+        var editor = this;
+        Array.from(files).forEach(function (file) {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            var img = $('<img>').attr('src', e.target.result)
+              .css({ maxWidth: '100%', height: 'auto', borderRadius: '8px', margin: '4px 0' });
+            $(editor).summernote('insertNode', img[0]);
           };
-          reader.readAsDataURL(blob);
-        }
+          reader.readAsDataURL(file);
+        });
       }
-      
-      if (!hasImage) {
-        const text = e.clipboardData.getData('text/plain');
-        document.execCommand('insertText', false, text);
-      }
-    });
-  });
-  
-  document.getElementById('bankQuestionForm').addEventListener('submit', function(e) {
-    document.getElementById('question_text_input').value = document.getElementById('question_editor').innerHTML;
-    document.getElementById('option_a_input').value = document.getElementById('option_a_editor').innerHTML;
-    document.getElementById('option_b_input').value = document.getElementById('option_b_editor').innerHTML;
-    document.getElementById('option_c_input').value = document.getElementById('option_c_editor').innerHTML;
-    document.getElementById('option_d_input').value = document.getElementById('option_d_editor').innerHTML;
-    document.getElementById('option_e_input').value = document.getElementById('option_e_editor').innerHTML;
-    
-    const fields = [
-      { id: 'question_editor', name: 'Pertanyaan' },
-      { id: 'option_a_editor', name: 'Opsi A' },
-      { id: 'option_b_editor', name: 'Opsi B' },
-      { id: 'option_c_editor', name: 'Opsi C' },
-      { id: 'option_d_editor', name: 'Opsi D' },
-      { id: 'option_e_editor', name: 'Opsi E' }
+    },
+    plugins: ['math']
+  };
+
+  $('#editor_question').summernote($.extend({}, commonConfig, {
+    height: 160,
+    placeholder: 'Ketik pertanyaan... Klik ∑ untuk rumus matematika',
+    toolbar: toolbarQuestion
+  }));
+
+  $('.summernote-option').summernote($.extend({}, commonConfig, {
+    height: 90,
+    placeholder: 'Ketik opsi jawaban...',
+    toolbar: toolbarOption
+  }));
+
+  var qtype = '<%= question.question_type || "MCQ" %>';
+
+  // Validasi & submit
+  $('#bankQuestionForm').on('submit', function (e) {
+    var fields = [
+      { id: 'editor_question', name: 'Pertanyaan' },
+      { id: 'editor_option_a', name: 'Opsi A' },
+      { id: 'editor_option_b', name: 'Opsi B' }
     ];
-    
-    for (const field of fields) {
-      const editor = document.getElementById(field.id);
-      const text = editor.textContent.trim();
-      const images = editor.querySelectorAll('img');
-      if (text === '' && images.length === 0) {
+
+    // Tambah C/D/E kecuali TRUE_FALSE
+    if (qtype !== 'TRUE_FALSE') {
+      fields.push({ id: 'editor_option_c', name: 'Opsi C' });
+      fields.push({ id: 'editor_option_d', name: 'Opsi D' });
+    }
+
+    for (var i = 0; i < fields.length; i++) {
+      var f = fields[i];
+      var content = $('#' + f.id).summernote('code');
+      var text = $('<div>').html(content).text().trim();
+      var hasImg = content.indexOf('<img') !== -1;
+      if (!text && !hasImg) {
         e.preventDefault();
-        alert(`${field.name} tidak boleh kosong!`);
-        editor.focus();
+        alert(f.name + ' tidak boleh kosong!');
+        $('#' + f.id).summernote('focus');
         return false;
       }
     }
-    return true;
+
+    if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+      var checkedCount = document.querySelectorAll('input[name=correct]:checked').length;
+      if (checkedCount < 1) {
+        e.preventDefault();
+        alert('Pilih minimal 1 jawaban benar!');
+        return false;
+      }
+    }
   });
+
+});
 </script>
 
-<style>
-  [contenteditable] { outline: none; }
-  [contenteditable] img { cursor: pointer; transition: transform 0.2s; }
-  [contenteditable] img:hover { transform: scale(1.02); }
-</style>
-
 <script>
-  // Show multi-correct panel for COMPLEX/CHECKBOX questions
   (function() {
-    const qtype = '<%= question.question_type || "MCQ" %>';
+    var qtype = '<%= question.question_type || "MCQ" %>';
+    var singleWrap  = document.getElementById('edit_correct_single_wrap');
+    var complexWrap = document.getElementById('edit_correct_complex_wrap');
+    var tfWrap      = document.getElementById('edit_correct_trufalse_wrap');
+    var optC = document.getElementById('bank_edit_opt_c');
+    var optD = document.getElementById('bank_edit_opt_d');
+    var optE = document.getElementById('bank_edit_opt_e');
+
     if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
-      const singleWrap = document.getElementById('edit_correct_single_wrap');
-      const complexWrap = document.getElementById('edit_correct_complex_wrap');
       if (singleWrap) singleWrap.classList.add('hidden');
       if (complexWrap) complexWrap.classList.remove('hidden');
-      // Disable the single select so it doesn't interfere with form submission
-      const singleSelect = singleWrap ? singleWrap.querySelector('select') : null;
-      if (singleSelect) singleSelect.disabled = true;
+      var sel = singleWrap ? singleWrap.querySelector('select') : null;
+      if (sel) { sel.disabled = true; sel.removeAttribute('required'); }
+    } else if (qtype === 'TRUE_FALSE') {
+      if (singleWrap) singleWrap.classList.add('hidden');
+      if (tfWrap) tfWrap.classList.remove('hidden');
+      var sel = singleWrap ? singleWrap.querySelector('select') : null;
+      if (sel) { sel.disabled = true; sel.removeAttribute('required'); }
+      if (optC) optC.classList.add('hidden');
+      if (optD) optD.classList.add('hidden');
+      if (optE) optE.classList.add('hidden');
     }
   })();
 </script>
