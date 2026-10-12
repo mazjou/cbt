@@ -177,7 +177,7 @@ router.get('/exams', async (req, res) => {
              JOIN exams e ON e.id = a.exam_id
              WHERE a.student_id=:sid AND a.exam_id IN (${ph})
                AND (a.status='SUBMITTED'
-                 OR (a.status='IN_PROGRESS' AND TIMESTAMPDIFF(MINUTE, a.started_at, NOW()) > (e.duration_minutes + 10)))
+                 OR (a.status='IN_PROGRESS' AND EXTRACT(EPOCH FROM (NOW() - a.started_at))/60 > (e.duration_minutes + 10)))
              GROUP BY a.exam_id`,
             { sid: user.id, ...Object.fromEntries(examIds.map((id, i) => [i, id])) }
           );
@@ -204,7 +204,7 @@ router.get('/exams', async (req, res) => {
             (SELECT COUNT(*) FROM questions q WHERE q.exam_id=e.id) AS question_count,
             (SELECT COUNT(*) FROM attempts a WHERE a.exam_id=e.id AND a.student_id=:sid
                AND (a.status='SUBMITTED'
-                 OR (a.status='IN_PROGRESS' AND TIMESTAMPDIFF(MINUTE, a.started_at, NOW()) > (e.duration_minutes + 10)))
+                 OR (a.status='IN_PROGRESS' AND EXTRACT(EPOCH FROM (NOW() - a.started_at))/60 > (e.duration_minutes + 10)))
             ) AS attempts_count
      FROM exams e
      JOIN subjects s ON s.id=e.subject_id
@@ -277,7 +277,7 @@ router.get('/exams/:id', async (req, res) => {
             (SELECT COUNT(*) FROM questions q WHERE q.exam_id=e.id) AS question_count,
             (SELECT COUNT(*) FROM attempts a WHERE a.exam_id=e.id AND a.student_id=:sid
                AND (a.status='SUBMITTED'
-                 OR (a.status='IN_PROGRESS' AND TIMESTAMPDIFF(MINUTE, a.started_at, NOW()) > (e.duration_minutes + 10)))
+                 OR (a.status='IN_PROGRESS' AND EXTRACT(EPOCH FROM (NOW() - a.started_at))/60 > (e.duration_minutes + 10)))
             ) AS attempts_count
      FROM exams e
      JOIN subjects s ON s.id=e.subject_id
@@ -422,7 +422,7 @@ router.post('/exams/:id/start', async (req, res) => {
        SUM(CASE WHEN status = 'SUBMITTED' THEN 1 ELSE 0 END) AS submitted_count,
        SUM(CASE
          WHEN status = 'IN_PROGRESS'
-           AND TIMESTAMPDIFF(MINUTE, started_at, NOW()) <= (e.duration_minutes + 10)
+           AND EXTRACT(EPOCH FROM (NOW() - started_at))/60 <= (e.duration_minutes + 10)
          THEN 1 ELSE 0
        END) AS active_in_progress
      FROM attempts a
@@ -445,7 +445,7 @@ router.post('/exams/:id/start', async (req, res) => {
       `SELECT a.id FROM attempts a
        JOIN exams e ON e.id = a.exam_id
        WHERE a.exam_id=:eid AND a.student_id=:sid AND a.status='IN_PROGRESS'
-         AND TIMESTAMPDIFF(MINUTE, a.started_at, NOW()) <= (e.duration_minutes + 10)
+         AND EXTRACT(EPOCH FROM (NOW() - a.started_at))/60 <= (e.duration_minutes + 10)
        ORDER BY a.id DESC LIMIT 1;`,
       { eid: examId, sid: user.id }
     );
