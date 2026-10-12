@@ -462,7 +462,7 @@ router.post('/import/preview',
         for (const k of keys) { const v = low[k.toLowerCase()]; if (v !== undefined) return v; }
         return '';
       };
-      const [subjects] = await pool.query('SELECT id, code, name FROM subjects');
+      const [subjects] = await pool.query('SELECT id, code, name FROM subjects ORDER BY name ASC');
       const subjectMap = new Map();
       for (const s of subjects) {
         if (s.code) subjectMap.set(s.code.toLowerCase(), s.id);
@@ -492,22 +492,31 @@ router.post('/import/preview',
         const image_d = resolveImg(pickVal(row, ['image_d','gambar_d','img_d']));
         const image_e = resolveImg(pickVal(row, ['image_e','gambar_e','img_e']));
         const qtypeRaw = String(pickVal(row, ['question_type','tipe','type']) || 'MCQ').trim().toUpperCase();
-        const validQtype = ['MCQ','COMPLEX','TRUE_FALSE','CHECKBOX'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
+        // Normalise: COMPLEX → CHECKBOX agar konsisten
+        const rawQtype = ['MCQ','COMPLEX','TRUE_FALSE','CHECKBOX'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
+        // Treat COMPLEX sama seperti CHECKBOX (multi-jawaban)
+        const validQtype = rawQtype === 'COMPLEX' ? 'COMPLEX' : rawQtype;
+        const isMulti = validQtype === 'COMPLEX' || validQtype === 'CHECKBOX';
+
         if (!question_text) reasons.push('Kolom question_text kosong');
-        // Validasi opsi — boleh kosong jika ada gambar
+
+        // Validasi opsi — sesuai tipe soal
         if (validQtype === 'TRUE_FALSE') {
-          if (!A || !B) reasons.push('TRUE_FALSE: opsi A dan B wajib');
+          if (!A && !image_a) reasons.push('TRUE_FALSE: opsi A wajib diisi');
+          if (!B && !image_b) reasons.push('TRUE_FALSE: opsi B wajib diisi');
         } else {
-          if ((!A && !image_a) || (!B && !image_b) || (!C && !image_c) || (!D && !image_d)) {
-            reasons.push('Opsi A-D wajib terisi (teks atau gambar di image_a-image_d)');
-          }
+          // MCQ / COMPLEX / CHECKBOX wajib punya A, B — C dan D boleh kosong jika ada 2 opsi cukup
+          if (!A && !image_a) reasons.push('Opsi A wajib terisi (teks atau gambar)');
+          if (!B && !image_b) reasons.push('Opsi B wajib terisi (teks atau gambar)');
         }
+
         // Validasi kunci jawaban sesuai tipe
-        const correctLabels = (validQtype === 'COMPLEX' || validQtype === 'CHECKBOX')
-          ? String(correct).split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
-          : [String(correct).trim().toUpperCase()];
+        const correctRaw = String(correct).trim();
+        const correctLabels = isMulti
+          ? correctRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
+          : [correctRaw.toUpperCase()];
         if (correctLabels.length === 0 || !correctLabels.every(l => ['A','B','C','D','E'].includes(l))) {
-          reasons.push('Kunci jawaban tidak valid (gunakan A/B/C/D/E, untuk COMPLEX pisahkan dengan koma)');
+          reasons.push('Kunci jawaban tidak valid (gunakan A/B/C/D/E, untuk COMPLEX/CHECKBOX pisahkan dengan koma)');
         }
         let subject_id = null;
         if (subjectRaw) {
@@ -516,7 +525,7 @@ router.post('/import/preview',
         }
         const validDiff = ['EASY','MEDIUM','HARD'].includes(difficulty) ? difficulty : 'MEDIUM';
         const item = { rowNo, question_text, question_image, points,
-          correct: validQtype === 'COMPLEX' ? correctLabels.join(',') : correctLabels[0],
+          correct: isMulti ? correctLabels.join(',') : (correctLabels[0] || ''),
           correctLabels,
           question_type: validQtype,
           subject_id, subjectRaw,
