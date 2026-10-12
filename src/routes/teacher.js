@@ -3775,7 +3775,7 @@ router.get('/exams/:id/questions/export', async (req, res) => {
     if (!exam) { req.flash('error', 'Ujian tidak ditemukan.'); return res.redirect('/teacher/exams'); }
 
     const [questions] = await pool.query(
-      `SELECT q.id, q.question_text, q.question_image, q.points FROM questions q
+      `SELECT q.id, q.question_text, q.question_image, q.points, q.question_type FROM questions q
        WHERE q.exam_id=:eid ORDER BY q.id ASC;`,
       { eid: examId }
     );
