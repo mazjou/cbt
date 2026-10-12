@@ -2974,6 +2974,12 @@ router.get('/exams/:id/import', (req, res) => {
 router.get('/exams/:id/questions/upload-images', (req, res) => {
   res.redirect(`/teacher/exams/${req.params.id}/questions/upload-images`);
 });
+router.get('/exams/:id/questions/export', (req, res) => {
+  res.redirect(`/teacher/exams/${req.params.id}/questions/export`);
+});
+router.get('/exams/:id/export', (req, res) => {
+  res.redirect(`/teacher/exams/${req.params.id}/export`);
+});
 router.get('/questions/:id/edit', (req, res) => {
   res.redirect(`/teacher/questions/${req.params.id}/edit`);
 });
@@ -4174,7 +4180,7 @@ router.get('/question-bank/export', async (req, res) => {
   const path = require('path');
   try {
     const [questions] = await pq(`
-      SELECT qb.id, qb.question_text, qb.question_image, qb.points, qb.difficulty, qb.tags, qb.chapter,
+      SELECT qb.id, qb.question_text, qb.question_image, qb.points, qb.question_type, qb.difficulty, qb.tags, qb.chapter,
              s.name AS subject_name, s.code AS subject_code,
              u.full_name AS teacher_name
       FROM question_bank qb
@@ -4207,13 +4213,16 @@ router.get('/question-bank/export', async (req, res) => {
     };
     const rows = questions.map((q) => {
       const opts = optMap[q.id] || {};
-      const correct = Object.entries(opts).find(([, v]) => v.correct)?.[0] || '';
+      const correctEntries = Object.entries(opts).filter(([, v]) => v.correct).map(([lbl]) => lbl);
+      const correctStr = correctEntries.join(',');
+      const qtype = q.question_type || 'MCQ';
       const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
       return {
         'question_text': qText,
         'image': getImageRef(q.question_image),
         'points': q.points || 1,
-        'correct': correct,
+        'correct': correctStr,
+        'question_type': qtype,
         'A': opts['A']?.text || '', 'B': opts['B']?.text || '',
         'C': opts['C']?.text || '', 'D': opts['D']?.text || '', 'E': opts['E']?.text || '',
         'image_a': getImageRef(opts['A']?.image), 'image_b': getImageRef(opts['B']?.image),
@@ -4228,9 +4237,9 @@ router.get('/question-bank/export', async (req, res) => {
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows, {
-      header: ['question_text','image','points','correct','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e','difficulty','subject','chapter','tags','guru']
+      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e','difficulty','subject','chapter','tags','guru']
     });
-    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:8},{wch:35},{wch:35},{wch:35},{wch:35},{wch:35},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25},{wch:30}];
+    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:35},{wch:35},{wch:35},{wch:35},{wch:35},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25},{wch:30}];
     XLSX.utils.book_append_sheet(wb, ws, 'Soal');
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     res.setHeader('Content-Disposition', `attachment; filename="bank_soal_semua_${Date.now()}.xlsx"`);
