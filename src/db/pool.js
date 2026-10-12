@@ -50,6 +50,12 @@ function convertMysqlToPostgres(sql) {
   sql = sql.replace(/\bIF\s*\(([^,]+),\s*([^,]+),\s*([^)]+)\)/gi,
     (m, cond, a, b) => `CASE WHEN ${cond} THEN ${a} ELSE ${b} END`);
 
+  // IFNULL(a, b) → COALESCE(a, b)
+  sql = sql.replace(/\bIFNULL\s*\(/gi, 'COALESCE(');
+
+  // ISNULL(a) → (a IS NULL)
+  sql = sql.replace(/\bISNULL\s*\(([^)]+)\)/gi, '($1 IS NULL)');
+
   // TIMESTAMPDIFF
   sql = sql.replace(/TIMESTAMPDIFF\s*\(\s*MINUTE\s*,\s*([^,]+),\s*([^)]+)\)/gi,
     (m, a, b) => `FLOOR(EXTRACT(EPOCH FROM (${b.trim()} - ${a.trim()}))/60)`);
@@ -57,6 +63,44 @@ function convertMysqlToPostgres(sql) {
     (m, a, b) => `FLOOR(EXTRACT(EPOCH FROM (${b.trim()} - ${a.trim()})))`);
   sql = sql.replace(/TIMESTAMPDIFF\s*\(\s*HOUR\s*,\s*([^,]+),\s*([^)]+)\)/gi,
     (m, a, b) => `FLOOR(EXTRACT(EPOCH FROM (${b.trim()} - ${a.trim()}))/3600)`);
+  sql = sql.replace(/TIMESTAMPDIFF\s*\(\s*DAY\s*,\s*([^,]+),\s*([^)]+)\)/gi,
+    (m, a, b) => `FLOOR(EXTRACT(EPOCH FROM (${b.trim()} - ${a.trim()}))/86400)`);
+
+  // DATEDIFF(a, b) → FLOOR(EXTRACT EPOCH FROM (a-b))/86400
+  sql = sql.replace(/\bDATEDIFF\s*\(([^,]+),\s*([^)]+)\)/gi,
+    (m, a, b) => `FLOOR(EXTRACT(EPOCH FROM (${a.trim()} - ${b.trim()}))/86400)`);
+
+  // DATE_ADD(date, INTERVAL n UNIT) → (date + INTERVAL 'n UNIT')
+  sql = sql.replace(/\bDATE_ADD\s*\(\s*([^,]+),\s*INTERVAL\s+(\d+)\s+(\w+)\s*\)/gi,
+    (m, d, n, unit) => `(${d.trim()} + INTERVAL '${n} ${unit}')`);
+
+  // DATE_SUB(date, INTERVAL n UNIT) → (date - INTERVAL 'n UNIT')
+  sql = sql.replace(/\bDATE_SUB\s*\(\s*([^,]+),\s*INTERVAL\s+(\d+)\s+(\w+)\s*\)/gi,
+    (m, d, n, unit) => `(${d.trim()} - INTERVAL '${n} ${unit}')`);
+
+  // DATE_FORMAT(date, '%Y-%m-%d') → TO_CHAR(date, 'YYYY-MM-DD')
+  sql = sql.replace(/\bDATE_FORMAT\s*\(\s*([^,]+),\s*'([^']+)'\s*\)/gi, (m, d, fmt) => {
+    const pgFmt = fmt
+      .replace(/%Y/g, 'YYYY').replace(/%y/g, 'YY')
+      .replace(/%m/g, 'MM').replace(/%d/g, 'DD')
+      .replace(/%H/g, 'HH24').replace(/%i/g, 'MI').replace(/%s/g, 'SS')
+      .replace(/%M/g, 'Month').replace(/%W/g, 'Day');
+    return `TO_CHAR(${d.trim()}, '${pgFmt}')`;
+  });
+
+  // UNIX_TIMESTAMP() / UNIX_TIMESTAMP(col) → EXTRACT(EPOCH FROM ...)
+  sql = sql.replace(/\bUNIX_TIMESTAMP\s*\(\s*\)/gi, 'EXTRACT(EPOCH FROM NOW())');
+  sql = sql.replace(/\bUNIX_TIMESTAMP\s*\(\s*([^)]+)\)/gi, (m, col) => `EXTRACT(EPOCH FROM ${col.trim()})`);
+
+  // FROM_UNIXTIME(n) → TO_TIMESTAMP(n)
+  sql = sql.replace(/\bFROM_UNIXTIME\s*\(\s*([^)]+)\)/gi, (m, col) => `TO_TIMESTAMP(${col.trim()})`);
+
+  // FIND_IN_SET(val, col) → val = ANY(string_to_array(col, ','))
+  sql = sql.replace(/\bFIND_IN_SET\s*\(\s*([^,]+),\s*([^)]+)\)/gi,
+    (m, val, col) => `${val.trim()} = ANY(string_to_array(${col.trim()}, ','))`);
+
+  // LAST_INSERT_ID() → lastval()
+  sql = sql.replace(/\bLAST_INSERT_ID\s*\(\s*\)/gi, 'lastval()');
 
   // SET SESSION innodb_lock_wait_timeout → SELECT 1
   sql = sql.replace(/SET\s+SESSION\s+innodb_lock_wait_timeout\s*=\s*\d+/gi, 'SELECT 1');
