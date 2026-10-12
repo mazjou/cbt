@@ -104,6 +104,23 @@
       </div>
     </div>
 
+    <!-- Bulk Actions Toolbar (sticky, muncul saat ada yang dicentang) -->
+    <div id="bulkActionsBar" class="hidden sticky top-2 z-20 mb-4 rounded-xl border border-rose-200 bg-rose-50 shadow-lg px-5 py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-bold text-rose-700"><span id="selectedCount">0</span> siswa dipilih</span>
+        <button type="button" onclick="selectAllVisible()" class="text-xs px-3 py-1.5 rounded-lg bg-white border border-rose-200 text-rose-700 hover:bg-rose-100 font-medium transition-all">
+          Pilih Semua (<%= rows.length %>)
+        </button>
+        <button type="button" onclick="clearSelection()" class="text-xs px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 font-medium transition-all">
+          Batal Pilih
+        </button>
+      </div>
+      <button type="button" onclick="bulkReset()"
+        class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-bold text-sm shadow transition-all">
+        🔄 Reset Nilai Terpilih
+      </button>
+    </div>
+
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead class="text-purple-700">
@@ -166,25 +183,6 @@
       </table>
     </div>
 
-    <!-- Bulk Actions Bar -->
-    <div id="bulkActionsBar" class="hidden mt-4 p-4 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <span class="text-amber-800 font-medium">
-            <span id="selectedCount">0</span> nilai dipilih
-          </span>
-          <button onclick="clearSelection()" class="text-sm text-amber-600 hover:text-amber-800 underline">
-            Batal Pilih
-          </button>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="bulkReset()" class="px-4 py-2 rounded-xl border border-rose-300 bg-gradient-to-br from-rose-100 to-rose-200 hover:from-rose-200 hover:to-rose-300 text-rose-800 font-medium text-sm transition-all">
-            🗑️ Reset Nilai Terpilih
-          </button>
-        </div>
-      </div>
-    </div>
-
     <!-- Pagination -->
     <% if (pagination.totalPages > 1) { %>
       <div class="mt-4 flex items-center justify-between border-t border-purple-200 pt-4">
@@ -226,123 +224,68 @@
 function toggleSelectAll() {
   const selectAll = document.getElementById('selectAll');
   const checkboxes = document.querySelectorAll('.attempt-checkbox');
-  
-  checkboxes.forEach(checkbox => {
-    checkbox.checked = selectAll.checked;
-  });
-  
+  checkboxes.forEach(cb => { cb.checked = selectAll.checked; });
+  updateBulkActions();
+}
+
+function selectAllVisible() {
+  document.querySelectorAll('.attempt-checkbox').forEach(cb => { cb.checked = true; });
+  document.getElementById('selectAll').checked = true;
   updateBulkActions();
 }
 
 function updateBulkActions() {
-  const checkboxes = document.querySelectorAll('.attempt-checkbox:checked');
-  const bulkActionsBar = document.getElementById('bulkActionsBar');
-  const selectedCount = document.getElementById('selectedCount');
+  const checked = document.querySelectorAll('.attempt-checkbox:checked');
+  const all     = document.querySelectorAll('.attempt-checkbox');
+  const bar     = document.getElementById('bulkActionsBar');
+  const countEl = document.getElementById('selectedCount');
   const selectAll = document.getElementById('selectAll');
-  
-  selectedCount.textContent = checkboxes.length;
-  
-  if (checkboxes.length > 0) {
-    bulkActionsBar.classList.remove('hidden');
-  } else {
-    bulkActionsBar.classList.add('hidden');
-  }
-  
-  // Update select all checkbox state
-  const allCheckboxes = document.querySelectorAll('.attempt-checkbox');
-  if (checkboxes.length === allCheckboxes.length && allCheckboxes.length > 0) {
-    selectAll.checked = true;
-    selectAll.indeterminate = false;
-  } else if (checkboxes.length > 0) {
-    selectAll.checked = false;
-    selectAll.indeterminate = true;
-  } else {
-    selectAll.checked = false;
-    selectAll.indeterminate = false;
-  }
+
+  countEl.textContent = checked.length;
+  bar.classList.toggle('hidden', checked.length === 0);
+
+  selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+  selectAll.checked       = all.length > 0 && checked.length === all.length;
+
+  // Highlight baris yang dipilih
+  all.forEach(cb => {
+    cb.closest('tr').classList.toggle('bg-rose-50', cb.checked);
+  });
 }
 
 function clearSelection() {
-  const checkboxes = document.querySelectorAll('.attempt-checkbox');
-  const selectAll = document.getElementById('selectAll');
-  
-  checkboxes.forEach(checkbox => {
-    checkbox.checked = false;
-  });
-  selectAll.checked = false;
-  selectAll.indeterminate = false;
-  
+  document.querySelectorAll('.attempt-checkbox').forEach(cb => { cb.checked = false; });
+  document.getElementById('selectAll').checked = false;
+  document.getElementById('selectAll').indeterminate = false;
   updateBulkActions();
 }
 
 function bulkReset() {
-  const checkboxes = document.querySelectorAll('.attempt-checkbox:checked');
-  
-  console.log('=== CLIENT BULK RESET DEBUG ===');
-  console.log('Found checkboxes:', checkboxes.length);
-  
-  if (checkboxes.length === 0) {
-    alert('Pilih minimal satu nilai untuk direset.');
-    return;
-  }
-  
-  // Build confirmation message
-  let message = `Anda akan mereset ${checkboxes.length} nilai:\n\n`;
-  checkboxes.forEach((checkbox, index) => {
-    if (index < 5) { // Show max 5 items in confirmation
-      const student = checkbox.dataset.student;
-      const exam = checkbox.dataset.exam;
-      message += `• ${student} - ${exam}\n`;
-    }
+  const checked = document.querySelectorAll('.attempt-checkbox:checked');
+  if (checked.length === 0) { alert('Pilih minimal satu nilai untuk direset.'); return; }
+
+  let msg = `Reset ${checked.length} nilai berikut?\n\n`;
+  checked.forEach((cb, i) => {
+    if (i < 6) msg += `• ${cb.dataset.student} — ${cb.dataset.exam}\n`;
   });
-  
-  if (checkboxes.length > 5) {
-    message += `... dan ${checkboxes.length - 5} lainnya\n`;
-  }
-  
-  message += '\nSiswa dapat mengulang ujian setelah nilai direset. Lanjutkan?';
-  
-  if (!confirm(message)) {
-    return;
-  }
-  
-  // Collect attempt IDs
-  const attemptIds = Array.from(checkboxes).map(cb => cb.value);
-  console.log('Attempt IDs to send:', attemptIds);
-  
-  // Create form and submit
+  if (checked.length > 6) msg += `... dan ${checked.length - 6} lainnya\n`;
+  msg += '\nSiswa dapat mengulang ujian setelah direset. Lanjutkan?';
+
+  if (!confirm(msg)) return;
+
   const form = document.createElement('form');
   form.method = 'POST';
   form.action = '/teacher/attempts/bulk-reset';
-  
-  // Add CSRF token if available
-  const csrfToken = document.querySelector('meta[name="csrf-token"]');
-  if (csrfToken) {
-    const csrfInput = document.createElement('input');
-    csrfInput.type = 'hidden';
-    csrfInput.name = '_token';
-    csrfInput.value = csrfToken.getAttribute('content');
-    form.appendChild(csrfInput);
-  }
-  
-  attemptIds.forEach(id => {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'attempt_ids[]';
-    input.value = id;
-    form.appendChild(input);
-    console.log('Added input:', input.name, '=', input.value);
+  checked.forEach(cb => {
+    const inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'attempt_ids[]';
+    inp.value = cb.value;
+    form.appendChild(inp);
   });
-  
-  console.log('Form HTML:', form.innerHTML);
-  console.log('Submitting form to:', form.action);
-  
   document.body.appendChild(form);
   form.submit();
 }
 
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-  updateBulkActions();
-});
+document.addEventListener('DOMContentLoaded', updateBulkActions);
 </script>
