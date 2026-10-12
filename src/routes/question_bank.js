@@ -774,6 +774,31 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
   }
 });
 
+// ===== BULK DELETE =====
+router.post('/bulk-delete', async (req, res) => {
+  const user = req.session.user;
+  let ids = req.body['ids[]'] || req.body.ids || [];
+  if (typeof ids === 'string') ids = [ids];
+  const validIds = ids.map(Number).filter(n => Number.isInteger(n) && n > 0);
+  if (!validIds.length) {
+    req.flash('error', 'Tidak ada soal yang dipilih.');
+    return res.redirect('/teacher/question-bank');
+  }
+  try {
+    const ph = validIds.map((_, i) => `$${i + 2}`).join(',');
+    const result = await pool.query(
+      `DELETE FROM question_bank WHERE id IN (${ph}) AND teacher_id = $1`,
+      [user.id, ...validIds]
+    );
+    const deleted = result[0]?.affectedRows || validIds.length;
+    req.flash('success', `${deleted} soal berhasil dihapus dari bank soal.`);
+  } catch (e) {
+    console.error('Bulk delete error:', e);
+    req.flash('error', 'Gagal menghapus soal: ' + e.message);
+  }
+  res.redirect('/teacher/question-bank');
+});
+
 // ===== DELETE =====
 router.delete('/:id', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');

@@ -45,22 +45,20 @@
         <% }) %>
       </select>
     </div>
-    
     <div>
       <label class="text-sm text-slate-600 font-medium">Tingkat Kesulitan</label>
       <select name="difficulty" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
         <option value="">Semua</option>
-        <option value="EASY" <%= filters.difficulty === 'EASY' ? 'selected' : '' %>>Mudah</option>
+        <option value="EASY"   <%= filters.difficulty === 'EASY'   ? 'selected' : '' %>>Mudah</option>
         <option value="MEDIUM" <%= filters.difficulty === 'MEDIUM' ? 'selected' : '' %>>Sedang</option>
-        <option value="HARD" <%= filters.difficulty === 'HARD' ? 'selected' : '' %>>Sulit</option>
+        <option value="HARD"   <%= filters.difficulty === 'HARD'   ? 'selected' : '' %>>Sulit</option>
       </select>
     </div>
-    
     <div>
       <label class="text-sm text-slate-600 font-medium">Cari</label>
-      <input type="text" name="search" value="<%= filters.search || '' %>" placeholder="Cari soal atau tag..." class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      <input type="text" name="search" value="<%= filters.search || '' %>" placeholder="Cari soal atau tag..."
+        class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
     </div>
-    
     <div class="flex items-end gap-2">
       <button type="submit" class="flex-1 rounded-xl bg-gradient-to-r from-indigo-400 to-purple-400 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold py-2 shadow-md transform hover:scale-105 transition-all">Filter</button>
       <a href="/teacher/question-bank" class="px-4 py-2 rounded-xl border-2 border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium transition-all">Reset</a>
@@ -68,7 +66,6 @@
   </form>
 </div>
 
-<!-- List Soal -->
 <% if (!questions.length) { %>
   <div class="text-center py-12 rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50">
     <div class="text-6xl mb-3">📚</div>
@@ -82,86 +79,138 @@
     </a>
   </div>
 <% } else { %>
-  <div class="space-y-4">
-    <% questions.forEach((q, idx) => { 
-      const colors = [
-        { border: 'border-blue-200', bg: 'from-blue-50 to-cyan-50', text: 'text-blue-900', badge: 'bg-blue-100 text-blue-700' },
-        { border: 'border-purple-200', bg: 'from-purple-50 to-pink-50', text: 'text-purple-900', badge: 'bg-purple-100 text-purple-700' },
-        { border: 'border-emerald-200', bg: 'from-emerald-50 to-teal-50', text: 'text-emerald-900', badge: 'bg-emerald-100 text-emerald-700' },
-        { border: 'border-amber-200', bg: 'from-amber-50 to-orange-50', text: 'text-amber-900', badge: 'bg-amber-100 text-amber-700' }
-      ];
-      const color = colors[idx % colors.length];
-      
-      const difficultyLabel = {
-        'EASY': { text: 'Mudah', color: 'bg-green-100 text-green-700' },
-        'MEDIUM': { text: 'Sedang', color: 'bg-yellow-100 text-yellow-700' },
-        'HARD': { text: 'Sulit', color: 'bg-red-100 text-red-700' }
-      };
-      const diff = difficultyLabel[q.difficulty] || difficultyLabel['MEDIUM'];
-    %>
-      <div class="rounded-2xl border-2 <%= color.border %> bg-gradient-to-br <%= color.bg %> p-5 shadow-md hover:shadow-lg transition-all">
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex-1">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full <%= color.badge %> text-xs font-bold">
-                <%= q.subject_name %>
-              </span>
-              <% if (q.chapter) { %>
-                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-bold">
-                  📚 <%= q.chapter %>
-                </span>
-              <% } %>
-              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full <%= diff.color %> text-xs font-bold">
-                <%= diff.text %>
-              </span>
-              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
-                ⭐ <%= q.points %> poin
-              </span>
-              <% if (q.usage_count > 0) { %>
-                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
-                  📊 Digunakan <%= q.usage_count %>x
-                </span>
-              <% } %>
+
+  <!-- Form Bulk Delete -->
+  <form id="bulkDeleteForm" action="/teacher/question-bank/bulk-delete" method="POST">
+
+    <!-- Toolbar Bulk Action (muncul saat ada yang dicentang) -->
+    <div id="bulkToolbar" class="hidden mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 flex items-center justify-between gap-4 shadow-sm">
+      <div class="flex items-center gap-3">
+        <span id="selectedCount" class="text-sm font-bold text-rose-700">0 soal dipilih</span>
+        <button type="button" onclick="selectAll()" class="text-xs px-3 py-1.5 rounded-lg bg-white border border-rose-200 text-rose-700 hover:bg-rose-100 font-medium transition-all">
+          Pilih Semua (<%= questions.length %>)
+        </button>
+        <button type="button" onclick="deselectAll()" class="text-xs px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 font-medium transition-all">
+          Batal Pilih
+        </button>
+      </div>
+      <button type="submit" onclick="return confirmBulkDelete()"
+        class="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-bold text-sm shadow transition-all">
+        🗑️ Hapus yang Dipilih
+      </button>
+    </div>
+
+    <!-- Header row: Pilih Semua + jumlah -->
+    <div class="flex items-center gap-3 mb-3 px-1">
+      <label class="flex items-center gap-2 cursor-pointer select-none">
+        <input type="checkbox" id="checkAll" onchange="toggleAll(this)"
+          class="w-4 h-4 accent-rose-500 rounded cursor-pointer" />
+        <span class="text-sm font-semibold text-slate-600">Pilih Semua</span>
+      </label>
+      <span class="text-xs text-slate-400">— Total: <strong><%= questions.length %></strong> soal</span>
+    </div>
+
+    <!-- List Soal -->
+    <div class="space-y-4">
+      <% questions.forEach((q, idx) => {
+        const colors = [
+          { border: 'border-blue-200', bg: 'from-blue-50 to-cyan-50', text: 'text-blue-900', badge: 'bg-blue-100 text-blue-700' },
+          { border: 'border-purple-200', bg: 'from-purple-50 to-pink-50', text: 'text-purple-900', badge: 'bg-purple-100 text-purple-700' },
+          { border: 'border-emerald-200', bg: 'from-emerald-50 to-teal-50', text: 'text-emerald-900', badge: 'bg-emerald-100 text-emerald-700' },
+          { border: 'border-amber-200', bg: 'from-amber-50 to-orange-50', text: 'text-amber-900', badge: 'bg-amber-100 text-amber-700' }
+        ];
+        const color = colors[idx % colors.length];
+        const difficultyLabel = {
+          'EASY':   { text: 'Mudah',  color: 'bg-green-100 text-green-700' },
+          'MEDIUM': { text: 'Sedang', color: 'bg-yellow-100 text-yellow-700' },
+          'HARD':   { text: 'Sulit',  color: 'bg-red-100 text-red-700' }
+        };
+        const diff = difficultyLabel[q.difficulty] || difficultyLabel['MEDIUM'];
+      %>
+        <div class="rounded-2xl border-2 <%= color.border %> bg-gradient-to-br <%= color.bg %> p-5 shadow-md hover:shadow-lg transition-all item-card"
+             data-id="<%= q.id %>">
+          <div class="flex items-start gap-4">
+
+            <!-- Checkbox -->
+            <div class="pt-1 flex-shrink-0">
+              <input type="checkbox" name="ids[]" value="<%= q.id %>"
+                class="item-checkbox w-5 h-5 accent-rose-500 rounded cursor-pointer"
+                onchange="updateBulkToolbar()" />
             </div>
-            
-            <div class="text-slate-900 leading-relaxed prose prose-sm max-w-none line-clamp-2">
-              <%- q.question_text %>
-            </div>
-            
-            <% if (q.tags) { %>
-              <div class="mt-2 flex flex-wrap gap-1">
-                <% q.tags.split(',').forEach(tag => { %>
-                  <span class="px-2 py-1 rounded-lg bg-white/80 text-xs text-slate-600">#<%= tag.trim() %></span>
-                <% }) %>
+
+            <!-- Konten -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-2 flex-wrap">
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full <%= color.badge %> text-xs font-bold">
+                  <%= q.subject_name %>
+                </span>
+                <% if (q.chapter) { %>
+                  <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-bold">
+                    📚 <%= q.chapter %>
+                  </span>
+                <% } %>
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full <%= diff.color %> text-xs font-bold">
+                  <%= diff.text %>
+                </span>
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
+                  ⭐ <%= q.points %> poin
+                </span>
+                <% if (q.usage_count > 0) { %>
+                  <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
+                    📊 Digunakan <%= q.usage_count %>x
+                  </span>
+                <% } %>
               </div>
-            <% } %>
-            
-            <div class="mt-2 text-xs text-slate-500">
-              Dibuat: <%= new Date(q.created_at).toLocaleDateString('id-ID') %>
+
+              <div class="text-slate-900 leading-relaxed prose prose-sm max-w-none line-clamp-2">
+                <%- q.question_text %>
+              </div>
+
+              <% if (q.tags) { %>
+                <div class="mt-2 flex flex-wrap gap-1">
+                  <% q.tags.split(',').forEach(tag => { %>
+                    <span class="px-2 py-1 rounded-lg bg-white/80 text-xs text-slate-600">#<%= tag.trim() %></span>
+                  <% }) %>
+                </div>
+              <% } %>
+
+              <div class="mt-2 text-xs text-slate-500">
+                Dibuat: <%= new Date(q.created_at).toLocaleDateString('id-ID') %>
+              </div>
             </div>
-          </div>
-          
-          <div class="flex flex-col gap-2">
-            <a href="/teacher/question-bank/<%= q.id %>" class="px-3 py-2 rounded-xl border <%= color.border %> bg-white hover:bg-slate-50 <%= color.text %> font-medium text-xs transition-all text-center">
-              👁️ Detail
-            </a>
-            <a href="/teacher/question-bank/<%= q.id %>/edit" class="px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium text-xs transition-all text-center">
-              ✏️ Edit
-            </a>
-            <form action="/teacher/question-bank/<%= q.id %>?_method=DELETE" method="POST" onsubmit="return confirm('Hapus soal ini dari bank?')" class="inline">
-              <button class="w-full px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 font-medium text-xs transition-all">
+
+            <!-- Aksi -->
+            <div class="flex flex-col gap-2 flex-shrink-0">
+              <a href="/teacher/question-bank/<%= q.id %>"
+                class="px-3 py-2 rounded-xl border <%= color.border %> bg-white hover:bg-slate-50 <%= color.text %> font-medium text-xs transition-all text-center">
+                👁️ Detail
+              </a>
+              <a href="/teacher/question-bank/<%= q.id %>/edit"
+                class="px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 font-medium text-xs transition-all text-center">
+                ✏️ Edit
+              </a>
+              <button type="button"
+                onclick="deleteSingle(<%= q.id %>)"
+                class="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 font-medium text-xs transition-all">
                 🗑️ Hapus
               </button>
-            </form>
+            </div>
           </div>
         </div>
-      </div>
-    <% }) %>
-  </div>
-  
-  <div class="mt-6 text-center text-sm text-slate-600">
-    Total: <%= questions.length %> soal
-  </div>
+      <% }) %>
+    </div>
+
+    <div class="mt-6 text-center text-sm text-slate-600">
+      Total: <strong><%= questions.length %></strong> soal
+    </div>
+
+  </form><!-- end bulkDeleteForm -->
+
+  <!-- Form hapus satu soal (hidden, submit via JS) -->
+  <form id="singleDeleteForm" method="POST" style="display:none">
+    <input type="hidden" name="_method" value="DELETE" />
+  </form>
+
 <% } %>
 
 <style>
@@ -171,4 +220,60 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  .item-card.selected {
+    outline: 2px solid #f43f5e;
+    outline-offset: 1px;
+  }
 </style>
+
+<script>
+  function updateBulkToolbar() {
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    const checked = document.querySelectorAll('.item-checkbox:checked');
+    const toolbar = document.getElementById('bulkToolbar');
+    const countEl = document.getElementById('selectedCount');
+    const checkAll = document.getElementById('checkAll');
+
+    countEl.textContent = checked.length + ' soal dipilih';
+    toolbar.classList.toggle('hidden', checked.length === 0);
+    checkAll.indeterminate = checked.length > 0 && checked.length < checkboxes.length;
+    checkAll.checked = checked.length === checkboxes.length;
+
+    // Highlight kartu yang dipilih
+    checkboxes.forEach(cb => {
+      cb.closest('.item-card').classList.toggle('selected', cb.checked);
+    });
+  }
+
+  function toggleAll(master) {
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+      cb.checked = master.checked;
+    });
+    updateBulkToolbar();
+  }
+
+  function selectAll() {
+    document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = true);
+    document.getElementById('checkAll').checked = true;
+    updateBulkToolbar();
+  }
+
+  function deselectAll() {
+    document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('checkAll').checked = false;
+    updateBulkToolbar();
+  }
+
+  function confirmBulkDelete() {
+    const count = document.querySelectorAll('.item-checkbox:checked').length;
+    if (count === 0) { alert('Pilih minimal 1 soal terlebih dahulu.'); return false; }
+    return confirm(`Hapus ${count} soal yang dipilih dari bank soal? Tindakan ini tidak bisa dibatalkan.`);
+  }
+
+  function deleteSingle(id) {
+    if (!confirm('Hapus soal ini dari bank soal?')) return;
+    const form = document.getElementById('singleDeleteForm');
+    form.action = '/teacher/question-bank/' + id + '?_method=DELETE';
+    form.submit();
+  }
+</script>
