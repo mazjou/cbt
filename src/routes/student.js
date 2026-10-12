@@ -173,9 +173,12 @@ router.get('/exams', async (req, res) => {
         if (examIds.length > 0) {
           const ph = examIds.map((_, i) => `$${i + 1}`).join(',');
           const [attRows] = await pool.query(
-            `SELECT exam_id, COUNT(*) AS cnt FROM attempts
-             WHERE student_id=:sid AND exam_id IN (${ph})
-             GROUP BY exam_id`,
+            `SELECT exam_id, COUNT(*) AS cnt FROM attempts a
+             JOIN exams e ON e.id = a.exam_id
+             WHERE a.student_id=:sid AND a.exam_id IN (${ph})
+               AND (a.status='SUBMITTED'
+                 OR (a.status='IN_PROGRESS' AND TIMESTAMPDIFF(MINUTE, a.started_at, NOW()) > (e.duration_minutes + 10)))
+             GROUP BY a.exam_id`,
             { sid: user.id, ...Object.fromEntries(examIds.map((id, i) => [i, id])) }
           );
           const attMap = {};
@@ -199,7 +202,10 @@ router.get('/exams', async (req, res) => {
              JOIN classes c ON c.id=ec.class_id
              WHERE ec.exam_id=e.id) AS class_names,
             (SELECT COUNT(*) FROM questions q WHERE q.exam_id=e.id) AS question_count,
-            (SELECT COUNT(*) FROM attempts a WHERE a.exam_id=e.id AND a.student_id=:sid) AS attempts_count
+            (SELECT COUNT(*) FROM attempts a WHERE a.exam_id=e.id AND a.student_id=:sid
+               AND (a.status='SUBMITTED'
+                 OR (a.status='IN_PROGRESS' AND TIMESTAMPDIFF(MINUTE, a.started_at, NOW()) > (e.duration_minutes + 10)))
+            ) AS attempts_count
      FROM exams e
      JOIN subjects s ON s.id=e.subject_id
      JOIN users u ON u.id=e.teacher_id
@@ -269,7 +275,10 @@ router.get('/exams/:id', async (req, res) => {
   const [[exam]] = await pool.query(
     `SELECT e.*, s.name AS subject_name, c.name AS class_name, u.full_name AS teacher_name,
             (SELECT COUNT(*) FROM questions q WHERE q.exam_id=e.id) AS question_count,
-            (SELECT COUNT(*) FROM attempts a WHERE a.exam_id=e.id AND a.student_id=:sid) AS attempts_count
+            (SELECT COUNT(*) FROM attempts a WHERE a.exam_id=e.id AND a.student_id=:sid
+               AND (a.status='SUBMITTED'
+                 OR (a.status='IN_PROGRESS' AND TIMESTAMPDIFF(MINUTE, a.started_at, NOW()) > (e.duration_minutes + 10)))
+            ) AS attempts_count
      FROM exams e
      JOIN subjects s ON s.id=e.subject_id
      JOIN users u ON u.id=e.teacher_id
@@ -403,15 +412,51 @@ router.post('/exams/:id/start', async (req, res) => {
     }
   }
 
-  const [[cnt]] = await pool.query(`SELECT COUNT(*) AS c FROM attempts WHERE exam_id=:eid AND student_id=:sid;`, {
-    eid: examId,
-    sid: user.id
-  });
-  
-  console.log(`[START EXAM] Attempts: ${cnt.c}/${exam.max_attempts}`);
-  
-  if (cnt.c >= exam.max_attempts) {
-    console.log(`[START EXAM] Max attempts reached`);
+  // Hitung attempt yang sudah SUBMITTED sebagai percobaan valid.
+  // Attempt IN_PROGRESS yang masih aktif (belum expired) tidak dihitung ke kuota,
+  // tapi siswa diarahkan melanjutkan attempt tersebut.
+  // Attempt IN_PROGRESS yang sudah expired (lewat durasi + 10 menit grace) dihitung.
+  const [[cnt]] = await pool.query(
+    `SELECT
+       COUNT(*) AS c,
+       SUM(CASE WHEN status = 'SUBMITTED' THEN 1 ELSE 0 END) AS submitted_count,
+       SUM(CASE
+         WHEN status = 'IN_PROGRESS'
+           AND TIMESTAMPDIFF(MINUTE, started_at, NOW()) <= (e.duration_minutes + 10)
+         THEN 1 ELSE 0
+       END) AS active_in_progress
+     FROM attempts a
+     JOIN exams e ON e.id = a.exam_id
+     WHERE a.exam_id=:eid AND a.student_id=:sid;`,
+    { eid: examId, sid: user.id }
+  );
+
+  const submittedCount   = Number(cnt.submitted_count   || 0);
+  const activeInProgress = Number(cnt.active_in_progress || 0);
+  // Attempt IN_PROGRESS yang sudah expired dihitung sebagai percobaan
+  const expiredCount     = Number(cnt.c || 0) - submittedCount - activeInProgress;
+  const effectiveCount   = submittedCount + expiredCount;
+
+  console.log(`[START EXAM] Submitted: ${submittedCount}, ActiveIP: ${activeInProgress}, Expired: ${expiredCount}, Effective: ${effectiveCount}/${exam.max_attempts}`);
+
+  // Jika ada attempt IN_PROGRESS yang masih aktif → arahkan melanjutkan
+  if (activeInProgress > 0) {
+    const [[activeAttempt]] = await pool.query(
+      `SELECT a.id FROM attempts a
+       JOIN exams e ON e.id = a.exam_id
+       WHERE a.exam_id=:eid AND a.student_id=:sid AND a.status='IN_PROGRESS'
+         AND TIMESTAMPDIFF(MINUTE, a.started_at, NOW()) <= (e.duration_minutes + 10)
+       ORDER BY a.id DESC LIMIT 1;`,
+      { eid: examId, sid: user.id }
+    );
+    if (activeAttempt) {
+      console.log(`[START EXAM] Resuming active attempt ${activeAttempt.id}`);
+      return res.redirect(`/student/attempts/${activeAttempt.id}`);
+    }
+  }
+
+  if (effectiveCount >= exam.max_attempts) {
+    console.log(`[START EXAM] Max attempts reached (effective: ${effectiveCount})`);
     req.flash('error', 'Batas percobaan ujian sudah habis.');
     return res.redirect(`/student/exams/${examId}`);
   }
