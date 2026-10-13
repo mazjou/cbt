@@ -4144,7 +4144,6 @@ router.get('/assignments/:id', async (req, res) => {
 // POST Delete Assignment
 router.post('/assignments/:id/delete', async (req, res) => {
   const assignmentId = req.params.id;
-  
   try {
     await pool.query(`DELETE FROM assignments WHERE id = $1`, [assignmentId]);
     req.flash('success', 'Tugas berhasil dihapus.');
@@ -4152,8 +4151,32 @@ router.post('/assignments/:id/delete', async (req, res) => {
     console.error(e);
     req.flash('error', 'Gagal menghapus tugas.');
   }
-  
   res.redirect('/admin/assignments');
+});
+
+// POST Toggle Publish Assignment (admin)
+router.post('/assignments/:id/toggle-publish', async (req, res) => {
+  const assignmentId = req.params.id;
+  try {
+    const [[current]] = await pool.query(
+      `SELECT id, is_published FROM assignments WHERE id = $1 LIMIT 1`, [assignmentId]
+    );
+    if (!current) {
+      req.flash('error', 'Tugas tidak ditemukan.');
+      return res.redirect('/admin/assignments');
+    }
+    const newStatus = !current.is_published;
+    await pool.query(
+      `UPDATE assignments SET is_published = $1 WHERE id = $2`, [newStatus, assignmentId]
+    );
+    req.flash('success', newStatus ? 'Tugas berhasil dipublikasikan.' : 'Tugas berhasil dijadikan Draft.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal mengubah status tugas: ' + e.message);
+  }
+  // Redirect back to referrer (detail atau list)
+  const ref = req.get('Referer') || '/admin/assignments';
+  res.redirect(ref);
 });
 
 // POST Bulk Delete Assignments

@@ -168,6 +168,19 @@
                   <a href="/admin/assignments/<%= a.id %>" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs font-semibold transition-all">
                     Detail
                   </a>
+                  <form method="POST" action="/admin/assignments/<%= a.id %>/toggle-publish" class="inline">
+                    <% if (a.is_published) { %>
+                      <button type="submit" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white text-xs font-semibold transition-all"
+                        onclick="return confirm('Jadikan Draft tugas ini?')">
+                        Unpublish
+                      </button>
+                    <% } else { %>
+                      <button type="submit" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-xs font-semibold transition-all"
+                        onclick="return confirm('Publikasikan tugas ini?')">
+                        Publish
+                      </button>
+                    <% } %>
+                  </form>
                   <form method="POST" action="/admin/assignments/<%= a.id %>/delete" onsubmit="return confirm('Yakin ingin menghapus tugas ini?');" class="inline">
                     <button type="submit" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white text-xs font-semibold transition-all">
                       Hapus

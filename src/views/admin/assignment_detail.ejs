@@ -3,9 +3,26 @@
     <h1 class="text-3xl font-bold text-indigo-900">Detail Tugas</h1>
     <p class="mt-1 text-slate-600">Informasi lengkap tugas dan pengumpulan siswa</p>
   </div>
-  <a href="/admin/assignments" class="px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">
-    ← Kembali
-  </a>
+  <div class="flex items-center gap-2">
+    <form method="POST" action="/admin/assignments/<%= assignment.id %>/toggle-publish" class="inline">
+      <% if (assignment.is_published) { %>
+        <button type="submit"
+          onclick="return confirm('Jadikan Draft tugas ini? Siswa tidak bisa melihat tugas.')"
+          class="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-semibold transition-all shadow-md">
+          📤 Unpublish
+        </button>
+      <% } else { %>
+        <button type="submit"
+          onclick="return confirm('Publikasikan tugas ini? Siswa akan bisa melihat tugas.')"
+          class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold transition-all shadow-md">
+          🚀 Publish
+        </button>
+      <% } %>
+    </form>
+    <a href="/admin/assignments" class="px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">
+      ← Kembali
+    </a>
+  </div>
 </div>
 
 <!-- Assignment Info -->
