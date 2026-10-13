@@ -3833,14 +3833,29 @@ router.get('/exams/:id/questions/export', async (req, res) => {
     };
 
     // Buat data dengan header SAMA PERSIS dengan template import
+    const stripHtml = (html) => {
+      if (!html) return '';
+      return String(html)
+        .replace(/<br\s*\/?>/gi, '\n')       // br → newline
+        .replace(/<\/p>/gi, '\n')             // /p → newline
+        .replace(/<\/li>/gi, '\n')            // /li → newline
+        .replace(/<[^>]+>/g, '')              // hapus semua tag HTML
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\n{3,}/g, '\n\n')           // max 2 newline berturut
+        .trim();
+    };
+
     const rows = questions.map((q, idx) => {
       const opts = optMap[q.id] || {};
       const qtype = q.question_type || 'MCQ';
-      // Kunci: COMPLEX bisa lebih dari satu
       const correctEntries = Object.entries(opts).filter(([,v]) => v.correct).map(([lbl]) => lbl);
       const correctStr = correctEntries.join(',');
-      // Strip HTML tags dari question_text agar bisa diimport ulang
-      const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g,' ').trim();
+      const qText = stripHtml(q.question_text);
 
       // Kumpulkan gambar untuk sheet Daftar Gambar
       if (q.question_image) addImg(q.question_image, `Soal no.${idx+1}`);
@@ -3856,11 +3871,11 @@ router.get('/exams/:id/questions/export', async (req, res) => {
         'points': q.points || 1,
         'correct': correctStr,
         'question_type': qtype,
-        'A': opts['A']?.text || '',
-        'B': opts['B']?.text || '',
-        'C': opts['C']?.text || '',
-        'D': opts['D']?.text || '',
-        'E': opts['E']?.text || '',
+        'A': stripHtml(opts['A']?.text),
+        'B': stripHtml(opts['B']?.text),
+        'C': stripHtml(opts['C']?.text),
+        'D': stripHtml(opts['D']?.text),
+        'E': stripHtml(opts['E']?.text),
         'image_a': getImageRef(opts['A']?.image),
         'image_b': getImageRef(opts['B']?.image),
         'image_c': getImageRef(opts['C']?.image),

@@ -4390,20 +4390,36 @@ router.get('/question-bank/export', async (req, res) => {
       if (/^https?:\/\//i.test(v)) return v;
       return path.basename(v).replace(/^\d{10,13}_/, '') || '';
     };
+    const stripHtml = (html) => {
+      if (!html) return '';
+      return String(html)
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/li>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    };
     const rows = questions.map((q) => {
       const opts = optMap[q.id] || {};
       const correctEntries = Object.entries(opts).filter(([, v]) => v.correct).map(([lbl]) => lbl);
       const correctStr = correctEntries.join(',');
       const qtype = q.question_type || 'MCQ';
-      const qText = String(q.question_text || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+      const qText = stripHtml(q.question_text);
       return {
         'question_text': qText,
         'image': getImageRef(q.question_image),
         'points': q.points || 1,
         'correct': correctStr,
         'question_type': qtype,
-        'A': opts['A']?.text || '', 'B': opts['B']?.text || '',
-        'C': opts['C']?.text || '', 'D': opts['D']?.text || '', 'E': opts['E']?.text || '',
+        'A': stripHtml(opts['A']?.text), 'B': stripHtml(opts['B']?.text),
+        'C': stripHtml(opts['C']?.text), 'D': stripHtml(opts['D']?.text), 'E': stripHtml(opts['E']?.text),
         'image_a': getImageRef(opts['A']?.image), 'image_b': getImageRef(opts['B']?.image),
         'image_c': getImageRef(opts['C']?.image), 'image_d': getImageRef(opts['D']?.image),
         'image_e': getImageRef(opts['E']?.image),
