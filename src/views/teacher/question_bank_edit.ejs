@@ -48,7 +48,7 @@
   <!-- Hidden question_type -->
   <input type="hidden" name="question_type" value="<%= question.question_type || 'MCQ' %>" />
 
-  <div class="grid md:grid-cols-2 gap-4">
+  <div class="grid md:grid-cols-3 gap-4">
     <div>
       <label class="text-sm text-indigo-700 font-medium">Mata Pelajaran *</label>
       <select name="subject_id" required class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -56,6 +56,15 @@
         <% subjects.forEach(s => { %>
           <option value="<%= s.id %>" <%= question.subject_id == s.id ? 'selected' : '' %>><%= s.name %></option>
         <% }) %>
+      </select>
+    </div>
+    <div>
+      <label class="text-sm text-indigo-700 font-medium">Tingkat Kelas</label>
+      <select name="class_level" class="mt-1 w-full rounded-xl bg-white border border-indigo-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="" <%= !question.class_level ? 'selected' : '' %>>Semua Tingkat</option>
+        <option value="X"   <%= question.class_level === 'X'   ? 'selected' : '' %>>Kelas X</option>
+        <option value="XI"  <%= question.class_level === 'XI'  ? 'selected' : '' %>>Kelas XI</option>
+        <option value="XII" <%= question.class_level === 'XII' ? 'selected' : '' %>>Kelas XII</option>
       </select>
     </div>
     <div>

@@ -55,6 +55,15 @@
       </select>
     </div>
     <div>
+      <label class="text-sm text-slate-600 font-medium">Tingkat Kelas</label>
+      <select name="class_level" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        <option value="">Semua Kelas</option>
+        <option value="X"   <%= filters.class_level === 'X'   ? 'selected' : '' %>>Kelas X</option>
+        <option value="XI"  <%= filters.class_level === 'XI'  ? 'selected' : '' %>>Kelas XI</option>
+        <option value="XII" <%= filters.class_level === 'XII' ? 'selected' : '' %>>Kelas XII</option>
+      </select>
+    </div>
+    <div>
       <label class="text-sm text-slate-600 font-medium">Cari</label>
       <input type="text" name="search" value="<%= filters.search || '' %>" placeholder="Cari soal atau tag..."
         class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -147,6 +156,11 @@
                 <% if (q.chapter) { %>
                   <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-bold">
                     📚 <%= q.chapter %>
+                  </span>
+                <% } %>
+                <% if (q.class_level) { %>
+                  <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">
+                    🎓 Kelas <%= q.class_level %>
                   </span>
                 <% } %>
                 <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full <%= diff.color %> text-xs font-bold">

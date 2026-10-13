@@ -46,7 +46,7 @@ const stripHtml = (html) => {
 // ===== LIST =====
 router.get('/', async (req, res) => {
   const user = req.session.user;
-  const { subject_id, difficulty, search } = req.query;
+  const { subject_id, difficulty, search, class_level } = req.query;
   try {
     const params = [user.id];
     let query = `SELECT qb.*, s.name AS subject_name,
@@ -55,11 +55,12 @@ router.get('/', async (req, res) => {
       WHERE qb.teacher_id = $1`;
     if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }
     if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
+    if (class_level) { params.push(class_level); query += ` AND qb.class_level = $${params.length}`; }
     if (search) { params.push('%' + search + '%'); query += ` AND (qb.question_text ILIKE $${params.length} OR qb.tags ILIKE $${params.length})`; }
     query += ' ORDER BY qb.created_at DESC';
     const [questions] = await pool.query(query, params);
     const [subjects] = await pool.query('SELECT * FROM subjects ORDER BY name ASC');
-    res.render('teacher/question_bank', { title: 'Bank Soal', questions, subjects, filters: { subject_id, difficulty, search } });
+    res.render('teacher/question_bank', { title: 'Bank Soal', questions, subjects, filters: { subject_id, difficulty, search, class_level } });
   } catch (error) {
     console.error('Error loading question bank:', error);
     req.flash('error', 'Gagal memuat bank soal: ' + error.message);
@@ -160,14 +161,15 @@ router.get('/export', async (req, res) => {
         difficulty: q.difficulty || 'MEDIUM',
         subject:    q.subject_code || q.subject_name || '',
         chapter:    q.chapter || '',
-        tags:       q.tags || ''
+        tags:       q.tags || '',
+        class_level: q.class_level || ''
       };
     });
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(rows, {
-      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e','difficulty','subject','chapter','tags']
+      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e','difficulty','subject','chapter','tags','class_level']
     });
-    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25}];
+    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25},{wch:10}];
     XLSX.utils.book_append_sheet(wb, ws, 'Soal');
 
     // Tambahkan sheet Daftar Gambar jika ada
@@ -261,7 +263,8 @@ router.get('/import/template', async (req, res) => {
       { question_text: 'Contoh MCQ: Ibu kota Indonesia adalah?',
         image: '', points: 1, correct: 'A', question_type: 'MCQ',
         A: 'Jakarta', B: 'Surabaya', C: 'Bandung', D: 'Yogyakarta', E: '',
-        difficulty: 'EASY', subject: firstSubject, chapter: 'Bab 1', tags: 'geografi' },
+        image_a: '', image_b: '', image_c: '', image_d: '', image_e: '',
+        difficulty: 'EASY', subject: firstSubject, chapter: 'Bab 1', tags: 'geografi', class_level: 'X' },
       // Contoh 2: CHECKBOX (jawaban benar lebih dari satu, tanpa penalti)
       { question_text: 'Contoh CHECKBOX: Manakah yang termasuk bilangan prima?',
         image: '', points: 4, correct: 'A,C,D', question_type: 'CHECKBOX',
@@ -280,9 +283,9 @@ router.get('/import/template', async (req, res) => {
     ];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(contoh, {
-      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e','difficulty','subject','chapter','tags']
+      header: ['question_text','image','points','correct','question_type','A','B','C','D','E','image_a','image_b','image_c','image_d','image_e','difficulty','subject','chapter','tags','class_level']
     });
-    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25}];
+    ws['!cols'] = [{wch:60},{wch:20},{wch:8},{wch:12},{wch:12},{wch:30},{wch:30},{wch:30},{wch:30},{wch:30},{wch:20},{wch:20},{wch:20},{wch:20},{wch:20},{wch:10},{wch:15},{wch:20},{wch:25},{wch:10}];
     XLSX.utils.book_append_sheet(wb, ws, 'Template Soal');
     const panduan = [
       ['Kolom','Keterangan','Wajib','Contoh'],
@@ -492,6 +495,8 @@ router.post('/import/preview',
         const image_d = resolveImg(pickVal(row, ['image_d','gambar_d','img_d']));
         const image_e = resolveImg(pickVal(row, ['image_e','gambar_e','img_e']));
         const qtypeRaw = String(pickVal(row, ['question_type','tipe','type']) || 'MCQ').trim().toUpperCase();
+        const classLevelRaw = String(pickVal(row, ['class_level','kelas','tingkat']) || '').trim().toUpperCase();
+        const validClassLevel = ['X','XI','XII'].includes(classLevelRaw) ? classLevelRaw : null;
         // Normalise: COMPLEX → CHECKBOX agar konsisten
         const rawQtype = ['MCQ','COMPLEX','TRUE_FALSE','CHECKBOX'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
         // Treat COMPLEX sama seperti CHECKBOX (multi-jawaban)
@@ -530,6 +535,7 @@ router.post('/import/preview',
           question_type: validQtype,
           subject_id, subjectRaw,
           difficulty: validDiff, chapter, tags,
+          class_level: validClassLevel,
           options: { A, B, C, D, E },
           option_images: { A: image_a, B: image_b, C: image_c, D: image_d, E: image_e }
         };
@@ -569,8 +575,8 @@ router.post('/import/commit', async (req, res) => {
       if (!sid) continue;
       const qtype = r.question_type || 'MCQ';
       const [res2] = await conn.query(
-        'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, points, difficulty, tags, question_type) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
-        [user.id, sid, r.chapter || null, r.question_text, r.question_image || null, r.points || 1, r.difficulty || 'MEDIUM', r.tags || null, qtype]
+        'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, points, difficulty, tags, question_type, class_level) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',
+        [user.id, sid, r.chapter || null, r.question_text, r.question_image || null, r.points || 1, r.difficulty || 'MEDIUM', r.tags || null, qtype, r.class_level || null]
       );
       const bankId = res2.insertId;
       // Tentukan correctLabels
@@ -603,7 +609,7 @@ router.post('/import/commit', async (req, res) => {
 // ===== SAVE NEW =====
 router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
   const user = req.session.user;
-  const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, question_type } = req.body;
+  const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, question_type, class_level } = req.body;
   const qtype = question_type || 'MCQ';
 
   if (!subject_id || !question_text) {
@@ -640,11 +646,11 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', m
     const imageFile = req.files?.image?.[0];
     const pdfFile   = req.files?.pdf?.[0];
     const [result] = await conn.query(
-      'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, question_pdf, points, difficulty, tags, question_type) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',
+      'INSERT INTO question_bank (teacher_id, subject_id, chapter, question_text, question_image, question_pdf, points, difficulty, tags, question_type, class_level) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id',
       [user.id, subject_id, chapter || null, question_text,
        imageFile ? '/public/uploads/questions/' + path.basename(imageFile.filename) : null,
        pdfFile   ? '/public/uploads/questions/' + path.basename(pdfFile.filename)   : null,
-       Number(points || 1), difficulty || 'MEDIUM', tags || null, qtype]
+       Number(points || 1), difficulty || 'MEDIUM', tags || null, qtype, class_level || null]
     );
     const bankId = result.insertId;
 
@@ -726,7 +732,7 @@ router.get('/:id/edit', async (req, res) => {
 router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
-  const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, remove_image, remove_pdf, question_type } = req.body;
+  const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, remove_image, remove_pdf, question_type, class_level } = req.body;
   if (!subject_id || !question_text || !a || !b || !c || !d) {
     req.flash('error', 'Semua field wajib diisi');
     return res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
@@ -746,8 +752,8 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
     if (remove_pdf) pdfToSave = null;
     if (pdfFile) pdfToSave = '/public/uploads/questions/' + path.basename(pdfFile.filename);
     await conn.query(
-      'UPDATE question_bank SET subject_id=$1, chapter=$2, question_text=$3, question_image=$4, question_pdf=$5, points=$6, difficulty=$7, tags=$8, updated_at=NOW() WHERE id=$9',
-      [subject_id, chapter || null, question_text, imageToSave, pdfToSave, Number(points || 1), difficulty || 'MEDIUM', tags || null, req.params.id]
+      'UPDATE question_bank SET subject_id=$1, chapter=$2, question_text=$3, question_image=$4, question_pdf=$5, points=$6, difficulty=$7, tags=$8, class_level=$9, updated_at=NOW() WHERE id=$10',
+      [subject_id, chapter || null, question_text, imageToSave, pdfToSave, Number(points || 1), difficulty || 'MEDIUM', tags || null, class_level || null, req.params.id]
     );
     // Tentukan correctLabels untuk COMPLEX/CHECKBOX (multi) atau MCQ/TRUE_FALSE (single)
     let corrLabels = [];
@@ -861,12 +867,15 @@ router.post('/:id/use-in-exam/:examId', async (req, res) => {
 // ===== API LIST (diakses dari /teacher/question-bank/api) =====
 router.get('/api', async (req, res) => {
   const user = req.session.user;
-  const { subject_id, difficulty, search } = req.query;
+  const { subject_id, difficulty, search, class_level } = req.query;
   try {
     const params = [user.id];
-    let query = 'SELECT qb.id, qb.subject_id, qb.question_text, qb.points, qb.difficulty, qb.tags, s.name AS subject_name FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id WHERE qb.teacher_id = $1';
+    let query = `SELECT qb.id, qb.subject_id, qb.question_text, qb.points, qb.difficulty,
+      qb.tags, qb.chapter, qb.question_type, qb.class_level, s.name AS subject_name
+      FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id WHERE qb.teacher_id = $1`;
     if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }
     if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
+    if (class_level) { params.push(class_level); query += ` AND qb.class_level = $${params.length}`; }
     if (search) { params.push('%' + search + '%'); query += ` AND (qb.question_text ILIKE $${params.length} OR qb.tags ILIKE $${params.length})`; }
     query += ' ORDER BY qb.created_at DESC LIMIT 200';
     const [questions] = await pool.query(query, params);
