@@ -3607,6 +3607,70 @@ router.get('/grades/download', async (req, res) => {
         wsKelas['!cols'] = [{wch:5},{wch:15},{wch:12},{wch:13},{wch:8},{wch:12},{wch:12},{wch:15},{wch:15},{wch:15},{wch:15},{wch:15},{wch:10}];
         XLSX.utils.book_append_sheet(wb, wsKelas, 'Rekap Per Kelas');
       }
+
+      // Sheet Analisis Soal (jika filter ujian tertentu)
+      const [soalRows] = await pool.query(
+        `SELECT
+           q.id AS soal_id,
+           ROW_NUMBER() OVER (ORDER BY q.id ASC) AS no_soal,
+           LEFT(REGEXP_REPLACE(q.question_text, '<[^>]+>', '', 'g'), 120) AS teks_soal,
+           q.points,
+           COUNT(DISTINCT aa.attempt_id) FILTER (WHERE a.status='SUBMITTED') AS total_jawab,
+           COUNT(DISTINCT aa.attempt_id) FILTER (WHERE aa.is_correct=true AND a.status='SUBMITTED') AS benar,
+           COUNT(DISTINCT aa.attempt_id) FILTER (WHERE aa.is_correct=false AND a.status='SUBMITTED' AND aa.option_id IS NOT NULL) AS salah,
+           COUNT(DISTINCT aa.attempt_id) FILTER (WHERE aa.option_id IS NULL AND a.status='SUBMITTED') AS tidak_jawab,
+           ROUND(
+             100.0 * COUNT(DISTINCT aa.attempt_id) FILTER (WHERE aa.is_correct=true AND a.status='SUBMITTED')
+             / NULLIF(COUNT(DISTINCT aa.attempt_id) FILTER (WHERE a.status='SUBMITTED'), 0)
+           , 1) AS pct_benar,
+           COUNT(DISTINCT aa.attempt_id) FILTER (WHERE o.option_label='A' AND a.status='SUBMITTED' AND aa.option_id IS NOT NULL) AS pilih_a,
+           COUNT(DISTINCT aa.attempt_id) FILTER (WHERE o.option_label='B' AND a.status='SUBMITTED' AND aa.option_id IS NOT NULL) AS pilih_b,
+           COUNT(DISTINCT aa.attempt_id) FILTER (WHERE o.option_label='C' AND a.status='SUBMITTED' AND aa.option_id IS NOT NULL) AS pilih_c,
+           COUNT(DISTINCT aa.attempt_id) FILTER (WHERE o.option_label='D' AND a.status='SUBMITTED' AND aa.option_id IS NOT NULL) AS pilih_d,
+           COUNT(DISTINCT aa.attempt_id) FILTER (WHERE o.option_label='E' AND a.status='SUBMITTED' AND aa.option_id IS NOT NULL) AS pilih_e,
+           STRING_AGG(DISTINCT o2.option_label, ',' ORDER BY o2.option_label) FILTER (WHERE o2.is_correct=true) AS kunci
+         FROM questions q
+         JOIN attempts a ON a.exam_id=q.exam_id AND a.status='SUBMITTED'
+         LEFT JOIN attempt_answers aa ON aa.question_id=q.id AND aa.attempt_id=a.id
+         LEFT JOIN options o ON o.id=aa.option_id
+         LEFT JOIN options o2 ON o2.question_id=q.id
+         WHERE q.exam_id=$1 AND a.exam_id=$1
+         GROUP BY q.id, q.question_text, q.points
+         ORDER BY q.id ASC;`,
+        [exam_id]
+      );
+      if (soalRows.length > 0) {
+        const soalData = soalRows.map(r => {
+          const pct = r.pct_benar != null ? Number(r.pct_benar).toFixed(1) + '%' : '-';
+          const tingkat = r.pct_benar == null ? '-'
+            : r.pct_benar >= 70 ? 'Mudah'
+            : r.pct_benar >= 30 ? 'Sedang'
+            : 'Sulit';
+          return {
+            'No':          r.no_soal,
+            'Teks Soal':   r.teks_soal || '-',
+            'Poin':        r.points,
+            'Kunci':       r.kunci || '-',
+            'Total Jawab': r.total_jawab,
+            'Benar':       r.benar,
+            'Salah':       r.salah,
+            'Tdk Jawab':   r.tidak_jawab,
+            '% Benar':     pct,
+            'Tingkat':     tingkat,
+            'Pilih A':     r.pilih_a || 0,
+            'Pilih B':     r.pilih_b || 0,
+            'Pilih C':     r.pilih_c || 0,
+            'Pilih D':     r.pilih_d || 0,
+            'Pilih E':     r.pilih_e || 0,
+          };
+        });
+        const wsSoal = XLSX.utils.json_to_sheet(soalData);
+        wsSoal['!cols'] = [
+          {wch:5},{wch:60},{wch:6},{wch:8},{wch:12},{wch:8},{wch:8},{wch:10},
+          {wch:10},{wch:8},{wch:9},{wch:9},{wch:9},{wch:9},{wch:9}
+        ];
+        XLSX.utils.book_append_sheet(wb, wsSoal, 'Analisis Soal');
+      }
     }
 
     const now    = new Date().toISOString().slice(0,10);
