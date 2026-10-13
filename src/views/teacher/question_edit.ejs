@@ -267,6 +267,12 @@ $sn(document).ready(function () {
 
   // Validasi & submit
   $('#editQuestionForm').on('submit', function (e) {
+    // Sync semua Summernote ke textarea dulu sebelum validasi/submit
+    $('#editor_question').summernote('codeview.deactivate');
+    $('#editor_option_a, #editor_option_b, #editor_option_c, #editor_option_d, #editor_option_e').each(function() {
+      $(this).summernote('codeview.deactivate');
+    });
+
     var fields = [
       { id: 'editor_question', name: 'Pertanyaan' },
       { id: 'editor_option_a', name: 'Opsi A' },
@@ -293,6 +299,17 @@ $sn(document).ready(function () {
         e.preventDefault();
         alert(f.name + ' tidak boleh kosong!');
         $('#' + f.id).summernote('focus');
+        return false;
+      }
+    }
+
+    // Validasi jawaban benar untuk MCQ
+    if (qtype === 'MCQ' || qtype === 'TRUE_FALSE') {
+      var sel = document.querySelector('select[name=correct]:not([disabled])');
+      var radio = document.querySelector('input[name=correct][type=radio]:checked');
+      if (!sel && !radio) {
+        e.preventDefault();
+        alert('Pilih jawaban yang benar!');
         return false;
       }
     }
