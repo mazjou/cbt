@@ -620,7 +620,7 @@ function updateQuestionForm(qtype) {
     
     <!-- Filter -->
     <div class="p-4 border-b border-slate-200 bg-slate-50">
-      <div class="grid md:grid-cols-4 gap-3">
+      <div class="grid md:grid-cols-5 gap-3">
         <div>
           <label class="text-xs text-slate-600 font-medium">Mata Pelajaran</label>
           <select id="filterSubject" onchange="loadBankSoal()" class="mt-1 w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -635,6 +635,13 @@ function updateQuestionForm(qtype) {
             <option value="EASY">Mudah</option>
             <option value="MEDIUM">Sedang</option>
             <option value="HARD">Sulit</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-xs text-slate-600 font-medium">Bab/Materi</label>
+          <select id="filterChapter" onchange="loadBankSoal()" class="mt-1 w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="">Semua Bab</option>
           </select>
         </div>
         
@@ -707,16 +714,37 @@ async function loadSubjects() {
   } catch (error) {
     console.error('Error loading subjects:', error);
   }
+  // Load chapters dari bank soal
+  try {
+    const response = await fetch('/api/question-bank?limit=999');
+    const questions = await response.json();
+    const chapters = [...new Set(
+      questions.map(q => q.chapter).filter(c => c && c.trim())
+    )].sort();
+    const chapterSelect = document.getElementById('filterChapter');
+    chapters.forEach(c => {
+      const option = document.createElement('option');
+      option.value = c;
+      option.textContent = c;
+      chapterSelect.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error loading chapters:', error);
+  }
+}
+  }
 }
 
 async function loadBankSoal() {
   const subjectId = document.getElementById('filterSubject').value;
   const difficulty = document.getElementById('filterDifficulty').value;
+  const chapter = document.getElementById('filterChapter').value;
   const search = document.getElementById('filterSearch').value;
   
   const params = new URLSearchParams();
   if (subjectId) params.append('subject_id', subjectId);
   if (difficulty) params.append('difficulty', difficulty);
+  if (chapter) params.append('chapter', chapter);
   if (search) params.append('search', search);
   
   const listDiv = document.getElementById('bankSoalList');
@@ -764,16 +792,18 @@ async function loadBankSoal() {
                    onchange="toggleQuestion(${q.id})"
                    class="mt-1 w-5 h-5 rounded accent-indigo-500 cursor-pointer" />
             <label for="q_${q.id}" class="flex-1 cursor-pointer">
-              <div class="flex items-center gap-2 mb-2">
+              <div class="flex items-center gap-2 mb-2 flex-wrap">
                 <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full ${color.badge} text-xs font-bold">
                   ${q.subject_name}
                 </span>
+                ${q.chapter ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-bold">📚 ${q.chapter}</span>` : ''}
                 <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full ${diff.color} text-xs font-bold">
                   ${diff.text}
                 </span>
                 <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold">
                   ⭐ ${q.points} poin
                 </span>
+                ${q.question_type && q.question_type !== 'MCQ' ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold">${q.question_type}</span>` : ''}
               </div>
               <div class="text-slate-900 text-sm leading-relaxed line-clamp-2">
                 ${q.question_text.replace(/<[^>]*>/g, '').substring(0, 200)}...

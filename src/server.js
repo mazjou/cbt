@@ -327,19 +327,21 @@ function registerRoutes() {
     if (!req.session?.user) return res.status(401).json({ error: 'Unauthorized' });
     const user = req.session.user;
     if (!['TEACHER','ADMIN'].includes(user.role)) return res.status(403).json({ error: 'Forbidden' });
-    const { subject_id, difficulty, search } = req.query;
+    const { subject_id, difficulty, search, chapter } = req.query;
     try {
       const params = [];
       // Admin lihat semua, teacher lihat milik sendiri
-      let query = `SELECT qb.id, qb.subject_id, qb.question_text, qb.points, qb.difficulty, qb.tags, qb.chapter,
+      let query = `SELECT qb.id, qb.subject_id, qb.question_text, qb.points, 
+        qb.difficulty, qb.tags, qb.chapter, qb.question_type,
         s.name AS subject_name
         FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id
         WHERE 1=1`;
       if (user.role === 'TEACHER') { params.push(user.id); query += ` AND qb.teacher_id = $${params.length}`; }
       if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }
       if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
-      if (search) { params.push('%' + search + '%'); query += ` AND (qb.question_text ILIKE $${params.length} OR COALESCE(qb.tags,'') ILIKE $${params.length})`; }
-      query += ' ORDER BY qb.created_at DESC LIMIT 200';
+      if (chapter) { params.push(chapter); query += ` AND qb.chapter = $${params.length}`; }
+      if (search) { params.push('%' + search + '%'); query += ` AND (qb.question_text ILIKE $${params.length} OR COALESCE(qb.tags,'') ILIKE $${params.length} OR COALESCE(qb.chapter,'') ILIKE $${params.length})`; }
+      query += ' ORDER BY qb.chapter ASC NULLS LAST, qb.created_at DESC LIMIT 300';
       const pool = req.app.locals.pool || require('./db/pool');
       const [questions] = await pool.query(query, params);
       res.json(questions);
