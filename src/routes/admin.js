@@ -1482,59 +1482,87 @@ router.get('/users', async (req, res) => {
 // Download users as Excel
 router.get('/users/download', async (req, res) => {
   try {
-    // Support filter by IDs (bulk download)
-    const { ids } = req.query;
-    let query = `SELECT u.username, u.full_name, u.plain_password AS password,
-                        c.name AS class_name, u.nomor_peserta
-                 FROM users u
-                 LEFT JOIN classes c ON c.id=u.class_id
-                 WHERE u.role='STUDENT'`;
-    
+    const { ids, role, class_id } = req.query;
     const params = [];
+
+    let query = `SELECT u.id, u.username, u.full_name, u.plain_password AS password,
+                        u.role, c.name AS class_name, u.nomor_peserta, u.is_active
+                 FROM users u
+                 LEFT JOIN classes c ON c.id = u.class_id
+                 WHERE 1=1`;
+
+    // Filter by specific IDs (bulk select)
     if (ids) {
-      const idArray = ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+      const idArray = [...new Set(ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)))];
       if (idArray.length > 0) {
-        query += ` AND u.id IN (${idArray.map(() => '?').join(',')})`;
-        params.push(...idArray);
+        query += ` AND u.id IN (${idArray.join(',')})`;
       }
     }
-    
-    query += ` ORDER BY c.name ASC, u.full_name ASC`;
-    
+
+    // Filter by role
+    if (role && ['STUDENT', 'TEACHER', 'ADMIN'].includes(role.toUpperCase())) {
+      params.push(role.toUpperCase());
+      query += ` AND u.role = $${params.length}`;
+    }
+
+    // Filter by class
+    if (class_id) {
+      params.push(parseInt(class_id));
+      query += ` AND u.class_id = $${params.length}`;
+    }
+
+    query += ` ORDER BY u.role ASC, c.name ASC, u.full_name ASC`;
+
     const [users] = await pq(query, params);
-    
+
     if (users.length === 0) {
       req.flash('error', 'Tidak ada data pengguna untuk diunduh.');
       return res.redirect('/admin/users');
     }
-    
+
     const data = users.map(u => ({
-      'username': u.username,
-      'full_name': u.full_name,
-      'password': u.password || '',
-      'class': u.class_name || '',
-      'nomor_peserta': u.nomor_peserta || ''
+      'username':       u.username,
+      'full_name':      u.full_name,
+      'password':       u.password || '',
+      'role':           u.role,
+      'class':          u.class_name || '',
+      'nomor_peserta':  u.nomor_peserta || '',
+      'status':         u.is_active ? 'Aktif' : 'Nonaktif'
     }));
-    
+
     const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(data);
+    const ws = XLSX.utils.json_to_sheet(data, {
+      header: ['username','full_name','password','role','class','nomor_peserta','status']
+    });
     ws['!cols'] = [
-      { wch: 25 }, // username
+      { wch: 30 }, // username
       { wch: 35 }, // full_name
       { wch: 20 }, // password
+      { wch: 12 }, // role
       { wch: 20 }, // class
-      { wch: 20 }  // nomor_peserta
+      { wch: 20 }, // nomor_peserta
+      { wch: 10 }  // status
     ];
-    XLSX.utils.book_append_sheet(wb, ws, 'Siswa');
-    
+    XLSX.utils.book_append_sheet(wb, ws, 'Pengguna');
+
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-    const filename = ids ? `data_siswa_terpilih_${Date.now()}.xlsx` : `data_siswa_${Date.now()}.xlsx`;
+
+    // Nama file sesuai filter
+    let filename = 'data_pengguna';
+    if (role)     filename += `_${role.toLowerCase()}`;
+    if (class_id) {
+      const cls = users.find(u => u.class_name)?.class_name || class_id;
+      filename += `_${String(cls).replace(/[^a-zA-Z0-9]/g,'_')}`;
+    }
+    if (ids)      filename += `_terpilih`;
+    filename += `_${Date.now()}.xlsx`;
+
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buffer);
   } catch (e) {
     console.error(e);
-    req.flash('error', 'Gagal mengunduh data pengguna.');
+    req.flash('error', 'Gagal mengunduh data pengguna: ' + e.message);
     res.redirect('/admin/users');
   }
 });
@@ -1583,7 +1611,7 @@ router.get('/users/print-cards', async (req, res) => {
       return res.redirect('/admin/users');
     }
     
-    const [classes] = await pq('SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};');
+    const [classes] = await pq(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
     
     const schoolInfo = {
       name: process.env.SCHOOL_NAME || 'SMK Negeri 1 Kras',

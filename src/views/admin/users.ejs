@@ -3,19 +3,49 @@
     <h1 class="text-3xl font-semibold tracking-tight">Kelola Pengguna</h1>
     <p class="mt-1 text-slate-600">Buat admin/guru/siswa, reset password, aktif/nonaktif.</p>
   </div>
-  <div class="flex gap-2">
-    <a href="/admin/users/print-cards" class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-semibold transition-all shadow-md flex items-center gap-2">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-      </svg>
-      Cetak Kartu
-    </a>
-    <a href="/admin/users/download" class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all shadow-md flex items-center gap-2">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-      </svg>
-      Download Excel
-    </a>
+  <div class="flex gap-2 flex-wrap">
+    <!-- Cetak Kartu dengan dropdown -->
+    <div class="relative group">
+      <button type="button"
+        class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-semibold transition-all shadow-md flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+        </svg>
+        Cetak Kartu ▾
+      </button>
+      <div class="absolute left-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-rose-100 z-50 hidden group-hover:block">
+        <a href="/admin/users/print-cards" class="block px-4 py-2.5 text-sm text-slate-700 hover:bg-rose-50 rounded-t-xl font-medium">🖨️ Cetak Semua</a>
+        <div class="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">Per Role</div>
+        <a href="/admin/users/print-cards?role=STUDENT" class="block px-4 py-2 text-sm text-slate-700 hover:bg-rose-50">👨‍🎓 Siswa</a>
+        <a href="/admin/users/print-cards?role=TEACHER" class="block px-4 py-2 text-sm text-slate-700 hover:bg-rose-50">👨‍🏫 Guru</a>
+        <div class="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">Per Kelas</div>
+        <% classes.forEach(c => { %>
+          <a href="/admin/users/print-cards?role=STUDENT&class_id=<%= c.id %>" class="block px-4 py-2 text-sm text-slate-700 hover:bg-rose-50 truncate"><%= c.name %></a>
+        <% }) %>
+      </div>
+    </div>
+
+    <!-- Download Excel dengan dropdown -->
+    <div class="relative group">
+      <button type="button"
+        class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all shadow-md flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Download Excel ▾
+      </button>
+      <div class="absolute left-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-emerald-100 z-50 hidden group-hover:block">
+        <a href="/admin/users/download" class="block px-4 py-2.5 text-sm text-slate-700 hover:bg-emerald-50 rounded-t-xl font-medium">📥 Download Semua</a>
+        <div class="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">Per Role</div>
+        <a href="/admin/users/download?role=STUDENT" class="block px-4 py-2 text-sm text-slate-700 hover:bg-emerald-50">👨‍🎓 Siswa</a>
+        <a href="/admin/users/download?role=TEACHER" class="block px-4 py-2 text-sm text-slate-700 hover:bg-emerald-50">👨‍🏫 Guru</a>
+        <a href="/admin/users/download?role=ADMIN" class="block px-4 py-2 text-sm text-slate-700 hover:bg-emerald-50">🛡️ Admin</a>
+        <div class="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-400 font-semibold uppercase tracking-wider">Per Kelas</div>
+        <% classes.forEach(c => { %>
+          <a href="/admin/users/download?role=STUDENT&class_id=<%= c.id %>" class="block px-4 py-2 text-sm text-slate-700 hover:bg-emerald-50 truncate"><%= c.name %></a>
+        <% }) %>
+      </div>
+    </div>
     <a href="/admin/users/import" class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-400 to-purple-500 hover:from-violet-500 hover:to-purple-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
       Import Pengguna
     </a>
