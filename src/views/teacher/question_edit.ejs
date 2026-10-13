@@ -347,16 +347,26 @@ $sn(document).ready(function () {
     if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
       if (singleWrap) singleWrap.classList.add('hidden');
       if (complexWrap) complexWrap.classList.remove('hidden');
+      // Disable select MCQ agar tidak ikut terkirim
       var sel = singleWrap ? singleWrap.querySelector('select') : null;
       if (sel) { sel.disabled = true; sel.removeAttribute('required'); }
+      // Disable semua radio TRUE_FALSE
+      if (tfWrap) tfWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });
     } else if (qtype === 'TRUE_FALSE') {
       if (singleWrap) singleWrap.classList.add('hidden');
       if (tfWrap) tfWrap.classList.remove('hidden');
+      // Disable select MCQ agar tidak ikut terkirim
       var sel = singleWrap ? singleWrap.querySelector('select') : null;
       if (sel) { sel.disabled = true; sel.removeAttribute('required'); }
+      // Disable semua checkbox COMPLEX
+      if (complexWrap) complexWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });
       if (optC) optC.classList.add('hidden');
       if (optD) optD.classList.add('hidden');
       if (optE) optE.classList.add('hidden');
+    } else {
+      // MCQ: disable semua radio TRUE_FALSE dan checkbox COMPLEX
+      if (tfWrap) tfWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });
+      if (complexWrap) complexWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });
     }
   })();
 </script>

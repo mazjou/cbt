@@ -2212,19 +2212,27 @@ router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { na
   let correctLabels = [];
   if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
     const rawCorrect = req.body.correct;
-    if (Array.isArray(rawCorrect)) correctLabels = rawCorrect.map(s => s.toUpperCase());
-    else if (rawCorrect) correctLabels = String(rawCorrect).split(',').map(s => s.trim().toUpperCase());
+    if (Array.isArray(rawCorrect)) {
+      correctLabels = [...new Set(rawCorrect.map(s => s.trim().toUpperCase()).filter(Boolean))];
+    } else if (rawCorrect) {
+      correctLabels = [...new Set(String(rawCorrect).split(',').map(s => s.trim().toUpperCase()).filter(Boolean))];
+    }
   } else if (qtype === 'TRUE_FALSE') {
-    // Radio button: correct = 'A' atau 'B'
     const rawCorrect = req.body.correct;
-    if (rawCorrect) correctLabels = [String(rawCorrect).trim().toUpperCase()];
-    else correctLabels = ['A'];
+    const parsed = Array.isArray(rawCorrect) ? rawCorrect[0] : String(rawCorrect || 'A');
+    correctLabels = [parsed.trim().toUpperCase()];
   } else {
-    // MCQ: select biasa
+    // MCQ: ambil nilai pertama saja (antisipasi duplikat)
     const rawCorrect = req.body.correct;
-    if (rawCorrect) correctLabels = [String(rawCorrect).trim().toUpperCase()];
+    if (Array.isArray(rawCorrect)) {
+      correctLabels = [rawCorrect[0].trim().toUpperCase()];
+    } else if (rawCorrect) {
+      // Antisipasi "A,A" atau "B,A" — ambil karakter pertama saja
+      const first = String(rawCorrect).split(',')[0].trim().toUpperCase();
+      correctLabels = [first];
+    }
   }
-  console.log(`[EDIT QUESTION] qtype=${qtype}, correct=${req.body.correct}, correctLabels=${JSON.stringify(correctLabels)}`);
+  console.log(`[EDIT QUESTION] qtype=${qtype}, raw_correct=${JSON.stringify(req.body.correct)}, correctLabels=${JSON.stringify(correctLabels)}`);
 
   const [[row]] = await pool.query(
     `SELECT q.id, q.exam_id, q.question_image, q.question_pdf
