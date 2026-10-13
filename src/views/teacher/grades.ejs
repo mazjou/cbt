@@ -97,9 +97,18 @@
       <div class="flex items-center gap-3">
         <div class="text-sm text-purple-700">Total: <span class="font-semibold"><%= pagination.total %></span> data</div>
         <% if (rows.length > 0) { %>
-          <a href="/teacher/grades/download?<%= new URLSearchParams(filters).toString() %>" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-800 font-medium text-sm transition-all">
-            📥 Download Excel
-          </a>
+          <div class="flex flex-col items-end gap-1">
+            <a href="/teacher/grades/download?<%= new URLSearchParams(filters).toString() %>"
+               class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-semibold text-sm transition-all shadow-md">
+              📥 Download Excel
+            </a>
+            <div class="text-xs text-slate-500 text-right">
+              Sheet: Daftar Nilai
+              <% if (filters.exam_id) { %>
+                · Statistik · Rekap Per Kelas · <span class="text-indigo-600 font-semibold">Analisis Soal</span>
+              <% } %>
+            </div>
+          </div>
         <% } %>
       </div>
     </div>
