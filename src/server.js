@@ -165,6 +165,16 @@ app.use(express.json({ limit: '2mb' }));
 app.use(methodOverride('_method'));
 
 app.use('/public', express.static(path.join(__dirname, 'public')));
+
+// ── Blokir akses langsung ke file berbahaya di uploads ───────────────────────
+const BLOCKED_UPLOAD_EXTENSIONS = /\.(php\d?|phtml|phar|asp|aspx|jsp|cgi|pl|py|rb|sh|bash|cmd|bat|exe|dll|so|htaccess|htpasswd|svelte|ts)$/i;
+app.use('/public/uploads', (req, res, next) => {
+  if (BLOCKED_UPLOAD_EXTENSIONS.test(req.path)) {
+    console.warn(`[SECURITY] Blocked access to dangerous file: ${req.path} from ${req.ip}`);
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+});
 app.use('/public/uploads', express.static(UPLOAD_ROOT, { maxAge: '7d', etag: true, lastModified: true }));
 
 // ── SDMS Webhook — HARUS setelah express.json() ──────────────
