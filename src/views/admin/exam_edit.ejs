@@ -13,7 +13,7 @@
   </div>
 </div>
 
-<form method="POST" action="/admin/exams/<%= exam.id %>?_method=PUT" class="space-y-6">
+<form method="POST" action="/admin/exams/<%= exam.id %>?_method=PUT" class="space-y-6" id="adminExamEditForm" novalidate>
   <!-- Basic Information -->
   <div class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl p-8 border-2 border-blue-200 shadow-lg">
     <div class="flex items-center gap-3 mb-6">
@@ -306,16 +306,16 @@ function toggleAnticheatAdminEdit(cb) {
   if (cb.checked) {
     input.classList.remove('hidden');
     off.classList.add('hidden');
-    num.removeAttribute('disabled');
+    num.disabled = false;
     if (!num.value || num.value === '0') num.value = '3';
   } else {
     input.classList.add('hidden');
     off.classList.remove('hidden');
-    num.removeAttribute('disabled'); // pastikan value 0 terkirim
+    num.disabled = true;
     num.value = '0';
   }
 }
-// Init: set value 0 jika unchecked saat load
+// Init: set disabled jika unchecked saat load
 document.addEventListener('DOMContentLoaded', function() {
   const cb  = document.getElementById('anticheat_enabled_admin_edit');
   const num = document.getElementById('max_violations_admin_edit');

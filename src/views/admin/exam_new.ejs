@@ -8,7 +8,7 @@
   </a>
 </div>
 
-<form method="POST" action="/admin/exams" class="space-y-6">
+<form method="POST" action="/admin/exams" class="space-y-6" id="adminExamNewForm" novalidate>
   <!-- Basic Information -->
   <div class="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-3xl p-8 border-2 border-blue-200 shadow-lg">
     <div class="flex items-center gap-3 mb-6">
@@ -309,10 +309,36 @@ function toggleAnticheatAdminNew(cb) {
   } else {
     input.classList.add('hidden');
     off.classList.remove('hidden');
-    num.disabled = false;
+    num.disabled = true;
     num.value = '0';
   }
 }
+
+// Validasi manual saat submit (karena form pakai novalidate)
+document.getElementById('adminExamNewForm').addEventListener('submit', function(e) {
+  const title = this.querySelector('[name="title"]');
+  const subject = this.querySelector('[name="subject_id"]');
+  const teacher = this.querySelector('[name="teacher_id"]');
+
+  if (!title.value.trim()) {
+    e.preventDefault();
+    title.focus();
+    alert('Judul ujian wajib diisi.');
+    return false;
+  }
+  if (!subject.value) {
+    e.preventDefault();
+    subject.focus();
+    alert('Mata pelajaran wajib dipilih.');
+    return false;
+  }
+  if (!teacher.value) {
+    e.preventDefault();
+    teacher.focus();
+    alert('Guru pengampu wajib dipilih.');
+    return false;
+  }
+});
 
 // Jadwal per kelas toggle
 const schedulesWrapperNew = document.getElementById('class-schedules-wrapper');
