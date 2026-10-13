@@ -246,6 +246,11 @@ $sn(document).ready(function () {
           };
           reader.readAsDataURL(file);
         });
+      },
+      onChange: function(contents, $editable) {
+        // Sync ke textarea asli agar value terkirim saat submit native
+        var $textarea = $(this).closest('.note-editor').prev('textarea');
+        if ($textarea.length) $textarea.val(contents);
       }
     },
     plugins: ['math']
@@ -267,49 +272,49 @@ $sn(document).ready(function () {
 
   // Validasi & submit
   $('#editQuestionForm').on('submit', function (e) {
-    // Sync semua Summernote ke textarea dulu sebelum validasi/submit
-    $('#editor_question').summernote('codeview.deactivate');
-    $('#editor_option_a, #editor_option_b, #editor_option_c, #editor_option_d, #editor_option_e').each(function() {
-      $(this).summernote('codeview.deactivate');
-    });
-
-    var fields = [
-      { id: 'editor_question', name: 'Pertanyaan' },
-      { id: 'editor_option_a', name: 'Opsi A' },
-      { id: 'editor_option_b', name: 'Opsi B' },
-      { id: 'editor_option_c', name: 'Opsi C' },
-      { id: 'editor_option_d', name: 'Opsi D' },
-      { id: 'editor_option_e', name: 'Opsi E' }
-    ];
-
-    // Skip C/D/E validation for TRUE_FALSE
     var qtype = '<%= question.question_type || "MCQ" %>';
-    if (qtype === 'TRUE_FALSE') {
-      fields = fields.filter(function(f) {
-        return ['editor_question','editor_option_a','editor_option_b'].indexOf(f.id) !== -1;
-      });
-    }
 
-    for (var i = 0; i < fields.length; i++) {
-      var f = fields[i];
-      var content = $('#' + f.id).summernote('code');
-      var text = $('<div>').html(content).text().trim();
-      var hasImg = content.indexOf('<img') !== -1;
-      if (!text && !hasImg) {
-        e.preventDefault();
-        alert(f.name + ' tidak boleh kosong!');
-        $('#' + f.id).summernote('focus');
-        return false;
+    // Cek isi editor question - ambil dari textarea asli ATAU dari Summernote
+    var qContent = '';
+    try { qContent = $('#editor_question').summernote('code') || ''; } catch(_) {}
+    // Fallback: ambil dari note-editable (DOM Summernote)
+    if (!qContent || qContent === '<p><br></p>' || qContent.trim() === '') {
+      var noteEditable = document.querySelector('#editor_question').closest('.note-editor');
+      if (noteEditable) {
+        qContent = noteEditable.querySelector('.note-editable').innerHTML || '';
       }
     }
+    // Fallback terakhir: ambil teks langsung dari .note-editable
+    var qText = '';
+    var noteEditableEl = document.querySelector('.note-editor .note-editable');
+    if (noteEditableEl) qText = noteEditableEl.innerText.trim();
 
-    // Validasi jawaban benar untuk MCQ
-    if (qtype === 'MCQ' || qtype === 'TRUE_FALSE') {
-      var sel = document.querySelector('select[name=correct]:not([disabled])');
-      var radio = document.querySelector('input[name=correct][type=radio]:checked');
-      if (!sel && !radio) {
+    if (!qText && !qContent.includes('<img')) {
+      e.preventDefault();
+      alert('Pertanyaan tidak boleh kosong!');
+      return false;
+    }
+
+    // Validasi opsi A dan B (minimal harus ada)
+    var optFields = [
+      { id: 'editor_option_a', name: 'Opsi A' },
+      { id: 'editor_option_b', name: 'Opsi B' }
+    ];
+    if (qtype !== 'TRUE_FALSE') {
+      optFields.push({ id: 'editor_option_c', name: 'Opsi C' });
+      optFields.push({ id: 'editor_option_d', name: 'Opsi D' });
+    }
+
+    for (var i = 0; i < optFields.length; i++) {
+      var f = optFields[i];
+      var content = '';
+      try { content = $('#' + f.id).summernote('code') || ''; } catch(_) {}
+      var txt = $('<div>').html(content).text().trim();
+      var hasImg = content.indexOf('<img') !== -1;
+      if (!txt && !hasImg) {
         e.preventDefault();
-        alert('Pilih jawaban yang benar!');
+        alert(f.name + ' tidak boleh kosong!');
+        try { $('#' + f.id).summernote('focus'); } catch(_) {}
         return false;
       }
     }
