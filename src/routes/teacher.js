@@ -1612,10 +1612,10 @@ router.post(
     }
 
     try {
-      const wb = XLSX.readFile(file.path, { cellDates: true });
+      const wb = XLSX.readFile(file.path, { cellDates: true, cellText: true });
       const sheetName = wb.SheetNames[0];
       const ws = wb.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
 
       if (!rows.length) {
         req.flash('error', 'File kosong / tidak ada data.');

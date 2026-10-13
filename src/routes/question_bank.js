@@ -433,9 +433,9 @@ router.post('/import/preview',
     const file = (req.files?.file || [])[0];
     if (!file) { req.flash('error', 'File belum dipilih.'); return res.redirect('/teacher/question-bank/import'); }
     try {
-      const wb = XLSX.readFile(file.path, { cellDates: true });
+      const wb = XLSX.readFile(file.path, { cellDates: true, cellText: true });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '', raw: false });
       if (!rows.length) { req.flash('error', 'File kosong.'); return res.redirect('/teacher/question-bank/import'); }
       const uploaded = (req.files?.images || []).map(f => ({ originalname: f.originalname, filename: f.filename }));
       const resolveImg = (val) => {
