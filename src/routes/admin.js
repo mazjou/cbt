@@ -3494,6 +3494,10 @@ router.get('/grades/download', async (req, res) => {
         a.status,
         a.score AS nilai,
         e.pass_score AS nilai_lulus,
+        a.correct_count,
+        a.wrong_count,
+        a.total_points,
+        (SELECT COUNT(*) FROM questions WHERE exam_id = e.id) AS total_soal,
         CASE
           WHEN a.status='SUBMITTED' AND a.score >= e.pass_score THEN 'LULUS'
           WHEN a.status='SUBMITTED' AND a.score < e.pass_score  THEN 'TIDAK LULUS'
@@ -3522,28 +3526,88 @@ router.get('/grades/download', async (req, res) => {
       return res.redirect('/admin/grades');
     }
 
-    const data = rows.map(r => ({
-      'No':         r.no,
-      'Kelas':      r.kelas || '-',
-      'Nama Siswa': r.nama_siswa,
-      'Username':   r.username,
-      'Ujian':      r.ujian,
-      'Guru':       r.guru || '-',
-      'Nilai':      Number(r.nilai) || 0,
-      'Nilai Lulus':Number(r.nilai_lulus) || 0,
-      'Status':     r.status,
-      'Keterangan': r.keterangan,
-      'Waktu Mulai':r.started_at  ? new Date(r.started_at).toLocaleString('id-ID')  : '-',
-      'Waktu Selesai': r.finished_at ? new Date(r.finished_at).toLocaleString('id-ID') : '-',
-    }));
+    const data = rows.map(r => {
+      const isSubmitted = r.status === 'SUBMITTED';
+      const totalQ      = Number(r.total_soal    || 0);
+      const correct     = Number(r.correct_count || 0);
+      const wrong       = Number(r.wrong_count   || 0);
+      const pctBenar    = totalQ > 0 && isSubmitted ? ((correct / totalQ) * 100).toFixed(1) + '%' : '-';
+      const submitted   = Number(r.nilai_lulus   || 0);
+      return {
+        'No':              r.no,
+        'Kelas':           r.kelas || '-',
+        'Nama Siswa':      r.nama_siswa,
+        'Username':        r.username,
+        'Ujian':           r.ujian,
+        'Guru':            r.guru || '-',
+        'Nilai':           isSubmitted ? Number(r.nilai) || 0 : '-',
+        'Passing Score':   submitted,
+        'Keterangan':      r.keterangan,
+        'Total Soal':      totalQ || '-',
+        'Jawaban Benar':   isSubmitted ? correct : '-',
+        'Jawaban Salah':   isSubmitted ? wrong   : '-',
+        '% Benar':         pctBenar,
+        'Status':          r.status,
+        'Waktu Mulai':     r.started_at   ? new Date(r.started_at).toLocaleString('id-ID')   : '-',
+        'Waktu Selesai':   r.finished_at  ? new Date(r.finished_at).toLocaleString('id-ID')  : '-',
+      };
+    });
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data);
     ws['!cols'] = [
-      {wch:5},{wch:14},{wch:35},{wch:25},{wch:30},{wch:25},
-      {wch:8},{wch:10},{wch:12},{wch:13},{wch:20},{wch:20}
+      {wch:5},{wch:14},{wch:30},{wch:20},{wch:30},{wch:25},
+      {wch:8},{wch:13},{wch:13},{wch:10},{wch:14},{wch:14},{wch:10},{wch:12},{wch:20},{wch:20}
     ];
     XLSX.utils.book_append_sheet(wb, ws, 'Nilai');
+
+    // Sheet Rekap Per Kelas (jika filter ujian tertentu)
+    if (exam_id) {
+      const [classRows] = await pool.query(
+        `SELECT
+           c.name AS kelas,
+           COUNT(DISTINCT a.student_id) AS total_siswa,
+           COUNT(CASE WHEN a.status='SUBMITTED' THEN 1 END) AS sudah_submit,
+           COUNT(CASE WHEN a.status='SUBMITTED' AND a.score >= e.pass_score THEN 1 END) AS lulus,
+           ROUND(AVG(CASE WHEN a.status='SUBMITTED' THEN a.score END),1) AS rata_nilai,
+           MAX(CASE WHEN a.status='SUBMITTED' THEN a.score END) AS nilai_max,
+           MIN(CASE WHEN a.status='SUBMITTED' THEN a.score END) AS nilai_min,
+           ROUND(AVG(CASE WHEN a.status='SUBMITTED' THEN a.correct_count END),1) AS rata_benar,
+           ROUND(AVG(CASE WHEN a.status='SUBMITTED' THEN a.wrong_count END),1) AS rata_salah,
+           (SELECT COUNT(*) FROM questions WHERE exam_id=$1) AS total_soal
+         FROM attempts a
+         JOIN exams e ON e.id=a.exam_id
+         JOIN users u ON u.id=a.student_id
+         LEFT JOIN classes c ON c.id=u.class_id
+         WHERE e.id=$1 AND a.status='SUBMITTED'
+         GROUP BY c.name
+         ORDER BY
+           CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END,
+           regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+           (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST`,
+        [exam_id]
+      );
+      if (classRows.length > 0) {
+        const classData = classRows.map((r, i) => ({
+          'No':              i + 1,
+          'Kelas':           r.kelas || '-',
+          'Total Siswa':     r.total_siswa,
+          'Sudah Submit':    r.sudah_submit,
+          'Lulus':           r.lulus,
+          'Tidak Lulus':     Number(r.sudah_submit) - Number(r.lulus),
+          '% Kelulusan':     r.sudah_submit > 0 ? ((r.lulus / r.sudah_submit) * 100).toFixed(1) + '%' : '-',
+          'Rata-rata Nilai': r.rata_nilai != null ? Number(r.rata_nilai).toFixed(1) : '-',
+          'Nilai Tertinggi': r.nilai_max || '-',
+          'Nilai Terendah':  r.nilai_min || '-',
+          'Rata-rata Benar': r.rata_benar != null ? Number(r.rata_benar).toFixed(1) : '-',
+          'Rata-rata Salah': r.rata_salah != null ? Number(r.rata_salah).toFixed(1) : '-',
+          'Total Soal':      r.total_soal || '-',
+        }));
+        const wsKelas = XLSX.utils.json_to_sheet(classData);
+        wsKelas['!cols'] = [{wch:5},{wch:15},{wch:12},{wch:13},{wch:8},{wch:12},{wch:12},{wch:15},{wch:15},{wch:15},{wch:15},{wch:15},{wch:10}];
+        XLSX.utils.book_append_sheet(wb, wsKelas, 'Rekap Per Kelas');
+      }
+    }
 
     const now    = new Date().toISOString().slice(0,10);
     const label  = exam_id ? `ujian_${exam_id}` : class_id ? `kelas_${class_id}` : 'semua';

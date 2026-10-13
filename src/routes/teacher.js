@@ -3999,7 +3999,9 @@ router.get('/grades/download', async (req, res) => {
     // Get all data (no pagination for export)
     const [rows] = await pool.query(
       `SELECT a.id, a.score, a.status, a.started_at, a.finished_at,
+              a.correct_count, a.wrong_count, a.total_points,
               e.id AS exam_id, e.title AS exam_title, e.pass_score, e.duration_minutes,
+              (SELECT COUNT(*) FROM questions WHERE exam_id = e.id) AS total_questions,
               u.full_name AS student_name, u.username,
               c.name AS class_name
        FROM attempts a
@@ -4025,44 +4027,54 @@ router.get('/grades/download', async (req, res) => {
     
     // Sheet 1: Daftar Nilai
     const data = rows.map((r, idx) => {
-      const duration = r.finished_at && r.started_at 
-        ? Math.round((new Date(r.finished_at) - new Date(r.started_at)) / 60000) 
+      const isSubmitted = r.status === 'SUBMITTED';
+      const totalQ    = Number(r.total_questions || 0);
+      const correct   = Number(r.correct_count   || 0);
+      const wrong     = Number(r.wrong_count      || 0);
+      const pctBenar  = totalQ > 0 ? ((correct / totalQ) * 100).toFixed(1) + '%' : '-';
+      const duration  = r.finished_at && r.started_at
+        ? Math.round((new Date(r.finished_at) - new Date(r.started_at)) / 60000)
         : 0;
-      
+
       return {
-        'No': idx + 1,
-        'Nama Siswa': r.student_name,
-        'Username': r.username,
-        'Kelas': r.class_name || '-',
-        'Ujian': r.exam_title,
-        'Status': r.status === 'SUBMITTED' ? 'Selesai' : r.status === 'IN_PROGRESS' ? 'Sedang Mengerjakan' : 'Belum Mulai',
-        'Nilai': r.status === 'SUBMITTED' ? r.score : '-',
-        'Passing Score': r.pass_score,
-        'Keterangan': r.status === 'SUBMITTED' ? (Number(r.score) >= Number(r.pass_score) ? 'LULUS' : 'TIDAK LULUS') : '-',
+        'No':             idx + 1,
+        'Kelas':          r.class_name || '-',
+        'Nama Siswa':     r.student_name,
+        'Username':       r.username,
+        'Ujian':          r.exam_title,
+        'Status':         isSubmitted ? 'Selesai' : r.status === 'IN_PROGRESS' ? 'Sedang Mengerjakan' : 'Belum Mulai',
+        'Nilai':          isSubmitted ? r.score : '-',
+        'Passing Score':  r.pass_score,
+        'Keterangan':     isSubmitted ? (Number(r.score) >= Number(r.pass_score) ? 'LULUS' : 'TIDAK LULUS') : '-',
+        'Total Soal':     totalQ || '-',
+        'Jawaban Benar':  isSubmitted ? correct : '-',
+        'Jawaban Salah':  isSubmitted ? wrong   : '-',
+        '% Benar':        isSubmitted ? pctBenar : '-',
         'Durasi (menit)': duration > 0 ? duration : '-',
-        'Mulai': r.started_at ? new Date(r.started_at).toLocaleString('id-ID') : '-',
-        'Selesai': r.finished_at ? new Date(r.finished_at).toLocaleString('id-ID') : '-'
+        'Mulai':          r.started_at  ? new Date(r.started_at).toLocaleString('id-ID')  : '-',
+        'Selesai':        r.finished_at ? new Date(r.finished_at).toLocaleString('id-ID') : '-'
       };
     });
 
     const worksheet = XLSX.utils.json_to_sheet(data);
-    
-    // Set column widths
     worksheet['!cols'] = [
       { wch: 5 },  // No
-      { wch: 25 }, // Nama
-      { wch: 15 }, // Username
-      { wch: 15 }, // Kelas
+      { wch: 14 }, // Kelas
+      { wch: 28 }, // Nama
+      { wch: 18 }, // Username
       { wch: 30 }, // Ujian
       { wch: 18 }, // Status
       { wch: 8 },  // Nilai
-      { wch: 12 }, // Passing Score
-      { wch: 15 }, // Keterangan
-      { wch: 12 }, // Durasi
+      { wch: 13 }, // Passing Score
+      { wch: 13 }, // Keterangan
+      { wch: 10 }, // Total Soal
+      { wch: 14 }, // Jawaban Benar
+      { wch: 14 }, // Jawaban Salah
+      { wch: 10 }, // % Benar
+      { wch: 13 }, // Durasi
       { wch: 20 }, // Mulai
       { wch: 20 }  // Selesai
     ];
-
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Daftar Nilai');
 
     // Sheet 2: Statistik (jika ada filter ujian tertentu)
@@ -4084,24 +4096,71 @@ router.get('/grades/download', async (req, res) => {
 
       if (examInfo) {
         const statsData = [
-          { 'Keterangan': 'Judul Ujian', 'Nilai': examInfo.title },
-          { 'Keterangan': 'Passing Score', 'Nilai': examInfo.pass_score },
-          { 'Keterangan': 'Durasi (menit)', 'Nilai': examInfo.duration_minutes },
-          { 'Keterangan': '', 'Nilai': '' },
-          { 'Keterangan': 'Total Siswa Mengerjakan', 'Nilai': examInfo.total_students },
-          { 'Keterangan': 'Sudah Submit', 'Nilai': examInfo.submitted_count },
-          { 'Keterangan': 'Lulus', 'Nilai': examInfo.pass_count },
-          { 'Keterangan': 'Tidak Lulus', 'Nilai': examInfo.submitted_count - examInfo.pass_count },
-          { 'Keterangan': '', 'Nilai': '' },
-          { 'Keterangan': 'Nilai Rata-rata', 'Nilai': examInfo.avg_score ? Number(examInfo.avg_score).toFixed(2) : '-' },
-          { 'Keterangan': 'Nilai Tertinggi', 'Nilai': examInfo.max_score || '-' },
-          { 'Keterangan': 'Nilai Terendah', 'Nilai': examInfo.min_score || '-' },
-          { 'Keterangan': 'Persentase Kelulusan', 'Nilai': examInfo.submitted_count > 0 ? ((examInfo.pass_count / examInfo.submitted_count) * 100).toFixed(2) + '%' : '-' }
+          { 'Keterangan': 'Judul Ujian',              'Nilai': examInfo.title },
+          { 'Keterangan': 'Passing Score',             'Nilai': examInfo.pass_score },
+          { 'Keterangan': 'Durasi (menit)',            'Nilai': examInfo.duration_minutes },
+          { 'Keterangan': '',                          'Nilai': '' },
+          { 'Keterangan': 'Total Siswa Mengerjakan',   'Nilai': examInfo.total_students },
+          { 'Keterangan': 'Sudah Submit',              'Nilai': examInfo.submitted_count },
+          { 'Keterangan': 'Lulus',                     'Nilai': examInfo.pass_count },
+          { 'Keterangan': 'Tidak Lulus',               'Nilai': Number(examInfo.submitted_count) - Number(examInfo.pass_count) },
+          { 'Keterangan': '',                          'Nilai': '' },
+          { 'Keterangan': 'Nilai Rata-rata',           'Nilai': examInfo.avg_score ? Number(examInfo.avg_score).toFixed(2) : '-' },
+          { 'Keterangan': 'Nilai Tertinggi',           'Nilai': examInfo.max_score || '-' },
+          { 'Keterangan': 'Nilai Terendah',            'Nilai': examInfo.min_score || '-' },
+          { 'Keterangan': 'Persentase Kelulusan',      'Nilai': examInfo.submitted_count > 0 ? ((examInfo.pass_count / examInfo.submitted_count) * 100).toFixed(1) + '%' : '-' },
+          { 'Keterangan': 'Rata-rata Jawaban Benar',   'Nilai': examInfo.avg_correct != null ? Number(examInfo.avg_correct).toFixed(1) : '-' },
         ];
-
         const statsWorksheet = XLSX.utils.json_to_sheet(statsData);
         statsWorksheet['!cols'] = [{ wch: 30 }, { wch: 30 }];
         XLSX.utils.book_append_sheet(workbook, statsWorksheet, 'Statistik');
+
+        // Sheet 3: Rekap Per Kelas
+        const [classRows] = await pool.query(
+          `SELECT
+             c.name AS kelas,
+             COUNT(DISTINCT a.student_id) AS total_siswa,
+             COUNT(CASE WHEN a.status='SUBMITTED' THEN 1 END) AS sudah_submit,
+             COUNT(CASE WHEN a.status='SUBMITTED' AND a.score >= e.pass_score THEN 1 END) AS lulus,
+             ROUND(AVG(CASE WHEN a.status='SUBMITTED' THEN a.score END),1) AS rata_nilai,
+             MAX(CASE WHEN a.status='SUBMITTED' THEN a.score END) AS nilai_max,
+             MIN(CASE WHEN a.status='SUBMITTED' THEN a.score END) AS nilai_min,
+             ROUND(AVG(CASE WHEN a.status='SUBMITTED' THEN a.correct_count END),1) AS rata_benar,
+             ROUND(AVG(CASE WHEN a.status='SUBMITTED' THEN a.wrong_count END),1) AS rata_salah,
+             COUNT(DISTINCT q.id) AS total_soal
+           FROM attempts a
+           JOIN exams e ON e.id=a.exam_id
+           JOIN users u ON u.id=a.student_id
+           LEFT JOIN classes c ON c.id=u.class_id
+           LEFT JOIN questions q ON q.exam_id=e.id
+           WHERE e.id=:exam_id AND e.teacher_id=:tid AND a.status='SUBMITTED'
+           GROUP BY c.name
+           ORDER BY
+             CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END,
+             regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\s+', '') ASC,
+             (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST;`,
+          { exam_id, tid: user.id }
+        );
+        if (classRows.length > 0) {
+          const classData = classRows.map((r, i) => ({
+            'No':                i + 1,
+            'Kelas':             r.kelas || '-',
+            'Total Siswa':       r.total_siswa,
+            'Sudah Submit':      r.sudah_submit,
+            'Lulus':             r.lulus,
+            'Tidak Lulus':       Number(r.sudah_submit) - Number(r.lulus),
+            '% Kelulusan':       r.sudah_submit > 0 ? ((r.lulus / r.sudah_submit) * 100).toFixed(1) + '%' : '-',
+            'Rata-rata Nilai':   r.rata_nilai != null ? Number(r.rata_nilai).toFixed(1) : '-',
+            'Nilai Tertinggi':   r.nilai_max || '-',
+            'Nilai Terendah':    r.nilai_min || '-',
+            'Rata-rata Benar':   r.rata_benar != null ? Number(r.rata_benar).toFixed(1) : '-',
+            'Rata-rata Salah':   r.rata_salah != null ? Number(r.rata_salah).toFixed(1) : '-',
+            'Total Soal':        r.total_soal || '-',
+          }));
+          const wsKelas = XLSX.utils.json_to_sheet(classData);
+          wsKelas['!cols'] = [{wch:5},{wch:15},{wch:12},{wch:13},{wch:8},{wch:12},{wch:12},{wch:15},{wch:15},{wch:15},{wch:15},{wch:15},{wch:10}];
+          XLSX.utils.book_append_sheet(workbook, wsKelas, 'Rekap Per Kelas');
+        }
       }
     }
 
