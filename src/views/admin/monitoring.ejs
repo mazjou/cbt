@@ -637,7 +637,32 @@ async function restartService(service, btn) {
   const labels = { app: 'Aplikasi', postgresql: 'PostgreSQL', redis: 'Redis' };
   const label = labels[service] || service;
 
-  if (!confirm(`Yakin ingin restart ${label}?\n\nPastikan tidak ada siswa yang sedang ujian!`)) return;
+  // Cek apakah ada ujian/attempt aktif saat ini
+  const activeCount = window._monitoringData?.inProgressCount || 0;
+  const activeExams = window._monitoringData?.activeExams?.length || 0;
+
+  if (service === 'redis' || service === 'postgresql') {
+    if (activeCount > 0 || activeExams > 0) {
+      const lanjut = confirm(
+        `⚠️ PERINGATAN KERAS!\n\n` +
+        `Ada ${activeCount} siswa sedang mengerjakan ujian dan ${activeExams} ujian aktif.\n\n` +
+        `Restart ${label} AKAN menyebabkan:\n` +
+        (service === 'redis'
+          ? `• Semua ${activeCount} siswa TER-LOGOUT seketika\n• Mereka harus login ulang saat ujian berjalan\n`
+          : `• Koneksi database terputus\n• Ujian bisa gagal submit\n`) +
+        `\nSangat disarankan JANGAN restart saat ujian berlangsung!\n\n` +
+        `Ketik OK hanya jika Anda benar-benar yakin dan sudah koordinasi dengan pengawas ujian.`
+      );
+      if (!lanjut) return;
+      // Konfirmasi kedua
+      const konfirmasi2 = confirm(`Konfirmasi TERAKHIR: Restart ${label} sekarang?\n\nIni akan mengganggu ${activeCount} siswa yang sedang ujian.`);
+      if (!konfirmasi2) return;
+    } else {
+      if (!confirm(`Yakin ingin restart ${label}?\n\nTidak ada ujian aktif saat ini — aman untuk di-restart.`)) return;
+    }
+  } else {
+    if (!confirm(`Yakin ingin reload ${label}?\n\nPM2 reload menggunakan zero-downtime, aman dilakukan saat ujian.`)) return;
+  }
 
   const log = document.getElementById('restart-log');
   const origText = btn.textContent;
@@ -693,6 +718,13 @@ async function fetchData() {
     }
     const d = await r.json();
     if (!d.ok) return;
+
+    // Simpan data monitoring untuk dipakai oleh restartService
+    window._monitoringData = {
+      inProgressCount: (d.expiredAttempts || []).length + (d.activeExams || []).reduce((sum, e) => sum + (e.student_count || 0), 0),
+      activeExams: d.activeExams || [],
+      expiredAttempts: d.expiredAttempts || []
+    };
 
     const s = d.server, db = d.db, st = d.stats;
 
