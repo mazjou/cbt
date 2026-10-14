@@ -603,8 +603,8 @@ function updateQuestionForm(qtype) {
 
 
 <!-- Modal Bank Soal -->
-<div id="bankSoalModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+<div id="bankSoalModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50" style="display:none; align-items:center; justify-content:center; padding:1rem;">
+  <div class="bg-white rounded-2xl shadow-2xl w-full" style="max-width:900px; max-height:90vh; display:flex; flex-direction:column; overflow:hidden;">
     <!-- Modal Header -->
     <div class="flex items-center justify-between p-6 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-purple-50">
       <div>
@@ -619,15 +619,14 @@ function updateQuestionForm(qtype) {
     </div>
     
     <!-- Filter -->
-    <div class="p-4 border-b border-slate-200 bg-slate-50">
-      <div class="grid md:grid-cols-6 gap-3">
+    <div class="p-4 border-b border-slate-200 bg-slate-50" style="flex-shrink:0;">
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
         <div>
           <label class="text-xs text-slate-600 font-medium">Mata Pelajaran</label>
           <select id="filterSubject" onchange="loadBankSoal()" class="mt-1 w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">Semua</option>
           </select>
         </div>
-
         <div>
           <label class="text-xs text-slate-600 font-medium">Kelas</label>
           <select id="filterClassLevel" onchange="loadBankSoal()" class="mt-1 w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -637,7 +636,6 @@ function updateQuestionForm(qtype) {
             <option value="XII">Kelas XII</option>
           </select>
         </div>
-        
         <div>
           <label class="text-xs text-slate-600 font-medium">Kesulitan</label>
           <select id="filterDifficulty" onchange="loadBankSoal()" class="mt-1 w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -647,19 +645,16 @@ function updateQuestionForm(qtype) {
             <option value="HARD">Sulit</option>
           </select>
         </div>
-
         <div>
           <label class="text-xs text-slate-600 font-medium">Bab/Materi</label>
           <select id="filterChapter" onchange="loadBankSoal()" class="mt-1 w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
             <option value="">Semua Bab</option>
           </select>
         </div>
-        
         <div>
           <label class="text-xs text-slate-600 font-medium">Cari</label>
           <input type="text" id="filterSearch" onkeyup="loadBankSoal()" placeholder="Cari soal..." class="mt-1 w-full rounded-lg bg-white border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
-        
         <div class="flex items-end">
           <button onclick="loadBankSoal()" class="w-full rounded-lg bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 text-sm">
             🔍 Filter
@@ -669,7 +664,7 @@ function updateQuestionForm(qtype) {
     </div>
     
     <!-- Modal Body -->
-    <div id="bankSoalList" class="flex-1 overflow-y-auto p-6">
+    <div id="bankSoalList" class="p-4 overflow-y-auto" style="flex:1; min-height:200px; max-height:50vh;">
       <div class="text-center py-12">
         <div class="text-4xl mb-3">⏳</div>
         <div class="text-slate-600">Memuat bank soal...</div>
@@ -697,14 +692,16 @@ function updateQuestionForm(qtype) {
 let selectedQuestions = new Set();
 
 function openBankSoalModal() {
-  document.getElementById('bankSoalModal').classList.remove('hidden');
+  const modal = document.getElementById('bankSoalModal');
+  modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   loadBankSoal();
   loadSubjects();
 }
 
 function closeBankSoalModal() {
-  document.getElementById('bankSoalModal').classList.add('hidden');
+  const modal = document.getElementById('bankSoalModal');
+  modal.style.display = 'none';
   document.body.style.overflow = 'auto';
   selectedQuestions.clear();
   updateSelectedCount();
@@ -899,7 +896,7 @@ async function addSelectedQuestions() {
 
 // Close modal on ESC key
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !document.getElementById('bankSoalModal').classList.contains('hidden')) {
+  if (e.key === 'Escape' && document.getElementById('bankSoalModal').style.display !== 'none') {
     closeBankSoalModal();
   }
   if (e.key === 'Escape' && !document.getElementById('studentsModal').classList.contains('hidden')) {
