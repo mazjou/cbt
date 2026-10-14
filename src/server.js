@@ -246,6 +246,7 @@ async function initRedis() {
         return delay;
       },
     },
+    username: process.env.REDIS_USERNAME || undefined,
     password: process.env.REDIS_PASSWORD || undefined,
     disableOfflineQueue: true,
   });

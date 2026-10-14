@@ -986,6 +986,18 @@ router.put('/exams/:id', async (req, res) => {
     }
 
     req.flash('success', 'Ujian berhasil diperbarui.');
+    // Invalidasi cache metadata ujian per kelas agar perpanjangan waktu langsung efektif
+    try {
+      const redisClient = req.app.locals.redisClient;
+      if (redisClient && redisClient.isReady) {
+        // Hapus cache metadata exam per kelas (student:exams:meta:*)
+        const keys = await redisClient.keys('student:exams:meta:*');
+        if (keys.length > 0) await redisClient.del(keys);
+        // Hapus cache soal ujian ini
+        await invalidateExamQuestionsCache(examId, redisClient);
+        console.log(`[EDIT EXAM] Cache invalidated for exam ${examId}, ${keys.length} meta keys cleared`);
+      }
+    } catch (_) {}
     res.redirect(`/teacher/exams/${examId}`);
   } catch (e) {
     console.error(e);

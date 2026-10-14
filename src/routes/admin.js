@@ -2856,6 +2856,15 @@ router.put('/exams/:id', async (req, res) => {
     }
 
     req.flash('success', 'Ujian berhasil diperbarui.');
+    // Invalidasi cache metadata ujian per kelas
+    try {
+      const redisClient = req.app.locals.redisClient;
+      if (redisClient && redisClient.isReady) {
+        const keys = await redisClient.keys('student:exams:meta:*');
+        if (keys.length > 0) await redisClient.del(keys);
+        console.log(`[ADMIN EDIT EXAM] Cache invalidated for exam ${examId}, ${keys.length} meta keys cleared`);
+      }
+    } catch (_) {}
     res.redirect(`/admin/exams/${examId}`);
   } catch (error) {
     console.error(error);
