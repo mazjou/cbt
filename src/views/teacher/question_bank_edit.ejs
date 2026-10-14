@@ -38,7 +38,11 @@
       <% } %>
     </div>
   </div>
-  <a href="/teacher/question-bank" class="px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">
+  <%
+    const isAdminBack = typeof backUrl !== 'undefined' && backUrl && backUrl.startsWith('/admin');
+    const backLink = isAdminBack ? '/admin/question-bank' : '/teacher/question-bank';
+  %>
+  <a href="<%= backLink %>" class="px-4 py-2 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-100 hover:from-rose-100 hover:to-pink-200 text-rose-800 font-medium transition-all">
     ← Kembali
   </a>
 </div>
