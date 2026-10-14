@@ -711,10 +711,13 @@ function closeBankSoalModal() {
 }
 
 async function loadSubjects() {
+  // Cegah duplikasi jika modal dibuka berulang
+  const select = document.getElementById('filterSubject');
+  if (select.options.length > 1) return; // sudah di-load sebelumnya
+
   try {
     const response = await fetch('/api/subjects');
     const subjects = await response.json();
-    const select = document.getElementById('filterSubject');
     subjects.forEach(s => {
       const option = document.createElement('option');
       option.value = s.id;
@@ -726,18 +729,21 @@ async function loadSubjects() {
   }
   // Load chapters dari bank soal
   try {
-    const response = await fetch('/api/question-bank?limit=999');
+    const response = await fetch('/api/question-bank');
+    if (!response.ok) return;
     const questions = await response.json();
     const chapters = [...new Set(
       questions.map(q => q.chapter).filter(c => c && c.trim())
     )].sort();
     const chapterSelect = document.getElementById('filterChapter');
-    chapters.forEach(c => {
-      const option = document.createElement('option');
-      option.value = c;
-      option.textContent = c;
-      chapterSelect.appendChild(option);
-    });
+    if (chapterSelect.options.length <= 1) {
+      chapters.forEach(c => {
+        const option = document.createElement('option');
+        option.value = c;
+        option.textContent = c;
+        chapterSelect.appendChild(option);
+      });
+    }
   } catch (error) {
     console.error('Error loading chapters:', error);
   }
@@ -762,6 +768,11 @@ async function loadBankSoal() {
   
   try {
     const response = await fetch(`/api/question-bank?${params.toString()}`);
+    if (!response.ok) {
+      const errText = await response.text();
+      listDiv.innerHTML = `<div class="text-center py-8 text-red-600">Error ${response.status}: ${errText}</div>`;
+      return;
+    }
     const questions = await response.json();
     
     if (questions.length === 0) {
