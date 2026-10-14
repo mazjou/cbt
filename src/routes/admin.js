@@ -5296,6 +5296,53 @@ let _duCache = { uploadSize: '-', ts: 0 };
   }
 });
 
+// ── Clear Exam Cache (aman saat ujian berlangsung) ───────────────────────────
+router.post('/monitoring/clear-exam-cache', async (req, res) => {
+  try {
+    const redisClient = req.app.locals.redisClient;
+    if (!redisClient || !redisClient.isReady) {
+      return res.json({ ok: false, message: 'Redis tidak terhubung.' });
+    }
+
+    let deleted = 0;
+
+    // 1. Cache metadata ujian per kelas
+    const metaKeys = await redisClient.keys('student:exams:meta:*');
+    if (metaKeys.length > 0) {
+      await redisClient.del(metaKeys);
+      deleted += metaKeys.length;
+    }
+
+    // 2. Cache soal ujian
+    const examKeys = await redisClient.keys('exam:q:*');
+    if (examKeys.length > 0) {
+      await redisClient.del(examKeys);
+      deleted += examKeys.length;
+    }
+
+    // 3. Cache lms:exam*
+    const lmsExamKeys = await redisClient.keys('lms:exam*');
+    if (lmsExamKeys.length > 0) {
+      await redisClient.del(lmsExamKeys);
+      deleted += lmsExamKeys.length;
+    }
+
+    // Hitung session yang tersisa (tidak dihapus)
+    const sessionKeys = await redisClient.keys('lms:sess:*');
+
+    console.log(`[CLEAR EXAM CACHE] Admin ${req.session.user?.username} cleared ${deleted} cache keys. ${sessionKeys.length} sessions intact.`);
+    res.json({
+      ok: true,
+      message: `✅ Cache exam bersih. ${deleted} key dihapus. ${sessionKeys.length} session siswa TIDAK terganggu.`,
+      deleted,
+      sessionsIntact: sessionKeys.length
+    });
+  } catch (e) {
+    console.error('Clear exam cache error:', e.message);
+    res.json({ ok: false, message: 'Gagal clear cache: ' + e.message });
+  }
+});
+
 // ── Restart Services ─────────────────────────────────────────────────────────
 router.post('/monitoring/restart', async (req, res) => {
   const { service } = req.body;
