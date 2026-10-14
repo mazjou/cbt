@@ -5,11 +5,22 @@
   </div>
   <div class="flex gap-2">
     <% const baseUrl = typeof backUrl !== 'undefined' && backUrl.startsWith('/admin') ? '/admin' : '/teacher'; %>
-    <% if (baseUrl === '/teacher') { %>
-    <a href="<%= baseUrl %>/question-bank/<%= question.id %>/edit"
+    <%
+      const editUrl = baseUrl === '/admin'
+        ? '/admin/question-bank/' + question.id + '/edit'
+        : '/teacher/question-bank/' + question.id + '/edit';
+    %>
+    <a href="<%= editUrl %>"
        class="px-4 py-2 rounded-xl border border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold text-sm transition-all">
       ✏️ Edit
     </a>
+    <% if (baseUrl === '/admin') { %>
+    <form action="/admin/question-bank/<%= question.id %>/delete" method="POST"
+          onsubmit="return confirm('Hapus soal ini dari bank?')" class="inline">
+      <button class="px-4 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold text-sm transition-all">
+        🗑️ Hapus
+      </button>
+    </form>
     <% } %>
     <a href="<%= typeof backUrl !== 'undefined' ? backUrl : '/teacher/question-bank' %>"
        class="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all">
@@ -27,12 +38,41 @@
     <span class="px-3 py-1 rounded-full <%= diff.cls %> text-sm font-semibold"><%= diff.label %></span>
     <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-semibold">⭐ <%= question.points %> poin</span>
     <% if (question.chapter) { %>
-      <span class="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">📖 <%= question.chapter %></span>
+      <span class="px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-sm font-semibold">📚 <%= question.chapter %></span>
+    <% } %>
+    <% if (question.question_type && question.question_type !== 'MCQ') { %>
+      <span class="px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-sm font-semibold"><%= question.question_type %></span>
     <% } %>
     <% if (question.usage_count > 0) { %>
       <span class="px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-sm font-semibold">🔗 Dipakai <%= question.usage_count %>x</span>
     <% } %>
   </div>
+
+  <!-- Info Guru (untuk admin) -->
+  <% if (baseUrl === '/admin' && question.teacher_name) { %>
+  <div class="grid sm:grid-cols-2 gap-3 mb-4 p-4 rounded-xl bg-white/70 border border-indigo-100">
+    <div class="flex items-center gap-2 text-sm">
+      <span class="text-slate-500">👨‍🏫 Guru:</span>
+      <span class="font-semibold text-slate-800"><%= question.teacher_name %></span>
+    </div>
+    <% if (question.teacher_class) { %>
+    <div class="flex items-center gap-2 text-sm">
+      <span class="text-slate-500">🎓 Kelas Guru:</span>
+      <span class="font-semibold text-slate-800"><%= question.teacher_class %></span>
+    </div>
+    <% } %>
+    <div class="flex items-center gap-2 text-sm">
+      <span class="text-slate-500">📅 Dibuat:</span>
+      <span class="font-semibold text-slate-800"><%= new Date(question.created_at).toLocaleDateString('id-ID', {day:'2-digit',month:'long',year:'numeric'}) %></span>
+    </div>
+    <% if (question.tags) { %>
+    <div class="flex items-center gap-2 text-sm">
+      <span class="text-slate-500">🏷️ Tags:</span>
+      <span class="font-semibold text-slate-800"><%= question.tags %></span>
+    </div>
+    <% } %>
+  </div>
+  <% } %>
 
   <!-- Pertanyaan -->
   <div class="prose max-w-none text-slate-900 text-base mb-4">

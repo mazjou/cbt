@@ -4452,11 +4452,14 @@ router.get('/question-bank/:id', async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/admin/question-bank');
   try {
     const question = (await pool.query(
-      `SELECT qb.*, s.name AS subject_name, u.full_name AS teacher_name,
-        (SELECT COUNT(*) FROM question_bank_usage qbu WHERE qbu.question_bank_id = qb.id) AS usage_count
+      `SELECT qb.*, s.name AS subject_name,
+              u.full_name AS teacher_name,
+              c.name AS teacher_class,
+              (SELECT COUNT(*) FROM question_bank_usage qbu WHERE qbu.question_bank_id = qb.id) AS usage_count
        FROM question_bank qb
        JOIN subjects s ON s.id = qb.subject_id
        JOIN users u ON u.id = qb.teacher_id
+       LEFT JOIN classes c ON c.id = u.class_id
        WHERE qb.id = $1 LIMIT 1`,
       [req.params.id]
     ))[0][0];
@@ -4473,6 +4476,97 @@ router.get('/question-bank/:id', async (req, res) => {
     req.flash('error', 'Gagal memuat detail soal: ' + e.message);
     res.redirect('/admin/question-bank');
   }
+});
+
+// GET Admin Edit Bank Soal
+router.get('/question-bank/:id/edit', async (req, res) => {
+  if (!/^\d+$/.test(req.params.id)) return res.redirect('/admin/question-bank');
+  try {
+    const question = (await pool.query(
+      `SELECT qb.*, s.name AS subject_name, u.full_name AS teacher_name
+       FROM question_bank qb
+       JOIN subjects s ON s.id = qb.subject_id
+       JOIN users u ON u.id = qb.teacher_id
+       WHERE qb.id = $1 LIMIT 1`,
+      [req.params.id]
+    ))[0][0];
+    if (!question) { req.flash('error', 'Soal tidak ditemukan.'); return res.redirect('/admin/question-bank'); }
+    const [options] = await pq('SELECT * FROM question_bank_options WHERE question_bank_id = $1 ORDER BY option_label ASC', [req.params.id]);
+    const [subjects] = await pq('SELECT id, code, name FROM subjects ORDER BY name ASC');
+    const byLabel = {};
+    let correct_label = 'A';
+    const correct_labels = [];
+    for (const o of options) {
+      byLabel[o.option_label] = o.option_text;
+      if (o.is_correct) { correct_label = o.option_label; correct_labels.push(o.option_label); }
+    }
+    res.render('teacher/question_bank_edit', {
+      title: 'Edit Bank Soal',
+      question, options: byLabel, correct_label, correct_labels, subjects,
+      backUrl: '/admin/question-bank'
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat form edit: ' + e.message);
+    res.redirect('/admin/question-bank');
+  }
+});
+
+// PUT Admin Update Bank Soal
+router.post('/question-bank/:id/update', async (req, res) => {
+  if (!/^\d+$/.test(req.params.id)) return res.redirect('/admin/question-bank');
+  const id = req.params.id;
+  const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, question_type } = req.body;
+  const qtype = question_type || 'MCQ';
+
+  if (!subject_id || !question_text) {
+    req.flash('error', 'Mata pelajaran dan pertanyaan wajib diisi');
+    return res.redirect(`/admin/question-bank/${id}/edit`);
+  }
+
+  let correctLabels = [];
+  if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+    const rawCorrect = req.body.correct;
+    if (Array.isArray(rawCorrect)) correctLabels = [...new Set(rawCorrect.map(s => s.toUpperCase()))];
+    else if (rawCorrect) correctLabels = [...new Set(String(rawCorrect).split(',').map(s => s.trim().toUpperCase()).filter(Boolean))];
+  } else if (qtype === 'TRUE_FALSE') {
+    const raw = Array.isArray(correct) ? correct[0] : String(correct || 'A');
+    correctLabels = [raw.trim().toUpperCase()];
+  } else {
+    const raw = Array.isArray(correct) ? correct[0] : String(correct || 'A');
+    correctLabels = [raw.split(',')[0].trim().toUpperCase()];
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query(
+      `UPDATE question_bank SET subject_id=$1, chapter=$2, question_text=$3, points=$4,
+       difficulty=$5, tags=$6, question_type=$7 WHERE id=$8`,
+      [subject_id, chapter || null, question_text, Number(points || 1), difficulty || 'MEDIUM', tags || null, qtype, id]
+    );
+    const optsToUpsert = qtype === 'TRUE_FALSE'
+      ? [['A', a || 'Benar'], ['B', b || 'Salah']]
+      : [['A',a],['B',b],['C',c],['D',d],['E',e||'']];
+    for (const [lbl, txt] of optsToUpsert) {
+      if (!txt) continue;
+      await conn.query(
+        `INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct)
+         VALUES ($1,$2,$3,$4)
+         ON CONFLICT (question_bank_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, is_correct=EXCLUDED.is_correct`,
+        [id, lbl, txt, correctLabels.includes(lbl)]
+      );
+    }
+    await conn.commit();
+    req.flash('success', 'Bank soal berhasil diperbarui.');
+  } catch (e) {
+    await conn.rollback();
+    console.error(e);
+    req.flash('error', 'Gagal update soal: ' + e.message);
+  } finally {
+    conn.release();
+  }
+  res.redirect(`/admin/question-bank/${id}`);
 });
 
 router.get('/question-bank', async (req, res) => {

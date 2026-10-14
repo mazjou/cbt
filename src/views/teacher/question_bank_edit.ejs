@@ -43,7 +43,13 @@
   </a>
 </div>
 
-<form action="/teacher/question-bank/<%= question.id %>?_method=PUT" method="POST" enctype="multipart/form-data" class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 space-y-4" id="bankQuestionForm">
+<%
+  const isAdmin = typeof backUrl !== 'undefined' && backUrl && backUrl.startsWith('/admin');
+  const formAction = isAdmin
+    ? `/admin/question-bank/${question.id}/update`
+    : `/teacher/question-bank/${question.id}?_method=PUT`;
+%>
+<form action="<%= formAction %>" method="POST" enctype="multipart/form-data" class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-6 space-y-4" id="bankQuestionForm">
 
   <!-- Hidden question_type -->
   <input type="hidden" name="question_type" value="<%= question.question_type || 'MCQ' %>" />
