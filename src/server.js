@@ -342,7 +342,7 @@ function registerRoutes() {
       const params = [];
       // Admin lihat semua, teacher lihat milik sendiri
       let query = `SELECT qb.id, qb.subject_id, qb.question_text, qb.points, 
-        qb.difficulty, qb.tags, qb.chapter, qb.question_type,
+        qb.difficulty, qb.tags, qb.chapter, qb.question_type, qb.class_level,
         s.name AS subject_name
         FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id
         WHERE 1=1`;
@@ -350,8 +350,10 @@ function registerRoutes() {
       if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }
       if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
       if (chapter) { params.push(chapter); query += ` AND qb.chapter = $${params.length}`; }
+      const class_level = req.query.class_level;
+      if (class_level) { params.push(class_level); query += ` AND qb.class_level = $${params.length}`; }
       if (search) { params.push('%' + search + '%'); query += ` AND (qb.question_text ILIKE $${params.length} OR COALESCE(qb.tags,'') ILIKE $${params.length} OR COALESCE(qb.chapter,'') ILIKE $${params.length})`; }
-      query += ' ORDER BY qb.chapter ASC NULLS LAST, qb.created_at DESC LIMIT 300';
+      query += ' ORDER BY qb.class_level ASC NULLS LAST, qb.chapter ASC NULLS LAST, qb.created_at DESC LIMIT 300';
       const pool = req.app.locals.pool || require('./db/pool');
       const [questions] = await pool.query(query, params);
       res.json(questions);

@@ -37,6 +37,9 @@
     <% const diff = diffMap[question.difficulty] || diffMap.MEDIUM; %>
     <span class="px-3 py-1 rounded-full <%= diff.cls %> text-sm font-semibold"><%= diff.label %></span>
     <span class="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-sm font-semibold">⭐ <%= question.points %> poin</span>
+    <% if (question.class_level) { %>
+      <span class="px-3 py-1 rounded-full bg-violet-100 text-violet-700 text-sm font-semibold">🎓 Kelas <%= question.class_level %></span>
+    <% } %>
     <% if (question.chapter) { %>
       <span class="px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-sm font-semibold">📚 <%= question.chapter %></span>
     <% } %>

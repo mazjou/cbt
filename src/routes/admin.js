@@ -4518,6 +4518,7 @@ router.post('/question-bank/:id/update', async (req, res) => {
   const id = req.params.id;
   const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, question_type } = req.body;
   const qtype = question_type || 'MCQ';
+  const class_level = req.body.class_level || null;
 
   if (!subject_id || !question_text) {
     req.flash('error', 'Mata pelajaran dan pertanyaan wajib diisi');
@@ -4542,8 +4543,8 @@ router.post('/question-bank/:id/update', async (req, res) => {
     await conn.beginTransaction();
     await conn.query(
       `UPDATE question_bank SET subject_id=$1, chapter=$2, question_text=$3, points=$4,
-       difficulty=$5, tags=$6, question_type=$7 WHERE id=$8`,
-      [subject_id, chapter || null, question_text, Number(points || 1), difficulty || 'MEDIUM', tags || null, qtype, id]
+       difficulty=$5, tags=$6, question_type=$7, class_level=$8 WHERE id=$9`,
+      [subject_id, chapter || null, question_text, Number(points || 1), difficulty || 'MEDIUM', tags || null, qtype, class_level, id]
     );
     const optsToUpsert = qtype === 'TRUE_FALSE'
       ? [['A', a || 'Benar'], ['B', b || 'Salah']]
