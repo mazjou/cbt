@@ -102,50 +102,6 @@
         </button>
       </div>
 
-    <div class="grid grid-cols-3 gap-3">
-
-      <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-xl">⚡</span>
-          <div>
-            <div class="font-semibold text-blue-900 text-sm">Aplikasi Node.js</div>
-            <div class="text-xs text-blue-600">PM2 reload (zero downtime)</div>
-          </div>
-        </div>
-        <button onclick="restartService('app', this)"
-          class="w-full mt-1 px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold transition-all">
-          🔄 Reload App
-        </button>
-      </div>
-
-      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-xl">🐘</span>
-          <div>
-            <div class="font-semibold text-emerald-900 text-sm">PostgreSQL</div>
-            <div class="text-xs text-emerald-600" id="db-host-label">Restart database server</div>
-          </div>
-        </div>
-        <button onclick="restartService('postgresql', this)"
-          class="w-full mt-1 px-3 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold transition-all">
-          🔄 Restart DB
-        </button>
-      </div>
-
-      <div class="rounded-xl border border-red-200 bg-red-50 p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="text-xl">⚡</span>
-          <div>
-            <div class="font-semibold text-red-900 text-sm">Redis</div>
-            <div class="text-xs text-red-600" id="redis-host-label">Restart session store</div>
-          </div>
-        </div>
-        <button onclick="restartService('redis', this)"
-          class="w-full mt-1 px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-all">
-          🔄 Restart Redis
-        </button>
-      </div>
-
     </div>
 
     <!-- Clear Exam Cache — AMAN digunakan saat ujian berlangsung -->
