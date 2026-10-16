@@ -88,26 +88,54 @@ async function autoSubmitAllExpired() {
 async function autoPublishAndCloseExams() {
   try {
     // 1. Auto-publish 15 menit sebelum start_at
+    // Cek jadwal global (exams.start_at) ATAU jadwal per kelas (exam_classes.start_at)
     const publishResult = await pool.query(
       `UPDATE exams
        SET is_published = true
        WHERE is_published = false
-         AND start_at IS NOT NULL
-         AND NOW() >= (start_at - INTERVAL '15 minutes')
-         AND (end_at IS NULL OR NOW() < end_at)`
+         AND (
+           -- Jadwal global: start_at diset di tabel exams
+           (
+             start_at IS NOT NULL
+             AND NOW() >= (start_at - INTERVAL '15 minutes')
+             AND (end_at IS NULL OR NOW() < end_at)
+           )
+           OR
+           -- Jadwal per kelas: minimal 1 kelas sudah mencapai 15 menit sebelum start_at
+           EXISTS (
+             SELECT 1 FROM exam_classes ec
+             WHERE ec.exam_id = exams.id
+               AND ec.start_at IS NOT NULL
+               AND NOW() >= (ec.start_at - INTERVAL '15 minutes')
+               AND (ec.end_at IS NULL OR NOW() < ec.end_at)
+           )
+         )`
     );
     const published = publishResult?.affectedRows ?? 0;
     if (published > 0) {
       console.log(`[AUTO-PUBLISH] ✅ ${published} ujian dipublish otomatis (15 mnt sebelum mulai)`);
     }
 
-    // 2. Auto-close
+    // 2. Auto-close — tutup jika jadwal global lewat ATAU semua kelas sudah lewat end_at
     const closeResult = await pool.query(
       `UPDATE exams
        SET is_published = false
        WHERE is_published = true
-         AND end_at IS NOT NULL
-         AND NOW() >= end_at`
+         AND (
+           -- Jadwal global: end_at diset dan sudah lewat
+           (end_at IS NOT NULL AND NOW() >= end_at)
+           OR
+           -- Jadwal per kelas: SEMUA kelas sudah melewati end_at (tidak ada yang masih aktif)
+           (
+             end_at IS NULL
+             AND EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id = exams.id AND ec.end_at IS NOT NULL)
+             AND NOT EXISTS (
+               SELECT 1 FROM exam_classes ec2
+               WHERE ec2.exam_id = exams.id
+                 AND (ec2.end_at IS NULL OR NOW() < ec2.end_at)
+             )
+           )
+         )`
     );
     const closed = closeResult?.affectedRows ?? 0;
     if (closed > 0) {
