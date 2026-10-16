@@ -125,19 +125,26 @@ async function autoPublishAndCloseExams() {
            -- Kasus 1: Jadwal global end_at sudah lewat
            (end_at IS NOT NULL AND NOW() >= end_at)
            OR
-           -- Kasus 2: Tidak ada jadwal global, tapi SEMUA kelas yang punya end_at sudah lewat
-           -- dan tidak ada kelas yang masih aktif (end_at belum lewat atau end_at NULL tapi start_at sudah ada)
+           -- Kasus 2: Tidak ada jadwal global, semua kelas sudah selesai
+           -- "Selesai" = NOW() >= end_at ATAU NOW() >= start_at + duration_minutes
            (
              end_at IS NULL
              AND EXISTS (
                SELECT 1 FROM exam_classes ec
-               WHERE ec.exam_id = exams.id AND ec.end_at IS NOT NULL
+               WHERE ec.exam_id = exams.id
+                 AND (ec.end_at IS NOT NULL OR (ec.start_at IS NOT NULL AND ec.duration_minutes IS NOT NULL))
              )
              AND NOT EXISTS (
                SELECT 1 FROM exam_classes ec2
                WHERE ec2.exam_id = exams.id
-                 AND ec2.end_at IS NOT NULL
-                 AND NOW() < ec2.end_at
+                 AND (
+                   -- Kelas masih aktif karena end_at belum lewat
+                   (ec2.end_at IS NOT NULL AND NOW() < ec2.end_at)
+                   OR
+                   -- Kelas masih aktif karena start_at + durasi belum lewat
+                   (ec2.end_at IS NULL AND ec2.start_at IS NOT NULL AND ec2.duration_minutes IS NOT NULL
+                    AND NOW() < ec2.start_at + (ec2.duration_minutes * INTERVAL '1 minute'))
+                 )
              )
            )
          )`
