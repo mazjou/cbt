@@ -430,6 +430,44 @@ function registerRoutes() {
   app.use(liveClassesRoutes);
   app.use(quizApiRoutes);
 
+  // ── Global Multer error handler ─────────────────────────────────────────────
+  app.use((err, req, res, next) => {
+    if (err && err.code && err.code.startsWith('LIMIT_')) {
+      // File size exceeded
+      const msg = err.code === 'LIMIT_FILE_SIZE'
+        ? 'Ukuran file terlalu besar.'
+        : 'Terlalu banyak file.';
+      if (req.xhr || req.headers.accept?.includes('json')) {
+        return res.status(400).json({ ok: false, error: msg });
+      }
+      req.flash('error', msg);
+      return res.redirect('back');
+    }
+    if (err && err.name === 'MulterError') {
+      // Unexpected field atau error multer lainnya
+      console.warn(`[MULTER] ${err.message} — field: ${err.field || 'unknown'} — ${req.method} ${req.path}`);
+      if (req.xhr || req.headers.accept?.includes('json')) {
+        return res.status(400).json({ ok: false, error: 'Upload error: ' + err.message });
+      }
+      req.flash('error', 'Upload gagal: ' + err.message);
+      return res.redirect('back');
+    }
+    next(err);
+  });
+
+  // ── General error handler ─────────────────────────────────────────────────
+  app.use((err, req, res, next) => {
+    console.error('[SERVER ERROR]', err.message, req.method, req.path);
+    if (req.xhr || req.headers.accept?.includes('json')) {
+      return res.status(500).json({ ok: false, error: err.message });
+    }
+    res.status(500).render('error', {
+      title: 'Terjadi Kesalahan',
+      message: 'Terjadi kesalahan pada server. Silakan coba lagi.',
+      user: req.session?.user
+    });
+  });
+
   app.use((req, res) => {
     res.status(404).render('error', {
       title:   'Halaman tidak ditemukan',
