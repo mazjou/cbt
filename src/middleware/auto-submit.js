@@ -116,23 +116,28 @@ async function autoPublishAndCloseExams() {
       console.log(`[AUTO-PUBLISH] ✅ ${published} ujian dipublish otomatis (15 mnt sebelum mulai)`);
     }
 
-    // 2. Auto-close — tutup jika jadwal global lewat ATAU semua kelas sudah lewat end_at
+    // 2. Auto-close — tutup jika waktu ujian sudah habis
     const closeResult = await pool.query(
       `UPDATE exams
        SET is_published = false
        WHERE is_published = true
          AND (
-           -- Jadwal global: end_at diset dan sudah lewat
+           -- Kasus 1: Jadwal global end_at sudah lewat
            (end_at IS NOT NULL AND NOW() >= end_at)
            OR
-           -- Jadwal per kelas: SEMUA kelas sudah melewati end_at (tidak ada yang masih aktif)
+           -- Kasus 2: Tidak ada jadwal global, tapi SEMUA kelas yang punya end_at sudah lewat
+           -- dan tidak ada kelas yang masih aktif (end_at belum lewat atau end_at NULL tapi start_at sudah ada)
            (
              end_at IS NULL
-             AND EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id = exams.id AND ec.end_at IS NOT NULL)
+             AND EXISTS (
+               SELECT 1 FROM exam_classes ec
+               WHERE ec.exam_id = exams.id AND ec.end_at IS NOT NULL
+             )
              AND NOT EXISTS (
                SELECT 1 FROM exam_classes ec2
                WHERE ec2.exam_id = exams.id
-                 AND (ec2.end_at IS NULL OR NOW() < ec2.end_at)
+                 AND ec2.end_at IS NOT NULL
+                 AND NOW() < ec2.end_at
              )
            )
          )`
