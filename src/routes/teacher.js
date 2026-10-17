@@ -2711,9 +2711,9 @@ router.get('/grades', async (req, res) => {
   let examStats = null;
   let notYetRows = [];
 
-  if (exam_id) {
-    try {
-      // Statistik ringkas per ujian yang dipilih (hanya ujian milik guru ini)
+  try {
+    if (exam_id) {
+      // ── Mode: filter ujian tertentu ──
       const statsRes = await pool.query(`
         SELECT
           COUNT(DISTINCT u.id) AS total_siswa,
@@ -2745,19 +2745,15 @@ router.get('/grades', async (req, res) => {
         };
       }
 
-      // Daftar siswa yang BELUM mengerjakan (belum ada attempt sama sekali)
+      // Daftar siswa BELUM mengerjakan ujian tertentu
       const notYetRes = await pool.query(`
-        SELECT
-          u.id, u.full_name, u.username,
-          c.name AS class_name
+        SELECT u.id, u.full_name, u.username, c.name AS class_name
         FROM exams e
         JOIN exam_classes ec ON ec.exam_id = e.id
         JOIN users u ON u.class_id = ec.class_id AND u.role = 'STUDENT' AND u.is_active = true
         LEFT JOIN classes c ON c.id = u.class_id
         WHERE e.id = $1 AND e.teacher_id = $2
-          AND NOT EXISTS (
-            SELECT 1 FROM attempts a WHERE a.exam_id = e.id AND a.student_id = u.id
-          )
+          AND NOT EXISTS (SELECT 1 FROM attempts a WHERE a.exam_id = e.id AND a.student_id = u.id)
           ${class_id ? `AND u.class_id = $3` : ''}
         ORDER BY
           CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END ASC,
@@ -2766,9 +2762,39 @@ router.get('/grades', async (req, res) => {
           u.full_name ASC
       `, class_id ? [exam_id, user.id, class_id] : [exam_id, user.id]);
       notYetRows = notYetRes[0] || [];
-    } catch (e) {
-      console.error('Grades stats error (teacher):', e.message);
+
+    } else {
+      // ── Mode: semua ujian guru (tampilan awal / tanpa filter ujian) ──
+      const statsRes = await pool.query(`
+        SELECT
+          COUNT(DISTINCT a.student_id) FILTER (WHERE a.status = 'SUBMITTED') AS sudah_submit,
+          COUNT(DISTINCT a.student_id) FILTER (WHERE a.status = 'IN_PROGRESS') AS sedang_kerjakan,
+          ROUND(AVG(a.score) FILTER (WHERE a.status = 'SUBMITTED'), 1) AS avg_nilai,
+          COUNT(DISTINCT a.id) FILTER (WHERE a.status = 'SUBMITTED' AND a.score >= e.pass_score) AS lulus,
+          COUNT(DISTINCT a.id) FILTER (WHERE a.status = 'SUBMITTED' AND a.score < e.pass_score) AS tidak_lulus,
+          COUNT(DISTINCT e.id) AS total_ujian
+        FROM exams e
+        LEFT JOIN attempts a ON a.exam_id = e.id
+        WHERE e.teacher_id = $1
+      `, [user.id]);
+
+      const st = statsRes[0][0];
+      if (st) {
+        examStats = {
+          total_siswa:       Number(total),  // total attempt rows sesuai filter aktif
+          sudah_submit:      Number(st.sudah_submit) || 0,
+          sedang_kerjakan:   Number(st.sedang_kerjakan) || 0,
+          belum_mengerjakan: null,           // tidak relevan tanpa filter ujian
+          avg_nilai:         st.avg_nilai ? parseFloat(st.avg_nilai) : 0,
+          lulus:             Number(st.lulus) || 0,
+          tidak_lulus:       Number(st.tidak_lulus) || 0,
+          total_ujian:       Number(st.total_ujian) || 0,
+          mode_semua:        true,           // flag untuk view
+        };
+      }
     }
+  } catch (e) {
+    console.error('Grades stats error (teacher):', e.message);
   }
 
   res.render('teacher/grades', {
