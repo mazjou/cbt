@@ -980,3 +980,18 @@
     } catch(_) {}
   })();
 </script>
+
+<!-- KaTeX: render rumus matematika (akar, pecahan, dll) -->
+<link rel="stylesheet" href="/public/lib/katex/katex.min.css">
+<script src="/public/lib/katex/katex.min.js"></script>
+<script>
+  // Render semua elemen .math-formula[data-latex] di soal & opsi jawaban
+  document.querySelectorAll('.math-formula[data-latex]').forEach(function(el) {
+    try {
+      el.innerHTML = katex.renderToString(el.getAttribute('data-latex'), {
+        throwOnError: false,
+        displayMode: el.getAttribute('data-mode') === 'block'
+      });
+    } catch(e) {}
+  });
+</script>

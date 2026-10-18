@@ -181,7 +181,7 @@
           </div>
           
           <div class="mb-3 p-4 rounded-xl bg-white/70 border border-slate-200">
-            <div class="text-slate-900 font-medium whitespace-pre-line"><%= r.question_text %></div>
+            <div class="text-slate-900 font-medium prose prose-sm max-w-none"><%- r.question_text %></div>
           </div>
           
           <% if (r.question_image) { %>
@@ -225,3 +225,17 @@
     🏠 Kembali ke Daftar Ujian
   </a>
 </div>
+
+<!-- KaTeX: render rumus matematika -->
+<link rel="stylesheet" href="/public/lib/katex/katex.min.css">
+<script src="/public/lib/katex/katex.min.js"></script>
+<script>
+  document.querySelectorAll('.math-formula[data-latex]').forEach(function(el) {
+    try {
+      el.innerHTML = katex.renderToString(el.getAttribute('data-latex'), {
+        throwOnError: false,
+        displayMode: el.getAttribute('data-mode') === 'block'
+      });
+    } catch(e) {}
+  });
+</script>
