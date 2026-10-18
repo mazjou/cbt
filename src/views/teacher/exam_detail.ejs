@@ -995,3 +995,15 @@ function closeStudentsModal() {
     overflow: hidden;
   }
 </style>
+
+<script>
+  // Render KaTeX untuk semua rumus matematika di soal & opsi jawaban
+  document.querySelectorAll('.math-formula[data-latex]').forEach(function(el) {
+    try {
+      el.innerHTML = katex.renderToString(el.getAttribute('data-latex'), {
+        throwOnError: false,
+        displayMode: el.getAttribute('data-mode') === 'block'
+      });
+    } catch(e) {}
+  });
+</script>

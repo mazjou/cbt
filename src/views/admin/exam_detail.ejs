@@ -444,3 +444,17 @@
     <% } %>
   </div>
 </div>
+
+<!-- KaTeX: render rumus matematika di soal & opsi -->
+<link rel="stylesheet" href="/public/lib/katex/katex.min.css">
+<script src="/public/lib/katex/katex.min.js"></script>
+<script>
+  document.querySelectorAll('.math-formula[data-latex]').forEach(function(el) {
+    try {
+      el.innerHTML = katex.renderToString(el.getAttribute('data-latex'), {
+        throwOnError: false,
+        displayMode: el.getAttribute('data-mode') === 'block'
+      });
+    } catch(e) {}
+  });
+</script>
