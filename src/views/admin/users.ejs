@@ -815,9 +815,11 @@
         // Update row in table without reload
         const row = document.getElementById(`user-row-${id}`);
         if (row && j.user) {
+          const roleLabels = {TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',PRINCIPAL:'Kepala Sekolah'};
+          const roleLabel = roleLabels[j.user.role] || j.user.role || '';
           row.querySelector('.user-username').textContent = j.user.username || '';
           row.querySelector('.user-fullname').textContent = j.user.full_name || '';
-          row.querySelector('.user-role').innerHTML = `<span class="px-2 py-1 rounded-lg border border-slate-200">${j.user.role || ''}</span>`;
+          row.querySelector('.user-role').innerHTML = `<span class="px-2 py-1 rounded-lg border border-teal-300 bg-white text-teal-800 font-medium">${roleLabel}</span>`;
           row.querySelector('.user-class').textContent = j.user.class_name || '-';
           row.querySelector('.user-active').textContent = j.user.is_active ? 'Aktif' : 'Nonaktif';
         }
