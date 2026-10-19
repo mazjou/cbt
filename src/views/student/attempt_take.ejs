@@ -44,6 +44,43 @@
 <span id="timer" class="hidden"></span>
 <span id="answeredCount" class="hidden">0</span>
 
+<!-- Script global drawer — harus di-define SEBELUM tombol diklik -->
+<script>
+function toggleSoalDrawer() {
+  var drawer = document.getElementById('soalDrawer');
+  if (!drawer) return;
+  if (drawer.classList.contains('hidden')) {
+    drawer.classList.remove('hidden');
+    // Sync status soal saat drawer dibuka
+    document.querySelectorAll('.drawerBtn').forEach(function(btn) {
+      var no = btn.getAttribute('data-drawer-no');
+      var section = document.getElementById('q-' + no);
+      if (!section) return;
+      var hasRadio    = section.querySelector('input[type=radio]:not(.tf-radio):checked');
+      var hasTF       = section.querySelector('select.tf-select');
+      var tfAnswered  = hasTF && hasTF.value;
+      var hasComplex  = section.querySelector('input.complex-checkbox:checked');
+      var hasCheckbox = section.querySelector('input.checkbox-answer:checked');
+      var done = !!(hasRadio || tfAnswered || hasComplex || hasCheckbox);
+      btn.className = 'drawerBtn h-12 rounded-xl border-2 font-bold text-sm transition-all ' +
+        (done ? 'border-emerald-400 bg-emerald-100 text-emerald-700' : 'border-slate-300 bg-white text-slate-600');
+    });
+  } else {
+    drawer.classList.add('hidden');
+  }
+}
+
+function jumpAndClose(no) {
+  toggleSoalDrawer();
+  var target = document.getElementById('q-' + no);
+  if (target) {
+    setTimeout(function() {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+  }
+}
+</script>
+
 <!-- ══════════════════════════════════════════════════════════
      DRAWER DAFTAR SOAL — muncul saat tombol diklik
      ══════════════════════════════════════════════════════════ -->
@@ -1029,41 +1066,22 @@
     window.addEventListener('blur', () => reportViolation('Pindah Tab/Aplikasi', 'blur'));
   }
 
-  // ── Floating bar & Drawer soal ────────────────────────────────
+  // ── Floating bar & Drawer soal — fungsi sudah didefinisikan di atas (global script)
   function syncDrawerButtons() {
-    document.querySelectorAll('.drawerBtn').forEach(btn => {
-      const no = btn.getAttribute('data-drawer-no');
-      const section = document.getElementById('q-' + no);
+    document.querySelectorAll('.drawerBtn').forEach(function(btn) {
+      var no = btn.getAttribute('data-drawer-no');
+      var section = document.getElementById('q-' + no);
       if (!section) return;
-      // Cek apakah soal sudah dijawab
-      const hasRadio    = section.querySelector('input[type=radio]:not(.tf-radio):checked');
-      const hasTF       = section.querySelector('select.tf-select');
-      const tfAnswered  = hasTF && hasTF.value;
-      const hasComplex  = section.querySelector('input.complex-checkbox:checked');
-      const hasCheckbox = section.querySelector('input.checkbox-answer:checked');
-      const done = !!(hasRadio || tfAnswered || hasComplex || hasCheckbox);
-      btn.className = `drawerBtn h-12 rounded-xl border-2 font-bold text-sm transition-all ${done ? 'border-emerald-400 bg-emerald-100 text-emerald-700' : 'border-slate-300 bg-white text-slate-600'}`;
+      var hasRadio    = section.querySelector('input[type=radio]:not(.tf-radio):checked');
+      var hasTF       = section.querySelector('select.tf-select');
+      var tfAnswered  = hasTF && hasTF.value;
+      var hasComplex  = section.querySelector('input.complex-checkbox:checked');
+      var hasCheckbox = section.querySelector('input.checkbox-answer:checked');
+      var done = !!(hasRadio || tfAnswered || hasComplex || hasCheckbox);
+      btn.className = 'drawerBtn h-12 rounded-xl border-2 font-bold text-sm transition-all ' +
+        (done ? 'border-emerald-400 bg-emerald-100 text-emerald-700' : 'border-slate-300 bg-white text-slate-600');
     });
   }
-
-  window.toggleSoalDrawer = function() {
-    const drawer = document.getElementById('soalDrawer');
-    if (!drawer) return;
-    drawer.classList.toggle('hidden');
-    if (!drawer.classList.contains('hidden')) {
-      syncDrawerButtons();
-    }
-  };
-
-  window.jumpAndClose = function(no) {
-    window.toggleSoalDrawer();
-    const target = document.getElementById('q-' + no);
-    if (target) {
-      setTimeout(() => {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 200);
-    }
-  };
 
   document.addEventListener('contextmenu', (e) => {
     e.preventDefault();
