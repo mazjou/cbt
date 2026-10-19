@@ -1,14 +1,15 @@
 <div class="flex items-center justify-between gap-4">
+<div class="flex flex-col gap-3 mb-6">
   <div>
-    <h1 class="text-3xl font-semibold tracking-tight">Kelola Pengguna</h1>
-    <p class="mt-1 text-slate-600">Buat admin/guru/siswa, reset password, aktif/nonaktif.</p>
+    <h1 class="text-2xl font-semibold tracking-tight">Kelola Pengguna</h1>
+    <p class="mt-1 text-slate-600 text-sm">Buat admin/guru/siswa, reset password, aktif/nonaktif.</p>
   </div>
-  <div class="flex gap-2 flex-wrap">
+  <div class="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
     <!-- Cetak Kartu dengan dropdown -->
     <div class="relative">
       <button type="button" onclick="toggleDropdown('dropdownCetak')"
-        class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-semibold transition-all shadow-md flex items-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-semibold transition-all shadow-md flex items-center justify-center gap-1 text-sm">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
         </svg>
         Cetak Kartu ▾
@@ -30,8 +31,8 @@
     <!-- Download Excel dengan dropdown -->
     <div class="relative">
       <button type="button" onclick="toggleDropdown('dropdownExcel')"
-        class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all shadow-md flex items-center gap-2">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all shadow-md flex items-center justify-center gap-1 text-sm">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
         Download Excel ▾
@@ -55,29 +56,27 @@
     function toggleDropdown(id) {
       const el = document.getElementById(id);
       const isOpen = el.style.display === 'block';
-      // Tutup semua dropdown dulu
       document.querySelectorAll('#dropdownCetak, #dropdownExcel').forEach(d => d.style.display = 'none');
-      // Toggle yang diklik
       el.style.display = isOpen ? 'none' : 'block';
     }
-    // Klik di luar dropdown → tutup semua
     document.addEventListener('click', function(e) {
       if (!e.target.closest('.relative')) {
         document.querySelectorAll('#dropdownCetak, #dropdownExcel').forEach(d => d.style.display = 'none');
       }
     });
     </script>
-    <a href="/admin/users/import" class="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-400 to-purple-500 hover:from-violet-500 hover:to-purple-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+
+    <a href="/admin/users/import" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-violet-400 to-purple-500 hover:from-violet-500 hover:to-purple-600 text-white font-semibold transition-all shadow-md text-sm text-center">
       Import Pengguna
     </a>
-    <a href="/admin/users/import-password" class="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-red-400 hover:from-orange-500 hover:to-red-500 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+    <a href="/admin/users/import-password" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-red-400 hover:from-orange-500 hover:to-red-500 text-white font-semibold transition-all shadow-md text-sm text-center">
       🔑 Import Password
     </a>
-    <button type="button" onclick="openDeleteByRoleModal()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
+    <button type="button" onclick="openDeleteByRoleModal()" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-semibold transition-all shadow-md text-sm flex items-center justify-center gap-1">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
       Hapus Massal
     </button>
-    <a href="/admin" class="px-4 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-500 hover:to-blue-500 text-white font-medium transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105">
+    <a href="/admin" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-500 hover:to-blue-500 text-white font-medium transition-all shadow-md text-sm text-center col-span-2 sm:col-span-1">
       Kembali
     </a>
   </div>
