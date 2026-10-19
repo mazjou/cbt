@@ -84,56 +84,59 @@
 <div class="mt-6 space-y-4">
   <!-- Card Daftar Pengguna -->
   <div class="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 p-5">
+
+    <!-- Bulk Action Bar — muncul saat ada yang dicentang, sticky di atas -->
+    <div id="bulkActionBar" class="hidden mb-4 rounded-xl border border-teal-300 bg-white p-3 shadow-sm">
+      <div class="flex flex-wrap gap-2 items-center">
+        <span class="text-sm font-semibold text-teal-800 w-full sm:w-auto mb-1 sm:mb-0">
+          <span id="selectedCount">0</span> dipilih
+        </span>
+        <button type="button" onclick="downloadSelectedExcel()"
+          class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 text-white font-semibold text-xs flex items-center justify-center gap-1 shadow">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Download Excel
+        </button>
+        <button type="button" onclick="printSelectedCards()"
+          class="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-gradient-to-r from-pink-400 to-rose-400 text-white font-semibold text-xs flex items-center justify-center gap-1 shadow">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          Cetak Kartu
+        </button>
+        <form action="/admin/users/bulk-delete" method="POST" onsubmit="return confirmBulkDelete()" class="flex-1 sm:flex-none">
+          <button type="submit"
+            class="w-full px-3 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-red-500 text-white font-semibold text-xs flex items-center justify-center gap-1 shadow">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Hapus <span id="selectedCount2">0</span>
+          </button>
+          <input type="hidden" name="user_ids" id="bulkDeleteIds" value="[]" />
+        </form>
+        <div class="flex items-center gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+          <select id="bulkMoveClassSelect" class="flex-1 rounded-lg bg-white border border-indigo-200 px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs">
+            <option value="">Pilih Kelas Tujuan</option>
+            <% classes.forEach(c => { %>
+              <option value="<%= c.id %>"><%= c.name %></option>
+            <% }) %>
+            <option value="null">Tanpa Kelas</option>
+          </select>
+          <button type="button" onclick="bulkMoveClass()"
+            class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold text-xs flex items-center gap-1 shadow whitespace-nowrap">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+            Pindah Kelas
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-lg font-semibold text-teal-900">Daftar Pengguna</h2>
-      <div class="flex items-center gap-4">
-        <div id="bulkActionBar" class="hidden flex items-center gap-2">
-          <!-- Bulk Download Excel -->
-          <button type="button" onclick="downloadSelectedExcel()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Download Excel
-          </button>
-          
-          <!-- Bulk Print Cards -->
-          <button type="button" onclick="printSelectedCards()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-pink-400 to-rose-400 hover:from-pink-500 hover:to-rose-500 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-            </svg>
-            Cetak Kartu
-          </button>
-          
-          <!-- Bulk Delete -->
-          <form action="/admin/users/bulk-delete" method="POST" onsubmit="return confirmBulkDelete()" class="inline">
-            <button type="submit" class="px-4 py-2 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-              Hapus <span id="selectedCount">0</span>
-            </button>
-            <input type="hidden" name="user_ids" id="bulkDeleteIds" value="[]" />
-          </form>
-          
-          <!-- Bulk Move Class -->
-          <div class="flex items-center gap-2">
-            <select id="bulkMoveClassSelect" class="rounded-xl bg-white border border-indigo-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-              <option value="">Pilih Kelas Tujuan</option>
-              <% classes.forEach(c => { %>
-                <option value="<%= c.id %>"><%= c.name %></option>
-              <% }) %>
-              <option value="null">Tanpa Kelas</option>
-            </select>
-            <button type="button" onclick="bulkMoveClass()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 flex items-center gap-2">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-              </svg>
-              Pindah Kelas
-            </button>
-          </div>
-        </div>
-        <div class="text-sm text-teal-700">Total: <span class="font-semibold"><%= pagination.total %></span> pengguna</div>
-      </div>
+      <div class="text-sm text-teal-700">Total: <span class="font-semibold"><%= pagination.total %></span> pengguna</div>
     </div>
     
     <!-- Filter Section -->
@@ -603,6 +606,9 @@
       if (selectedIds.length > 0) {
         bulkActionBar.classList.remove('hidden');
         selectedCountSpan.textContent = selectedIds.length;
+        // Sync ke tombol hapus juga
+        const sc2 = document.getElementById('selectedCount2');
+        if (sc2) sc2.textContent = selectedIds.length;
         bulkDeleteIdsInput.value = JSON.stringify(selectedIds);
       } else {
         bulkActionBar.classList.add('hidden');
