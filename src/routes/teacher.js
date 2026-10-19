@@ -758,7 +758,7 @@ router.post('/exams', async (req, res) => {
           ? (new Date(start_at).getTime() - Date.now() <= 15 * 60 * 1000)
           : false,
         max_questions: max_questions ? Number(max_questions) : null,
-        max_violations: max_violations ? Number(max_violations) : 3
+        max_violations: req.body.anticheat_enabled ? Math.max(1, Number(max_violations) || 3) : 0
       }
     );
 
@@ -941,7 +941,7 @@ router.put('/exams/:id', async (req, res) => {
         show_score_to_student: show_score_to_student ? true : false,
         show_review_to_student: show_review_to_student ? true : false,
         max_questions: max_questions ? Number(max_questions) : null,
-        max_violations: Number(max_violations) >= 0 ? Number(max_violations) : 3
+        max_violations: req.body.anticheat_enabled ? Math.max(1, Number(max_violations) || 3) : 0
       }
     );
 

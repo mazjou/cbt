@@ -2810,7 +2810,8 @@ router.put('/exams/:id', async (req, res) => {
         access_code || null,
         show_score_to_student ? true : false, show_review_to_student ? true : false,
         max_questions ? Number(max_questions) : null,
-        max_violations !== undefined ? Number(max_violations) : 3,
+        // anticheat: kalau anticheat_enabled tidak dicentang → simpan 0, kalau dicentang pakai nilai max_violations (min 1)
+        req.body.anticheat_enabled ? Math.max(1, Number(max_violations) || 3) : 0,
         examId
       ]
     );
