@@ -2,16 +2,30 @@ const pool = require('../db/pool');
 const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 
 // Query expired attempts - PostgreSQL syntax
+// Attempt dianggap expired jika:
+// 1. Durasi pengerjaan sudah melebihi duration_minutes (+ 5 menit grace), ATAU
+// 2. Waktu ujian (end_at) sudah lewat + 10 menit grace period
+//    Grace period mencegah auto-submit paksa saat guru mengubah tanggal ujian
 const EXPIRED_QUERY = `
   SELECT a.id, a.student_id, a.exam_id, a.started_at,
-         e.duration_minutes, e.end_at AS exam_end_time,
+         COALESCE(ec.duration_minutes, e.duration_minutes) AS duration_minutes,
+         COALESCE(ec.end_at, e.end_at) AS exam_end_time,
          FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) AS minutes_elapsed
   FROM attempts a
   JOIN exams e ON e.id = a.exam_id
+  LEFT JOIN exam_classes ec ON ec.exam_id = e.id
+    AND ec.class_id = (SELECT class_id FROM users WHERE id = a.student_id LIMIT 1)
+    AND (ec.start_at IS NOT NULL OR ec.end_at IS NOT NULL)
   WHERE a.status = 'IN_PROGRESS'
   AND (
-    FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) > e.duration_minutes
-    OR (e.end_at IS NOT NULL AND NOW() > e.end_at)
+    -- Kondisi 1: durasi pengerjaan melebihi batas waktu + 5 menit grace
+    FLOOR(EXTRACT(EPOCH FROM (NOW() - a.started_at))/60) > COALESCE(ec.duration_minutes, e.duration_minutes) + 5
+    OR
+    -- Kondisi 2: waktu ujian sudah berakhir + 10 menit grace period
+    (
+      COALESCE(ec.end_at, e.end_at) IS NOT NULL
+      AND NOW() > COALESCE(ec.end_at, e.end_at) + INTERVAL '10 minutes'
+    )
   )
 `;
 
