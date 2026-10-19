@@ -138,7 +138,7 @@ function jumpAndClose(no) {
 
     <!-- Tombol kumpulkan -->
     <div class="px-5 py-4 border-t border-slate-100 flex-shrink-0">
-      <form action="/student/attempts/<%= attempt.id %>/submit" method="POST">
+      <form id="submitForm" action="/student/attempts/<%= attempt.id %>/submit" method="POST">
         <button type="submit"
           onclick="return confirm('Yakin ingin mengumpulkan jawaban? Pastikan semua soal sudah dijawab.')"
           class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3 shadow-lg transition-all">
@@ -893,14 +893,15 @@ function jumpAndClose(no) {
   
   // Override form submission to use retry mechanism
   const submitForm = document.getElementById('submitForm');
-  submitForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    
-    const confirmed = confirm('Yakin ingin mengumpulkan jawaban? Pastikan semua soal sudah dijawab.');
-    if (confirmed) {
-      submitWithRetry();
-    }
-  });
+  if (submitForm) {
+    submitForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const confirmed = confirm('Yakin ingin mengumpulkan jawaban? Pastikan semua soal sudah dijawab.');
+      if (confirmed) {
+        submitWithRetry();
+      }
+    });
+  }
 
   // Autosave jawaban
   document.querySelectorAll('input[type=radio]').forEach(r => {
