@@ -65,36 +65,33 @@ router.get('/login', (req, res) => {
 // API endpoint for banner data (fast loading with caching)
 router.get('/api/banner-data', async (req, res) => {
   try {
-    // Simple in-memory cache (5 minutes)
-    const cacheKey = 'banner-data';
-    const cacheTime = 5 * 60 * 1000; // 5 minutes
-    
-    if (router.bannerCache && router.bannerCache.timestamp && 
+    // Cache 5 menit
+    const cacheTime = 5 * 60 * 1000;
+    if (router.bannerCache && router.bannerCache.timestamp &&
         (Date.now() - router.bannerCache.timestamp) < cacheTime) {
       return res.json(router.bannerCache.data);
     }
 
-    // Calculate date range for last week
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     const oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
 
-    // Get top 3 active classes (optimized query)
+    // Kelas teraktif (7 hari terakhir)
     const [activeClasses] = await pool.query(`
       SELECT 
         c.name as class_name,
         COUNT(DISTINCT at.id) + COUNT(DISTINCT mr.id) as activity_score
       FROM classes c
-      LEFT JOIN users u ON u.class_id = c.id AND u.role = 'STUDENT'
+      LEFT JOIN users u ON u.class_id = c.id AND u.role = 'STUDENT' AND u.is_active = true
       LEFT JOIN attempts at ON at.student_id = u.id AND at.created_at >= :weekAgo
       LEFT JOIN material_reads mr ON mr.student_id = u.id AND mr.created_at >= :weekAgo
       GROUP BY c.id, c.name
       HAVING COUNT(DISTINCT at.id) + COUNT(DISTINCT mr.id) > 0
-      ORDER BY activity_score DESC
+      ORDER BY activity_score DESC, c.name ASC
       LIMIT 3;
     `, { weekAgo: oneWeekAgoStr });
 
-    // Get top 3 active students (optimized query)
+    // Siswa teraktif (7 hari terakhir) - attempts + reads + submissions
     const [activeStudents] = await pool.query(`
       SELECT 
         u.full_name,
@@ -108,11 +105,11 @@ router.get('/api/banner-data', async (req, res) => {
       WHERE u.role = 'STUDENT' AND u.is_active = true
       GROUP BY u.id, u.full_name, c.name
       HAVING COUNT(DISTINCT at.id) + COUNT(DISTINCT mr.id) + COUNT(DISTINCT asub.id) > 0
-      ORDER BY activity_score DESC
+      ORDER BY activity_score DESC, u.full_name ASC
       LIMIT 3;
     `, { weekAgo: oneWeekAgoStr });
 
-    // Get top 3 active teachers (optimized query)
+    // Guru teraktif (7 hari terakhir) - ujian + materi + tugas yang dibuat
     const [activeTeachers] = await pool.query(`
       SELECT 
         u.full_name,
@@ -124,7 +121,7 @@ router.get('/api/banner-data', async (req, res) => {
       WHERE u.role = 'TEACHER' AND u.is_active = true
       GROUP BY u.id, u.full_name
       HAVING COUNT(DISTINCT e.id) + COUNT(DISTINCT m.id) + COUNT(DISTINCT a.id) > 0
-      ORDER BY activity_score DESC
+      ORDER BY activity_score DESC, u.full_name ASC
       LIMIT 3;
     `, { weekAgo: oneWeekAgoStr });
 
