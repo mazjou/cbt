@@ -31,11 +31,10 @@
   <!-- Tombol Daftar Soal -->
   <button onclick="toggleSoalDrawer()" type="button"
     class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-bold shadow-md hover:shadow-lg transition-all active:scale-95">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
     </svg>
-    <span class="hidden sm:inline">Daftar Soal</span>
-    <span class="sm:hidden">Soal</span>
+    <span>Daftar Soal</span>
   </button>
 </div>
 
@@ -599,14 +598,7 @@
     if (fp) fp.style.width = (<%= totalQ %> > 0 ? (answered / <%= totalQ %> * 100) : 0) + '%';
 
     // Update tombol di drawer
-    document.querySelectorAll('.drawerBtn').forEach(btn => {
-      const no = btn.getAttribute('data-drawer-no');
-      const navBtn = document.querySelector(`[data-jump="q-${no}"]`);
-      if (navBtn) {
-        const answered = navBtn.classList.contains('border-emerald-400');
-        btn.className = `drawerBtn h-12 rounded-xl border-2 font-bold text-sm transition-all ${answered ? 'border-emerald-400 bg-emerald-100 text-emerald-700' : 'border-slate-300 bg-white text-slate-600'}`;
-      }
-    });
+    syncDrawerButtons();
 
     // Update nav button — MCQ radio biasa (bukan tf-radio)
     document.querySelectorAll('input[type=radio]:not(.tf-radio):checked').forEach(radio => {
@@ -1038,25 +1030,33 @@
   }
 
   // ── Floating bar & Drawer soal ────────────────────────────────
+  function syncDrawerButtons() {
+    document.querySelectorAll('.drawerBtn').forEach(btn => {
+      const no = btn.getAttribute('data-drawer-no');
+      const section = document.getElementById('q-' + no);
+      if (!section) return;
+      // Cek apakah soal sudah dijawab
+      const hasRadio    = section.querySelector('input[type=radio]:not(.tf-radio):checked');
+      const hasTF       = section.querySelector('select.tf-select');
+      const tfAnswered  = hasTF && hasTF.value;
+      const hasComplex  = section.querySelector('input.complex-checkbox:checked');
+      const hasCheckbox = section.querySelector('input.checkbox-answer:checked');
+      const done = !!(hasRadio || tfAnswered || hasComplex || hasCheckbox);
+      btn.className = `drawerBtn h-12 rounded-xl border-2 font-bold text-sm transition-all ${done ? 'border-emerald-400 bg-emerald-100 text-emerald-700' : 'border-slate-300 bg-white text-slate-600'}`;
+    });
+  }
+
   window.toggleSoalDrawer = function() {
     const drawer = document.getElementById('soalDrawer');
     if (!drawer) return;
     drawer.classList.toggle('hidden');
     if (!drawer.classList.contains('hidden')) {
-      // Sync status soal ke drawer saat dibuka
-      document.querySelectorAll('.drawerBtn').forEach(btn => {
-        const no = btn.getAttribute('data-drawer-no');
-        const navBtn = document.querySelector(`[data-jump="q-${no}"]`);
-        if (navBtn) {
-          const done = navBtn.classList.contains('border-emerald-400');
-          btn.className = `drawerBtn h-12 rounded-xl border-2 font-bold text-sm transition-all ${done ? 'border-emerald-400 bg-emerald-100 text-emerald-700' : 'border-slate-300 bg-white text-slate-600'}`;
-        }
-      });
+      syncDrawerButtons();
     }
   };
 
   window.jumpAndClose = function(no) {
-    toggleSoalDrawer();
+    window.toggleSoalDrawer();
     const target = document.getElementById('q-' + no);
     if (target) {
       setTimeout(() => {
