@@ -1619,10 +1619,28 @@ router.get('/users/print-cards', async (req, res) => {
       logo: '/images/logo.png'
     };
     
+    // Generate QR code server-side sebagai data URL (tidak perlu CDN)
+    const QRCode = require('qrcode');
+    const appUrl = process.env.APP_URL || 'http://localhost:3000';
+    const usersWithQR = await Promise.all(users.map(async (u) => {
+      try {
+        const qrText = `${appUrl}|${u.username}`;
+        const qrDataUrl = await QRCode.toDataURL(qrText, {
+          width: 80,
+          margin: 1,
+          color: { dark: '#000000', light: '#ffffff' },
+          errorCorrectionLevel: 'M'
+        });
+        return { ...u, qr_data_url: qrDataUrl };
+      } catch(e) {
+        return { ...u, qr_data_url: null };
+      }
+    }));
+
     // Render dengan layout: false menggunakan app.render langsung
     res.app.render('admin/print_login_cards', {
       title: 'Cetak Kartu Login',
-      users,
+      users: usersWithQR,
       classes,
       schoolInfo,
       role: role || '',

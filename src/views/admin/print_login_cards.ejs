@@ -158,7 +158,11 @@
         <div class="t3">TP <%=ta%></div>
       </div>
       <div class="k-qr">
-        <div class="k-qr-wrap" id="qr-<%=j%>" data-qr="<%=encodeURIComponent((process.env.APP_URL||'http://localhost:3000')+'|'+u.username)%>"></div>
+        <div class="k-qr-wrap">
+          <% if(u.qr_data_url) { %>
+            <img src="<%=u.qr_data_url%>" alt="QR" style="width:13mm;height:13mm;display:block;">
+          <% } %>
+        </div>
         <div class="k-qr-label">Scan</div>
       </div>
     </div>
@@ -184,58 +188,6 @@
 <% } %>
 
 <script>
-// QR Code generator ringan — tidak butuh library eksternal
-// Menggunakan qrcode-svg via CDN kecil (7KB gzip)
-(function(){
-  // Load QR library ringan
-  var s = document.createElement('script');
-  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
-  s.onload = function() {
-    // Render QR secara batch kecil agar browser tidak freeze
-    var els = document.querySelectorAll('[id^="qr-"]');
-    var i = 0;
-    function renderBatch() {
-      var end = Math.min(i + 20, els.length); // 20 QR per batch
-      for (; i < end; i++) {
-        var el = els[i];
-        var text = decodeURIComponent(el.getAttribute('data-qr') || '');
-        if (!text) continue;
-        try {
-          new QRCode(el, {
-            text: text,
-            width: 50, height: 50,
-            colorDark: '#000', colorLight: '#fff',
-            correctLevel: QRCode.CorrectLevel.M
-          });
-          var c = el.querySelector('canvas');
-          if (c) { c.style.width = '100%'; c.style.height = '100%'; }
-        } catch(e) {}
-      }
-      if (i < els.length) {
-        // Render batch berikutnya setelah browser sempat bernafas
-        setTimeout(renderBatch, 50);
-      } else {
-        // Semua QR selesai — aktifkan tombol cetak
-        document.getElementById('printBtn').disabled = false;
-        document.getElementById('printBtn').textContent = '🖨️ Cetak / Save PDF';
-      }
-    }
-    renderBatch();
-  };
-  s.onerror = function() {
-    // Kalau CDN gagal load, tetap bisa cetak tanpa QR
-    document.getElementById('printBtn').disabled = false;
-    document.getElementById('printBtn').textContent = '🖨️ Cetak (tanpa QR)';
-  };
-  document.head.appendChild(s);
-
-  // Disable tombol cetak sampai QR siap
-  var btn = document.querySelector('.btn-print');
-  btn.id = 'printBtn';
-  btn.disabled = true;
-  btn.textContent = '⏳ Menyiapkan QR...';
-})();
-
 function doPrint() {
   window.print();
 }
