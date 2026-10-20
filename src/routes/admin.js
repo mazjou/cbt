@@ -6172,6 +6172,15 @@ router.get('/raport/:id', async (req, res) => {
       `SELECT id, name FROM classes ORDER BY name ASC`
     );
 
+    // Kelas yang sudah ada di raport_subject_classes untuk periode ini
+    const [printClasses] = await pq(`
+      SELECT DISTINCT c.id, c.name
+      FROM raport_subject_classes rsc
+      JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id AND rs.period_id = $1
+      JOIN classes c ON c.id = rsc.class_id
+      ORDER BY c.name ASC
+    `, [id]);
+
     // Index classRows per subject_id
     const classMap = new Map();
     for (const cr of classRows) {
@@ -6215,7 +6224,8 @@ router.get('/raport/:id', async (req, res) => {
       period,
       groups,
       teachers,
-      classes
+      classes,
+      printClasses
     });
   } catch (e) {
     console.error(e);
@@ -6230,7 +6240,8 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
   try {
     const [[student]] = await pq(`
       SELECT u.id, u.full_name, u.username, u.tanggal_lahir,
-             c.name AS class_name
+             c.name AS class_name, u.class_id,
+             c.homeroom_teacher_name, c.homeroom_teacher_nip
       FROM users u
       LEFT JOIN classes c ON c.id = u.class_id
       WHERE u.id = $1
@@ -6242,6 +6253,8 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       return res.status(404).send('Data tidak ditemukan.');
     }
 
+    // Ambil mapel yang relevan untuk kelas siswa ini
+    // Mapel yang punya raport_subject_classes untuk class_id siswa, ATAU mapel tanpa kelas (global)
     const [rows] = await pq(`
       SELECT
         rsg.id AS group_id, rsg.name AS group_name, rsg.sort_order AS group_sort,
@@ -6249,11 +6262,13 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
         sc.score, sc.notes
       FROM raport_subject_groups rsg
       JOIN raport_subjects rs ON rs.group_id = rsg.id AND rs.period_id = $1
+      -- Hanya tampilkan mapel yang ada untuk kelas siswa ini
+      JOIN raport_subject_classes rsc ON rsc.raport_subject_id = rs.id AND rsc.class_id = $3
       LEFT JOIN raport_scores sc ON sc.raport_subject_id = rs.id
         AND sc.student_id = $2 AND sc.period_id = $1
       WHERE rsg.period_id = $1
       ORDER BY rsg.sort_order ASC, rsg.id ASC, rs.sort_order ASC, rs.id ASC
-    `, [period_id, student_id]);
+    `, [period_id, student_id, student.class_id]);
 
     // Bangun nested groups dengan scores
     const groupMap = new Map();
@@ -6326,21 +6341,27 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
       return res.redirect('/admin/raport/' + period_id);
     }
 
-    // Ambil semua nilai sekaligus untuk semua siswa
+    // Ambil semua nilai sekaligus — mapel difilter per kelas siswa masing-masing
     const studentIds = students.map(s => s.id);
     const placeholders = studentIds.map((_, i) => `$${i + 2}`).join(',');
+
     const [allRows] = await pq(`
       SELECT
         sc.student_id,
+        u.class_id AS student_class_id,
         rsg.id AS group_id, rsg.name AS group_name, rsg.sort_order AS group_sort,
         rs.id AS subject_id, rs.subject_name, rs.sort_order AS subject_sort,
         sc.score, sc.notes
       FROM raport_subject_groups rsg
       JOIN raport_subjects rs ON rs.group_id = rsg.id AND rs.period_id = $1
+      -- Join ke raport_subject_classes untuk tahu mapel ini untuk kelas mana
+      JOIN raport_subject_classes rsc ON rsc.raport_subject_id = rs.id
+      -- Join siswa yang kelasnya cocok dengan kelas mapel
+      JOIN users u ON u.id IN (${placeholders}) AND u.class_id = rsc.class_id
       LEFT JOIN raport_scores sc ON sc.raport_subject_id = rs.id
-        AND sc.student_id IN (${placeholders}) AND sc.period_id = $1
+        AND sc.student_id = u.id AND sc.period_id = $1
       WHERE rsg.period_id = $1
-      ORDER BY sc.student_id, rsg.sort_order ASC, rsg.id ASC, rs.sort_order ASC, rs.id ASC
+      ORDER BY u.id, rsg.sort_order ASC, rsg.id ASC, rs.sort_order ASC, rs.id ASC
     `, [period_id, ...studentIds]);
 
     // Group data per siswa

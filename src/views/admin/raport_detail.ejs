@@ -24,11 +24,36 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
           Kembali
         </a>
-        <a href="/admin/raport/<%= period.id %>/print-all"
-          class="inline-flex items-center gap-2 px-4 py-2 bg-white text-violet-700 font-semibold rounded-xl hover:bg-violet-50 transition-all shadow-md">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-          Cetak Semua
-        </a>
+        <!-- Dropdown cetak per kelas -->
+        <div class="relative" id="cetakDropdown">
+          <button onclick="document.getElementById('cetakMenu').classList.toggle('hidden')"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-white text-violet-700 font-semibold rounded-xl hover:bg-violet-50 transition-all shadow-md">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            Cetak Raport
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div id="cetakMenu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden">
+            <div class="px-3 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Cetak per Kelas</div>
+            <% if (typeof printClasses !== 'undefined' && printClasses.length) { %>
+              <% printClasses.forEach(c => { %>
+                <a href="/admin/raport/<%= period.id %>/print-all?class_id=<%= c.id %>" target="_blank"
+                  class="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-violet-50 hover:text-violet-700 transition-all">
+                  <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16"/></svg>
+                  <%= c.name %>
+                </a>
+              <% }) %>
+            <% } else { %>
+              <div class="px-4 py-3 text-sm text-slate-400 italic">Belum ada kelas dengan nilai</div>
+            <% } %>
+            <div class="border-t border-slate-100">
+              <a href="/admin/raport/<%= period.id %>/print-all" target="_blank"
+                class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-violet-700 hover:bg-violet-50 transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                Cetak Semua Kelas
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -351,3 +376,14 @@ function editGrup(id, name, sortOrder) {
     </form>
   </div>
 </div>
+
+<script>
+// Tutup dropdown cetak saat klik di luar
+document.addEventListener('click', function(e) {
+  const dd = document.getElementById('cetakDropdown');
+  const menu = document.getElementById('cetakMenu');
+  if (dd && menu && !dd.contains(e.target)) {
+    menu.classList.add('hidden');
+  }
+});
+</script>
