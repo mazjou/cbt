@@ -149,7 +149,7 @@
     <div class="data-siswa">
       <table>
         <tr>
-          <td>Nama Lengkap</td>
+          <td>Nama Siswa</td>
           <td>:</td>
           <td><strong><%= stu.full_name %></strong></td>
           <td width="20"></td>
@@ -158,13 +158,13 @@
           <td><%= stu.class_name || '-' %></td>
         </tr>
         <tr>
-          <td>Tempat, Tanggal Lahir</td>
+          <td>TTL</td>
           <td>:</td>
           <td><%= stu.tanggal_lahir ? formatTTL(stu.tanggal_lahir) : '-' %></td>
           <td></td>
-          <td>Nomor Induk</td>
+          <td>NISN</td>
           <td>:</td>
-          <td><%= stu.username %></td>
+          <td><%= stu.username ? stu.username.split('@')[0] : '-' %></td>
         </tr>
       </table>
     </div>
@@ -218,8 +218,8 @@
       <div class="ttd-box">
         <p>Wali Kelas,</p>
         <div class="ttd-garis"></div>
-        <p class="ttd-nama">.................................</p>
-        <p class="ttd-nip">NIP. -</p>
+        <p class="ttd-nama"><%= stu.homeroom_teacher_name || '.................................' %></p>
+        <p class="ttd-nip">NIP. <%= stu.homeroom_teacher_nip || '-' %></p>
       </div>
       <div class="ttd-box">
         <p>Kepala Sekolah,</p>

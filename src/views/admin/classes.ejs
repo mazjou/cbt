@@ -92,6 +92,7 @@
               <td class="py-3 font-mono class-code text-purple-900"><%= c.code %></td>
               <td class="py-3 class-name text-purple-900"><%= c.name %></td>
               <td class="py-3 text-right">
+                <button type="button" data-class-id="<%= c.id %>" data-homeroom-name="<%= c.homeroom_teacher_name || '' %>" data-homeroom-nip="<%= c.homeroom_teacher_nip || '' %>" class="btn-open-homeroom-modal px-3 py-2 rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 font-medium inline-block mr-2 transition-colors">Wali Kelas</button>
                 <button type="button" data-class-id="<%= c.id %>" class="btn-open-class-modal px-3 py-2 rounded-lg border border-purple-300 bg-white hover:bg-purple-50 text-purple-800 font-medium inline-block mr-2 transition-colors">Edit</button>
                 <form action="/admin/classes/<%= c.id %>?_method=DELETE" method="POST" onsubmit="return confirm('Hapus kelas ini?')" class="inline">
                   <button class="px-3 py-2 rounded-lg border border-rose-300 bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium transition-colors">Hapus</button>
@@ -170,6 +171,35 @@
       <div class="pt-2 flex justify-end gap-2">
         <button type="button" class="rounded-xl border border-slate-200 px-4 py-2 hover:bg-slate-100" data-close-class-modal>Batal</button>
         <button id="cm_save" type="submit" class="rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-semibold px-4 py-2">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Wali Kelas -->
+<div id="homeroomModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+  <div class="absolute inset-0 bg-black/40" data-close-homeroom-modal></div>
+  <div class="relative mx-auto mt-16 w-[92%] max-w-lg rounded-2xl bg-white shadow-xl">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <div>
+        <h3 class="text-lg font-semibold">Wali Kelas</h3>
+        <p class="text-sm text-slate-500">Atur nama dan NIP wali kelas.</p>
+      </div>
+      <button type="button" class="rounded-xl border border-slate-200 px-3 py-1.5 hover:bg-slate-100" data-close-homeroom-modal>✕</button>
+    </div>
+    <form id="homeroomForm" method="POST" class="p-5 space-y-3">
+      <input type="hidden" id="hr_class_id" />
+      <div>
+        <label class="text-sm text-slate-600">Nama Wali Kelas</label>
+        <input id="hr_name" name="homeroom_teacher_name" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Nama lengkap wali kelas" />
+      </div>
+      <div>
+        <label class="text-sm text-slate-600">NIP Wali Kelas</label>
+        <input id="hr_nip" name="homeroom_teacher_nip" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="NIP wali kelas" />
+      </div>
+      <div class="pt-2 flex justify-end gap-2">
+        <button type="button" class="rounded-xl border border-slate-200 px-4 py-2 hover:bg-slate-100" data-close-homeroom-modal>Batal</button>
+        <button type="submit" class="rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold px-4 py-2">Simpan</button>
       </div>
     </form>
   </div>
@@ -292,5 +322,31 @@
       setLoading(false);
     }
   });
+})();
+
+// Modal wali kelas
+(function(){
+  const modal = document.getElementById('homeroomModal');
+  const form = document.getElementById('homeroomForm');
+  const elId = document.getElementById('hr_class_id');
+  const elName = document.getElementById('hr_name');
+  const elNip = document.getElementById('hr_nip');
+
+  function showModal(){ modal.classList.remove('hidden'); modal.setAttribute('aria-hidden','false'); }
+  function hideModal(){ modal.classList.add('hidden'); modal.setAttribute('aria-hidden','true'); }
+
+  document.querySelectorAll('.btn-open-homeroom-modal').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-class-id');
+      elId.value = id;
+      elName.value = btn.getAttribute('data-homeroom-name') || '';
+      elNip.value = btn.getAttribute('data-homeroom-nip') || '';
+      form.action = `/admin/classes/${id}/homeroom`;
+      showModal();
+    });
+  });
+
+  modal.querySelectorAll('[data-close-homeroom-modal]').forEach(el => el.addEventListener('click', hideModal));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) hideModal(); });
 })();
 </script>

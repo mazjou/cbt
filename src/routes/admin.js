@@ -687,6 +687,23 @@ router.post('/classes/:id/ajax-update', async (req, res) => {
   }
 });
 
+// POST /admin/classes/:id/homeroom - update wali kelas
+router.post('/classes/:id/homeroom', async (req, res) => {
+  const { id } = req.params;
+  const { homeroom_teacher_name, homeroom_teacher_nip } = req.body;
+  try {
+    await pq(
+      `UPDATE classes SET homeroom_teacher_name = $1, homeroom_teacher_nip = $2 WHERE id = $3`,
+      [homeroom_teacher_name || null, homeroom_teacher_nip || null, id]
+    );
+    req.flash('success', 'Wali kelas berhasil diperbarui.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memperbarui wali kelas: ' + e.message);
+  }
+  res.redirect('/admin/classes');
+});
+
 router.delete('/classes/:id', async (req, res) => {
   const id = req.params.id;
   try {
@@ -6316,7 +6333,8 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       name: process.env.SCHOOL_NAME || 'SMK NEGERI 1 KRAS',
       address: process.env.SCHOOL_ADDRESS || 'Desa Kras, Kec. Kras, Kab. Kediri, Jawa Timur',
       principalName: process.env.PRINCIPAL_NAME || '',
-      principalNip: process.env.PRINCIPAL_NIP || ''
+      principalNip: process.env.PRINCIPAL_NIP || '',
+      logoPath: process.env.SCHOOL_LOGO || null
     };
 
     res.render('admin/raport_print', {
@@ -6345,7 +6363,8 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
 
     let studentQuery = `
       SELECT DISTINCT u.id, u.full_name, u.username, u.tanggal_lahir,
-             c.name AS class_name, u.class_id
+             c.name AS class_name, u.class_id,
+             c.homeroom_teacher_name, c.homeroom_teacher_nip
       FROM users u
       JOIN classes c ON c.id = u.class_id
       JOIN raport_subject_classes rsc ON rsc.class_id = u.class_id
@@ -6416,7 +6435,8 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
       name: process.env.SCHOOL_NAME || 'SMK NEGERI 1 KRAS',
       address: process.env.SCHOOL_ADDRESS || 'Desa Kras, Kec. Kras, Kab. Kediri, Jawa Timur',
       principalName: process.env.PRINCIPAL_NAME || '',
-      principalNip: process.env.PRINCIPAL_NIP || ''
+      principalNip: process.env.PRINCIPAL_NIP || '',
+      logoPath: process.env.SCHOOL_LOGO || null
     };
 
     res.render('admin/raport_print', {
