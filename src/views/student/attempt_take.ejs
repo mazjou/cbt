@@ -88,7 +88,8 @@ function jumpAndClose(no) {
   <!-- Overlay -->
   <div class="absolute inset-0 bg-black/50" onclick="toggleSoalDrawer()"></div>
   <!-- Panel — tengah di semua ukuran layar -->
-  <div class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+  <div class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+       style="max-height: min(85vh, 600px);">
     <!-- Header panel -->
     <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-indigo-50 to-purple-50 flex-shrink-0">
       <div class="flex items-center gap-3">
@@ -123,25 +124,25 @@ function jumpAndClose(no) {
     </div>
 
     <!-- Grid soal -->
-    <div class="overflow-y-auto p-4 flex-1">
-      <div class="grid grid-cols-5 gap-2" id="drawerGrid">
+    <div class="overflow-y-auto p-3 flex-1" style="min-height:0;">
+      <div class="grid grid-cols-5 gap-1.5" id="drawerGrid">
         <% questions.forEach((q) => { %>
           <button type="button"
             onclick="jumpAndClose('<%= q.no %>')"
             data-drawer-no="<%= q.no %>"
-            class="drawerBtn h-12 rounded-xl border-2 font-bold text-sm transition-all <%= q.chosen_option_id ? 'border-emerald-400 bg-emerald-100 text-emerald-700' : 'border-slate-300 bg-white text-slate-600' %>">
+            class="drawerBtn h-10 rounded-xl border-2 font-bold text-sm transition-all <%= q.chosen_option_id ? 'border-emerald-400 bg-emerald-100 text-emerald-700' : 'border-slate-300 bg-white text-slate-600' %>">
             <%= q.no %>
           </button>
         <% }) %>
       </div>
     </div>
 
-    <!-- Tombol kumpulkan -->
-    <div class="px-5 py-4 border-t border-slate-100 flex-shrink-0">
+    <!-- Tombol kumpulkan — selalu terlihat di bawah -->
+    <div class="px-4 py-3 border-t border-slate-100 bg-white flex-shrink-0">
       <form id="submitForm" action="/student/attempts/<%= attempt.id %>/submit" method="POST">
         <button type="submit"
           onclick="return confirm('Yakin ingin mengumpulkan jawaban? Pastikan semua soal sudah dijawab.')"
-          class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3 shadow-lg transition-all">
+          class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-bold py-3 shadow-lg transition-all text-base">
           ✅ Kumpulkan Jawaban
         </button>
       </form>
