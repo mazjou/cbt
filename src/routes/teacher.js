@@ -1196,9 +1196,22 @@ router.get('/exams/:id', async (req, res) => {
 
 router.post('/exams/:id/questions', upload.any(), async (req, res) => {
   const user = req.session.user;
-  const { question_text, points, a, b, c, d, e, correct, question_type } = req.body;
+  let { question_text, points, a, b, c, d, e, correct, question_type } = req.body;
   const examId = req.params.id;
   const qtype = question_type || 'MCQ';
+
+  // Auto-strip gambar base64 inline
+  function stripBase64Images(html) {
+    if (!html) return html;
+    return html.replace(/<img[^>]+src=["']data:image\/[^"']+["'][^>]*>/gi,
+      '<span style="color:red;font-size:11px">[gambar dihapus - gunakan upload gambar]</span>');
+  }
+  if (question_text && question_text.includes('data:image/')) {
+    question_text = stripBase64Images(question_text);
+    req.flash('info', 'Gambar yang di-paste langsung dihapus otomatis. Gunakan Upload Gambar.');
+  }
+  a = stripBase64Images(a); b = stripBase64Images(b);
+  c = stripBase64Images(c); d = stripBase64Images(d); e = stripBase64Images(e);
 
   // Validasi — TRUE_FALSE hanya butuh A dan B, COMPLEX butuh minimal A-D
   if (!question_text) {
@@ -2212,7 +2225,7 @@ router.get('/questions/:id/edit', async (req, res) => {
 router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }, { name: 'file', maxCount: 1 }]), async (req, res) => {
   const user = req.session.user;
   const qId = req.params.id;
-  const { question_text, points, a, b, c, d, e, correct, remove_image, remove_pdf, question_type } = req.body;
+  let { question_text, points, a, b, c, d, e, correct, remove_image, remove_pdf, question_type } = req.body;
   const qtype = question_type || 'MCQ';
 
   if (!question_text) {
@@ -2220,11 +2233,22 @@ router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { na
     return res.redirect(`/teacher/questions/${qId}/edit`);
   }
 
-  // Blokir base64 gambar inline — mencegah payload raksasa yang memberatkan server
-  if (question_text.includes('data:image/') && question_text.length > 50000) {
-    req.flash('error', 'Soal mengandung gambar yang di-paste langsung (base64). Gunakan tombol Upload Gambar di bawah form, bukan paste gambar ke editor teks.');
-    return res.redirect(`/teacher/questions/${qId}/edit`);
+  // Auto-strip gambar base64 inline dari question_text dan opsi
+  // Base64 gambar bisa mencapai jutaan karakter dan memberatkan server/DB
+  function stripBase64Images(html) {
+    if (!html) return html;
+    return html.replace(/<img[^>]+src=["']data:image\/[^"']+["'][^>]*>/gi,
+      '<span style="color:red;font-size:11px">[gambar dihapus - gunakan upload gambar]</span>');
   }
+  if (question_text && question_text.includes('data:image/')) {
+    question_text = stripBase64Images(question_text);
+    req.flash('info', 'Gambar yang di-paste langsung dihapus otomatis. Gunakan tombol Upload Gambar untuk menyisipkan gambar.');
+  }
+  a = stripBase64Images(a);
+  b = stripBase64Images(b);
+  c = stripBase64Images(c);
+  d = stripBase64Images(d);
+  e = stripBase64Images(e);
 
   // Kunci jawaban parsing
   let correctLabels = [];
