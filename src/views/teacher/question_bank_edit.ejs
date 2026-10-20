@@ -254,13 +254,15 @@ $sn(document).ready(function () {
     disableDragAndDrop: false,
     callbacks: {
       onImageUpload: function (files) {
-        var editor = this;
+        var $note = $(this);
         Array.from(files).forEach(function (file) {
+          if (!file.type.startsWith('image/')) return;
+          if (file.size > 5 * 1024 * 1024) { alert('Ukuran gambar maksimal 5MB'); return; }
           var reader = new FileReader();
           reader.onload = function (e) {
-            var img = $('<img>').attr('src', e.target.result)
-              .css({ maxWidth: '100%', height: 'auto', borderRadius: '8px', margin: '4px 0' });
-            $(editor).summernote('insertNode', img[0]);
+            $note.summernote('editor.insertImage', e.target.result, function($image) {
+              $image.css({ maxWidth: '100%', height: 'auto', borderRadius: '8px', margin: '4px 0' });
+            });
           };
           reader.readAsDataURL(file);
         });
