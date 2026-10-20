@@ -482,9 +482,14 @@ router.get('/classes', async (req, res) => {
 
   const totalPages = Math.ceil(total / limit);
 
+  const [teachers] = await pq(
+    `SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC`
+  );
+
   res.render('admin/classes', { 
     title: 'Kelola Kelas', 
     classes,
+    teachers,
     pagination: {
       page,
       limit,
