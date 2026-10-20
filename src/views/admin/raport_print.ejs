@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; color: #000; background: #f0f0f0; }
+
+    /* Control bar — hide on print */
+    .no-print { background: #fff; padding: 12px 20px; box-shadow: 0 2px 8px rgba(0,0,0,.12); margin-bottom: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .btn { padding: 8px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; border: none; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-print { background: #4f46e5; color: #fff; }
+    .btn-back { background: #f1f5f9; color: #475569; }
+
+    /* Page wrapper */
+    .raport-page {
+      background: #fff;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto 20px;
+      padding: 1.5cm;
+      box-shadow: 0 4px 24px rgba(0,0,0,.1);
+      page-break-after: always;
+    }
+
+    /* Kop surat */
+    .kop { display: flex; align-items: center; gap: 16px; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 12px; }
+    .kop-logo { width: 70px; height: 70px; object-fit: contain; flex-shrink: 0; }
+    .kop-logo-placeholder { width: 70px; height: 70px; border: 2px solid #999; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10pt; color: #999; flex-shrink: 0; }
+    .kop-text { text-align: center; flex: 1; }
+    .kop-text p { line-height: 1.4; }
+    .kop-text .sekolah { font-size: 16pt; font-weight: bold; text-transform: uppercase; }
+    .kop-text .dinas { font-size: 11pt; font-weight: bold; text-transform: uppercase; }
+    .kop-text .provinsi { font-size: 10pt; font-weight: bold; text-transform: uppercase; }
+    .kop-text .alamat { font-size: 9pt; }
+
+    /* Judul */
+    .judul { text-align: center; margin: 14px 0 16px; }
+    .judul h2 { font-size: 13pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; text-decoration: underline; }
+    .judul p { font-size: 10pt; margin-top: 3px; }
+
+    /* Data siswa */
+    .data-siswa { margin-bottom: 14px; }
+    .data-siswa table { width: 100%; border-collapse: collapse; }
+    .data-siswa td { padding: 2px 4px; font-size: 10.5pt; vertical-align: top; }
+    .data-siswa td:first-child { width: 160px; font-weight: normal; }
+    .data-siswa td:nth-child(2) { width: 12px; text-align: center; }
+
+    /* Tabel nilai */
+    .tabel-nilai { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 10pt; }
+    .tabel-nilai th { background: #f0f0f0; border: 1px solid #555; padding: 5px 8px; text-align: center; font-weight: bold; }
+    .tabel-nilai td { border: 1px solid #555; padding: 4px 8px; vertical-align: top; }
+    .tabel-nilai td.no { text-align: center; width: 32px; }
+    .tabel-nilai td.nilai { text-align: center; width: 60px; }
+    .tabel-nilai tr.group-header td { background: #e8e8e8; font-weight: bold; font-style: italic; padding: 4px 8px; }
+    .tabel-nilai tr.summary td { font-weight: bold; background: #f8f8f8; }
+
+    /* Tanda tangan */
+    .ttd-section { display: flex; justify-content: space-between; margin-top: 20px; }
+    .ttd-box { text-align: center; min-width: 180px; }
+    .ttd-box p { font-size: 10pt; margin-bottom: 2px; }
+    .ttd-box .ttd-garis { height: 55px; border-bottom: 1px solid #000; margin: 0 auto; width: 160px; }
+    .ttd-box .ttd-nama { font-weight: bold; margin-top: 4px; text-decoration: underline; font-size: 10pt; }
+    .ttd-box .ttd-nip { font-size: 9pt; }
+
+    @media print {
+      @page { size: A4 portrait; margin: 1.5cm; }
+      body { background: #fff; }
+      .no-print { display: none !important; }
+      .raport-page { box-shadow: none; margin: 0; padding: 0; width: 100%; min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="no-print">
+  <button class="btn btn-print" onclick="window.print()">
+    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+    Cetak
+  </button>
+  <a href="javascript:history.back()" class="btn btn-back">Kembali</a>
+  <span style="font-size:12px;color:#64748b;"><%= multiStudent ? allStudents.length + ' siswa' : (student ? student.full_name : '') %></span>
+</div>
+
+<%
+  // Helper: format tanggal lahir
+  function formatTTL(d) {
+    if (!d) return '-';
+    try {
+      const dt = new Date(d);
+      const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+      return dt.getDate() + ' ' + months[dt.getMonth()] + ' ' + dt.getFullYear();
+    } catch(e) { return '-'; }
+  }
+
+  // Helper: format nilai
+  function formatNilai(n) {
+    if (n === null || n === undefined || n === '') return '-';
+    const num = parseFloat(n);
+    if (isNaN(num)) return '-';
+    return num.toFixed(2);
+  }
+
+  // Data yang akan dicetak
+  const students = multiStudent ? allStudents : [{ ...student, groups: groups }];
+%>
+
+<% students.forEach(function(stu) { %>
+  <%
+    const stuGroups = stu.groups || groups || [];
+    let totalScore = 0;
+    let scoreCount = 0;
+    stuGroups.forEach(function(g) {
+      (g.subjects || []).forEach(function(s) {
+        if (s.score !== null && s.score !== undefined && s.score !== '') {
+          totalScore += parseFloat(s.score);
+          scoreCount++;
+        }
+      });
+    });
+    const avgScore = scoreCount > 0 ? (totalScore / scoreCount).toFixed(2) : '-';
+    let noUrut = 0;
+  %>
+  <div class="raport-page">
+    <!-- Kop Surat -->
+    <div class="kop">
+      <% if (schoolInfo && schoolInfo.logoPath) { %>
+        <img src="<%= schoolInfo.logoPath %>" alt="Logo" class="kop-logo">
+      <% } else { %>
+        <div class="kop-logo-placeholder">LOGO</div>
+      <% } %>
+      <div class="kop-text">
+        <p class="provinsi">PEMERINTAH PROVINSI JAWA TIMUR</p>
+        <p class="dinas">DINAS PENDIDIKAN</p>
+        <p class="sekolah"><%= schoolInfo ? schoolInfo.name : 'SMK NEGERI 1 KRAS' %></p>
+        <p class="alamat">Alamat: <%= schoolInfo ? schoolInfo.address : '' %></p>
+      </div>
+    </div>
+
+    <!-- Judul -->
+    <div class="judul">
+      <h2>Laporan Tengah Semester</h2>
+      <p>Semester <%= period.semester %> Tahun Pelajaran <%= period.school_year %></p>
+    </div>
+
+    <!-- Data Siswa -->
+    <div class="data-siswa">
+      <table>
+        <tr>
+          <td>Nama Lengkap</td>
+          <td>:</td>
+          <td><strong><%= stu.full_name %></strong></td>
+          <td width="20"></td>
+          <td width="120">Kelas</td>
+          <td width="10">:</td>
+          <td><%= stu.class_name || '-' %></td>
+        </tr>
+        <tr>
+          <td>Tempat, Tanggal Lahir</td>
+          <td>:</td>
+          <td><%= stu.tanggal_lahir ? formatTTL(stu.tanggal_lahir) : '-' %></td>
+          <td></td>
+          <td>Nomor Induk</td>
+          <td>:</td>
+          <td><%= stu.username %></td>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Tabel Nilai -->
+    <table class="tabel-nilai">
+      <thead>
+        <tr>
+          <th class="no">No</th>
+          <th>Mata Pelajaran</th>
+          <th class="nilai">Nilai</th>
+          <th>Keterangan</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% stuGroups.forEach(function(g) { noUrut = 0; %>
+          <tr class="group-header">
+            <td colspan="4"><%= g.name %></td>
+          </tr>
+          <% (g.subjects || []).forEach(function(s, si) { noUrut++; %>
+            <tr>
+              <td class="no"><%= noUrut %></td>
+              <td><%= s.name %></td>
+              <td class="nilai"><%= formatNilai(s.score) %></td>
+              <td><%= s.notes || '' %></td>
+            </tr>
+          <% }) %>
+        <% }) %>
+        <% if (scoreCount > 0) { %>
+          <tr class="summary">
+            <td colspan="2" style="text-align:right;">Jumlah Nilai</td>
+            <td class="nilai"><%= totalScore.toFixed(2) %></td>
+            <td></td>
+          </tr>
+          <tr class="summary">
+            <td colspan="2" style="text-align:right;">Rata-rata</td>
+            <td class="nilai"><%= avgScore %></td>
+            <td></td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+
+    <!-- Tanda Tangan -->
+    <div class="ttd-section">
+      <div class="ttd-box">
+        <p>Wali Kelas,</p>
+        <div class="ttd-garis"></div>
+        <p class="ttd-nama">.................................</p>
+        <p class="ttd-nip">NIP. -</p>
+      </div>
+      <div class="ttd-box">
+        <p>Kepala Sekolah,</p>
+        <div class="ttd-garis"></div>
+        <p class="ttd-nama"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
+        <p class="ttd-nip">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
+      </div>
+    </div>
+  </div>
+<% }) %>
+
+</body>
+</html>

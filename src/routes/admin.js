@@ -5896,4 +5896,337 @@ router.get('/panitia/print-cards', async (req, res) => {
   }
 });
 
+// ===== RAPORT TENGAH SEMESTER =====
+
+// GET /admin/raport - daftar semua periode
+router.get('/raport', async (req, res) => {
+  try {
+    const [periods] = await pq(`
+      SELECT p.*,
+             COUNT(DISTINCT rsg.id) AS group_count,
+             COUNT(DISTINCT rs.id)  AS subject_count
+      FROM raport_periods p
+      LEFT JOIN raport_subject_groups rsg ON rsg.period_id = p.id
+      LEFT JOIN raport_subjects rs ON rs.period_id = p.id
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
+    `);
+    res.render('admin/raport', { title: 'Raport Tengah Semester', user: req.session.user, periods });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat data raport.');
+    res.redirect('/admin');
+  }
+});
+
+// POST /admin/raport - buat periode baru
+router.post('/raport', async (req, res) => {
+  const { name, semester, school_year } = req.body;
+  try {
+    await pq(
+      `INSERT INTO raport_periods (name, semester, school_year) VALUES ($1, $2, $3)`,
+      [name, semester, school_year]
+    );
+    req.flash('success', 'Periode raport berhasil dibuat.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal membuat periode raport.');
+  }
+  res.redirect('/admin/raport');
+});
+
+// POST /admin/raport/:id/activate - aktifkan periode
+router.post('/raport/:id/activate', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pq(`UPDATE raport_periods SET is_active = false`);
+    await pq(`UPDATE raport_periods SET is_active = true WHERE id = $1`, [id]);
+    req.flash('success', 'Periode raport diaktifkan.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal mengaktifkan periode.');
+  }
+  res.redirect('/admin/raport');
+});
+
+// POST /admin/raport/:id/groups - tambah grup
+router.post('/raport/:id/groups', async (req, res) => {
+  const { id } = req.params;
+  const { name, sort_order } = req.body;
+  try {
+    await pq(
+      `INSERT INTO raport_subject_groups (period_id, name, sort_order) VALUES ($1, $2, $3)`,
+      [id, name, sort_order || 0]
+    );
+    req.flash('success', 'Grup mata pelajaran ditambahkan.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menambahkan grup.');
+  }
+  res.redirect('/admin/raport/' + id);
+});
+
+// POST /admin/raport/groups/:gid/subjects - tambah mapel
+router.post('/raport/groups/:gid/subjects', async (req, res) => {
+  const { gid } = req.params;
+  const { subject_name, sort_order, teacher_id } = req.body;
+  try {
+    const [[grp]] = await pq(`SELECT period_id FROM raport_subject_groups WHERE id = $1`, [gid]);
+    if (!grp) {
+      req.flash('error', 'Grup tidak ditemukan.');
+      return res.redirect('/admin/raport');
+    }
+    const periodId = grp.period_id;
+    await pq(
+      `INSERT INTO raport_subjects (group_id, period_id, subject_name, sort_order, teacher_id)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [gid, periodId, subject_name, sort_order || 0, teacher_id || null]
+    );
+    req.flash('success', 'Mata pelajaran ditambahkan.');
+    res.redirect('/admin/raport/' + periodId);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menambahkan mata pelajaran.');
+    res.redirect('/admin/raport');
+  }
+});
+
+// DELETE /admin/raport/subjects/:sid - hapus mapel (AJAX)
+router.delete('/raport/subjects/:sid', async (req, res) => {
+  try {
+    await pq(`DELETE FROM raport_subjects WHERE id = $1`, [req.params.sid]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// GET /admin/raport/:id - detail periode
+router.get('/raport/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [[period]] = await pq(`SELECT * FROM raport_periods WHERE id = $1`, [id]);
+    if (!period) {
+      req.flash('error', 'Periode tidak ditemukan.');
+      return res.redirect('/admin/raport');
+    }
+
+    const [rows] = await pq(`
+      SELECT
+        rsg.id AS group_id, rsg.name AS group_name, rsg.sort_order AS group_sort,
+        rs.id AS subject_id, rs.subject_name, rs.sort_order AS subject_sort,
+        u.full_name AS teacher_name
+      FROM raport_subject_groups rsg
+      LEFT JOIN raport_subjects rs ON rs.group_id = rsg.id
+      LEFT JOIN users u ON u.id = rs.teacher_id
+      WHERE rsg.period_id = $1
+      ORDER BY rsg.sort_order ASC, rsg.id ASC, rs.sort_order ASC, rs.id ASC
+    `, [id]);
+
+    const [teachers] = await pq(
+      `SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC`
+    );
+
+    // Bangun nested groups
+    const groupMap = new Map();
+    for (const row of rows) {
+      if (!groupMap.has(row.group_id)) {
+        groupMap.set(row.group_id, {
+          id: row.group_id,
+          name: row.group_name,
+          sort_order: row.group_sort,
+          subjects: []
+        });
+      }
+      if (row.subject_id) {
+        groupMap.get(row.group_id).subjects.push({
+          id: row.subject_id,
+          name: row.subject_name,
+          sort_order: row.subject_sort,
+          teacher_name: row.teacher_name
+        });
+      }
+    }
+    const groups = [...groupMap.values()];
+
+    res.render('admin/raport_detail', {
+      title: 'Detail Periode Raport',
+      user: req.session.user,
+      period,
+      groups,
+      teachers
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat detail raport.');
+    res.redirect('/admin/raport');
+  }
+});
+
+// GET /admin/raport/:period_id/print/:student_id - cetak raport per siswa
+router.get('/raport/:period_id/print/:student_id', async (req, res) => {
+  const { period_id, student_id } = req.params;
+  try {
+    const [[student]] = await pq(`
+      SELECT u.id, u.full_name, u.username, u.tanggal_lahir,
+             c.name AS class_name
+      FROM users u
+      LEFT JOIN classes c ON c.id = u.class_id
+      WHERE u.id = $1
+    `, [student_id]);
+
+    const [[period]] = await pq(`SELECT * FROM raport_periods WHERE id = $1`, [period_id]);
+
+    if (!student || !period) {
+      return res.status(404).send('Data tidak ditemukan.');
+    }
+
+    const [rows] = await pq(`
+      SELECT
+        rsg.id AS group_id, rsg.name AS group_name, rsg.sort_order AS group_sort,
+        rs.id AS subject_id, rs.subject_name, rs.sort_order AS subject_sort,
+        sc.score, sc.notes
+      FROM raport_subject_groups rsg
+      JOIN raport_subjects rs ON rs.group_id = rsg.id AND rs.period_id = $1
+      LEFT JOIN raport_scores sc ON sc.raport_subject_id = rs.id
+        AND sc.student_id = $2 AND sc.period_id = $1
+      WHERE rsg.period_id = $1
+      ORDER BY rsg.sort_order ASC, rsg.id ASC, rs.sort_order ASC, rs.id ASC
+    `, [period_id, student_id]);
+
+    // Bangun nested groups dengan scores
+    const groupMap = new Map();
+    for (const row of rows) {
+      if (!groupMap.has(row.group_id)) {
+        groupMap.set(row.group_id, {
+          id: row.group_id,
+          name: row.group_name,
+          subjects: []
+        });
+      }
+      groupMap.get(row.group_id).subjects.push({
+        id: row.subject_id,
+        name: row.subject_name,
+        score: row.score,
+        notes: row.notes
+      });
+    }
+    const groups = [...groupMap.values()];
+
+    const schoolInfo = {
+      name: process.env.SCHOOL_NAME || 'SMK NEGERI 1 KRAS',
+      address: process.env.SCHOOL_ADDRESS || 'Desa Kras, Kec. Kras, Kab. Kediri, Jawa Timur',
+      principalName: process.env.PRINCIPAL_NAME || '',
+      principalNip: process.env.PRINCIPAL_NIP || ''
+    };
+
+    res.render('admin/raport_print', {
+      title: 'Raport Tengah Semester',
+      layout: false,
+      student,
+      period,
+      groups,
+      schoolInfo,
+      multiStudent: false,
+      allStudents: []
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('Gagal memuat data cetak raport.');
+  }
+});
+
+// GET /admin/raport/:period_id/print-all - cetak semua siswa
+router.get('/raport/:period_id/print-all', async (req, res) => {
+  const { period_id } = req.params;
+  const { class_id } = req.query;
+  try {
+    const [[period]] = await pq(`SELECT * FROM raport_periods WHERE id = $1`, [period_id]);
+    if (!period) return res.status(404).send('Periode tidak ditemukan.');
+
+    let studentQuery = `
+      SELECT DISTINCT u.id, u.full_name, u.username, u.tanggal_lahir,
+             c.name AS class_name
+      FROM users u
+      JOIN raport_scores sc ON sc.student_id = u.id AND sc.period_id = $1
+      LEFT JOIN classes c ON c.id = u.class_id
+    `;
+    const params = [period_id];
+    if (class_id) {
+      params.push(class_id);
+      studentQuery += ` WHERE u.class_id = $2`;
+    }
+    studentQuery += ` ORDER BY c.name ASC, u.full_name ASC`;
+
+    const [students] = await pq(studentQuery, params);
+
+    if (!students.length) {
+      req.flash('error', 'Belum ada siswa dengan nilai di periode ini.');
+      return res.redirect('/admin/raport/' + period_id);
+    }
+
+    // Ambil semua nilai sekaligus untuk semua siswa
+    const studentIds = students.map(s => s.id);
+    const placeholders = studentIds.map((_, i) => `$${i + 2}`).join(',');
+    const [allRows] = await pq(`
+      SELECT
+        sc.student_id,
+        rsg.id AS group_id, rsg.name AS group_name, rsg.sort_order AS group_sort,
+        rs.id AS subject_id, rs.subject_name, rs.sort_order AS subject_sort,
+        sc.score, sc.notes
+      FROM raport_subject_groups rsg
+      JOIN raport_subjects rs ON rs.group_id = rsg.id AND rs.period_id = $1
+      LEFT JOIN raport_scores sc ON sc.raport_subject_id = rs.id
+        AND sc.student_id IN (${placeholders}) AND sc.period_id = $1
+      WHERE rsg.period_id = $1
+      ORDER BY sc.student_id, rsg.sort_order ASC, rsg.id ASC, rs.sort_order ASC, rs.id ASC
+    `, [period_id, ...studentIds]);
+
+    // Group data per siswa
+    const scoresByStudent = {};
+    for (const row of allRows) {
+      if (!row.student_id) continue;
+      const sid = row.student_id;
+      if (!scoresByStudent[sid]) scoresByStudent[sid] = new Map();
+      const gmap = scoresByStudent[sid];
+      if (!gmap.has(row.group_id)) {
+        gmap.set(row.group_id, { id: row.group_id, name: row.group_name, subjects: [] });
+      }
+      gmap.get(row.group_id).subjects.push({
+        id: row.subject_id,
+        name: row.subject_name,
+        score: row.score,
+        notes: row.notes
+      });
+    }
+
+    const allStudents = students.map(s => ({
+      ...s,
+      groups: [...(scoresByStudent[s.id] || new Map()).values()]
+    }));
+
+    const schoolInfo = {
+      name: process.env.SCHOOL_NAME || 'SMK NEGERI 1 KRAS',
+      address: process.env.SCHOOL_ADDRESS || 'Desa Kras, Kec. Kras, Kab. Kediri, Jawa Timur',
+      principalName: process.env.PRINCIPAL_NAME || '',
+      principalNip: process.env.PRINCIPAL_NIP || ''
+    };
+
+    res.render('admin/raport_print', {
+      title: 'Raport Tengah Semester - Semua Siswa',
+      layout: false,
+      student: allStudents[0],
+      period,
+      groups: allStudents[0] ? allStudents[0].groups : [],
+      schoolInfo,
+      multiStudent: true,
+      allStudents
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('Gagal memuat data cetak raport.');
+  }
+});
+
 module.exports = router;

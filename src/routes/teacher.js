@@ -4659,3 +4659,134 @@ router.get('/exams/:id/export', async (req, res) => {
   }
 });
 
+// ===== RAPORT TENGAH SEMESTER =====
+
+// GET /teacher/raport - daftar periode aktif + mapel yang diampu guru ini
+router.get('/raport', async (req, res) => {
+  const user = req.session.user;
+  try {
+    const [rows] = await pool.query(`
+      SELECT
+        p.id AS period_id, p.name AS period_name, p.semester, p.school_year,
+        rs.id AS subject_id, rs.subject_name,
+        rsg.name AS group_name
+      FROM raport_periods p
+      JOIN raport_subjects rs ON rs.period_id = p.id AND rs.teacher_id = $1
+      JOIN raport_subject_groups rsg ON rsg.id = rs.group_id
+      WHERE p.is_active = true
+      ORDER BY p.created_at DESC, rsg.sort_order ASC, rs.sort_order ASC
+    `, [user.id]);
+
+    // Bangun nested per periode
+    const periodMap = new Map();
+    for (const row of rows) {
+      if (!periodMap.has(row.period_id)) {
+        periodMap.set(row.period_id, {
+          id: row.period_id,
+          name: row.period_name,
+          semester: row.semester,
+          school_year: row.school_year,
+          subjects: []
+        });
+      }
+      periodMap.get(row.period_id).subjects.push({
+        subject_id: row.subject_id,
+        subject_name: row.subject_name,
+        group_name: row.group_name
+      });
+    }
+    const periods = [...periodMap.values()];
+
+    res.render('teacher/raport', { title: 'Raport Tengah Semester', user, periods });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat data raport.');
+    res.redirect('/teacher');
+  }
+});
+
+// GET /teacher/raport/:period_id/:subject_id - form input nilai
+router.get('/raport/:period_id/:subject_id', async (req, res) => {
+  const user = req.session.user;
+  const { period_id, subject_id } = req.params;
+  try {
+    const [[subject]] = await pool.query(`
+      SELECT rs.*, rsg.name AS group_name, p.name AS period_name, p.semester, p.school_year
+      FROM raport_subjects rs
+      JOIN raport_subject_groups rsg ON rsg.id = rs.group_id
+      JOIN raport_periods p ON p.id = rs.period_id
+      WHERE rs.id = $1 AND rs.period_id = $2 AND rs.teacher_id = $3
+    `, [subject_id, period_id, user.id]);
+
+    if (!subject) {
+      req.flash('error', 'Mata pelajaran tidak ditemukan atau Anda tidak berwenang.');
+      return res.redirect('/teacher/raport');
+    }
+
+    const [students] = await pool.query(`
+      SELECT
+        u.id, u.full_name, u.username,
+        c.name AS class_name,
+        sc.score, sc.notes
+      FROM users u
+      LEFT JOIN classes c ON c.id = u.class_id
+      LEFT JOIN raport_scores sc
+        ON sc.student_id = u.id
+        AND sc.period_id = $1
+        AND sc.raport_subject_id = $2
+      WHERE u.role = 'STUDENT' AND u.is_active = true
+      ORDER BY c.name ASC, u.full_name ASC
+    `, [period_id, subject_id]);
+
+    res.render('teacher/raport_scores', {
+      title: 'Input Nilai Raport',
+      user,
+      subject,
+      period_id,
+      subject_id,
+      students
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat data nilai.');
+    res.redirect('/teacher/raport');
+  }
+});
+
+// POST /teacher/raport/:period_id/:subject_id - simpan nilai (bulk upsert)
+router.post('/raport/:period_id/:subject_id', async (req, res) => {
+  const user = req.session.user;
+  const { period_id, subject_id } = req.params;
+  try {
+    // Validasi kepemilikan mapel
+    const [[subject]] = await pool.query(
+      `SELECT id FROM raport_subjects WHERE id = $1 AND period_id = $2 AND teacher_id = $3`,
+      [subject_id, period_id, user.id]
+    );
+    if (!subject) {
+      req.flash('error', 'Akses ditolak.');
+      return res.redirect('/teacher/raport');
+    }
+
+    const scores = req.body.scores || {};
+    for (const [studentId, data] of Object.entries(scores)) {
+      const score = data.score !== '' && data.score !== undefined ? parseFloat(data.score) : null;
+      const notes = data.notes || null;
+      await pool.query(`
+        INSERT INTO raport_scores (period_id, student_id, raport_subject_id, score, notes, updated_by, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        ON CONFLICT (period_id, student_id, raport_subject_id)
+        DO UPDATE SET score = EXCLUDED.score, notes = EXCLUDED.notes,
+                      updated_by = EXCLUDED.updated_by, updated_at = NOW()
+      `, [period_id, studentId, subject_id, score, notes, user.id]);
+    }
+
+    req.flash('success', 'Nilai berhasil disimpan.');
+    res.redirect(`/teacher/raport/${period_id}/${subject_id}`);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menyimpan nilai: ' + e.message);
+    res.redirect(`/teacher/raport/${period_id}/${subject_id}`);
+  }
+});
+

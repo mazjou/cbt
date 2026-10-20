@@ -1,0 +1,87 @@
+<!-- Header Banner -->
+<div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 shadow-xl mb-6">
+  <div class="absolute inset-0 opacity-10">
+    <div class="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -mr-32 -mt-32"></div>
+    <div class="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full -ml-24 -mb-24"></div>
+  </div>
+  <div class="relative px-6 py-8">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div class="flex items-center gap-4">
+        <div class="bg-white/20 backdrop-blur-sm rounded-2xl p-4">
+          <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-3xl font-bold text-white tracking-tight">Raport Tengah Semester</h1>
+          <p class="mt-1 text-purple-100">Input nilai raport untuk mata pelajaran yang Anda ampu</p>
+        </div>
+      </div>
+      <a href="/teacher" class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white font-semibold rounded-xl transition-all">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        Kembali
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Flash Messages -->
+<% if (typeof messages !== 'undefined') { %>
+  <% if (messages.success && messages.success.length) { %>
+    <div class="mb-4 p-4 bg-green-50 border border-green-200 text-green-800 rounded-xl"><%= messages.success[0] %></div>
+  <% } %>
+  <% if (messages.error && messages.error.length) { %>
+    <div class="mb-4 p-4 bg-red-50 border border-red-200 text-red-800 rounded-xl"><%= messages.error[0] %></div>
+  <% } %>
+<% } %>
+
+<% if (!periods || !periods.length) { %>
+  <div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-12 text-center text-slate-500">
+    <svg class="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+    </svg>
+    <p class="text-lg font-medium">Belum ada mata pelajaran raport untuk Anda</p>
+    <p class="text-sm mt-1">Admin belum mengaktifkan periode raport atau belum menugaskan mata pelajaran kepada Anda.</p>
+  </div>
+<% } else { %>
+  <div class="space-y-6">
+    <% periods.forEach(p => { %>
+      <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+        <!-- Periode Header -->
+        <div class="px-6 py-4 bg-gradient-to-r from-violet-50 to-indigo-50 border-b border-violet-100">
+          <div class="flex items-center gap-3">
+            <span class="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </span>
+            <div>
+              <h3 class="font-bold text-slate-800"><%= p.name %></h3>
+              <p class="text-sm text-slate-500">Semester <%= p.semester %> &bull; T.P. <%= p.school_year %></p>
+            </div>
+            <span class="ml-auto inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+              <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Aktif
+            </span>
+          </div>
+        </div>
+
+        <!-- Daftar Mapel -->
+        <div class="p-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <% p.subjects.forEach(s => { %>
+              <a href="/teacher/raport/<%= p.id %>/<%= s.subject_id %>"
+                class="flex items-center gap-4 p-4 border-2 border-slate-100 rounded-xl hover:border-violet-300 hover:bg-violet-50 transition-all group">
+                <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-200 transition-colors">
+                  <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-semibold text-slate-800 group-hover:text-violet-700 transition-colors truncate"><%= s.subject_name %></p>
+                  <p class="text-xs text-slate-500 truncate"><%= s.group_name %></p>
+                </div>
+                <svg class="w-4 h-4 text-slate-300 group-hover:text-violet-400 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </a>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
