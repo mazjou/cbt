@@ -6002,6 +6002,84 @@ router.delete('/raport/subjects/:sid', async (req, res) => {
   }
 });
 
+// POST /admin/raport/:id/edit - edit periode
+router.post('/raport/:id/edit', async (req, res) => {
+  const { id } = req.params;
+  const { name, semester, school_year } = req.body;
+  try {
+    await pq(`UPDATE raport_periods SET name=$1, semester=$2, school_year=$3 WHERE id=$4`,
+      [name, semester, school_year, id]);
+    req.flash('success', 'Periode berhasil diperbarui.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memperbarui periode: ' + e.message);
+  }
+  res.redirect('/admin/raport');
+});
+
+// POST /admin/raport/:id/delete - hapus periode
+router.post('/raport/:id/delete', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pq(`DELETE FROM raport_periods WHERE id=$1`, [id]);
+    req.flash('success', 'Periode berhasil dihapus.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menghapus periode: ' + e.message);
+  }
+  res.redirect('/admin/raport');
+});
+
+// POST /admin/raport/subjects/:sid/edit - edit mapel
+router.post('/raport/subjects/:sid/edit', async (req, res) => {
+  const { sid } = req.params;
+  const { subject_name, sort_order, teacher_id } = req.body;
+  try {
+    // Ambil period_id dulu untuk redirect
+    const [[subj]] = await pq(`SELECT rs.id, rsg.period_id FROM raport_subjects rs JOIN raport_subject_groups rsg ON rsg.id=rs.group_id WHERE rs.id=$1`, [sid]);
+    await pq(`UPDATE raport_subjects SET subject_name=$1, sort_order=$2, teacher_id=$3 WHERE id=$4`,
+      [subject_name, Number(sort_order || 0), teacher_id || null, sid]);
+    req.flash('success', 'Mata pelajaran berhasil diperbarui.');
+    res.redirect('/admin/raport/' + subj.period_id);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memperbarui mapel: ' + e.message);
+    res.redirect('back');
+  }
+});
+
+// POST /admin/raport/groups/:gid/edit - edit grup
+router.post('/raport/groups/:gid/edit', async (req, res) => {
+  const { gid } = req.params;
+  const { name, sort_order } = req.body;
+  try {
+    const [[grp]] = await pq(`SELECT period_id FROM raport_subject_groups WHERE id=$1`, [gid]);
+    await pq(`UPDATE raport_subject_groups SET name=$1, sort_order=$2 WHERE id=$3`,
+      [name, Number(sort_order || 0), gid]);
+    req.flash('success', 'Grup berhasil diperbarui.');
+    res.redirect('/admin/raport/' + grp.period_id);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memperbarui grup: ' + e.message);
+    res.redirect('back');
+  }
+});
+
+// POST /admin/raport/groups/:gid/delete - hapus grup
+router.post('/raport/groups/:gid/delete', async (req, res) => {
+  const { gid } = req.params;
+  try {
+    const [[grp]] = await pq(`SELECT period_id FROM raport_subject_groups WHERE id=$1`, [gid]);
+    await pq(`DELETE FROM raport_subject_groups WHERE id=$1`, [gid]);
+    req.flash('success', 'Grup berhasil dihapus.');
+    res.redirect('/admin/raport/' + grp.period_id);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menghapus grup: ' + e.message);
+    res.redirect('back');
+  }
+});
+
 // GET /admin/raport/:id - detail periode
 router.get('/raport/:id', async (req, res) => {
   const { id } = req.params;
