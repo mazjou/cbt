@@ -6002,6 +6002,46 @@ router.delete('/raport/subjects/:sid', async (req, res) => {
   }
 });
 
+// POST /admin/raport/subjects/:sid/classes - tambah kelas ke mapel
+router.post('/raport/subjects/:sid/classes', async (req, res) => {
+  const { sid } = req.params;
+  const { class_id, teacher_id } = req.body;
+  try {
+    const [[subj]] = await pq(
+      `SELECT rs.id, rsg.period_id FROM raport_subjects rs
+       JOIN raport_subject_groups rsg ON rsg.id = rs.group_id
+       WHERE rs.id = $1`, [sid]
+    );
+    if (!subj) {
+      req.flash('error', 'Mata pelajaran tidak ditemukan.');
+      return res.redirect('/admin/raport');
+    }
+    await pq(
+      `INSERT INTO raport_subject_classes (raport_subject_id, class_id, teacher_id)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (raport_subject_id, class_id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id`,
+      [sid, class_id, teacher_id || null]
+    );
+    req.flash('success', 'Kelas berhasil ditambahkan ke mata pelajaran.');
+    res.redirect('/admin/raport/' + subj.period_id);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menambahkan kelas: ' + e.message);
+    res.redirect('back');
+  }
+});
+
+// DELETE /admin/raport/subject-classes/:scid - hapus relasi kelas dari mapel (AJAX)
+router.delete('/raport/subject-classes/:scid', async (req, res) => {
+  try {
+    await pq(`DELETE FROM raport_subject_classes WHERE id = $1`, [req.params.scid]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
 // POST /admin/raport/:id/edit - edit periode
 router.post('/raport/:id/edit', async (req, res) => {
   const { id } = req.params;
@@ -6090,19 +6130,38 @@ router.get('/raport/:id', async (req, res) => {
       return res.redirect('/admin/raport');
     }
 
-    const [rows] = await pq(`
+    // Query 1: ambil subjects beserta guru default
+    const [subjectRows] = await pq(`
       SELECT
-        rsg.id AS group_id, rsg.name AS group_name, rsg.sort_order AS group_sort,
-        rs.id AS subject_id, rs.subject_name, rs.sort_order AS subject_sort,
-        rs.teacher_id, rs.class_id,
-        u.full_name AS teacher_name,
-        c.name AS class_name
+        rsg.id   AS group_id,   rsg.name AS group_name, rsg.sort_order AS group_sort,
+        rs.id    AS subject_id, rs.subject_name,        rs.sort_order  AS subject_sort,
+        rs.teacher_id           AS default_teacher_id,
+        u.full_name             AS default_teacher_name
       FROM raport_subject_groups rsg
       LEFT JOIN raport_subjects rs ON rs.group_id = rsg.id
       LEFT JOIN users u ON u.id = rs.teacher_id
-      LEFT JOIN classes c ON c.id = rs.class_id
       WHERE rsg.period_id = $1
       ORDER BY rsg.sort_order ASC, rsg.id ASC, rs.sort_order ASC, rs.id ASC
+    `, [id]);
+
+    // Query 2: ambil semua kelas yang terdaftar per subject
+    const [classRows] = await pq(`
+      SELECT
+        rsc.id            AS sc_id,
+        rsc.raport_subject_id,
+        rsc.class_id,
+        rsc.teacher_id,
+        c.name            AS class_name,
+        u.full_name       AS teacher_name
+      FROM raport_subject_classes rsc
+      JOIN classes c ON c.id = rsc.class_id
+      LEFT JOIN users u ON u.id = rsc.teacher_id
+      WHERE rsc.raport_subject_id IN (
+        SELECT rs.id FROM raport_subjects rs
+        JOIN raport_subject_groups rsg ON rsg.id = rs.group_id
+        WHERE rsg.period_id = $1
+      )
+      ORDER BY c.name ASC
     `, [id]);
 
     const [teachers] = await pq(
@@ -6113,26 +6172,38 @@ router.get('/raport/:id', async (req, res) => {
       `SELECT id, name FROM classes ORDER BY name ASC`
     );
 
+    // Index classRows per subject_id
+    const classMap = new Map();
+    for (const cr of classRows) {
+      if (!classMap.has(cr.raport_subject_id)) classMap.set(cr.raport_subject_id, []);
+      classMap.get(cr.raport_subject_id).push({
+        sc_id:        cr.sc_id,
+        class_id:     cr.class_id,
+        class_name:   cr.class_name,
+        teacher_id:   cr.teacher_id,
+        teacher_name: cr.teacher_name
+      });
+    }
+
     // Bangun nested groups
     const groupMap = new Map();
-    for (const row of rows) {
+    for (const row of subjectRows) {
       if (!groupMap.has(row.group_id)) {
         groupMap.set(row.group_id, {
-          id: row.group_id,
-          name: row.group_name,
+          id:         row.group_id,
+          name:       row.group_name,
           sort_order: row.group_sort,
-          subjects: []
+          subjects:   []
         });
       }
       if (row.subject_id) {
         groupMap.get(row.group_id).subjects.push({
-          id: row.subject_id,
-          name: row.subject_name,
-          sort_order: row.subject_sort,
-          teacher_id: row.teacher_id,
-          teacher_name: row.teacher_name,
-          class_id: row.class_id,
-          class_name: row.class_name
+          id:           row.subject_id,
+          name:         row.subject_name,
+          sort_order:   row.subject_sort,
+          teacher_id:   row.default_teacher_id,
+          teacher_name: row.default_teacher_name,
+          classes:      classMap.get(row.subject_id) || []
         });
       }
     }

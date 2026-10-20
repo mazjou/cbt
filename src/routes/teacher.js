@@ -4661,20 +4661,30 @@ router.get('/exams/:id/export', async (req, res) => {
 
 // ===== RAPORT TENGAH SEMESTER =====
 
-// GET /teacher/raport - daftar periode aktif + mapel yang diampu guru ini
+// GET /teacher/raport - daftar periode aktif + mapel yang diampu guru ini (via raport_subject_classes)
 router.get('/raport', async (req, res) => {
   const user = req.session.user;
   try {
     const [rows] = await pool.query(`
       SELECT
-        p.id AS period_id, p.name AS period_name, p.semester, p.school_year,
-        rs.id AS subject_id, rs.subject_name,
-        rsg.name AS group_name
+        p.id       AS period_id,
+        p.name     AS period_name,
+        p.semester,
+        p.school_year,
+        rs.id      AS subject_id,
+        rs.subject_name,
+        rsg.name   AS group_name,
+        rsc.class_id,
+        c.name     AS class_name,
+        rsc.id     AS sc_id
       FROM raport_periods p
-      JOIN raport_subjects rs ON rs.period_id = p.id AND rs.teacher_id = $1
-      JOIN raport_subject_groups rsg ON rsg.id = rs.group_id
+      JOIN raport_subject_groups rsg ON rsg.period_id = p.id
+      JOIN raport_subjects rs ON rs.group_id = rsg.id
+      JOIN raport_subject_classes rsc ON rsc.raport_subject_id = rs.id
+      JOIN classes c ON c.id = rsc.class_id
       WHERE p.is_active = true
-      ORDER BY p.created_at DESC, rsg.sort_order ASC, rs.sort_order ASC
+        AND rsc.teacher_id = $1
+      ORDER BY p.created_at DESC, rsg.sort_order ASC, rs.sort_order ASC, c.name ASC
     `, [user.id]);
 
     // Bangun nested per periode
@@ -4682,17 +4692,20 @@ router.get('/raport', async (req, res) => {
     for (const row of rows) {
       if (!periodMap.has(row.period_id)) {
         periodMap.set(row.period_id, {
-          id: row.period_id,
-          name: row.period_name,
-          semester: row.semester,
-          school_year: row.school_year,
-          subjects: []
+          id:           row.period_id,
+          name:         row.period_name,
+          semester:     row.semester,
+          school_year:  row.school_year,
+          subjects:     []
         });
       }
+      // Setiap kombinasi subject + class menjadi 1 entry
       periodMap.get(row.period_id).subjects.push({
-        subject_id: row.subject_id,
+        subject_id:   row.subject_id,
         subject_name: row.subject_name,
-        group_name: row.group_name
+        group_name:   row.group_name,
+        class_id:     row.class_id,
+        class_name:   row.class_name
       });
     }
     const periods = [...periodMap.values()];
@@ -4705,62 +4718,56 @@ router.get('/raport', async (req, res) => {
   }
 });
 
-// GET /teacher/raport/:period_id/:subject_id - form input nilai
-router.get('/raport/:period_id/:subject_id', async (req, res) => {
+// GET /teacher/raport/:period_id/:subject_id/:class_id - form input nilai
+router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
   const user = req.session.user;
-  const { period_id, subject_id } = req.params;
+  const { period_id, subject_id, class_id } = req.params;
   try {
-    const [[subject]] = await pool.query(`
-      SELECT rs.*, rsg.name AS group_name, p.name AS period_name, p.semester, p.school_year,
-             rs.class_id, c.name AS class_name
-      FROM raport_subjects rs
+    // Validasi: guru harus terdaftar di raport_subject_classes untuk subject + class ini
+    const [[scRow]] = await pool.query(`
+      SELECT rsc.id, rs.subject_name, rsg.name AS group_name,
+             p.name AS period_name, p.semester, p.school_year,
+             c.name AS class_name
+      FROM raport_subject_classes rsc
+      JOIN raport_subjects rs  ON rs.id  = rsc.raport_subject_id
       JOIN raport_subject_groups rsg ON rsg.id = rs.group_id
-      JOIN raport_periods p ON p.id = rs.period_id
-      LEFT JOIN classes c ON c.id = rs.class_id
-      WHERE rs.id = $1 AND rs.period_id = $2 AND rs.teacher_id = $3
-    `, [subject_id, period_id, user.id]);
+      JOIN raport_periods p    ON p.id   = rsg.period_id
+      JOIN classes c           ON c.id   = rsc.class_id
+      WHERE rsc.raport_subject_id = $1
+        AND rsc.class_id          = $2
+        AND rsc.teacher_id        = $3
+        AND p.id                  = $4
+    `, [subject_id, class_id, user.id, period_id]);
 
-    if (!subject) {
-      req.flash('error', 'Mata pelajaran tidak ditemukan atau Anda tidak berwenang.');
+    if (!scRow) {
+      req.flash('error', 'Mata pelajaran tidak ditemukan atau Anda tidak berwenang untuk kelas ini.');
       return res.redirect('/teacher/raport');
     }
 
-    // Filter siswa: jika mapel punya class_id → hanya siswa kelas itu
-    // Jika tidak punya class_id → tampilkan semua siswa (fallback)
-    const studentQuery = subject.class_id
-      ? `SELECT u.id, u.full_name, u.username, c.name AS class_name,
-                sc.score, sc.notes
-         FROM users u
-         LEFT JOIN classes c ON c.id = u.class_id
-         LEFT JOIN raport_scores sc
-           ON sc.student_id = u.id
-           AND sc.period_id = $1
-           AND sc.raport_subject_id = $2
-         WHERE u.role = 'STUDENT' AND u.is_active = true AND u.class_id = $3
-         ORDER BY u.full_name ASC`
-      : `SELECT u.id, u.full_name, u.username, c.name AS class_name,
-                sc.score, sc.notes
-         FROM users u
-         LEFT JOIN classes c ON c.id = u.class_id
-         LEFT JOIN raport_scores sc
-           ON sc.student_id = u.id
-           AND sc.period_id = $1
-           AND sc.raport_subject_id = $2
-         WHERE u.role = 'STUDENT' AND u.is_active = true
-         ORDER BY c.name ASC, u.full_name ASC`;
-
-    const studentParams = subject.class_id
-      ? [period_id, subject_id, subject.class_id]
-      : [period_id, subject_id];
-
-    const [students] = await pool.query(studentQuery, studentParams);
+    // Ambil siswa kelas ini beserta nilai yang sudah ada
+    const [students] = await pool.query(`
+      SELECT u.id, u.full_name, u.username,
+             c.name AS class_name,
+             sc.score, sc.notes
+      FROM users u
+      LEFT JOIN classes c ON c.id = u.class_id
+      LEFT JOIN raport_scores sc
+        ON sc.student_id        = u.id
+        AND sc.period_id         = $1
+        AND sc.raport_subject_id = $2
+      WHERE u.role      = 'STUDENT'
+        AND u.is_active = true
+        AND u.class_id  = $3
+      ORDER BY u.full_name ASC
+    `, [period_id, subject_id, class_id]);
 
     res.render('teacher/raport_scores', {
-      title: 'Input Nilai Raport',
+      title:      'Input Nilai Raport',
       user,
-      subject,
+      subject:    scRow,
       period_id,
       subject_id,
+      class_id,
       students
     });
   } catch (e) {
@@ -4770,23 +4777,32 @@ router.get('/raport/:period_id/:subject_id', async (req, res) => {
   }
 });
 
-// POST /teacher/raport/:period_id/:subject_id - simpan nilai (bulk upsert)
-router.post('/raport/:period_id/:subject_id', async (req, res) => {
+// POST /teacher/raport/:period_id/:subject_id/:class_id - simpan nilai (bulk upsert)
+router.post('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
   const user = req.session.user;
-  const { period_id, subject_id } = req.params;
+  const { period_id, subject_id, class_id } = req.params;
   try {
-    // Validasi kepemilikan mapel
-    const [[subject]] = await pool.query(
-      `SELECT id FROM raport_subjects WHERE id = $1 AND period_id = $2 AND teacher_id = $3`,
-      [subject_id, period_id, user.id]
+    // Validasi kepemilikan mapel+kelas
+    const [[scRow]] = await pool.query(
+      `SELECT rsc.id FROM raport_subject_classes rsc
+       WHERE rsc.raport_subject_id = $1 AND rsc.class_id = $2 AND rsc.teacher_id = $3`,
+      [subject_id, class_id, user.id]
     );
-    if (!subject) {
+    if (!scRow) {
       req.flash('error', 'Akses ditolak.');
       return res.redirect('/teacher/raport');
     }
 
+    // Ambil daftar student_id yang valid di kelas ini
+    const [validStudents] = await pool.query(
+      `SELECT id FROM users WHERE role = 'STUDENT' AND is_active = true AND class_id = $1`,
+      [class_id]
+    );
+    const validStudentIds = new Set(validStudents.map(s => String(s.id)));
+
     const scores = req.body.scores || {};
     for (const [studentId, data] of Object.entries(scores)) {
+      if (!validStudentIds.has(studentId)) continue; // keamanan: hanya simpan untuk siswa kelas ini
       const score = data.score !== '' && data.score !== undefined ? parseFloat(data.score) : null;
       const notes = data.notes || null;
       await pool.query(`
@@ -4799,11 +4815,11 @@ router.post('/raport/:period_id/:subject_id', async (req, res) => {
     }
 
     req.flash('success', 'Nilai berhasil disimpan.');
-    res.redirect(`/teacher/raport/${period_id}/${subject_id}`);
+    res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal menyimpan nilai: ' + e.message);
-    res.redirect(`/teacher/raport/${period_id}/${subject_id}`);
+    res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
   }
 });
 
