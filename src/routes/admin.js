@@ -689,17 +689,23 @@ router.post('/classes/:id/ajax-update', async (req, res) => {
 
 // POST /admin/classes/:id/homeroom - update wali kelas
 router.post('/classes/:id/homeroom', async (req, res) => {
-  const { id } = req.params;
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    req.flash('error', 'ID kelas tidak valid.');
+    return res.redirect('/admin/classes');
+  }
   const { homeroom_teacher_name, homeroom_teacher_nip } = req.body;
+  const name = homeroom_teacher_name ? homeroom_teacher_name.trim() : null;
+  const nip  = homeroom_teacher_nip  ? homeroom_teacher_nip.trim()  : null;
   try {
     await pq(
       `UPDATE classes SET homeroom_teacher_name = $1, homeroom_teacher_nip = $2 WHERE id = $3`,
-      [homeroom_teacher_name || null, homeroom_teacher_nip || null, id]
+      [name || null, nip || null, id]
     );
     req.flash('success', 'Wali kelas berhasil diperbarui.');
   } catch (e) {
     console.error(e);
-    req.flash('error', 'Gagal memperbarui wali kelas: ' + e.message);
+    req.flash('error', 'Gagal memperbarui wali kelas.');
   }
   res.redirect('/admin/classes');
 });
