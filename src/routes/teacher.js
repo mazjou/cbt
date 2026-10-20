@@ -1276,6 +1276,15 @@ router.post('/exams/:id/questions', upload.any(), async (req, res) => {
     );
     const questionId = qRes.insertId;
 
+    // Gambar per opsi dari upload
+    const optImgMap = {};
+    if (req.files) {
+      for (const f of req.files) {
+        const m = f.fieldname.match(/^option_image_([a-e])$/i);
+        if (m) optImgMap[m[1].toUpperCase()] = `/public/uploads/questions/${path.basename(f.filename)}`;
+      }
+    }
+
     // Opsi yang akan dimasukkan berdasarkan tipe
     let optsToInsert;
     if (qtype === 'TRUE_FALSE') {
@@ -1286,10 +1295,11 @@ router.post('/exams/:id/questions', upload.any(), async (req, res) => {
     }
 
     for (const [lbl, txt] of optsToInsert) {
-      if (!txt) continue;
+      if (!txt && !optImgMap[lbl]) continue;
       await conn.query(
-        `INSERT INTO options (question_id, option_label, option_text, is_correct) VALUES (:qid,:lbl,:txt,:isc);`,
-        { qid: questionId, lbl, txt, isc: correctLabels.includes(lbl) ? 1 : 0 }
+        `INSERT INTO options (question_id, option_label, option_text, option_image, is_correct)
+         VALUES (:qid,:lbl,:txt,:img,:isc);`,
+        { qid: questionId, lbl, txt: txt || '', img: optImgMap[lbl] || null, isc: correctLabels.includes(lbl) ? 1 : 0 }
       );
     }
 

@@ -449,12 +449,25 @@
 
       <!-- Opsi jawaban -->
       <div class="space-y-3" id="options_wrap">
-        <% ['A','B','C','D','E'].forEach((opt, idx) => { %>
-        <div id="opt_row_<%= opt %>" class="<%= idx >= 2 ? 'opt-cde' : '' %>">
-          <label class="text-sm text-indigo-700 font-medium">
-            Opsi <%= opt %> <span id="opt_req_<%= opt %>" class="<%= idx < 4 ? '' : 'hidden' %>">*</span>
+        <% [
+          {lbl:'A', color:'text-rose-700', dot:'bg-rose-500', border:'border-rose-200'},
+          {lbl:'B', color:'text-orange-700', dot:'bg-orange-500', border:'border-orange-200'},
+          {lbl:'C', color:'text-lime-700', dot:'bg-lime-500', border:'border-lime-200'},
+          {lbl:'D', color:'text-sky-700', dot:'bg-sky-500', border:'border-sky-200'},
+          {lbl:'E', color:'text-violet-700', dot:'bg-violet-500', border:'border-violet-200'},
+        ].forEach((opt, idx) => { %>
+        <div id="opt_row_<%= opt.lbl %>" class="rounded-xl border <%= opt.border %> bg-white p-3 <%= idx >= 2 ? 'opt-cde' : '' %>">
+          <label class="flex items-center gap-2 text-sm font-medium <%= opt.color %> mb-1">
+            <span class="w-5 h-5 rounded-full <%= opt.dot %> text-white text-xs flex items-center justify-center font-bold"><%= opt.lbl %></span>
+            Opsi <%= opt.lbl %> <span id="opt_req_<%= opt.lbl %>" class="<%= idx < 4 ? '' : 'hidden' %>">*</span>
           </label>
-          <textarea id="sn_option_<%= opt.toLowerCase() %>" name="<%= opt.toLowerCase() %>" class="mt-1 sn-option"></textarea>
+          <textarea id="sn_option_<%= opt.lbl.toLowerCase() %>" name="<%= opt.lbl.toLowerCase() %>" class="mt-1 sn-option"></textarea>
+          <!-- Upload gambar opsi -->
+          <div class="mt-2">
+            <input type="file" name="option_image_<%= opt.lbl.toLowerCase() %>" accept="image/*"
+              class="w-full rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200 transition-all" />
+            <div class="text-xs text-slate-400 mt-0.5">Gambar opsi (opsional) · Max 5MB</div>
+          </div>
         </div>
         <% }) %>
       </div>
