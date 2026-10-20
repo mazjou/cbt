@@ -148,45 +148,38 @@
   <div class="space-y-3">
     <div class="text-sm font-semibold text-slate-600 flex items-center gap-2">Opsi Jawaban</div>
 
-    <!-- Opsi A -->
-    <div class="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 to-pink-50 p-4 shadow-sm">
-      <label class="flex items-center gap-2 text-sm font-semibold text-rose-700 mb-2">
-        <span class="w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center font-bold">A</span> Opsi A
+    <% [
+      {lbl:'A', id:'editor_option_a', name:'a', border:'border-rose-200', bg:'from-rose-50 to-pink-50', color:'text-rose-700', dot:'bg-rose-500', imgField:'option_image_a'},
+      {lbl:'B', id:'editor_option_b', name:'b', border:'border-orange-200', bg:'from-orange-50 to-amber-50', color:'text-orange-700', dot:'bg-orange-500', imgField:'option_image_b'},
+      {lbl:'C', id:'editor_option_c', name:'c', border:'border-lime-200', bg:'from-lime-50 to-green-50', color:'text-lime-700', dot:'bg-lime-500', imgField:'option_image_c'},
+      {lbl:'D', id:'editor_option_d', name:'d', border:'border-sky-200', bg:'from-sky-50 to-cyan-50', color:'text-sky-700', dot:'bg-sky-500', imgField:'option_image_d'},
+      {lbl:'E', id:'editor_option_e', name:'e', border:'border-violet-200', bg:'from-violet-50 to-purple-50', color:'text-violet-700', dot:'bg-violet-500', imgField:'option_image_e'},
+    ].forEach(opt => { %>
+    <div id="opt_wrap_<%= opt.lbl.toLowerCase() %>" class="rounded-2xl border <%= opt.border %> bg-gradient-to-br <%= opt.bg %> p-4 shadow-sm">
+      <label class="flex items-center gap-2 text-sm font-semibold <%= opt.color %> mb-2">
+        <span class="w-6 h-6 rounded-full <%= opt.dot %> text-white text-xs flex items-center justify-center font-bold"><%= opt.lbl %></span>
+        Opsi <%= opt.lbl %>
       </label>
-      <textarea id="editor_option_a" name="a" class="summernote-option"><%- options.A || '' %></textarea>
-    </div>
+      <textarea id="<%= opt.id %>" name="<%= opt.name %>" class="summernote-option"><%- options[opt.lbl] || '' %></textarea>
 
-    <!-- Opsi B -->
-    <div class="rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-50 to-amber-50 p-4 shadow-sm">
-      <label class="flex items-center gap-2 text-sm font-semibold text-orange-700 mb-2">
-        <span class="w-6 h-6 rounded-full bg-orange-500 text-white text-xs flex items-center justify-center font-bold">B</span> Opsi B
-      </label>
-      <textarea id="editor_option_b" name="b" class="summernote-option"><%- options.B || '' %></textarea>
+      <!-- Upload gambar opsi -->
+      <div class="mt-2">
+        <% if (option_images && option_images[opt.lbl]) { %>
+          <div class="mb-2 flex items-center gap-3 p-2 bg-white rounded-xl border border-slate-200">
+            <img src="<%= option_images[opt.lbl] %>" alt="Gambar opsi <%= opt.lbl %>" class="h-12 rounded-lg object-contain border border-slate-200">
+            <div class="flex-1 text-xs text-slate-500">Gambar saat ini</div>
+            <label class="flex items-center gap-1.5 text-xs text-rose-600 cursor-pointer">
+              <input type="checkbox" name="remove_option_image[<%= opt.lbl %>]" value="1" class="accent-rose-500">
+              Hapus
+            </label>
+          </div>
+        <% } %>
+        <input type="file" name="<%= opt.imgField %>" accept="image/*"
+          class="w-full rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-600 hover:file:bg-slate-200 transition-all" />
+        <div class="text-xs text-slate-400 mt-1">Gambar opsi (opsional) · Max 5MB · JPG/PNG/GIF/WebP</div>
+      </div>
     </div>
-
-    <!-- Opsi C -->
-    <div id="opt_wrap_c" class="rounded-2xl border border-lime-200 bg-gradient-to-br from-lime-50 to-green-50 p-4 shadow-sm">
-      <label class="flex items-center gap-2 text-sm font-semibold text-lime-700 mb-2">
-        <span class="w-6 h-6 rounded-full bg-lime-500 text-white text-xs flex items-center justify-center font-bold">C</span> Opsi C
-      </label>
-      <textarea id="editor_option_c" name="c" class="summernote-option"><%- options.C || '' %></textarea>
-    </div>
-
-    <!-- Opsi D -->
-    <div id="opt_wrap_d" class="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 to-cyan-50 p-4 shadow-sm">
-      <label class="flex items-center gap-2 text-sm font-semibold text-sky-700 mb-2">
-        <span class="w-6 h-6 rounded-full bg-sky-500 text-white text-xs flex items-center justify-center font-bold">D</span> Opsi D
-      </label>
-      <textarea id="editor_option_d" name="d" class="summernote-option"><%- options.D || '' %></textarea>
-    </div>
-
-    <!-- Opsi E -->
-    <div id="opt_wrap_e" class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-purple-50 p-4 shadow-sm">
-      <label class="flex items-center gap-2 text-sm font-semibold text-violet-700 mb-2">
-        <span class="w-6 h-6 rounded-full bg-violet-500 text-white text-xs flex items-center justify-center font-bold">E</span> Opsi E
-      </label>
-      <textarea id="editor_option_e" name="e" class="summernote-option"><%- options.E || '' %></textarea>
-    </div>
+    <% }) %>
   </div>
 
   <!-- Tombol Aksi -->

@@ -2186,7 +2186,7 @@ router.get('/questions/:id/edit', async (req, res) => {
   }
 
   const [opts] = await pool.query(
-    `SELECT option_label, option_text, is_correct
+    `SELECT option_label, option_text, option_image, is_correct
      FROM options
      WHERE question_id=:qid
      ORDER BY option_label ASC;`,
@@ -2194,10 +2194,12 @@ router.get('/questions/:id/edit', async (req, res) => {
   );
 
   const byLabel = {};
+  const byLabelImage = {};
   let correct = 'A';
   let correctLabels = []; // untuk COMPLEX
   for (const o of opts) {
     byLabel[o.option_label] = o.option_text;
+    byLabelImage[o.option_label] = o.option_image || null;
     if (o.is_correct) {
       correct = o.option_label; // last correct (MCQ/TRUE_FALSE)
       correctLabels.push(o.option_label);
@@ -2217,12 +2219,18 @@ router.get('/questions/:id/edit', async (req, res) => {
       question_type: q.question_type || 'MCQ'
     },
     options: byLabel,
+    option_images: byLabelImage,
     correct_label: correct,
     correct_labels: correctLabels
   });
 });
 
-router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }, { name: 'file', maxCount: 1 }]), async (req, res) => {
+router.put('/questions/:id', upload.fields([
+  { name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }, { name: 'file', maxCount: 1 },
+  { name: 'option_image_a', maxCount: 1 }, { name: 'option_image_b', maxCount: 1 },
+  { name: 'option_image_c', maxCount: 1 }, { name: 'option_image_d', maxCount: 1 },
+  { name: 'option_image_e', maxCount: 1 }
+]), async (req, res) => {
   const user = req.session.user;
   const qId = req.params.id;
   let { question_text, points, a, b, c, d, e, correct, remove_image, remove_pdf, question_type } = req.body;
@@ -2303,6 +2311,15 @@ router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { na
   if (remove_pdf) pdfToSave = null;
   if (newPdf) pdfToSave = newPdf;
 
+  // Handle gambar per opsi jawaban (A-E)
+  const optImageFiles = {};
+  const removeOptImages = req.body.remove_option_image || {};
+  for (const lbl of ['a','b','c','d','e']) {
+    const fieldName = `option_image_${lbl}`;
+    const f = req.files && req.files[fieldName] ? req.files[fieldName][0] : null;
+    optImageFiles[lbl.toUpperCase()] = f ? `/public/uploads/questions/${path.basename(f.filename)}` : null;
+  }
+
   const corr = String(correct || '').toUpperCase();
   const conn = await pool.getConnection();
   try {
@@ -2321,11 +2338,28 @@ router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { na
 
     for (const [lbl, txt] of optsToUpsert) {
       if (!txt) continue;
+      // Dapatkan gambar opsi yang sudah ada di DB
+      const [existingOpts] = await conn.query(
+        `SELECT option_label, option_image FROM options WHERE question_id=:qid`,
+        { qid: qId }
+      );
+      const existingOptImages = {};
+      for (const o of existingOpts) existingOptImages[o.option_label] = o.option_image;
+
       await conn.query(
-        `INSERT INTO options (question_id, option_label, option_text, is_correct)
-         VALUES (:qid,:lbl,:txt,:isc)
-         ON CONFLICT (question_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, is_correct=EXCLUDED.is_correct;`,
-        { qid: qId, lbl, txt, isc: correctLabels.includes(lbl) ? 1 : 0 }
+        `INSERT INTO options (question_id, option_label, option_text, option_image, is_correct)
+         VALUES (:qid,:lbl,:txt,:img,:isc)
+         ON CONFLICT (question_id, option_label) DO UPDATE SET
+           option_text=EXCLUDED.option_text,
+           option_image=EXCLUDED.option_image,
+           is_correct=EXCLUDED.is_correct;`,
+        {
+          qid: qId, lbl, txt,
+          img: optImageFiles[lbl]
+            ? optImageFiles[lbl]
+            : (removeOptImages[lbl] ? null : (existingOptImages[lbl] || null)),
+          isc: correctLabels.includes(lbl) ? 1 : 0
+        }
       );
     }
 
