@@ -140,8 +140,7 @@ function jumpAndClose(no) {
     <!-- Tombol kumpulkan — selalu terlihat di bawah -->
     <div class="px-4 py-3 border-t border-slate-100 bg-white flex-shrink-0">
       <form id="submitForm" action="/student/attempts/<%= attempt.id %>/submit" method="POST">
-        <button type="submit"
-          onclick="return confirm('Yakin ingin mengumpulkan jawaban? Pastikan semua soal sudah dijawab.')"
+        <button type="submit" id="submitBtn"
           class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-bold py-3 shadow-lg transition-all text-base">
           ✅ Kumpulkan Jawaban
         </button>
@@ -894,13 +893,36 @@ function jumpAndClose(no) {
   
   // Override form submission to use retry mechanism
   const submitForm = document.getElementById('submitForm');
+  const submitBtn  = document.getElementById('submitBtn');
+
   if (submitForm) {
     submitForm.addEventListener('submit', (e) => {
       e.preventDefault();
-      const confirmed = confirm('Yakin ingin mengumpulkan jawaban? Pastikan semua soal sudah dijawab.');
-      if (confirmed) {
-        submitWithRetry();
+
+      // Jika sudah dalam proses submit, tampilkan info bukan diam
+      if (isSubmitting) {
+        toast('⏳ Sedang mengirim jawaban, harap tunggu...');
+        return;
       }
+
+      const confirmed = confirm('Yakin ingin mengumpulkan jawaban? Pastikan semua soal sudah dijawab.');
+      if (!confirmed) return;
+
+      // Feedback visual: tombol loading
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⏳ Mengirim jawaban...';
+        submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
+      }
+
+      submitWithRetry().finally(() => {
+        // Reset tombol jika gagal (sukses → redirect, tidak sampai sini)
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '✅ Kumpulkan Jawaban';
+          submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+        }
+      });
     });
   }
 
