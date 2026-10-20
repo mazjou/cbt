@@ -257,6 +257,21 @@ $sn(document).ready(function () {
           reader.readAsDataURL(file);
         });
       },
+      onPaste: function (e) {
+        // Blokir paste gambar dari clipboard (screenshot, copy-paste gambar)
+        // agar tidak jadi base64 besar yang memberatkan server
+        var bufferText = ((e.originalEvent || e).clipboardData || window.clipboardData);
+        if (bufferText && bufferText.items) {
+          var items = bufferText.items;
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+              e.preventDefault();
+              alert('⚠️ Paste gambar langsung tidak didukung.\n\nGunakan tombol 🖼 "Gambar Soal" di bawah form untuk upload gambar.');
+              return false;
+            }
+          }
+        }
+      },
       onChange: function(contents, $editable) {
         // Sync ke textarea asli agar value terkirim saat submit native
         var $textarea = $(this).closest('.note-editor').prev('textarea');

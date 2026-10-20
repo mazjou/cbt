@@ -2220,6 +2220,12 @@ router.put('/questions/:id', upload.fields([{ name: 'image', maxCount: 1 }, { na
     return res.redirect(`/teacher/questions/${qId}/edit`);
   }
 
+  // Blokir base64 gambar inline — mencegah payload raksasa yang memberatkan server
+  if (question_text.includes('data:image/') && question_text.length > 50000) {
+    req.flash('error', 'Soal mengandung gambar yang di-paste langsung (base64). Gunakan tombol Upload Gambar di bawah form, bukan paste gambar ke editor teks.');
+    return res.redirect(`/teacher/questions/${qId}/edit`);
+  }
+
   // Kunci jawaban parsing
   let correctLabels = [];
   if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
