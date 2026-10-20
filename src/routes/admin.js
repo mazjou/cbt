@@ -6120,6 +6120,29 @@ router.post('/raport/groups/:gid/delete', async (req, res) => {
   }
 });
 
+// GET /admin/raport/:period_id/students - JSON list siswa untuk autocomplete
+router.get('/raport/:period_id/students', async (req, res) => {
+  const { period_id } = req.params;
+  const q = req.query.q || '';
+  try {
+    const [rows] = await pq(`
+      SELECT DISTINCT u.id, u.full_name, u.username, c.name AS class_name
+      FROM users u
+      JOIN classes c ON c.id = u.class_id
+      JOIN raport_subject_classes rsc ON rsc.class_id = u.class_id
+      JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id AND rs.period_id = $1
+      WHERE u.role = 'STUDENT' AND u.is_active = true
+        AND (LOWER(u.full_name) LIKE LOWER($2) OR LOWER(u.username) LIKE LOWER($2))
+      ORDER BY c.name ASC, u.full_name ASC
+      LIMIT 30
+    `, [period_id, `%${q}%`]);
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Gagal mengambil data siswa.' });
+  }
+});
+
 // GET /admin/raport/:id - detail periode
 router.get('/raport/:id', async (req, res) => {
   const { id } = req.params;
@@ -6322,22 +6345,24 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
 
     let studentQuery = `
       SELECT DISTINCT u.id, u.full_name, u.username, u.tanggal_lahir,
-             c.name AS class_name
+             c.name AS class_name, u.class_id
       FROM users u
-      JOIN raport_scores sc ON sc.student_id = u.id AND sc.period_id = $1
-      LEFT JOIN classes c ON c.id = u.class_id
+      JOIN classes c ON c.id = u.class_id
+      JOIN raport_subject_classes rsc ON rsc.class_id = u.class_id
+      JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id AND rs.period_id = $1
+      WHERE u.role = 'STUDENT' AND u.is_active = true
     `;
     const params = [period_id];
     if (class_id) {
       params.push(class_id);
-      studentQuery += ` WHERE u.class_id = $2`;
+      studentQuery += ` AND u.class_id = $2`;
     }
     studentQuery += ` ORDER BY c.name ASC, u.full_name ASC`;
 
     const [students] = await pq(studentQuery, params);
 
     if (!students.length) {
-      req.flash('error', 'Belum ada siswa dengan nilai di periode ini.');
+      req.flash('error', 'Belum ada siswa aktif di kelas yang terdaftar pada periode ini.');
       return res.redirect('/admin/raport/' + period_id);
     }
 

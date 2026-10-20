@@ -180,6 +180,11 @@
         </tr>
       </thead>
       <tbody>
+        <% if (!stuGroups || stuGroups.length === 0) { %>
+          <tr>
+            <td colspan="4" style="text-align:center; padding: 12px; color: #888; font-style: italic;">Belum ada nilai yang diisi untuk siswa ini.</td>
+          </tr>
+        <% } %>
         <% stuGroups.forEach(function(g) { noUrut = 0; %>
           <tr class="group-header">
             <td colspan="4"><%= g.name %></td>
