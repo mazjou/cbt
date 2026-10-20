@@ -4711,10 +4711,12 @@ router.get('/raport/:period_id/:subject_id', async (req, res) => {
   const { period_id, subject_id } = req.params;
   try {
     const [[subject]] = await pool.query(`
-      SELECT rs.*, rsg.name AS group_name, p.name AS period_name, p.semester, p.school_year
+      SELECT rs.*, rsg.name AS group_name, p.name AS period_name, p.semester, p.school_year,
+             rs.class_id, c.name AS class_name
       FROM raport_subjects rs
       JOIN raport_subject_groups rsg ON rsg.id = rs.group_id
       JOIN raport_periods p ON p.id = rs.period_id
+      LEFT JOIN classes c ON c.id = rs.class_id
       WHERE rs.id = $1 AND rs.period_id = $2 AND rs.teacher_id = $3
     `, [subject_id, period_id, user.id]);
 
@@ -4723,20 +4725,35 @@ router.get('/raport/:period_id/:subject_id', async (req, res) => {
       return res.redirect('/teacher/raport');
     }
 
-    const [students] = await pool.query(`
-      SELECT
-        u.id, u.full_name, u.username,
-        c.name AS class_name,
-        sc.score, sc.notes
-      FROM users u
-      LEFT JOIN classes c ON c.id = u.class_id
-      LEFT JOIN raport_scores sc
-        ON sc.student_id = u.id
-        AND sc.period_id = $1
-        AND sc.raport_subject_id = $2
-      WHERE u.role = 'STUDENT' AND u.is_active = true
-      ORDER BY c.name ASC, u.full_name ASC
-    `, [period_id, subject_id]);
+    // Filter siswa: jika mapel punya class_id → hanya siswa kelas itu
+    // Jika tidak punya class_id → tampilkan semua siswa (fallback)
+    const studentQuery = subject.class_id
+      ? `SELECT u.id, u.full_name, u.username, c.name AS class_name,
+                sc.score, sc.notes
+         FROM users u
+         LEFT JOIN classes c ON c.id = u.class_id
+         LEFT JOIN raport_scores sc
+           ON sc.student_id = u.id
+           AND sc.period_id = $1
+           AND sc.raport_subject_id = $2
+         WHERE u.role = 'STUDENT' AND u.is_active = true AND u.class_id = $3
+         ORDER BY u.full_name ASC`
+      : `SELECT u.id, u.full_name, u.username, c.name AS class_name,
+                sc.score, sc.notes
+         FROM users u
+         LEFT JOIN classes c ON c.id = u.class_id
+         LEFT JOIN raport_scores sc
+           ON sc.student_id = u.id
+           AND sc.period_id = $1
+           AND sc.raport_subject_id = $2
+         WHERE u.role = 'STUDENT' AND u.is_active = true
+         ORDER BY c.name ASC, u.full_name ASC`;
+
+    const studentParams = subject.class_id
+      ? [period_id, subject_id, subject.class_id]
+      : [period_id, subject_id];
+
+    const [students] = await pool.query(studentQuery, studentParams);
 
     res.render('teacher/raport_scores', {
       title: 'Input Nilai Raport',

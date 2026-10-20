@@ -5969,7 +5969,7 @@ router.post('/raport/:id/groups', async (req, res) => {
 // POST /admin/raport/groups/:gid/subjects - tambah mapel
 router.post('/raport/groups/:gid/subjects', async (req, res) => {
   const { gid } = req.params;
-  const { subject_name, sort_order, teacher_id } = req.body;
+  const { subject_name, sort_order, teacher_id, class_id } = req.body;
   try {
     const [[grp]] = await pq(`SELECT period_id FROM raport_subject_groups WHERE id = $1`, [gid]);
     if (!grp) {
@@ -5978,9 +5978,9 @@ router.post('/raport/groups/:gid/subjects', async (req, res) => {
     }
     const periodId = grp.period_id;
     await pq(
-      `INSERT INTO raport_subjects (group_id, period_id, subject_name, sort_order, teacher_id)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [gid, periodId, subject_name, sort_order || 0, teacher_id || null]
+      `INSERT INTO raport_subjects (group_id, period_id, subject_name, sort_order, teacher_id, class_id)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [gid, periodId, subject_name, sort_order || 0, teacher_id || null, class_id || null]
     );
     req.flash('success', 'Mata pelajaran ditambahkan.');
     res.redirect('/admin/raport/' + periodId);
@@ -6033,12 +6033,12 @@ router.post('/raport/:id/delete', async (req, res) => {
 // POST /admin/raport/subjects/:sid/edit - edit mapel
 router.post('/raport/subjects/:sid/edit', async (req, res) => {
   const { sid } = req.params;
-  const { subject_name, sort_order, teacher_id } = req.body;
+  const { subject_name, sort_order, teacher_id, class_id } = req.body;
   try {
     // Ambil period_id dulu untuk redirect
     const [[subj]] = await pq(`SELECT rs.id, rsg.period_id FROM raport_subjects rs JOIN raport_subject_groups rsg ON rsg.id=rs.group_id WHERE rs.id=$1`, [sid]);
-    await pq(`UPDATE raport_subjects SET subject_name=$1, sort_order=$2, teacher_id=$3 WHERE id=$4`,
-      [subject_name, Number(sort_order || 0), teacher_id || null, sid]);
+    await pq(`UPDATE raport_subjects SET subject_name=$1, sort_order=$2, teacher_id=$3, class_id=$4 WHERE id=$5`,
+      [subject_name, Number(sort_order || 0), teacher_id || null, class_id || null, sid]);
     req.flash('success', 'Mata pelajaran berhasil diperbarui.');
     res.redirect('/admin/raport/' + subj.period_id);
   } catch (e) {
@@ -6094,16 +6094,23 @@ router.get('/raport/:id', async (req, res) => {
       SELECT
         rsg.id AS group_id, rsg.name AS group_name, rsg.sort_order AS group_sort,
         rs.id AS subject_id, rs.subject_name, rs.sort_order AS subject_sort,
-        u.full_name AS teacher_name
+        rs.teacher_id, rs.class_id,
+        u.full_name AS teacher_name,
+        c.name AS class_name
       FROM raport_subject_groups rsg
       LEFT JOIN raport_subjects rs ON rs.group_id = rsg.id
       LEFT JOIN users u ON u.id = rs.teacher_id
+      LEFT JOIN classes c ON c.id = rs.class_id
       WHERE rsg.period_id = $1
       ORDER BY rsg.sort_order ASC, rsg.id ASC, rs.sort_order ASC, rs.id ASC
     `, [id]);
 
     const [teachers] = await pq(
       `SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC`
+    );
+
+    const [classes] = await pq(
+      `SELECT id, name FROM classes ORDER BY name ASC`
     );
 
     // Bangun nested groups
@@ -6122,7 +6129,10 @@ router.get('/raport/:id', async (req, res) => {
           id: row.subject_id,
           name: row.subject_name,
           sort_order: row.subject_sort,
-          teacher_name: row.teacher_name
+          teacher_id: row.teacher_id,
+          teacher_name: row.teacher_name,
+          class_id: row.class_id,
+          class_name: row.class_name
         });
       }
     }
@@ -6133,7 +6143,8 @@ router.get('/raport/:id', async (req, res) => {
       user: req.session.user,
       period,
       groups,
-      teachers
+      teachers,
+      classes
     });
   } catch (e) {
     console.error(e);

@@ -44,3 +44,6 @@ CREATE TABLE IF NOT EXISTS raport_scores (
   updated_by INT REFERENCES users(id) ON DELETE SET NULL,
   UNIQUE(period_id, student_id, raport_subject_id)
 );
+
+-- Tambah class_id ke raport_subjects agar satu mapel bisa punya guru berbeda per kelas
+ALTER TABLE raport_subjects ADD COLUMN IF NOT EXISTS class_id INT REFERENCES classes(id) ON DELETE SET NULL;
