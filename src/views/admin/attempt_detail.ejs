@@ -130,6 +130,10 @@
                 <div class="flex items-start gap-2">
                   <span class="font-mono text-xs text-slate-500 shrink-0"><%= opt.option_label %>.</span>
                   <span class="text-slate-900"><%= opt.option_text %></span>
+                  <% if (opt.option_image) { %>
+                    <img src="<%= opt.option_image %>" alt="opsi <%= opt.option_label %>"
+                      class="mt-1 max-h-32 rounded-lg border border-slate-200" loading="lazy" />
+                  <% } %>
                 </div>
                 <div class="mt-1 text-xs">
                   <% if(opt.id === a.correct_option_id) { %><span class="text-emerald-600 font-semibold">✓ Kunci</span><% } %>

@@ -339,6 +339,10 @@ function jumpAndClose(no) {
                       <%= o.option_label %>
                     </div>
                     <div class="text-slate-700 prose prose-sm max-w-none"><%- o.option_text %></div>
+                    <% if (o.option_image) { %>
+                      <img src="<%= o.option_image %>" alt="Opsi <%= o.option_label %>"
+                        class="mt-2 max-w-full max-h-48 rounded-xl border border-slate-200 shadow-sm" loading="lazy" />
+                    <% } %>
                   </div>
                 </div>
               </label>
