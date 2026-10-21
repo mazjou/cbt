@@ -4718,6 +4718,58 @@ router.get('/raport', async (req, res) => {
   }
 });
 
+// DELETE /teacher/raport/kd/:kd_id - hapus KD (AJAX JSON)
+router.delete('/raport/kd/:kd_id', async (req, res) => {
+  const user = req.session.user;
+  try {
+    // Validasi guru berhak atas KD ini
+    const [[kd]] = await pool.query(`
+      SELECT rsk.id FROM raport_subject_kd rsk
+      JOIN raport_subjects rs ON rs.id = rsk.raport_subject_id
+      JOIN raport_subject_classes rsc ON rsc.raport_subject_id = rs.id
+      WHERE rsk.id = $1 AND rsc.teacher_id = $2
+      LIMIT 1
+    `, [req.params.kd_id, user.id]);
+    if (!kd) return res.status(403).json({ ok: false, message: 'Akses ditolak.' });
+    await pool.query(`DELETE FROM raport_subject_kd WHERE id = $1`, [req.params.kd_id]);
+    res.json({ ok: true });
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+// POST /teacher/raport/:period_id/:subject_id/kd - tambah KD baru
+router.post('/raport/:period_id/:subject_id/kd', async (req, res) => {
+  const user = req.session.user;
+  const { period_id, subject_id } = req.params;
+  const { kd_name, sort_order, class_id } = req.body;
+  try {
+    const [[scRow]] = await pool.query(`
+      SELECT rsc.id FROM raport_subject_classes rsc
+      JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id
+      WHERE rs.id = $1 AND rsc.teacher_id = $2 AND rs.period_id = $3
+    `, [subject_id, user.id, period_id]);
+    if (!scRow) {
+      req.flash('error', 'Akses ditolak.');
+      return res.redirect('/teacher/raport');
+    }
+    if (!kd_name || !kd_name.trim()) {
+      req.flash('error', 'Nama KD tidak boleh kosong.');
+      return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
+    }
+    await pool.query(
+      `INSERT INTO raport_subject_kd (raport_subject_id, kd_name, sort_order) VALUES ($1, $2, $3)`,
+      [subject_id, kd_name.trim(), parseInt(sort_order) || 0]
+    );
+    req.flash('success', 'KD berhasil ditambahkan.');
+  } catch(e) {
+    console.error(e);
+    req.flash('error', 'Gagal menambah KD: ' + e.message);
+  }
+  res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
+});
+
 // GET /teacher/raport/:period_id/:subject_id/:class_id - form input nilai
 router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
   const user = req.session.user;
@@ -4744,11 +4796,18 @@ router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
       return res.redirect('/teacher/raport');
     }
 
-    // Ambil siswa kelas ini beserta nilai yang sudah ada
+    // Ambil KD untuk subject ini
+    const [kdList] = await pool.query(
+      `SELECT id, kd_name, sort_order FROM raport_subject_kd
+       WHERE raport_subject_id = $1 ORDER BY sort_order ASC, id ASC`,
+      [subject_id]
+    );
+
+    // Ambil siswa kelas ini beserta nilai akhir yang sudah ada
     const [students] = await pool.query(`
       SELECT u.id, u.full_name, u.username,
              c.name AS class_name,
-             sc.score, sc.notes
+             sc.score AS final_score, sc.notes
       FROM users u
       LEFT JOIN classes c ON c.id = u.class_id
       LEFT JOIN raport_scores sc
@@ -4761,6 +4820,23 @@ router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
       ORDER BY u.full_name ASC
     `, [period_id, subject_id, class_id]);
 
+    // Ambil semua nilai KD untuk siswa di kelas ini
+    const studentIds = students.map(s => s.id);
+    let kdScoreMap = {};
+    if (studentIds.length > 0 && kdList.length > 0) {
+      const placeholders = studentIds.map((_, i) => `$${i + 3}`).join(',');
+      const [kdScores] = await pool.query(`
+        SELECT student_id, kd_id, score
+        FROM raport_kd_scores
+        WHERE period_id = $1 AND raport_subject_id = $2
+          AND student_id IN (${placeholders})
+      `, [period_id, subject_id, ...studentIds]);
+      for (const ks of kdScores) {
+        if (!kdScoreMap[ks.student_id]) kdScoreMap[ks.student_id] = {};
+        kdScoreMap[ks.student_id][ks.kd_id] = ks.score;
+      }
+    }
+
     res.render('teacher/raport_scores', {
       title:      'Input Nilai Raport',
       user,
@@ -4768,7 +4844,9 @@ router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
       period_id,
       subject_id,
       class_id,
-      students
+      students,
+      kdList,
+      kdScoreMap
     });
   } catch (e) {
     console.error(e);
@@ -4777,10 +4855,11 @@ router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
   }
 });
 
-// POST /teacher/raport/:period_id/:subject_id/:class_id - simpan nilai (bulk upsert)
+// POST /teacher/raport/:period_id/:subject_id/:class_id - simpan nilai (bulk upsert, mendukung KD)
 router.post('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
   const user = req.session.user;
   const { period_id, subject_id, class_id } = req.params;
+  const conn = await pool.getConnection();
   try {
     // Validasi kepemilikan mapel+kelas
     const [[scRow]] = await pool.query(
@@ -4793,33 +4872,72 @@ router.post('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
       return res.redirect('/teacher/raport');
     }
 
-    // Ambil daftar student_id yang valid di kelas ini
+    // Ambil daftar KD aktif untuk mapel ini
+    const [kdList] = await pool.query(
+      `SELECT id FROM raport_subject_kd WHERE raport_subject_id = $1`,
+      [subject_id]
+    );
+    const kdIds = kdList.map(k => k.id);
+
+    // Ambil daftar student_id yang valid di kelas ini (keamanan)
     const [validStudents] = await pool.query(
       `SELECT id FROM users WHERE role = 'STUDENT' AND is_active = true AND class_id = $1`,
       [class_id]
     );
-    const validStudentIds = new Set(validStudents.map(s => String(s.id)));
+    const validIds = new Set(validStudents.map(s => String(s.id)));
 
-    const scores = req.body.scores || {};
-    for (const [studentId, data] of Object.entries(scores)) {
-      if (!validStudentIds.has(studentId)) continue; // keamanan: hanya simpan untuk siswa kelas ini
-      const score = data.score !== '' && data.score !== undefined ? parseFloat(data.score) : null;
-      const notes = data.notes || null;
-      await pool.query(`
+    const kdScoresBody = req.body.kd_scores || {};
+    const notesBody    = req.body.notes || {};
+
+    await conn.beginTransaction();
+
+    for (const [studentId, kdValues] of Object.entries(kdScoresBody)) {
+      if (!validIds.has(studentId)) continue;
+
+      let totalScore = 0, countScore = 0;
+
+      for (const kdId of kdIds) {
+        const raw = kdValues ? kdValues[String(kdId)] : undefined;
+        const score = (raw !== '' && raw !== undefined && raw !== null) ? parseFloat(raw) : null;
+        if (score !== null && !isNaN(score) && score >= 0 && score <= 100) {
+          await conn.query(`
+            INSERT INTO raport_kd_scores (period_id, student_id, raport_subject_id, kd_id, score, updated_by, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            ON CONFLICT (period_id, student_id, kd_id)
+            DO UPDATE SET score = EXCLUDED.score, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+          `, [period_id, studentId, subject_id, kdId, score, user.id]);
+          totalScore += score;
+          countScore++;
+        } else {
+          await conn.query(
+            `DELETE FROM raport_kd_scores WHERE period_id = $1 AND student_id = $2 AND kd_id = $3`,
+            [period_id, studentId, kdId]
+          );
+        }
+      }
+
+      const finalScore = countScore > 0 ? Math.round((totalScore / countScore) * 100) / 100 : null;
+      const notes = notesBody[studentId] || null;
+
+      await conn.query(`
         INSERT INTO raport_scores (period_id, student_id, raport_subject_id, score, notes, updated_by, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, NOW())
         ON CONFLICT (period_id, student_id, raport_subject_id)
         DO UPDATE SET score = EXCLUDED.score, notes = EXCLUDED.notes,
                       updated_by = EXCLUDED.updated_by, updated_at = NOW()
-      `, [period_id, studentId, subject_id, score, notes, user.id]);
+      `, [period_id, studentId, subject_id, finalScore, notes, user.id]);
     }
 
+    await conn.commit();
     req.flash('success', 'Nilai berhasil disimpan.');
     res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
   } catch (e) {
+    await conn.rollback();
     console.error(e);
-    req.flash('error', 'Gagal menyimpan nilai: ' + e.message);
+    req.flash('error', 'Gagal menyimpan: ' + e.message);
     res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
+  } finally {
+    conn.release();
   }
 });
 
@@ -4862,35 +4980,73 @@ router.get('/raport/:period_id/:subject_id/:class_id/export', async (req, res) =
       ORDER BY u.full_name ASC
     `, [period_id, subject_id, class_id]);
 
+    // Ambil KD untuk subject ini
+    const [kdList] = await pool.query(
+      `SELECT id, kd_name FROM raport_subject_kd WHERE raport_subject_id = $1 ORDER BY sort_order ASC, id ASC`,
+      [subject_id]
+    );
+
+    let kdScoreMap = {};
+    if (kdList.length > 0 && students.length > 0) {
+      const sIds = students.map(s => s.id);
+      const ph = sIds.map((_, i) => `$${i + 3}`).join(',');
+      const [kdScores] = await pool.query(`
+        SELECT student_id, kd_id, score FROM raport_kd_scores
+        WHERE period_id = $1 AND raport_subject_id = $2 AND student_id IN (${ph})
+      `, [period_id, subject_id, ...sIds]);
+      for (const ks of kdScores) {
+        if (!kdScoreMap[ks.student_id]) kdScoreMap[ks.student_id] = {};
+        kdScoreMap[ks.student_id][ks.kd_id] = ks.score;
+      }
+    }
+
     // Buat workbook Excel
     const wb = XLSX.utils.book_new();
 
     // Baris 1: info mapel
     const infoRow = [`Mata Pelajaran: ${scRow.subject_name} | Kelas: ${scRow.class_name} | Periode: ${scRow.period_name} ${scRow.semester === 1 ? 'Ganjil' : 'Genap'} ${scRow.school_year}`];
-    // Baris 2: header kolom
-    const headerRow = ['No', 'ID Siswa', 'Nama Siswa', 'NISN', 'Nilai (0-100)', 'Keterangan'];
-    // Baris data
-    const dataRows = students.map((s, idx) => [
-      idx + 1,
-      s.id,
-      s.full_name,
-      String(s.username || '').split('@')[0],
-      s.score !== null && s.score !== undefined ? s.score : '',
-      s.notes || ''
-    ]);
+
+    let headerRow, dataRows, colWidths;
+    if (kdList.length > 0) {
+      headerRow = ['No', 'ID Siswa', 'Nama Siswa', 'NISN',
+        ...kdList.map(kd => kd.kd_name), 'Rata-rata', 'Keterangan'];
+      dataRows = students.map((s, idx) => {
+        const kdValues = kdList.map(kd => {
+          const v = kdScoreMap[s.id] && kdScoreMap[s.id][kd.id];
+          return (v !== undefined && v !== null) ? v : '';
+        });
+        return [idx + 1, s.id, s.full_name,
+          String(s.username || '').split('@')[0],
+          ...kdValues,
+          s.score !== null && s.score !== undefined ? s.score : '',
+          s.notes || ''
+        ];
+      });
+      colWidths = [
+        { wch: 5 }, { wch: 10 }, { wch: 30 }, { wch: 15 },
+        ...kdList.map(() => ({ wch: 12 })),
+        { wch: 12 }, { wch: 25 }
+      ];
+    } else {
+      headerRow = ['No', 'ID Siswa', 'Nama Siswa', 'NISN', 'Nilai (0-100)', 'Keterangan'];
+      dataRows = students.map((s, idx) => [
+        idx + 1,
+        s.id,
+        s.full_name,
+        String(s.username || '').split('@')[0],
+        s.score !== null && s.score !== undefined ? s.score : '',
+        s.notes || ''
+      ]);
+      colWidths = [
+        { wch: 5 }, { wch: 10 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 25 }
+      ];
+    }
 
     const aoa = [infoRow, headerRow, ...dataRows];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
 
     // Lebar kolom
-    ws['!cols'] = [
-      { wch: 5 },   // No
-      { wch: 10 },  // ID Siswa
-      { wch: 30 },  // Nama Siswa
-      { wch: 15 },  // NISN
-      { wch: 12 },  // Nilai
-      { wch: 25 }   // Keterangan
-    ];
+    ws['!cols'] = colWidths;
 
     // Freeze pane: beku 2 baris header
     ws['!freeze'] = { xSplit: 0, ySplit: 2, topLeftCell: 'A3', activeCell: 'A3', sqref: 'A3' };
