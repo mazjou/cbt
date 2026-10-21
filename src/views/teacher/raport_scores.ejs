@@ -114,7 +114,7 @@
     </a>
 
     <% if (!kdList || kdList.length === 0) { %>
-      <!-- Import hanya untuk mapel tanpa TP -->
+      <!-- Import untuk mapel tanpa TP -->
       <form method="POST" action="/teacher/raport/<%= period_id %>/<%= subject_id %>/<%= class_id %>/import"
             enctype="multipart/form-data"
             class="flex items-center gap-2">
@@ -133,9 +133,24 @@
       </form>
       <span class="text-xs text-slate-400">Download template dulu, isi nilai di Excel, lalu import</span>
     <% } else { %>
-      <span class="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
-      &#x2139;&#xFE0F; Import Excel tidak tersedia untuk mapel dengan TP. Gunakan form di bawah.
-      </span>
+      <!-- Import untuk mapel dengan TP — template sudah include kolom TP -->
+      <form method="POST" action="/teacher/raport/<%= period_id %>/<%= subject_id %>/<%= class_id %>/import"
+            enctype="multipart/form-data"
+            class="flex items-center gap-2">
+        <label class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 border-2 border-indigo-200 hover:bg-indigo-100 text-indigo-700 text-sm font-semibold rounded-xl transition-all cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+          </svg>
+          <span id="import-file-label-tp">Pilih File Excel (dengan TP)</span>
+          <input type="file" name="nilai_file" accept=".xlsx,.xls" class="hidden" id="import-file-input-tp"
+                 onchange="document.getElementById('import-file-label-tp').textContent = this.files[0]?.name || 'Pilih File Excel (dengan TP)'">
+        </label>
+        <button type="submit"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-sm">
+          Import Nilai TP
+        </button>
+      </form>
+      <span class="text-xs text-indigo-500">💡 Download template dulu — template sudah berisi kolom <%= kdList.length %> TP</span>
     <% } %>
   </div>
 

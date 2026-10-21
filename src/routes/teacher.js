@@ -5114,18 +5114,15 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
         return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
       }
 
-      // Tolak import jika mapel memiliki KD aktif — kolom offset tidak cocok
+      // Ambil KD aktif untuk mapel ini
       const [activeKds] = await pool.query(
-        `SELECT id FROM raport_subject_kd WHERE raport_subject_id = $1 LIMIT 1`,
+        `SELECT id, kd_name FROM raport_subject_kd WHERE raport_subject_id = $1 ORDER BY sort_order ASC, id ASC`,
         [subject_id]
       );
-      if (activeKds.length > 0) {
-        req.flash('error', 'Import Excel tidak tersedia untuk mapel yang memiliki KD. Gunakan form input nilai per KD di halaman ini.');
-        return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
-      }
+      const hasKd = activeKds.length > 0;
 
       // Parse Excel dari buffer
-      const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const wb = XLSX.read(req.file.buffer, { type: 'buffer', raw: false });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
@@ -5143,8 +5140,14 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
       const validStudentIds = new Set(validStudents.map(s => String(s.id)));
 
       // Kumpulkan baris valid dulu sebelum eksekusi
-      const upsertRows = [];
+      const upsertRows = [];       // untuk raport_scores (nilai akhir)
+      const upsertKdRows = [];     // untuk raport_kd_scores (nilai per TP)
       let skipCount = 0;
+
+      // Format kolom tergantung ada TP atau tidak:
+      // Tanpa TP: [No, ID, Nama, NISN, Nilai, Keterangan]
+      // Dengan TP: [No, ID, Nama, NISN, TP1, TP2, ..., Rata-rata, Keterangan]
+      const kdStartCol = 4; // kolom TP mulai dari index 4
 
       for (let i = 2; i < rows.length; i++) {
         const row = rows[i];
@@ -5153,18 +5156,40 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
         if (!studentId || isNaN(studentId)) { skipCount++; continue; }
         if (!validStudentIds.has(String(studentId))) { skipCount++; continue; }
 
-        const rawScore = row[4];
-        const score = (rawScore !== '' && rawScore !== undefined && rawScore !== null)
-          ? parseFloat(rawScore) : null;
-        if (score !== null && (isNaN(score) || score < 0 || score > 100)) { skipCount++; continue; }
-
-        upsertRows.push([period_id, studentId, subject_id, score, String(row[5] || '').trim() || null, user.id]);
+        if (hasKd) {
+          // Ambil nilai per TP
+          let kdSum = 0, kdCount = 0;
+          for (let k = 0; k < activeKds.length; k++) {
+            const rawKd = row[kdStartCol + k];
+            const kdScore = (rawKd !== '' && rawKd !== undefined && rawKd !== null)
+              ? parseFloat(rawKd) : null;
+            if (kdScore !== null && !isNaN(kdScore) && kdScore >= 0 && kdScore <= 100) {
+              upsertKdRows.push([period_id, studentId, subject_id, activeKds[k].id, kdScore, user.id]);
+              kdSum += kdScore;
+              kdCount++;
+            }
+          }
+          // Rata-rata dari kolom atau hitung sendiri
+          const avgColIdx = kdStartCol + activeKds.length;
+          const notesColIdx = avgColIdx + 1;
+          const avgScore = kdCount > 0 ? Math.round((kdSum / kdCount) * 100) / 100 : null;
+          const notes = String(row[notesColIdx] || '').trim() || null;
+          upsertRows.push([period_id, studentId, subject_id, avgScore, notes, user.id]);
+        } else {
+          // Tanpa TP: kolom nilai di index 4
+          const rawScore = row[4];
+          const score = (rawScore !== '' && rawScore !== undefined && rawScore !== null)
+            ? parseFloat(rawScore) : null;
+          if (score !== null && (isNaN(score) || score < 0 || score > 100)) { skipCount++; continue; }
+          upsertRows.push([period_id, studentId, subject_id, score, String(row[5] || '').trim() || null, user.id]);
+        }
       }
 
       // Eksekusi semua dalam satu transaksi — all-or-nothing
       const conn = await pool.getConnection();
       try {
         await conn.beginTransaction();
+        // Simpan nilai akhir (raport_scores)
         for (const params of upsertRows) {
           await conn.query(`
             INSERT INTO raport_scores (period_id, student_id, raport_subject_id, score, notes, updated_by, updated_at)
@@ -5172,6 +5197,16 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
             ON CONFLICT (period_id, student_id, raport_subject_id)
             DO UPDATE SET score = EXCLUDED.score, notes = EXCLUDED.notes,
                           updated_by = EXCLUDED.updated_by, updated_at = NOW()
+          `, params);
+        }
+        // Simpan nilai per TP (raport_kd_scores) jika ada
+        for (const params of upsertKdRows) {
+          // [period_id, studentId, subject_id, kd_id, kdScore, user.id]
+          await conn.query(`
+            INSERT INTO raport_kd_scores (period_id, student_id, raport_subject_id, kd_id, score, updated_by, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            ON CONFLICT (period_id, student_id, raport_subject_id, kd_id)
+            DO UPDATE SET score = EXCLUDED.score, updated_by = EXCLUDED.updated_by, updated_at = NOW()
           `, params);
         }
         await conn.commit();
@@ -5183,7 +5218,8 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
       }
 
       const successCount = upsertRows.length;
-      req.flash('success', `Import berhasil: ${successCount} nilai tersimpan${skipCount > 0 ? `, ${skipCount} baris dilewati` : ''}.`);
+      const kdCount = upsertKdRows.length;
+      req.flash('success', `Import berhasil: ${successCount} nilai tersimpan${kdCount > 0 ? `, ${kdCount} nilai TP` : ''}${skipCount > 0 ? `, ${skipCount} baris dilewati` : ''}.`);
       res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
 
     } catch (e) {
