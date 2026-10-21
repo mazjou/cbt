@@ -4710,7 +4710,21 @@ router.get('/raport', async (req, res) => {
     }
     const periods = [...periodMap.values()];
 
-    res.render('teacher/raport', { title: 'Raport Tengah Semester', user, periods });
+    // Cek apakah guru ini adalah wali kelas
+    const [[homeroomClass]] = await pool.query(`
+      SELECT id, name AS class_name, homeroom_teacher_nip
+      FROM classes
+      WHERE homeroom_teacher_name = (SELECT full_name FROM users WHERE id = $1 LIMIT 1)
+         OR homeroom_teacher_nip = (SELECT username FROM users WHERE id = $1 LIMIT 1)
+      LIMIT 1
+    `, [user.id]).catch(() => [[null]]);
+
+    // Ambil periode aktif untuk print wali kelas
+    const [[activePeriod]] = await pool.query(`
+      SELECT id, name, semester, school_year FROM raport_periods WHERE is_active = true LIMIT 1
+    `).catch(() => [[null]]);
+
+    res.render('teacher/raport', { title: 'Raport Tengah Semester', user, periods, homeroomClass: homeroomClass || null, activePeriod: activePeriod || null });
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal memuat data raport.');
@@ -4718,7 +4732,197 @@ router.get('/raport', async (req, res) => {
   }
 });
 
-// DELETE /teacher/raport/kd/:kd_id - hapus KD (AJAX JSON)
+// GET /teacher/raport/:period_id/print-kelas - cetak raport kelas wali (wali kelas only)
+router.get('/raport/:period_id/print-kelas', async (req, res) => {
+  const user = req.session.user;
+  const { period_id } = req.params;
+  try {
+    // Cari kelas yang guru ini jadi wali kelasnya
+    const [[homeroomClass]] = await pool.query(`
+      SELECT id, name FROM classes
+      WHERE homeroom_teacher_name = (SELECT full_name FROM users WHERE id = $1 LIMIT 1)
+         OR homeroom_teacher_nip = (SELECT username FROM users WHERE id = $1 LIMIT 1)
+      LIMIT 1
+    `, [user.id]);
+
+    if (!homeroomClass) {
+      req.flash('error', 'Anda tidak terdaftar sebagai wali kelas manapun.');
+      return res.redirect('/teacher/raport');
+    }
+
+    const [[period]] = await pool.query(`SELECT * FROM raport_periods WHERE id = $1`, [period_id]);
+    if (!period) return res.status(404).send('Periode tidak ditemukan.');
+
+    // Ambil semua siswa di kelas ini
+    const [students] = await pool.query(`
+      SELECT u.id, u.full_name, u.username, u.tanggal_lahir,
+             c.name AS class_name, u.class_id,
+             c.homeroom_teacher_name, c.homeroom_teacher_nip
+      FROM users u
+      JOIN classes c ON c.id = u.class_id
+      WHERE u.role = 'STUDENT' AND u.is_active = true AND u.class_id = $1
+      ORDER BY u.full_name ASC
+    `, [homeroomClass.id]);
+
+    if (!students.length) {
+      req.flash('error', 'Belum ada siswa aktif di kelas ini.');
+      return res.redirect('/teacher/raport');
+    }
+
+    // Ambil mapel + nilai untuk semua siswa di kelas ini
+    const [scoreRows] = await pool.query(`
+      SELECT rs.subject_name, rsg.name AS group_name,
+             rs.sort_order AS subject_order, rsg.sort_order AS group_order,
+             sc.student_id, sc.score, sc.notes
+      FROM raport_subjects rs
+      JOIN raport_subject_groups rsg ON rsg.id = rs.group_id AND rsg.period_id = $1
+      JOIN raport_subject_classes rsc ON rsc.raport_subject_id = rs.id AND rsc.class_id = $2
+      LEFT JOIN raport_scores sc ON sc.raport_subject_id = rs.id
+        AND sc.period_id = $1 AND sc.student_id = ANY($3::int[])
+      ORDER BY rsg.sort_order ASC, rs.sort_order ASC
+    `, [period_id, homeroomClass.id, students.map(s => s.id)]);
+
+    // Bangun groups per siswa
+    const groupMapTemplate = new Map();
+    for (const row of scoreRows) {
+      if (!groupMapTemplate.has(row.group_name)) {
+        groupMapTemplate.set(row.group_name, { group_name: row.group_name, subjects: [] });
+      }
+      const grp = groupMapTemplate.get(row.group_name);
+      if (!grp.subjects.find(s => s.subject_name === row.subject_name)) {
+        grp.subjects.push({ subject_name: row.subject_name });
+      }
+    }
+
+    const allStudents = students.map(stu => {
+      const stuGroups = [...groupMapTemplate.values()].map(grp => ({
+        group_name: grp.group_name,
+        subjects: grp.subjects.map(subj => {
+          const sc = scoreRows.find(r => r.student_id === stu.id && r.subject_name === subj.subject_name);
+          return { subject_name: subj.subject_name, score: sc ? sc.score : null, notes: sc ? sc.notes : null };
+        })
+      }));
+      return { ...stu, groups: stuGroups };
+    });
+
+    // Ambil kepala sekolah dari DB
+    const schoolInfo = {
+      name: process.env.SCHOOL_NAME || 'SMK NEGERI 1 KRAS',
+      address: process.env.SCHOOL_ADDRESS || 'Kediri, Jawa Timur',
+      principalName: process.env.PRINCIPAL_NAME || '',
+      principalNip: process.env.PRINCIPAL_NIP || '',
+      logoPath: process.env.SCHOOL_LOGO || null
+    };
+    try {
+      const [[principal]] = await pool.query(
+        `SELECT full_name, username FROM users WHERE role='PRINCIPAL' AND is_active=true LIMIT 1`
+      );
+      if (principal) {
+        schoolInfo.principalName = principal.full_name;
+        schoolInfo.principalNip  = (principal.username || '').split('@')[0];
+      }
+    } catch(_) {}
+
+    res.render('admin/raport_print', {
+      title: `Raport ${homeroomClass.name} - ${period.name}`,
+      layout: false,
+      student: null,
+      period,
+      groups: allStudents[0]?.groups || [],
+      schoolInfo,
+      multiStudent: true,
+      allStudents
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal cetak raport: ' + e.message);
+    res.redirect('/teacher/raport');
+  }
+});
+
+// GET /teacher/raport/:period_id/print-siswa/:student_id - cetak raport 1 siswa (wali kelas)
+router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
+  const user = req.session.user;
+  const { period_id, student_id } = req.params;
+  try {
+    // Validasi: guru harus wali kelas dari kelas siswa ini
+    const [[stu]] = await pool.query(`
+      SELECT u.id, u.full_name, u.username, u.tanggal_lahir,
+             c.name AS class_name, u.class_id,
+             c.homeroom_teacher_name, c.homeroom_teacher_nip
+      FROM users u JOIN classes c ON c.id = u.class_id
+      WHERE u.id = $1 AND u.role = 'STUDENT'
+    `, [student_id]);
+
+    if (!stu) return res.status(404).send('Siswa tidak ditemukan.');
+
+    // Cek wali kelas
+    const [[hc]] = await pool.query(`
+      SELECT id FROM classes
+      WHERE id = $1 AND (
+        homeroom_teacher_name = (SELECT full_name FROM users WHERE id = $2 LIMIT 1)
+        OR homeroom_teacher_nip = (SELECT username FROM users WHERE id = $2 LIMIT 1)
+      )
+    `, [stu.class_id, user.id]);
+
+    if (!hc && user.role !== 'ADMIN') {
+      req.flash('error', 'Anda bukan wali kelas dari siswa ini.');
+      return res.redirect('/teacher/raport');
+    }
+
+    const [[period]] = await pool.query(`SELECT * FROM raport_periods WHERE id = $1`, [period_id]);
+    if (!period) return res.status(404).send('Periode tidak ditemukan.');
+
+    const [scoreRows] = await pool.query(`
+      SELECT rsg.name AS group_name, rsg.sort_order AS g_order,
+             rs.subject_name, rs.sort_order AS s_order,
+             sc.score, sc.notes
+      FROM raport_subject_groups rsg
+      JOIN raport_subjects rs ON rs.group_id = rsg.id AND rsg.period_id = $1
+      JOIN raport_subject_classes rsc ON rsc.raport_subject_id = rs.id AND rsc.class_id = $3
+      LEFT JOIN raport_scores sc ON sc.raport_subject_id = rs.id
+        AND sc.period_id = $1 AND sc.student_id = $2
+      ORDER BY rsg.sort_order ASC, rs.sort_order ASC
+    `, [period_id, student_id, stu.class_id]);
+
+    const groupMap = new Map();
+    for (const r of scoreRows) {
+      if (!groupMap.has(r.group_name)) groupMap.set(r.group_name, { group_name: r.group_name, subjects: [] });
+      groupMap.get(r.group_name).subjects.push({ subject_name: r.subject_name, score: r.score, notes: r.notes });
+    }
+
+    const schoolInfo = {
+      name: process.env.SCHOOL_NAME || 'SMK NEGERI 1 KRAS',
+      address: process.env.SCHOOL_ADDRESS || 'Kediri, Jawa Timur',
+      principalName: process.env.PRINCIPAL_NAME || '',
+      principalNip: process.env.PRINCIPAL_NIP || '',
+      logoPath: process.env.SCHOOL_LOGO || null
+    };
+    try {
+      const [[principal]] = await pool.query(
+        `SELECT full_name, username FROM users WHERE role='PRINCIPAL' AND is_active=true LIMIT 1`
+      );
+      if (principal) { schoolInfo.principalName = principal.full_name; schoolInfo.principalNip = (principal.username||'').split('@')[0]; }
+    } catch(_) {}
+
+    res.render('admin/raport_print', {
+      title: `Raport ${stu.full_name}`,
+      layout: false,
+      student: { ...stu, groups: [...groupMap.values()] },
+      period,
+      groups: [...groupMap.values()],
+      schoolInfo,
+      multiStudent: false,
+      allStudents: []
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal cetak raport: ' + e.message);
+    res.redirect('/teacher/raport');
+  }
+});
+
+// GET /teacher/raport/:period_id/kelas-siswa - daftar siswa kelas wali untuk cetak per siswa
 router.delete('/raport/kd/:kd_id', async (req, res) => {
   const user = req.session.user;
   try {
