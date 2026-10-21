@@ -132,8 +132,8 @@
         <div class="kop-logo-placeholder">LOGO</div>
       <% } %>
       <div class="kop-text">
-        <p class="provinsi">PEMERINTAH PROVINSI JAWA TIMUR</p>
-        <p class="dinas">DINAS PENDIDIKAN</p>
+        <p class="provinsi"><%= schoolInfo && schoolInfo.headerLine1 ? schoolInfo.headerLine1 : 'PEMERINTAH PROVINSI JAWA TIMUR' %></p>
+        <p class="dinas"><%= schoolInfo && schoolInfo.headerLine2 ? schoolInfo.headerLine2 : 'DINAS PENDIDIKAN' %></p>
         <p class="sekolah"><%= schoolInfo ? schoolInfo.name : 'SMK NEGERI 1 KRAS' %></p>
         <p class="alamat">Alamat: <%= schoolInfo ? schoolInfo.address : '' %></p>
       </div>
