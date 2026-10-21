@@ -187,34 +187,40 @@
       </div>
       <button type="button" class="rounded-xl border border-slate-200 px-3 py-1.5 hover:bg-slate-100" data-close-homeroom-modal>✕</button>
     </div>
-    <form id="homeroomForm" method="POST" class="p-5 space-y-4 overflow-y-auto flex-1">
-      <input type="hidden" id="hr_class_id" name="class_id" />
-      <div>
-        <label class="text-sm font-medium text-slate-700 block mb-1">Pilih Guru Wali Kelas</label>
-        <select id="hr_teacher_select"
-          class="w-full rounded-xl bg-white border border-slate-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
-          <option value="">— Pilih Guru —</option>
-          <% (typeof teachers !== 'undefined' ? teachers : []).forEach(t => { %>
-            <option value="<%= t.id %>" data-name="<%= t.full_name %>" data-username="<%= (t.username || '').split('@')[0] %>"><%= t.full_name %> (<%= (t.username || '').split('@')[0] %>)</option>
-          <% }) %>
-        </select>
-        <p class="text-xs text-slate-400 mt-1">Pilih guru — nama dan NIP otomatis terisi</p>
+    <!-- Konten form yang bisa scroll -->
+    <form id="homeroomForm" method="POST" class="flex flex-col flex-1 overflow-hidden">
+      <div class="p-5 space-y-4 overflow-y-auto flex-1">
+        <input type="hidden" id="hr_class_id" name="class_id" />
+        <div>
+          <label class="text-sm font-medium text-slate-700 block mb-1">Pilih Guru Wali Kelas</label>
+          <select id="hr_teacher_select"
+            class="w-full rounded-xl bg-white border border-slate-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
+            <option value="">— Pilih Guru —</option>
+            <% (typeof teachers !== 'undefined' ? teachers : []).forEach(t => { %>
+              <option value="<%= t.id %>"
+                data-name="<%= t.full_name %>"
+                data-nip="<%= (t.username || '').split('@')[0] %>"><%= t.full_name %> (<%= (t.username || '').split('@')[0] %>)</option>
+            <% }) %>
+          </select>
+          <p class="text-xs text-slate-400 mt-1">Pilih guru — nama dan NIP otomatis terisi</p>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700 block mb-1">Nama Wali Kelas</label>
+          <input id="hr_name" name="homeroom_teacher_name"
+            class="w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+            placeholder="Otomatis dari pilihan guru, atau isi manual" />
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700 block mb-1">NIP Wali Kelas</label>
+          <input id="hr_nip" name="homeroom_teacher_nip"
+            class="w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+            placeholder="Otomatis dari username guru" />
+        </div>
       </div>
-      <div>
-        <label class="text-sm font-medium text-slate-700 block mb-1">Nama Wali Kelas</label>
-        <input id="hr_name" name="homeroom_teacher_name"
-          class="w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
-          placeholder="Otomatis dari pilihan guru, atau isi manual" />
-      </div>
-      <div>
-        <label class="text-sm font-medium text-slate-700 block mb-1">NIP Wali Kelas</label>
-        <input id="hr_nip" name="homeroom_teacher_nip"
-          class="w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
-          placeholder="Otomatis dari username guru" />
-      </div>
-      <div class="pt-2 flex justify-end gap-2 pb-1">
+      <!-- Tombol selalu di bawah, tidak ikut scroll -->
+      <div class="px-5 py-4 border-t border-slate-100 bg-white flex-shrink-0 flex justify-end gap-2">
         <button type="button" class="rounded-xl border border-slate-200 px-4 py-2 hover:bg-slate-100 text-sm" data-close-homeroom-modal>Batal</button>
-        <button type="submit" class="rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold px-5 py-2.5 text-sm shadow-md">Simpan Wali Kelas</button>
+        <button type="submit" class="rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-semibold px-5 py-2.5 text-sm shadow-md">💾 Simpan Wali Kelas</button>
       </div>
     </form>
   </div>
@@ -351,27 +357,36 @@
   function showModal(){ modal.classList.remove('hidden'); modal.setAttribute('aria-hidden','false'); }
   function hideModal(){ modal.classList.add('hidden'); modal.setAttribute('aria-hidden','true'); }
 
-  // Saat guru dipilih dari dropdown, otomatis isi nama
+  // Saat guru dipilih dari dropdown, otomatis isi nama dan NIP
   elSelect.addEventListener('change', function() {
     const opt = this.options[this.selectedIndex];
     if (opt.value) {
       elName.value = opt.getAttribute('data-name') || '';
-      elNip.value = opt.getAttribute('data-username') || '';
+      elNip.value  = opt.getAttribute('data-nip')  || '';
+    } else {
+      elName.value = '';
+      elNip.value  = '';
     }
   });
 
   document.querySelectorAll('.btn-open-homeroom-modal').forEach(btn => {
     btn.addEventListener('click', () => {
-      const id = btn.getAttribute('data-class-id');
+      const id          = btn.getAttribute('data-class-id');
       const currentName = btn.getAttribute('data-homeroom-name') || '';
       const currentNip  = btn.getAttribute('data-homeroom-nip')  || '';
-      elId.value  = id;
+      elId.value   = id;
       elName.value = currentName;
       elNip.value  = currentNip;
-      // Reset dropdown — coba cocokkan nama yang sudah ada
+      // Coba cocokkan guru dari dropdown berdasarkan nama
       elSelect.value = '';
       for (let i = 0; i < elSelect.options.length; i++) {
-        if (elSelect.options[i].getAttribute('data-name') === currentName) {
+        const optName = elSelect.options[i].getAttribute('data-name') || '';
+        const optNip  = elSelect.options[i].getAttribute('data-nip')  || '';
+        // Cocokkan berdasarkan NIP dulu (lebih akurat), fallback ke nama
+        if (currentNip && optNip === currentNip) {
+          elSelect.value = elSelect.options[i].value;
+          break;
+        } else if (!currentNip && optName === currentName) {
           elSelect.value = elSelect.options[i].value;
           break;
         }
