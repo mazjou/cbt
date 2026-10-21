@@ -4748,10 +4748,11 @@ router.post('/raport/:period_id/:subject_id/kd', async (req, res) => {
     const [[scRow]] = await pool.query(`
       SELECT rsc.id FROM raport_subject_classes rsc
       JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id
+      JOIN raport_periods rp ON rp.id = $3 AND rp.is_active = true
       WHERE rs.id = $1 AND rsc.teacher_id = $2 AND rs.period_id = $3
     `, [subject_id, user.id, period_id]);
     if (!scRow) {
-      req.flash('error', 'Akses ditolak.');
+      req.flash('error', 'Akses ditolak atau periode sudah tidak aktif.');
       return res.redirect('/teacher/raport');
     }
     if (!kd_name || !kd_name.trim()) {
@@ -5109,6 +5110,16 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
 
       if (!req.file) {
         req.flash('error', 'Tidak ada file yang diunggah.');
+        return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
+      }
+
+      // Tolak import jika mapel memiliki KD aktif — kolom offset tidak cocok
+      const [activeKds] = await pool.query(
+        `SELECT id FROM raport_subject_kd WHERE raport_subject_id = $1 LIMIT 1`,
+        [subject_id]
+      );
+      if (activeKds.length > 0) {
+        req.flash('error', 'Import Excel tidak tersedia untuk mapel yang memiliki KD. Gunakan form input nilai per KD di halaman ini.');
         return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
       }
 
