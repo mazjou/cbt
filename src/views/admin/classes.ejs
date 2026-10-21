@@ -195,7 +195,7 @@
           class="w-full rounded-xl bg-white border border-slate-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
           <option value="">— Pilih Guru —</option>
           <% (typeof teachers !== 'undefined' ? teachers : []).forEach(t => { %>
-            <option value="<%= t.id %>" data-name="<%= t.full_name %>" data-username="<%= t.username.split('@')[0] %>"><%= t.full_name %> (<%= t.username.split('@')[0] %>)</option>
+            <option value="<%= t.id %>" data-name="<%= t.full_name %>" data-username="<%= (t.username || '').split('@')[0] %>"><%= t.full_name %> (<%= (t.username || '').split('@')[0] %>)</option>
           <% }) %>
         </select>
         <p class="text-xs text-slate-400 mt-1">Pilih guru — nama dan NIP otomatis terisi</p>
