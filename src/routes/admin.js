@@ -455,6 +455,7 @@ router.get('/reports', async (req, res) => {
 
 // ===== CLASSES =====
 router.get('/classes', async (req, res) => {
+  try {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
@@ -483,7 +484,7 @@ router.get('/classes', async (req, res) => {
   const totalPages = Math.ceil(total / limit);
 
   const [teachers] = await pq(
-    `SELECT id, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC`
+    `SELECT id, username, full_name FROM users WHERE role = 'TEACHER' AND is_active = true ORDER BY full_name ASC`
   );
 
   res.render('admin/classes', { 
@@ -500,6 +501,11 @@ router.get('/classes', async (req, res) => {
       search
     }
   });
+  } catch (e) {
+    console.error('[CLASSES] Error:', e.message);
+    req.flash('error', 'Gagal memuat data kelas: ' + e.message);
+    res.redirect('/admin');
+  }
 });
 
 // Download classes as Excel
