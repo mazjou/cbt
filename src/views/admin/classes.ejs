@@ -75,13 +75,14 @@
             </th>
             <th class="text-left py-2">Kode</th>
             <th class="text-left py-2">Nama</th>
+            <th class="text-left py-2">Wali Kelas</th>
             <th class="text-right py-2">Aksi</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-purple-200">
           <% if (classes.length === 0) { %>
             <tr>
-              <td colspan="4" class="py-8 text-center text-purple-600">Tidak ada data kelas.</td>
+              <td colspan="5" class="py-8 text-center text-purple-600">Tidak ada data kelas.</td>
             </tr>
           <% } %>
           <% classes.forEach(c => { %>
@@ -91,6 +92,18 @@
               </td>
               <td class="py-3 font-mono class-code text-purple-900"><%= c.code %></td>
               <td class="py-3 class-name text-purple-900"><%= c.name %></td>
+              <td class="py-3">
+                <% if (c.homeroom_teacher_name) { %>
+                  <div class="inline-flex flex-col">
+                    <span class="text-sm font-semibold text-teal-800"><%= c.homeroom_teacher_name %></span>
+                    <% if (c.homeroom_teacher_nip) { %>
+                      <span class="text-xs text-slate-500">NIP: <%= c.homeroom_teacher_nip %></span>
+                    <% } %>
+                  </div>
+                <% } else { %>
+                  <span class="text-xs text-slate-400 italic">Belum diset</span>
+                <% } %>
+              </td>
               <td class="py-3 text-right">
                 <button type="button" data-class-id="<%= c.id %>" data-homeroom-name="<%= c.homeroom_teacher_name || '' %>" data-homeroom-nip="<%= c.homeroom_teacher_nip || '' %>" class="btn-open-homeroom-modal px-3 py-2 rounded-lg border border-teal-300 bg-teal-50 hover:bg-teal-100 text-teal-800 font-medium inline-block mr-2 transition-colors">Wali Kelas</button>
                 <button type="button" data-class-id="<%= c.id %>" class="btn-open-class-modal px-3 py-2 rounded-lg border border-purple-300 bg-white hover:bg-purple-50 text-purple-800 font-medium inline-block mr-2 transition-colors">Edit</button>
