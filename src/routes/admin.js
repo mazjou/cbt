@@ -6413,7 +6413,7 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       schoolShortName: process.env.SCHOOL_SHORT_NAME || 'KRAS',
       city: process.env.SCHOOL_CITY || 'KEDIRI',
       email: process.env.SCHOOL_EMAIL || 'smkn1kras@gmail.com',
-      website: process.env.SCHOOL_WEB || 'http://www.smkn1kras.sch.id',
+      website: process.env.SCHOOL_WEB || process.env.SCHOOL_WEBSITE || 'http://www.smkn1kras.sch.id',
       principalName: process.env.PRINCIPAL_NAME || '',
       principalNip: process.env.PRINCIPAL_NIP || '',
       logoPath: process.env.SCHOOL_LOGO || null
