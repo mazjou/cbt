@@ -5932,6 +5932,64 @@ router.get('/panitia/print-cards', async (req, res) => {
 
 // ===== RAPORT TENGAH SEMESTER =====
 
+// POST /admin/raport/upload-logo - upload logo sekolah
+router.post('/raport/upload-logo', async (req, res) => {
+  const multer  = require('multer');
+  const path    = require('path');
+  const fs      = require('fs');
+
+  const logoDir = path.join(__dirname, '..', 'public', 'images');
+  fs.mkdirSync(logoDir, { recursive: true });
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, logoDir),
+    filename:    (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.png';
+      cb(null, 'school-logo' + ext);
+    }
+  });
+  const upload = multer({
+    storage,
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      if (!file.mimetype.startsWith('image/')) return cb(new Error('Hanya file gambar'));
+      cb(null, true);
+    }
+  }).single('logo');
+
+  upload(req, res, async (err) => {
+    if (err) {
+      req.flash('error', 'Upload gagal: ' + err.message);
+      return res.redirect('/admin/raport');
+    }
+    if (!req.file) {
+      req.flash('error', 'Pilih file logo terlebih dahulu.');
+      return res.redirect('/admin/raport');
+    }
+    // Simpan path ke .env (hanya untuk session ini — perlu restart untuk permanen)
+    // Cara terbaik: simpan ke DB atau update .env file
+    const logoWebPath = '/public/images/' + req.file.filename;
+
+    // Update .env file
+    try {
+      const envPath = path.join(__dirname, '..', '..', '.env');
+      let envContent = fs.readFileSync(envPath, 'utf8');
+      if (envContent.includes('SCHOOL_LOGO=')) {
+        envContent = envContent.replace(/SCHOOL_LOGO=.*/g, `SCHOOL_LOGO=${logoWebPath}`);
+      } else {
+        envContent += `\nSCHOOL_LOGO=${logoWebPath}`;
+      }
+      fs.writeFileSync(envPath, envContent);
+      process.env.SCHOOL_LOGO = logoWebPath;
+    } catch (e) {
+      console.error('Failed to update .env:', e.message);
+    }
+
+    req.flash('success', 'Logo berhasil diupload. Raport akan menggunakan logo baru.');
+    res.redirect('/admin/raport');
+  });
+});
+
 // GET /admin/raport - daftar semua periode
 router.get('/raport', async (req, res) => {
   try {
@@ -6354,6 +6412,17 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       logoPath: process.env.SCHOOL_LOGO || null
     };
 
+    // Ambil kepala sekolah dari DB (role PRINCIPAL) jika ada
+    try {
+      const [[principal]] = await pq(
+        `SELECT full_name, username FROM users WHERE role='PRINCIPAL' AND is_active=true ORDER BY id ASC LIMIT 1`
+      );
+      if (principal) {
+        schoolInfo.principalName = principal.full_name;
+        schoolInfo.principalNip  = (principal.username || '').split('@')[0];
+      }
+    } catch(_) {}
+
     res.render('admin/raport_print', {
       title: 'Raport Tengah Semester',
       layout: false,
@@ -6455,6 +6524,17 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
       principalNip: process.env.PRINCIPAL_NIP || '',
       logoPath: process.env.SCHOOL_LOGO || null
     };
+
+    // Ambil kepala sekolah dari DB
+    try {
+      const [[principal]] = await pq(
+        `SELECT full_name, username FROM users WHERE role='PRINCIPAL' AND is_active=true ORDER BY id ASC LIMIT 1`
+      );
+      if (principal) {
+        schoolInfo.principalName = principal.full_name;
+        schoolInfo.principalNip  = (principal.username || '').split('@')[0];
+      }
+    } catch(_) {}
 
     res.render('admin/raport_print', {
       title: 'Raport Tengah Semester - Semua Siswa',

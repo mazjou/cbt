@@ -35,6 +35,43 @@
 <!-- Flash Messages -->
 <%- include('../partials/flash') %>
 
+<!-- Card Upload Logo Sekolah -->
+<div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-5 mb-6">
+  <div class="flex items-center gap-3 mb-4">
+    <div class="bg-indigo-100 rounded-xl p-2">
+      <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+      </svg>
+    </div>
+    <div>
+      <h3 class="font-bold text-slate-800">Logo Sekolah untuk Raport</h3>
+      <p class="text-xs text-slate-500">Logo tampil di kop surat raport. Format: PNG/JPG/SVG, max 2MB.</p>
+    </div>
+    <% const logoPath = process.env.SCHOOL_LOGO; %>
+    <% if (logoPath) { %>
+      <div class="ml-auto">
+        <img src="<%= logoPath %>" alt="Logo Sekolah" class="h-14 w-14 object-contain rounded-xl border border-slate-200 shadow-sm" />
+      </div>
+    <% } else { %>
+      <div class="ml-auto w-14 h-14 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs">
+        Logo
+      </div>
+    <% } %>
+  </div>
+  <form action="/admin/raport/upload-logo" method="POST" enctype="multipart/form-data" class="flex items-center gap-3">
+    <input type="file" name="logo" accept="image/*" required
+      class="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2 text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 focus:outline-none focus:border-indigo-400" />
+    <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold text-sm shadow-md hover:from-indigo-600 hover:to-purple-700 transition-all whitespace-nowrap">
+      Upload Logo
+    </button>
+  </form>
+  <% if (logoPath) { %>
+    <p class="text-xs text-emerald-600 mt-2">✅ Logo aktif: <code class="bg-slate-100 px-1 rounded"><%= logoPath %></code></p>
+  <% } else { %>
+    <p class="text-xs text-amber-600 mt-2">⚠️ Belum ada logo. Upload logo agar tampil di kop surat raport.</p>
+  <% } %>
+</div>
+
 <!-- Tabel Daftar Periode -->
 <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
   <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
