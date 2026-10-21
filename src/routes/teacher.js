@@ -4937,12 +4937,15 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
     const user = req.session.user;
     const { period_id, subject_id, class_id } = req.params;
     try {
-      // Validasi akses
-      const [[scRow]] = await pool.query(
-        `SELECT rsc.id FROM raport_subject_classes rsc
-         WHERE rsc.raport_subject_id = $1 AND rsc.class_id = $2 AND rsc.teacher_id = $3`,
-        [subject_id, class_id, user.id]
-      );
+      // Validasi akses — sama persis dengan route GET dan export (sertakan period_id)
+      const [[scRow]] = await pool.query(`
+        SELECT rsc.id FROM raport_subject_classes rsc
+        JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id
+        WHERE rsc.raport_subject_id = $1
+          AND rsc.class_id          = $2
+          AND rsc.teacher_id        = $3
+          AND rs.period_id          = $4
+      `, [subject_id, class_id, user.id, period_id]);
       if (!scRow) {
         req.flash('error', 'Akses ditolak.');
         return res.redirect('/teacher/raport');
@@ -4958,9 +4961,7 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
-      // rows[0] = info mapel (skip)
-      // rows[1] = header kolom (skip)
-      // rows[2..] = data siswa: [No, ID Siswa, Nama, NISN, Nilai, Keterangan]
+      // rows[0] = info mapel (skip), rows[1] = header (skip), rows[2..] = data siswa
       if (!rows || rows.length < 3) {
         req.flash('error', 'File Excel tidak memiliki data siswa (minimal 1 baris data).');
         return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
@@ -4973,37 +4974,47 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
       );
       const validStudentIds = new Set(validStudents.map(s => String(s.id)));
 
-      let successCount = 0;
+      // Kumpulkan baris valid dulu sebelum eksekusi
+      const upsertRows = [];
       let skipCount = 0;
 
       for (let i = 2; i < rows.length; i++) {
         const row = rows[i];
-        // Skip baris kosong
         if (!row[1] && row[1] !== 0) { skipCount++; continue; }
         const studentId = parseInt(row[1]);
         if (!studentId || isNaN(studentId)) { skipCount++; continue; }
-        // Validasi siswa milik kelas ini
         if (!validStudentIds.has(String(studentId))) { skipCount++; continue; }
 
         const rawScore = row[4];
         const score = (rawScore !== '' && rawScore !== undefined && rawScore !== null)
-          ? parseFloat(rawScore)
-          : null;
-        // Validasi range nilai
+          ? parseFloat(rawScore) : null;
         if (score !== null && (isNaN(score) || score < 0 || score > 100)) { skipCount++; continue; }
 
-        const notes = String(row[5] || '').trim() || null;
-
-        await pool.query(`
-          INSERT INTO raport_scores (period_id, student_id, raport_subject_id, score, notes, updated_by, updated_at)
-          VALUES ($1, $2, $3, $4, $5, $6, NOW())
-          ON CONFLICT (period_id, student_id, raport_subject_id)
-          DO UPDATE SET score = EXCLUDED.score, notes = EXCLUDED.notes,
-                        updated_by = EXCLUDED.updated_by, updated_at = NOW()
-        `, [period_id, studentId, subject_id, score, notes, user.id]);
-        successCount++;
+        upsertRows.push([period_id, studentId, subject_id, score, String(row[5] || '').trim() || null, user.id]);
       }
 
+      // Eksekusi semua dalam satu transaksi — all-or-nothing
+      const conn = await pool.getConnection();
+      try {
+        await conn.beginTransaction();
+        for (const params of upsertRows) {
+          await conn.query(`
+            INSERT INTO raport_scores (period_id, student_id, raport_subject_id, score, notes, updated_by, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            ON CONFLICT (period_id, student_id, raport_subject_id)
+            DO UPDATE SET score = EXCLUDED.score, notes = EXCLUDED.notes,
+                          updated_by = EXCLUDED.updated_by, updated_at = NOW()
+          `, params);
+        }
+        await conn.commit();
+      } catch (txErr) {
+        await conn.rollback();
+        throw txErr;
+      } finally {
+        conn.release();
+      }
+
+      const successCount = upsertRows.length;
       req.flash('success', `Import berhasil: ${successCount} nilai tersimpan${skipCount > 0 ? `, ${skipCount} baris dilewati` : ''}.`);
       res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
 
