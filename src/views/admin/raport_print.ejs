@@ -26,15 +26,18 @@
     }
 
     /* Kop surat */
-    .kop { display: flex; align-items: center; gap: 16px; border-bottom: 3px double #000; padding-bottom: 8px; margin-bottom: 12px; }
+    .kop { display: flex; align-items: center; gap: 16px; border-bottom: 3px double #000; padding-bottom: 6px; margin-bottom: 4px; }
     .kop-logo { width: 70px; height: 70px; object-fit: contain; flex-shrink: 0; }
     .kop-logo-placeholder { width: 70px; height: 70px; border: 2px solid #999; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10pt; color: #999; flex-shrink: 0; }
     .kop-text { text-align: center; flex: 1; }
-    .kop-text p { line-height: 1.4; }
-    .kop-text .sekolah { font-size: 16pt; font-weight: bold; text-transform: uppercase; }
-    .kop-text .dinas { font-size: 11pt; font-weight: bold; text-transform: uppercase; }
-    .kop-text .provinsi { font-size: 10pt; font-weight: bold; text-transform: uppercase; }
+    .kop-text p { line-height: 1.5; }
+    .kop-text .sekolah { font-size: 14pt; font-weight: bold; text-transform: uppercase; }
+    .kop-text .dinas { font-size: 11pt; font-weight: normal; }
+    .kop-text .provinsi { font-size: 10pt; font-weight: normal; }
     .kop-text .alamat { font-size: 9pt; }
+    .kop-text .nama-kota { font-size: 12pt; font-weight: bold; letter-spacing: 4px; }
+    .kop-separator { border: none; border-top: 1px solid #000; margin: 3px 0; }
+    .kop-kota-wrapper { text-align: center; border-bottom: 3px double #000; padding: 3px 0 5px; margin-bottom: 12px; }
 
     /* Judul */
     .judul { text-align: center; margin: 14px 0 16px; }
@@ -134,9 +137,16 @@
       <div class="kop-text">
         <p class="provinsi"><%= schoolInfo && schoolInfo.headerLine1 ? schoolInfo.headerLine1 : 'PEMERINTAH PROVINSI JAWA TIMUR' %></p>
         <p class="dinas"><%= schoolInfo && schoolInfo.headerLine2 ? schoolInfo.headerLine2 : 'DINAS PENDIDIKAN' %></p>
-        <p class="sekolah"><%= schoolInfo ? schoolInfo.name : 'SMK NEGERI 1 KRAS' %></p>
-        <p class="alamat">Alamat: <%= schoolInfo ? schoolInfo.address : '' %></p>
+        <p class="sekolah"><%= schoolInfo && schoolInfo.headerLine3 ? schoolInfo.headerLine3 : 'SEKOLAH MENENGAH KEJURUAN NEGERI 1' %></p>
+        <p class="nama-kota"><%= schoolInfo ? (schoolInfo.schoolShortName || schoolInfo.name.replace(/SMK NEGERI \d+/i,'').trim() || 'KRAS') : 'KRAS' %></p>
+        <p class="alamat"><%= schoolInfo && schoolInfo.address ? 'Alamat : ' + schoolInfo.address : '' %></p>
+        <% if (schoolInfo && schoolInfo.email) { %>
+          <p class="alamat">Pos.el : <u><%= schoolInfo.email %></u>&nbsp;&nbsp; Laman : <u><%= schoolInfo.website || '' %></u></p>
+        <% } %>
       </div>
+    </div>
+    <div class="kop-kota-wrapper">
+      <span class="nama-kota"><%= schoolInfo && schoolInfo.city ? schoolInfo.city : 'KEDIRI' %></span>
     </div>
 
     <!-- Judul -->

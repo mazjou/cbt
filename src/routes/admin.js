@@ -6406,9 +6406,14 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
 
     const schoolInfo = {
       name: process.env.SCHOOL_NAME || 'SMK NEGERI 1 KRAS',
-      address: process.env.SCHOOL_ADDRESS || 'Desa Kras, Kec. Kras, Kab. Kediri, Jawa Timur',
+      address: process.env.SCHOOL_ADDRESS || 'Demangan Setonorejo Kras Kediri Kode Pos 64172',
       headerLine1: process.env.SCHOOL_HEADER1 || 'PEMERINTAH PROVINSI JAWA TIMUR',
       headerLine2: process.env.SCHOOL_HEADER2 || 'DINAS PENDIDIKAN',
+      headerLine3: process.env.SCHOOL_HEADER3 || 'SEKOLAH MENENGAH KEJURUAN NEGERI 1',
+      schoolShortName: process.env.SCHOOL_SHORT_NAME || 'KRAS',
+      city: process.env.SCHOOL_CITY || 'KEDIRI',
+      email: process.env.SCHOOL_EMAIL || 'smkn1kras@gmail.com',
+      website: process.env.SCHOOL_WEB || 'http://www.smkn1kras.sch.id',
       principalName: process.env.PRINCIPAL_NAME || '',
       principalNip: process.env.PRINCIPAL_NIP || '',
       logoPath: process.env.SCHOOL_LOGO || null
