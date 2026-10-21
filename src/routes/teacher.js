@@ -4722,14 +4722,15 @@ router.get('/raport', async (req, res) => {
 router.delete('/raport/kd/:kd_id', async (req, res) => {
   const user = req.session.user;
   try {
-    // Validasi guru berhak atas KD ini
+    // Validasi guru berhak atas KD ini (ADMIN bisa hapus KD siapapun)
+    const isAdmin = user.role === 'ADMIN';
     const [[kd]] = await pool.query(`
       SELECT rsk.id FROM raport_subject_kd rsk
       JOIN raport_subjects rs ON rs.id = rsk.raport_subject_id
       JOIN raport_subject_classes rsc ON rsc.raport_subject_id = rs.id
-      WHERE rsk.id = $1 AND rsc.teacher_id = $2
+      WHERE rsk.id = $1 AND ($2 = true OR rsc.teacher_id = $3)
       LIMIT 1
-    `, [req.params.kd_id, user.id]);
+    `, [req.params.kd_id, isAdmin, user.id]);
     if (!kd) return res.status(403).json({ ok: false, message: 'Akses ditolak.' });
     await pool.query(`DELETE FROM raport_subject_kd WHERE id = $1`, [req.params.kd_id]);
     res.json({ ok: true });
@@ -4748,8 +4749,8 @@ router.post('/raport/:period_id/:subject_id/kd', async (req, res) => {
     const [[scRow]] = await pool.query(`
       SELECT rsc.id FROM raport_subject_classes rsc
       JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id
-      JOIN raport_periods rp ON rp.id = $3 AND rp.is_active = true
-      WHERE rs.id = $1 AND rsc.teacher_id = $2 AND rs.period_id = $3
+      JOIN raport_periods rp ON rp.id = rs.period_id
+      WHERE rs.id = $1 AND rsc.teacher_id = $2 AND rs.period_id = $3 AND rp.is_active = true
     `, [subject_id, user.id, period_id]);
     if (!scRow) {
       req.flash('error', 'Akses ditolak atau periode sudah tidak aktif.');
@@ -4892,13 +4893,13 @@ router.post('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
 
     await conn.beginTransaction();
 
-    for (const [studentId, kdValues] of Object.entries(kdScoresBody)) {
-      if (!validIds.has(studentId)) continue;
+    for (const studentId of validIds) {
+      const kdValues = kdScoresBody[studentId] || {};
 
       let totalScore = 0, countScore = 0;
 
       for (const kdId of kdIds) {
-        const raw = kdValues ? kdValues[String(kdId)] : undefined;
+        const raw = kdValues[String(kdId)];
         const score = (raw !== '' && raw !== undefined && raw !== null) ? parseFloat(raw) : null;
         if (score !== null && !isNaN(score) && score >= 0 && score <= 100) {
           await conn.query(`
