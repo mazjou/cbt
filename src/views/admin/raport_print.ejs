@@ -150,11 +150,11 @@
         <% if (email || web) { %>
         <p class="alamat">Pos.el : <u><%= email %></u>&nbsp;&nbsp; Laman : <u><%= web %></u></p>
         <% } %>
+        <!-- KEDIRI di dalam kop-text agar lurus dengan teks di atas -->
+        <div style="border-bottom:1.5px solid #000; margin-top:4px; padding-bottom:3px;">
+          <span style="font-size:13pt; font-weight:bold; letter-spacing:5px;"><%= (schoolInfo && schoolInfo.city ? schoolInfo.city.toUpperCase() : 'KEDIRI').split('').join(' ') %></span>
+        </div>
       </div>
-    </div>
-    <!-- KEDIRI dalam satu blok terpusat, lurus dengan teks kop di atas -->
-    <div class="kop-kota-wrapper">
-      <span class="kop-kota-text"><%= (schoolInfo && schoolInfo.city ? schoolInfo.city.toUpperCase() : 'KEDIRI').split('').join(' ') %></span>
     </div>
 
     <!-- Judul -->
