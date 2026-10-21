@@ -4823,3 +4823,195 @@ router.post('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
   }
 });
 
+
+// GET /teacher/raport/:period_id/:subject_id/:class_id/export - download template Excel nilai
+router.get('/raport/:period_id/:subject_id/:class_id/export', async (req, res) => {
+  const user = req.session.user;
+  const { period_id, subject_id, class_id } = req.params;
+  try {
+    // Validasi guru berhak akses
+    const [[scRow]] = await pool.query(`
+      SELECT rsc.id, rs.subject_name, p.name AS period_name,
+             p.semester, p.school_year, c.name AS class_name
+      FROM raport_subject_classes rsc
+      JOIN raport_subjects rs  ON rs.id  = rsc.raport_subject_id
+      JOIN raport_subject_groups rsg ON rsg.id = rs.group_id
+      JOIN raport_periods p    ON p.id   = rsg.period_id
+      JOIN classes c           ON c.id   = rsc.class_id
+      WHERE rsc.raport_subject_id = $1
+        AND rsc.class_id          = $2
+        AND rsc.teacher_id        = $3
+        AND p.id                  = $4
+    `, [subject_id, class_id, user.id, period_id]);
+
+    if (!scRow) {
+      req.flash('error', 'Akses ditolak.');
+      return res.redirect('/teacher/raport');
+    }
+
+    // Ambil siswa kelas beserta nilai yang sudah ada
+    const [students] = await pool.query(`
+      SELECT u.id, u.full_name, u.username,
+             sc.score, sc.notes
+      FROM users u
+      LEFT JOIN raport_scores sc
+        ON sc.student_id = u.id
+        AND sc.period_id = $1
+        AND sc.raport_subject_id = $2
+      WHERE u.role = 'STUDENT' AND u.is_active = true AND u.class_id = $3
+      ORDER BY u.full_name ASC
+    `, [period_id, subject_id, class_id]);
+
+    // Buat workbook Excel
+    const wb = XLSX.utils.book_new();
+
+    // Baris 1: info mapel
+    const infoRow = [`Mata Pelajaran: ${scRow.subject_name} | Kelas: ${scRow.class_name} | Periode: ${scRow.period_name} ${scRow.semester === 1 ? 'Ganjil' : 'Genap'} ${scRow.school_year}`];
+    // Baris 2: header kolom
+    const headerRow = ['No', 'ID Siswa', 'Nama Siswa', 'NISN', 'Nilai (0-100)', 'Keterangan'];
+    // Baris data
+    const dataRows = students.map((s, idx) => [
+      idx + 1,
+      s.id,
+      s.full_name,
+      String(s.username || '').split('@')[0],
+      s.score !== null && s.score !== undefined ? s.score : '',
+      s.notes || ''
+    ]);
+
+    const aoa = [infoRow, headerRow, ...dataRows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+    // Lebar kolom
+    ws['!cols'] = [
+      { wch: 5 },   // No
+      { wch: 10 },  // ID Siswa
+      { wch: 30 },  // Nama Siswa
+      { wch: 15 },  // NISN
+      { wch: 12 },  // Nilai
+      { wch: 25 }   // Keterangan
+    ];
+
+    // Freeze pane: beku 2 baris header
+    ws['!freeze'] = { xSplit: 0, ySplit: 2, topLeftCell: 'A3', activeCell: 'A3', sqref: 'A3' };
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Nilai');
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+    const safeName = (name) => String(name || '').replace(/[^a-zA-Z0-9]/g, '_');
+    const filename = `nilai_${safeName(scRow.subject_name)}_${safeName(scRow.class_name)}.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal export nilai: ' + e.message);
+    res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
+  }
+});
+
+// Multer untuk import nilai (memory storage, tidak simpan ke disk)
+const uploadRaportExcel = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    if (
+      file.mimetype.includes('spreadsheet') ||
+      file.mimetype.includes('excel') ||
+      file.originalname.endsWith('.xlsx') ||
+      file.originalname.endsWith('.xls')
+    ) {
+      cb(null, true);
+    } else {
+      cb(new Error('Hanya file Excel (.xlsx/.xls) yang diizinkan'));
+    }
+  }
+});
+
+// POST /teacher/raport/:period_id/:subject_id/:class_id/import - import nilai dari Excel
+router.post('/raport/:period_id/:subject_id/:class_id/import',
+  uploadRaportExcel.single('nilai_file'),
+  async (req, res) => {
+    const user = req.session.user;
+    const { period_id, subject_id, class_id } = req.params;
+    try {
+      // Validasi akses
+      const [[scRow]] = await pool.query(
+        `SELECT rsc.id FROM raport_subject_classes rsc
+         WHERE rsc.raport_subject_id = $1 AND rsc.class_id = $2 AND rsc.teacher_id = $3`,
+        [subject_id, class_id, user.id]
+      );
+      if (!scRow) {
+        req.flash('error', 'Akses ditolak.');
+        return res.redirect('/teacher/raport');
+      }
+
+      if (!req.file) {
+        req.flash('error', 'Tidak ada file yang diunggah.');
+        return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
+      }
+
+      // Parse Excel dari buffer
+      const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // rows[0] = info mapel (skip)
+      // rows[1] = header kolom (skip)
+      // rows[2..] = data siswa: [No, ID Siswa, Nama, NISN, Nilai, Keterangan]
+      if (!rows || rows.length < 3) {
+        req.flash('error', 'File Excel tidak memiliki data siswa (minimal 1 baris data).');
+        return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
+      }
+
+      // Ambil set student_id valid di kelas ini (keamanan)
+      const [validStudents] = await pool.query(
+        `SELECT id FROM users WHERE role = 'STUDENT' AND is_active = true AND class_id = $1`,
+        [class_id]
+      );
+      const validStudentIds = new Set(validStudents.map(s => String(s.id)));
+
+      let successCount = 0;
+      let skipCount = 0;
+
+      for (let i = 2; i < rows.length; i++) {
+        const row = rows[i];
+        // Skip baris kosong
+        if (!row[1] && row[1] !== 0) { skipCount++; continue; }
+        const studentId = parseInt(row[1]);
+        if (!studentId || isNaN(studentId)) { skipCount++; continue; }
+        // Validasi siswa milik kelas ini
+        if (!validStudentIds.has(String(studentId))) { skipCount++; continue; }
+
+        const rawScore = row[4];
+        const score = (rawScore !== '' && rawScore !== undefined && rawScore !== null)
+          ? parseFloat(rawScore)
+          : null;
+        // Validasi range nilai
+        if (score !== null && (isNaN(score) || score < 0 || score > 100)) { skipCount++; continue; }
+
+        const notes = String(row[5] || '').trim() || null;
+
+        await pool.query(`
+          INSERT INTO raport_scores (period_id, student_id, raport_subject_id, score, notes, updated_by, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, NOW())
+          ON CONFLICT (period_id, student_id, raport_subject_id)
+          DO UPDATE SET score = EXCLUDED.score, notes = EXCLUDED.notes,
+                        updated_by = EXCLUDED.updated_by, updated_at = NOW()
+        `, [period_id, studentId, subject_id, score, notes, user.id]);
+        successCount++;
+      }
+
+      req.flash('success', `Import berhasil: ${successCount} nilai tersimpan${skipCount > 0 ? `, ${skipCount} baris dilewati` : ''}.`);
+      res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
+
+    } catch (e) {
+      console.error(e);
+      req.flash('error', 'Gagal import nilai: ' + e.message);
+      res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
+    }
+  }
+);
+

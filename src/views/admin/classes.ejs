@@ -195,7 +195,7 @@
           class="w-full rounded-xl bg-white border border-slate-200 px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
           <option value="">— Pilih Guru —</option>
           <% (typeof teachers !== 'undefined' ? teachers : []).forEach(t => { %>
-            <option value="<%= t.id %>" data-name="<%= t.full_name %>"><%= t.full_name %></option>
+            <option value="<%= t.id %>" data-name="<%= t.full_name %>" data-username="<%= t.username %>"><%= t.full_name %> (<%= t.username %>)</option>
           <% }) %>
         </select>
         <p class="text-xs text-slate-400 mt-1">Nama akan otomatis terisi setelah memilih guru</p>
@@ -356,6 +356,7 @@
     const opt = this.options[this.selectedIndex];
     if (opt.value) {
       elName.value = opt.getAttribute('data-name') || '';
+      elNip.value = opt.getAttribute('data-username') || '';
     }
   });
 
