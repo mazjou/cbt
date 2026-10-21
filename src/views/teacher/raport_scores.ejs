@@ -31,27 +31,27 @@
 
 <%- include('../partials/flash') %>
 
-<!-- Panel Kelola KD -->
+<!-- Panel Kelola TP -->
 <div class="bg-white rounded-2xl shadow-lg border border-slate-100 mb-6">
   <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
     <div>
-      <h2 class="text-lg font-bold text-slate-800">Kelola Kompetensi Dasar (KD)</h2>
-      <p class="text-sm text-slate-500 mt-0.5">KD hanya tampil di form input, tidak di raport cetakan.</p>
+      <h2 class="text-lg font-bold text-slate-800">Kelola Tujuan Pembelajaran (TP)</h2>
+      <p class="text-sm text-slate-500 mt-0.5">TP hanya tampil di form input, tidak di raport cetakan.</p>
     </div>
     <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700">
-      <%= (kdList || []).length %> KD
+      <%= (kdList || []).length %> TP
     </span>
   </div>
 
   <div class="px-6 py-4">
-    <!-- Daftar KD yang sudah ada -->
+    <!-- Daftar TP yang sudah ada -->
     <% if (kdList && kdList.length > 0) { %>
       <div class="mb-4">
         <ul class="space-y-2" id="kd-list">
           <% kdList.forEach((kd, i) => { %>
             <li class="flex items-center justify-between px-4 py-2.5 bg-slate-50 rounded-xl" id="kd-item-<%= kd.id %>">
               <span class="text-sm text-slate-700">
-                <span class="font-semibold text-indigo-600 mr-2">KD <%= i + 1 %>:</span>
+                <span class="font-semibold text-indigo-600 mr-2">TP <%= i + 1 %>:</span>
                 <%= kd.kd_name %>
               </span>
               <button type="button"
@@ -66,15 +66,15 @@
       </div>
     <% } else { %>
       <div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
-        <strong>Belum ada KD</strong> — tambahkan KD terlebih dahulu untuk bisa input nilai.
+        <strong>Belum ada TP</strong> — tambahkan TP terlebih dahulu untuk bisa input nilai.
       </div>
     <% } %>
 
-    <!-- Form tambah KD baru -->
+    <!-- Form tambah TP baru -->
     <form method="POST" action="/teacher/raport/<%= period_id %>/<%= subject_id %>/kd" class="flex flex-wrap items-end gap-3">
       <input type="hidden" name="class_id" value="<%= class_id %>">
       <div class="flex-1 min-w-[200px]">
-        <label class="block text-xs font-semibold text-slate-600 mb-1">Nama KD Baru</label>
+        <label class="block text-xs font-semibold text-slate-600 mb-1">Nama TP Baru</label>
         <input type="text" name="kd_name" required
           placeholder="contoh: Memahami konsep dasar..."
           class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm transition-all">
@@ -87,7 +87,7 @@
       <button type="submit"
         class="inline-flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition-all shadow-sm">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-        Tambah KD
+        Tambah TP
       </button>
     </form>
   </div>
@@ -114,7 +114,7 @@
     </a>
 
     <% if (!kdList || kdList.length === 0) { %>
-      <!-- Import hanya untuk mapel tanpa KD -->
+      <!-- Import hanya untuk mapel tanpa TP -->
       <form method="POST" action="/teacher/raport/<%= period_id %>/<%= subject_id %>/<%= class_id %>/import"
             enctype="multipart/form-data"
             class="flex items-center gap-2">
@@ -134,21 +134,20 @@
       <span class="text-xs text-slate-400">Download template dulu, isi nilai di Excel, lalu import</span>
     <% } else { %>
       <span class="text-xs text-amber-600 bg-amber-50 px-3 py-1.5 rounded-lg border border-amber-200">
-        &#x2139;&#xFE0F; Import Excel tidak tersedia untuk mapel dengan KD. Gunakan form di bawah.
+      &#x2139;&#xFE0F; Import Excel tidak tersedia untuk mapel dengan TP. Gunakan form di bawah.
       </span>
     <% } %>
   </div>
 
-  <% if (!kdList || kdList.length === 0) { %>
-    <!-- Belum ada KD -->
+  <!-- Belum ada TP -->
     <div class="px-6 py-10 text-center">
       <div class="inline-flex items-center justify-center w-16 h-16 bg-amber-100 rounded-2xl mb-4">
         <svg class="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
       </div>
-      <p class="text-slate-500 font-medium">Tambahkan KD di panel atas untuk mulai input nilai.</p>
+      <p class="text-slate-500 font-medium">Tambahkan TP di panel atas untuk mulai input nilai.</p>
     </div>
   <% } else { %>
-    <!-- Form input nilai dengan KD dinamis -->
+    <!-- Form input nilai dengan TP dinamis -->
     <form method="POST" action="/teacher/raport/<%= period_id %>/<%= subject_id %>/<%= class_id %>">
       <div class="overflow-x-auto">
         <table class="w-full">
@@ -158,12 +157,12 @@
               <th class="px-4 py-3">Nama Siswa</th>
               <th class="px-4 py-3">NISN</th>
               <% kdList.forEach((kd, i) => { %>
-                <th class="px-3 py-3 w-24 text-center" title="<%= kd.kd_name %>">KD <%= i + 1 %></th>
+                <th class="px-3 py-3 w-24 text-center" title="<%= kd.kd_name %>">TP <%= i + 1 %></th>
               <% }) %>
               <th class="px-3 py-3 w-28 text-center">Rata-rata</th>
               <th class="px-4 py-3">Keterangan</th>
             </tr>
-            <!-- Sub-header nama KD -->
+            <!-- Sub-header nama TP -->
             <tr class="bg-indigo-50 text-xs text-indigo-700">
               <td class="px-4 py-1" colspan="3"></td>
               <% kdList.forEach(kd => { %>
@@ -215,7 +214,7 @@
 
       <% if (students && students.length) { %>
         <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-          <p class="text-sm text-slate-500">Rata-rata dihitung otomatis dari KD yang diisi. Nilai akhir tersimpan sebagai rata-rata KD.</p>
+          <p class="text-sm text-slate-500">Rata-rata dihitung otomatis dari TP yang diisi. Nilai akhir tersimpan sebagai rata-rata TP.</p>
           <button type="submit"
             class="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white font-semibold rounded-xl hover:from-indigo-700 hover:to-blue-700 transition-all shadow-md whitespace-nowrap">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -239,19 +238,19 @@ function hitungRataRata(studentId) {
   if (rataEl) rataEl.textContent = count > 0 ? (total / count).toFixed(2) : '-';
 }
 
-// Hapus KD via AJAX DELETE
+// Hapus TP via AJAX DELETE
 async function hapusKD(kdId) {
-  if (!confirm('Hapus KD ini? Semua nilai KD yang sudah diinput akan ikut terhapus.')) return;
+  if (!confirm('Hapus TP ini? Semua nilai TP yang sudah diinput akan ikut terhapus.')) return;
   try {
     const res = await fetch('/teacher/raport/kd/' + kdId, { method: 'DELETE' });
     const data = await res.json();
     if (data.ok) {
       window.location.reload();
     } else {
-      alert('Gagal menghapus KD: ' + (data.message || 'Error tidak diketahui'));
+      alert('Gagal menghapus TP: ' + (data.message || 'Error tidak diketahui'));
     }
   } catch(e) {
-    alert('Gagal menghapus KD: ' + e.message);
+    alert('Gagal menghapus TP: ' + e.message);
   }
 }
 
