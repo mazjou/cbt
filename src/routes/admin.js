@@ -6072,7 +6072,7 @@ router.get('/raport/:period_id/tp-labels', async (req, res) => {
         FROM raport_subject_kd rsk
         JOIN raport_subjects rs ON rs.id = rsk.raport_subject_id
         WHERE rs.period_id = $1
-        GROUP BY rsk.raport_subject_id
+        GROUP BY rsk.raport_subject_id, COALESCE(rsk.class_id, 0)
       ) sub
     `, [period_id]);
     const maxTp = maxRow ? maxRow.max_tp : 0;
@@ -6101,7 +6101,7 @@ router.post('/raport/:period_id/tp-labels', async (req, res) => {
         FROM raport_subject_kd rsk
         JOIN raport_subjects rs ON rs.id = rsk.raport_subject_id
         WHERE rs.period_id = $1
-        GROUP BY rsk.raport_subject_id
+        GROUP BY rsk.raport_subject_id, COALESCE(rsk.class_id, 0)
       ) sub
     `, [period_id]);
     const maxTp = maxRow ? maxRow.max_tp : 0;
@@ -6549,6 +6549,7 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
     let maxKdPerSubject = {}; // jumlah KD terbanyak per subject
     if (subjectIds.length > 0) {
       const ph = subjectIds.map((_, i) => `$${i + 3}`).join(',');
+      const phClassSingle = `$${subjectIds.length + 3}`;
       const [kdRows] = await pq(`
         SELECT rsk.id AS kd_id, rsk.kd_name, rsk.raport_subject_id AS subject_id,
                rsk.sort_order,
@@ -6557,8 +6558,9 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
         LEFT JOIN raport_kd_scores ksc ON ksc.kd_id = rsk.id
           AND ksc.student_id = $1 AND ksc.period_id = $2
         WHERE rsk.raport_subject_id IN (${ph})
+          AND (rsk.class_id = ${phClassSingle} OR rsk.class_id IS NULL)
         ORDER BY rsk.raport_subject_id ASC, rsk.sort_order ASC, rsk.id ASC
-      `, [student_id, period_id, ...subjectIds]);
+      `, [student_id, period_id, ...subjectIds, student.class_id]);
 
       for (const kd of kdRows) {
         if (!kdMap[kd.subject_id]) kdMap[kd.subject_id] = [];
@@ -6719,6 +6721,9 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
       const allStudentIds = students.map(s => s.id);
       const phSub = allSubjectIds.map((_, i) => `$${i + 1}`).join(',');
       const phStu = allStudentIds.map((_, i) => `$${allSubjectIds.length + i + 1}`).join(',');
+      const phPeriod = `$${allSubjectIds.length + allStudentIds.length + 1}`;
+      const phClassArr = `$${allSubjectIds.length + allStudentIds.length + 2}`;
+      const uniqueClassIds = [...new Set(students.map(s => s.class_id).filter(Boolean))];
 
       const [kdRowsAll] = await pq(`
         SELECT rsk.id AS kd_id, rsk.kd_name, rsk.raport_subject_id AS subject_id,
@@ -6728,11 +6733,12 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
         FROM raport_subject_kd rsk
         LEFT JOIN raport_kd_scores ksc
           ON ksc.kd_id = rsk.id
-          AND ksc.period_id = $${allSubjectIds.length + allStudentIds.length + 1}
+          AND ksc.period_id = ${phPeriod}
           AND ksc.student_id IN (${phStu})
         WHERE rsk.raport_subject_id IN (${phSub})
+          AND (rsk.class_id = ANY(${phClassArr}::int[]) OR rsk.class_id IS NULL)
         ORDER BY rsk.raport_subject_id ASC, rsk.sort_order ASC, rsk.id ASC
-      `, [...allSubjectIds, ...allStudentIds, period_id]);
+      `, [...allSubjectIds, ...allStudentIds, period_id, uniqueClassIds]);
 
       // Hitung maxKd per subject dari jumlah distinct KD
       const kdCountPerSubject = {};

@@ -4817,6 +4817,7 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
       const phSub = allSubjectIdsKelas.map((_, i) => `$${i + 1}`).join(',');
       const phStu = stuIds.map((_, i) => `$${allSubjectIdsKelas.length + i + 1}`).join(',');
 
+      const phClassKelas = `$${allSubjectIdsKelas.length + stuIds.length + 2}`;
       const [kdRowsKelas] = await pool.query(`
         SELECT rsk.id AS kd_id, rsk.kd_name, rsk.raport_subject_id AS subject_id,
                rsk.sort_order,
@@ -4828,8 +4829,9 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
           AND ksc.period_id = $${allSubjectIdsKelas.length + stuIds.length + 1}
           AND ksc.student_id IN (${phStu})
         WHERE rsk.raport_subject_id IN (${phSub})
+          AND (rsk.class_id = ${phClassKelas} OR rsk.class_id IS NULL)
         ORDER BY rsk.raport_subject_id ASC, rsk.sort_order ASC, rsk.id ASC
-      `, [...allSubjectIdsKelas, ...stuIds, period_id]);
+      `, [...allSubjectIdsKelas, ...stuIds, period_id, homeroomClass.id]);
 
       const kdCountPerSubject = {};
       for (const kd of kdRowsKelas) {
@@ -4980,6 +4982,7 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
 
     if (subjectIdsSiswa.length > 0) {
       const ph = subjectIdsSiswa.map((_, i) => `$${i + 3}`).join(',');
+      const phClassSiswa = `$${subjectIdsSiswa.length + 3}`;
       const [kdRowsSiswa] = await pool.query(`
         SELECT rsk.id AS kd_id, rsk.kd_name, rsk.raport_subject_id AS subject_id,
                rsk.sort_order,
@@ -4988,8 +4991,9 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
         LEFT JOIN raport_kd_scores ksc ON ksc.kd_id = rsk.id
           AND ksc.student_id = $1 AND ksc.period_id = $2
         WHERE rsk.raport_subject_id IN (${ph})
+          AND (rsk.class_id = ${phClassSiswa} OR rsk.class_id IS NULL)
         ORDER BY rsk.raport_subject_id ASC, rsk.sort_order ASC, rsk.id ASC
-      `, [student_id, period_id, ...subjectIdsSiswa]);
+      `, [student_id, period_id, ...subjectIdsSiswa, stu.class_id]);
 
       for (const kd of kdRowsSiswa) {
         if (!kdMapSiswa[kd.subject_id]) kdMapSiswa[kd.subject_id] = [];
@@ -5102,6 +5106,17 @@ router.post('/raport/:period_id/:subject_id/kd', async (req, res) => {
     if (!scRow) {
       req.flash('error', 'Akses ditolak atau periode sudah tidak aktif.');
       return res.redirect('/teacher/raport');
+    }
+    // Validasi class_id: harus terdaftar di raport_subject_classes untuk subject ini
+    if (class_id) {
+      const [[classRow]] = await pool.query(`
+        SELECT id FROM raport_subject_classes
+        WHERE raport_subject_id = $1 AND class_id = $2
+      `, [subject_id, class_id]);
+      if (!classRow) {
+        req.flash('error', 'Kelas tidak valid untuk mata pelajaran ini.');
+        return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
+      }
     }
     if (!kd_name || !kd_name.trim()) {
       req.flash('error', 'Nama KD tidak boleh kosong.');
