@@ -100,12 +100,12 @@
     } catch(e) { return '-'; }
   }
 
-  // Helper: format nilai
+  // Helper: format nilai (buang trailing zero, misal 90.00 → 90, 89.67 → 89.67)
   function formatNilai(n) {
     if (n === null || n === undefined || n === '') return '-';
     const num = parseFloat(n);
     if (isNaN(num)) return '-';
-    return num.toFixed(2);
+    return parseFloat(num.toFixed(2)).toString();
   }
 
   // Data yang akan dicetak
@@ -245,7 +245,7 @@
               <td><%= s.name %></td>
               <% if (hasKd) { %>
                 <% for (var ki2 = 0; ki2 < maxKd; ki2++) { %>
-                  <td class="nilai"><%= (s.kdScores && s.kdScores[ki2] && s.kdScores[ki2].score !== null && s.kdScores[ki2].score !== undefined) ? parseFloat(s.kdScores[ki2].score).toFixed(2) : '-' %></td>
+                  <td class="nilai"><%= (s.kdScores && s.kdScores[ki2] && s.kdScores[ki2].score !== null && s.kdScores[ki2].score !== undefined) ? parseFloat(parseFloat(s.kdScores[ki2].score).toFixed(2)).toString() : '-' %></td>
                 <% } %>
                 <td class="nilai"><%= formatNilai(s.score) %></td>
               <% } else { %>
