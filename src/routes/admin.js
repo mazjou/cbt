@@ -1698,7 +1698,8 @@ router.get('/users/print-cards', async (req, res) => {
 router.get('/users/:id/json', async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, username, full_name, role, class_id, is_active, nomor_peserta
+      `SELECT id, username, full_name, role, class_id, is_active, nomor_peserta,
+              tempat_lahir, tanggal_lahir
        FROM users WHERE id=$1 LIMIT 1`,
       [req.params.id]
     );
@@ -1713,32 +1714,36 @@ router.get('/users/:id/json', async (req, res) => {
 
 // Update via AJAX untuk modal edit
 router.post('/users/:id/ajax-update', async (req, res) => {
-  const { username, full_name, role, class_id, is_active, new_password, nomor_peserta } = req.body || {};
+  const { username, full_name, role, class_id, is_active, new_password, nomor_peserta, tempat_lahir, tanggal_lahir } = req.body || {};
   try {
     const plainPwd = new_password && String(new_password).trim().length > 0 ? String(new_password).trim() : null;
     const noPeserta = String(nomor_peserta || '').trim() || null;
+    const tmptLahir = String(tempat_lahir || '').trim() || null;
+    const tglLahir  = tanggal_lahir && String(tanggal_lahir).trim() ? String(tanggal_lahir).trim() : null;
 
     if (plainPwd) {
       const password_hash = await bcrypt.hash(plainPwd, 10);
       await pool.query(
         `UPDATE users SET username=$1, full_name=$2, role=$3, class_id=$4, is_active=$5,
-         nomor_peserta=$6, password_hash=$7, plain_password=$8 WHERE id=$9`,
+         nomor_peserta=$6, tempat_lahir=$7, tanggal_lahir=$8,
+         password_hash=$9, plain_password=$10 WHERE id=$11`,
         [String(username||'').trim(), String(full_name||'').trim(), String(role||'STUDENT').trim(),
          class_id ? Number(class_id) : null, String(is_active)==='1'||is_active===true,
-         noPeserta, password_hash, plainPwd, req.params.id]
+         noPeserta, tmptLahir, tglLahir, password_hash, plainPwd, req.params.id]
       );
     } else {
       await pool.query(
         `UPDATE users SET username=$1, full_name=$2, role=$3, class_id=$4, is_active=$5,
-         nomor_peserta=$6 WHERE id=$7`,
+         nomor_peserta=$6, tempat_lahir=$7, tanggal_lahir=$8 WHERE id=$9`,
         [String(username||'').trim(), String(full_name||'').trim(), String(role||'STUDENT').trim(),
          class_id ? Number(class_id) : null, String(is_active)==='1'||is_active===true,
-         noPeserta, req.params.id]
+         noPeserta, tmptLahir, tglLahir, req.params.id]
       );
     }
 
     const result = await pool.query(
-      `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.class_id, u.nomor_peserta, c.name AS class_name
+      `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.class_id, u.nomor_peserta,
+              u.tempat_lahir, u.tanggal_lahir, c.name AS class_name
        FROM users u LEFT JOIN classes c ON c.id=u.class_id WHERE u.id=$1 LIMIT 1`,
       [req.params.id]
     );

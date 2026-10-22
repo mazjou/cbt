@@ -437,6 +437,17 @@
         <input name="full_name" id="um_full_name" required class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
 
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-sm text-slate-600">Tempat Lahir</label>
+          <input name="tempat_lahir" id="um_tempat_lahir" placeholder="Contoh: Kediri" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+        <div>
+          <label class="text-sm text-slate-600">Tanggal Lahir</label>
+          <input type="date" name="tanggal_lahir" id="um_tanggal_lahir" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+      </div>
+
       <div>
         <label class="text-sm text-slate-600">Nomor Peserta <span class="text-slate-400 font-normal">(opsional - tampil di kartu cetak)</span></label>
         <input name="nomor_peserta" id="um_nomor_peserta" placeholder="Contoh: 001, 2024-001" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
@@ -727,6 +738,8 @@
     const elUsername = document.getElementById('um_username');
     const elFullName = document.getElementById('um_full_name');
     const elNoPeserta = document.getElementById('um_nomor_peserta');
+    const elTempatLahir = document.getElementById('um_tempat_lahir');
+    const elTanggalLahir = document.getElementById('um_tanggal_lahir');
     const elRole = document.getElementById('um_role');
     const elClassId = document.getElementById('um_class_id');
     const elActive = document.getElementById('um_is_active');
@@ -771,6 +784,9 @@
         elUsername.value = j.user.username || '';
         elFullName.value = j.user.full_name || '';
         elNoPeserta.value = j.user.nomor_peserta || '';
+        elTempatLahir.value = j.user.tempat_lahir || '';
+        // Format tanggal: ambil YYYY-MM-DD saja
+        elTanggalLahir.value = j.user.tanggal_lahir ? String(j.user.tanggal_lahir).substring(0, 10) : '';
         elRole.value = j.user.role || 'STUDENT';
         elClassId.value = (j.user.class_id === null || j.user.class_id === undefined) ? '' : String(j.user.class_id);
         elActive.value = String(j.user.is_active ? 1 : 0);
@@ -799,6 +815,8 @@
           username: elUsername.value,
           full_name: elFullName.value,
           nomor_peserta: elNoPeserta.value,
+          tempat_lahir: elTempatLahir.value,
+          tanggal_lahir: elTanggalLahir.value,
           role: elRole.value,
           class_id: elClassId.value,
           is_active: elActive.value,
