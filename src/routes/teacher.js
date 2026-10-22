@@ -5108,8 +5108,8 @@ router.post('/raport/:period_id/:subject_id/kd', async (req, res) => {
       return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
     }
     await pool.query(
-      `INSERT INTO raport_subject_kd (raport_subject_id, kd_name, sort_order) VALUES ($1, $2, $3)`,
-      [subject_id, kd_name.trim(), parseInt(sort_order) || 0]
+      `INSERT INTO raport_subject_kd (raport_subject_id, kd_name, sort_order, class_id) VALUES ($1, $2, $3, $4)`,
+      [subject_id, kd_name.trim(), parseInt(sort_order) || 0, class_id || null]
     );
     req.flash('success', 'KD berhasil ditambahkan.');
   } catch(e) {
@@ -5145,11 +5145,12 @@ router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
       return res.redirect('/teacher/raport');
     }
 
-    // Ambil KD untuk subject ini
+    // Ambil KD untuk subject ini (filter per kelas, TP lama ber-class_id NULL tetap muncul)
     const [kdList] = await pool.query(
       `SELECT id, kd_name, sort_order FROM raport_subject_kd
-       WHERE raport_subject_id = $1 ORDER BY sort_order ASC, id ASC`,
-      [subject_id]
+       WHERE raport_subject_id = $1 AND (class_id = $2 OR class_id IS NULL)
+       ORDER BY sort_order ASC, id ASC`,
+      [subject_id, class_id]
     );
 
     // Ambil siswa kelas ini beserta nilai akhir yang sudah ada
@@ -5223,8 +5224,8 @@ router.post('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
 
     // Ambil daftar KD aktif untuk mapel ini
     const [kdList] = await pool.query(
-      `SELECT id FROM raport_subject_kd WHERE raport_subject_id = $1`,
-      [subject_id]
+      `SELECT id FROM raport_subject_kd WHERE raport_subject_id = $1 AND (class_id = $2 OR class_id IS NULL)`,
+      [subject_id, class_id]
     );
     const kdIds = kdList.map(k => k.id);
 
@@ -5331,8 +5332,8 @@ router.get('/raport/:period_id/:subject_id/:class_id/export', async (req, res) =
 
     // Ambil KD untuk subject ini
     const [kdList] = await pool.query(
-      `SELECT id, kd_name FROM raport_subject_kd WHERE raport_subject_id = $1 ORDER BY sort_order ASC, id ASC`,
-      [subject_id]
+      `SELECT id, kd_name FROM raport_subject_kd WHERE raport_subject_id = $1 AND (class_id = $2 OR class_id IS NULL) ORDER BY sort_order ASC, id ASC`,
+      [subject_id, class_id]
     );
 
     let kdScoreMap = {};
@@ -5463,8 +5464,8 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
 
       // Ambil KD aktif untuk mapel ini
       const [activeKds] = await pool.query(
-        `SELECT id, kd_name FROM raport_subject_kd WHERE raport_subject_id = $1 ORDER BY sort_order ASC, id ASC`,
-        [subject_id]
+        `SELECT id, kd_name FROM raport_subject_kd WHERE raport_subject_id = $1 AND (class_id = $2 OR class_id IS NULL) ORDER BY sort_order ASC, id ASC`,
+        [subject_id, class_id]
       );
       const hasKd = activeKds.length > 0;
 
