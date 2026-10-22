@@ -6493,7 +6493,7 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
   const { period_id, student_id } = req.params;
   try {
     const [[student]] = await pq(`
-      SELECT u.id, u.full_name, u.username, u.tanggal_lahir,
+      SELECT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir,
              c.name AS class_name, u.class_id,
              c.homeroom_teacher_name, c.homeroom_teacher_nip
       FROM users u
@@ -6640,7 +6640,7 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
     if (!period) return res.status(404).send('Periode tidak ditemukan.');
 
     let studentQuery = `
-      SELECT DISTINCT u.id, u.full_name, u.username, u.tanggal_lahir,
+      SELECT DISTINCT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir,
              c.name AS class_name, u.class_id,
              c.homeroom_teacher_name, c.homeroom_teacher_nip
       FROM users u

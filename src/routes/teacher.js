@@ -4755,7 +4755,7 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
 
     // Ambil semua siswa di kelas ini
     const [students] = await pool.query(`
-      SELECT u.id, u.full_name, u.username, u.tanggal_lahir,
+      SELECT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir,
              c.name AS class_name, u.class_id,
              c.homeroom_teacher_name, c.homeroom_teacher_nip
       FROM users u
@@ -4928,7 +4928,7 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
   try {
     // Validasi: guru harus wali kelas dari kelas siswa ini
     const [[stu]] = await pool.query(`
-      SELECT u.id, u.full_name, u.username, u.tanggal_lahir,
+      SELECT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir,
              c.name AS class_name, u.class_id,
              c.homeroom_teacher_name, c.homeroom_teacher_nip
       FROM users u JOIN classes c ON c.id = u.class_id
