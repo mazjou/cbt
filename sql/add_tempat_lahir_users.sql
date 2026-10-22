@@ -10,7 +10,12 @@ SET
   tempat_lahir  = ss.tempat_lahir,
   tanggal_lahir = ss.tanggal_lahir
 FROM sdms_siswa ss
-WHERE (u.username = ss.nisn OR u.username = ss.nis)
+WHERE (
+  u.username = ss.nisn OR
+  u.username = ss.nis  OR
+  SPLIT_PART(u.username, '@', 1) = ss.nisn OR
+  SPLIT_PART(u.username, '@', 1) = ss.nis
+)
   AND u.role = 'STUDENT'
   AND (ss.tempat_lahir IS NOT NULL OR ss.tanggal_lahir IS NOT NULL);
 
