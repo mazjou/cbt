@@ -5263,7 +5263,9 @@ router.post('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
 
       for (const kdId of kdIds) {
         const raw = kdValues[String(kdId)];
-        const score = (raw !== '' && raw !== undefined && raw !== null) ? parseFloat(raw) : null;
+        // Kalau field tidak dikirim sama sekali (undefined), skip — jangan hapus nilai yang sudah ada
+        if (raw === undefined) continue;
+        const score = (raw !== '' && raw !== null) ? parseFloat(raw) : null;
         if (score !== null && !isNaN(score) && score >= 0 && score <= 100) {
           await conn.query(`
             INSERT INTO raport_kd_scores (period_id, student_id, raport_subject_id, kd_id, score, updated_by, updated_at)
@@ -5274,6 +5276,7 @@ router.post('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
           totalScore += score;
           countScore++;
         } else {
+          // raw dikirim tapi kosong — guru sengaja kosongkan, hapus nilai
           await conn.query(
             `DELETE FROM raport_kd_scores WHERE period_id = $1 AND student_id = $2 AND kd_id = $3`,
             [period_id, studentId, kdId]
@@ -5281,7 +5284,17 @@ router.post('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
         }
       }
 
-      const finalScore = countScore > 0 ? Math.round((totalScore / countScore) * 100) / 100 : null;
+      // Hitung rata-rata dari SEMUA nilai TP di DB (bukan hanya yang dikirim form)
+      const [allKdScores] = await conn.query(`
+        SELECT score FROM raport_kd_scores
+        WHERE period_id = $1 AND student_id = $2 AND raport_subject_id = $3
+          AND score IS NOT NULL
+      `, [period_id, studentId, subject_id]);
+      let finalScore = null;
+      if (allKdScores.length > 0) {
+        const sum = allKdScores.reduce((a, r) => a + parseFloat(r.score), 0);
+        finalScore = Math.round((sum / allKdScores.length) * 100) / 100;
+      }
       const notes = notesBody[studentId] || null;
 
       await conn.query(`
