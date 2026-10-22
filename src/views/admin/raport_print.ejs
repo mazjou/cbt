@@ -201,6 +201,24 @@
           (g.subjects || []).reduce((m, s) => Math.max(m, (s.kdScores || []).length), max), 0);
       const hasKd = maxKd > 0;
       const totalCols = hasKd ? 3 + maxKd + 1 : 4; // No + Mapel + TP1..N + Rata2/Nilai + Ket
+      // Nama kolom TP: dari server (kdNames) atau dari data kdScores
+      const safeKdNames = (typeof kdNames !== 'undefined' && Array.isArray(kdNames) && kdNames.length > 0) ? kdNames :
+        (() => {
+          const names = [];
+          outer:
+          for (const g of stuGroups) {
+            for (const s of (g.subjects || [])) {
+              if (s.kdScores && s.kdScores.length >= maxKd) {
+                for (let ki = 0; ki < maxKd; ki++) {
+                  names.push((s.kdScores[ki] && s.kdScores[ki].kd_name) ? s.kdScores[ki].kd_name : ('TP ' + (ki + 1)));
+                }
+                break outer;
+              }
+            }
+          }
+          while (names.length < maxKd) names.push('TP ' + (names.length + 1));
+          return names;
+        })();
     %>
     <table class="tabel-nilai">
       <thead>
@@ -208,8 +226,8 @@
           <th class="no">No</th>
           <th>Mata Pelajaran</th>
           <% if (hasKd) { %>
-            <% for (var ki = 1; ki <= maxKd; ki++) { %>
-              <th class="nilai">TP <%= ki %></th>
+            <% for (var ki = 0; ki < maxKd; ki++) { %>
+              <th class="nilai"><%= safeKdNames[ki] || ('TP ' + (ki + 1)) %></th>
             <% } %>
             <th class="nilai">Rata-rata</th>
           <% } else { %>

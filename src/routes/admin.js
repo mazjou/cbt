@@ -6487,6 +6487,18 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
     const globalMaxKd = Object.values(maxKdPerSubject).length > 0
       ? Math.max(...Object.values(maxKdPerSubject)) : 0;
 
+    // Bangun kdNames dari kdMap
+    const kdNamesSingle = [];
+    if (globalMaxKd > 0) {
+      for (let ki = 0; ki < globalMaxKd; ki++) {
+        let found = null;
+        for (const sid of Object.keys(kdMap)) {
+          if (kdMap[sid][ki] && kdMap[sid][ki].kd_name) { found = kdMap[sid][ki].kd_name; break; }
+        }
+        kdNamesSingle.push(found || `TP ${ki + 1}`);
+      }
+    }
+
     // Inject kdScores ke subjects
     for (const grp of groups) {
       for (const subj of grp.subjects) {
@@ -6530,7 +6542,8 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       schoolInfo,
       multiStudent: false,
       allStudents: [],
-      globalMaxKd: globalMaxKd || 0
+      globalMaxKd: globalMaxKd || 0,
+      kdNames: kdNamesSingle || []
     });
   } catch (e) {
     console.error(e);
@@ -6616,6 +6629,83 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
       groups: [...(scoresByStudent[s.id] || new Map()).values()]
     }));
 
+    // --- KD / TP injection untuk print-all ---
+    const allSubjectIds = [...new Set(allRows.map(r => r.subject_id).filter(Boolean))];
+    let kdMapAll = {};   // { subject_id: { student_id: [{kd_id, kd_name, score}] } }
+    let maxKdPerSubjectAll = {};
+    let globalKdNamesMap = {}; // { subject_id: [kd_name, ...] }
+
+    if (allSubjectIds.length > 0) {
+      const allStudentIds = students.map(s => s.id);
+      const phSub = allSubjectIds.map((_, i) => `$${i + 1}`).join(',');
+      const phStu = allStudentIds.map((_, i) => `$${allSubjectIds.length + i + 1}`).join(',');
+
+      const [kdRowsAll] = await pq(`
+        SELECT rsk.id AS kd_id, rsk.kd_name, rsk.raport_subject_id AS subject_id,
+               rsk.sort_order,
+               ksc.student_id,
+               ksc.score AS kd_score
+        FROM raport_subject_kd rsk
+        LEFT JOIN raport_kd_scores ksc
+          ON ksc.kd_id = rsk.id
+          AND ksc.period_id = $${allSubjectIds.length + allStudentIds.length + 1}
+          AND ksc.student_id IN (${phStu})
+        WHERE rsk.raport_subject_id IN (${phSub})
+        ORDER BY rsk.raport_subject_id ASC, rsk.sort_order ASC, rsk.id ASC
+      `, [...allSubjectIds, ...allStudentIds, period_id]);
+
+      // Hitung maxKd per subject dari jumlah distinct KD
+      const kdCountPerSubject = {};
+      for (const kd of kdRowsAll) {
+        if (!kdCountPerSubject[kd.subject_id]) kdCountPerSubject[kd.subject_id] = new Set();
+        kdCountPerSubject[kd.subject_id].add(kd.kd_id);
+        // Kumpulkan nama KD per subject (unik)
+        if (!globalKdNamesMap[kd.subject_id]) globalKdNamesMap[kd.subject_id] = [];
+        if (!globalKdNamesMap[kd.subject_id].includes(kd.kd_name)) {
+          globalKdNamesMap[kd.subject_id].push(kd.kd_name);
+        }
+      }
+      for (const [sid, kdSet] of Object.entries(kdCountPerSubject)) {
+        maxKdPerSubjectAll[sid] = kdSet.size;
+      }
+
+      for (const kd of kdRowsAll) {
+        if (kd.student_id == null) continue;
+        if (!kdMapAll[kd.subject_id]) kdMapAll[kd.subject_id] = {};
+        if (!kdMapAll[kd.subject_id][kd.student_id]) kdMapAll[kd.subject_id][kd.student_id] = [];
+        kdMapAll[kd.subject_id][kd.student_id].push({
+          kd_id: kd.kd_id,
+          kd_name: kd.kd_name,
+          score: kd.kd_score
+        });
+      }
+    }
+
+    const globalMaxKd = Object.values(maxKdPerSubjectAll).length > 0
+      ? Math.max(...Object.values(maxKdPerSubjectAll)) : 0;
+
+    // Bangun kdNames: array nama TP index 0..globalMaxKd-1
+    const kdNames = [];
+    if (globalMaxKd > 0) {
+      for (let ki = 0; ki < globalMaxKd; ki++) {
+        let found = null;
+        for (const sid of Object.keys(globalKdNamesMap)) {
+          if (globalKdNamesMap[sid][ki]) { found = globalKdNamesMap[sid][ki]; break; }
+        }
+        kdNames.push(found || `TP ${ki + 1}`);
+      }
+    }
+
+    // Inject kdScores ke setiap subject setiap siswa
+    for (const stu of allStudents) {
+      for (const grp of stu.groups) {
+        for (const subj of grp.subjects) {
+          subj.kdScores = (kdMapAll[subj.id] && kdMapAll[subj.id][stu.id]) || [];
+        }
+      }
+    }
+    // --- end KD injection ---
+
     const schoolInfo = {
       name: process.env.SCHOOL_NAME || 'SMK NEGERI 1 KRAS',
       address: process.env.SCHOOL_ADDRESS || 'Desa Kras, Kec. Kras, Kab. Kediri, Jawa Timur',
@@ -6644,7 +6734,9 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
       groups: allStudents[0] ? allStudents[0].groups : [],
       schoolInfo,
       multiStudent: true,
-      allStudents
+      allStudents,
+      globalMaxKd: globalMaxKd || 0,
+      kdNames: kdNames || []
     });
   } catch (e) {
     console.error(e);

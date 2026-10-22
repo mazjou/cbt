@@ -4771,7 +4771,7 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
 
     // Ambil mapel + nilai untuk semua siswa di kelas ini
     const [scoreRows] = await pool.query(`
-      SELECT rs.subject_name, rsg.name AS group_name,
+      SELECT rs.id AS subject_id, rs.subject_name, rsg.id AS group_id, rsg.name AS group_name,
              rs.sort_order AS subject_order, rsg.sort_order AS group_order,
              sc.student_id, sc.score, sc.notes
       FROM raport_subjects rs
@@ -4785,25 +4785,99 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
     // Bangun groups per siswa
     const groupMapTemplate = new Map();
     for (const row of scoreRows) {
-      if (!groupMapTemplate.has(row.group_name)) {
-        groupMapTemplate.set(row.group_name, { group_name: row.group_name, subjects: [] });
+      if (!groupMapTemplate.has(row.group_id)) {
+        groupMapTemplate.set(row.group_id, { id: row.group_id, name: row.group_name, subjects: [] });
       }
-      const grp = groupMapTemplate.get(row.group_name);
-      if (!grp.subjects.find(s => s.subject_name === row.subject_name)) {
-        grp.subjects.push({ subject_name: row.subject_name });
+      const grp = groupMapTemplate.get(row.group_id);
+      if (!grp.subjects.find(s => s.id === row.subject_id)) {
+        grp.subjects.push({ id: row.subject_id, name: row.subject_name });
       }
     }
 
     const allStudents = students.map(stu => {
       const stuGroups = [...groupMapTemplate.values()].map(grp => ({
-        group_name: grp.group_name,
+        id: grp.id,
+        name: grp.name,
         subjects: grp.subjects.map(subj => {
-          const sc = scoreRows.find(r => r.student_id === stu.id && r.subject_name === subj.subject_name);
-          return { subject_name: subj.subject_name, score: sc ? sc.score : null, notes: sc ? sc.notes : null };
+          const sc = scoreRows.find(r => r.student_id === stu.id && r.subject_id === subj.id);
+          return { id: subj.id, name: subj.name, score: sc ? sc.score : null, notes: sc ? sc.notes : null };
         })
       }));
       return { ...stu, groups: stuGroups };
     });
+
+    // --- KD / TP injection untuk print-kelas ---
+    const allSubjectIdsKelas = [...new Set(scoreRows.map(r => r.subject_id).filter(Boolean))];
+    let kdMapKelas = {};
+    let maxKdPerSubjectKelas = {};
+    let kdNamesMapKelas = {}; // { subject_id: [kd_name, ...] }
+
+    if (allSubjectIdsKelas.length > 0) {
+      const stuIds = students.map(s => s.id);
+      const phSub = allSubjectIdsKelas.map((_, i) => `$${i + 1}`).join(',');
+      const phStu = stuIds.map((_, i) => `$${allSubjectIdsKelas.length + i + 1}`).join(',');
+
+      const [kdRowsKelas] = await pool.query(`
+        SELECT rsk.id AS kd_id, rsk.kd_name, rsk.raport_subject_id AS subject_id,
+               rsk.sort_order,
+               ksc.student_id,
+               ksc.score AS kd_score
+        FROM raport_subject_kd rsk
+        LEFT JOIN raport_kd_scores ksc
+          ON ksc.kd_id = rsk.id
+          AND ksc.period_id = $${allSubjectIdsKelas.length + stuIds.length + 1}
+          AND ksc.student_id IN (${phStu})
+        WHERE rsk.raport_subject_id IN (${phSub})
+        ORDER BY rsk.raport_subject_id ASC, rsk.sort_order ASC, rsk.id ASC
+      `, [...allSubjectIdsKelas, ...stuIds, period_id]);
+
+      const kdCountPerSubject = {};
+      for (const kd of kdRowsKelas) {
+        if (!kdCountPerSubject[kd.subject_id]) kdCountPerSubject[kd.subject_id] = new Set();
+        kdCountPerSubject[kd.subject_id].add(kd.kd_id);
+        if (!kdNamesMapKelas[kd.subject_id]) kdNamesMapKelas[kd.subject_id] = [];
+        if (!kdNamesMapKelas[kd.subject_id].includes(kd.kd_name)) {
+          kdNamesMapKelas[kd.subject_id].push(kd.kd_name);
+        }
+      }
+      for (const [sid, kdSet] of Object.entries(kdCountPerSubject)) {
+        maxKdPerSubjectKelas[sid] = kdSet.size;
+      }
+
+      for (const kd of kdRowsKelas) {
+        if (kd.student_id == null) continue;
+        if (!kdMapKelas[kd.subject_id]) kdMapKelas[kd.subject_id] = {};
+        if (!kdMapKelas[kd.subject_id][kd.student_id]) kdMapKelas[kd.subject_id][kd.student_id] = [];
+        kdMapKelas[kd.subject_id][kd.student_id].push({
+          kd_id: kd.kd_id,
+          kd_name: kd.kd_name,
+          score: kd.kd_score
+        });
+      }
+    }
+
+    const globalMaxKdKelas = Object.values(maxKdPerSubjectKelas).length > 0
+      ? Math.max(...Object.values(maxKdPerSubjectKelas)) : 0;
+
+    const kdNamesKelas = [];
+    if (globalMaxKdKelas > 0) {
+      for (let ki = 0; ki < globalMaxKdKelas; ki++) {
+        let found = null;
+        for (const sid of Object.keys(kdNamesMapKelas)) {
+          if (kdNamesMapKelas[sid][ki]) { found = kdNamesMapKelas[sid][ki]; break; }
+        }
+        kdNamesKelas.push(found || `TP ${ki + 1}`);
+      }
+    }
+
+    for (const stu of allStudents) {
+      for (const grp of stu.groups) {
+        for (const subj of grp.subjects) {
+          subj.kdScores = (kdMapKelas[subj.id] && kdMapKelas[subj.id][stu.id]) || [];
+        }
+      }
+    }
+    // --- end KD injection ---
 
     // Ambil kepala sekolah dari DB
     const schoolInfo = {
@@ -4838,7 +4912,9 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
       groups: allStudents[0]?.groups || [],
       schoolInfo,
       multiStudent: true,
-      allStudents
+      allStudents,
+      globalMaxKd: globalMaxKdKelas || 0,
+      kdNames: kdNamesKelas || []
     });
   } catch (e) {
     console.error(e);
@@ -4881,8 +4957,8 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
     if (!period) return res.status(404).send('Periode tidak ditemukan.');
 
     const [scoreRows] = await pool.query(`
-      SELECT rsg.name AS group_name, rsg.sort_order AS g_order,
-             rs.subject_name, rs.sort_order AS s_order,
+      SELECT rsg.id AS group_id, rsg.name AS group_name, rsg.sort_order AS g_order,
+             rs.id AS subject_id, rs.subject_name, rs.sort_order AS s_order,
              sc.score, sc.notes
       FROM raport_subject_groups rsg
       JOIN raport_subjects rs ON rs.group_id = rsg.id AND rsg.period_id = $1
@@ -4894,9 +4970,57 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
 
     const groupMap = new Map();
     for (const r of scoreRows) {
-      if (!groupMap.has(r.group_name)) groupMap.set(r.group_name, { group_name: r.group_name, subjects: [] });
-      groupMap.get(r.group_name).subjects.push({ subject_name: r.subject_name, score: r.score, notes: r.notes });
+      if (!groupMap.has(r.group_id)) groupMap.set(r.group_id, { id: r.group_id, name: r.group_name, subjects: [] });
+      groupMap.get(r.group_id).subjects.push({ id: r.subject_id, name: r.subject_name, score: r.score, notes: r.notes });
     }
+    const groups = [...groupMap.values()];
+
+    // --- KD / TP injection untuk print-siswa ---
+    const subjectIdsSiswa = [...new Set(scoreRows.map(r => r.subject_id).filter(Boolean))];
+    let kdMapSiswa = {};
+    let maxKdSiswa = {};
+
+    if (subjectIdsSiswa.length > 0) {
+      const ph = subjectIdsSiswa.map((_, i) => `$${i + 3}`).join(',');
+      const [kdRowsSiswa] = await pool.query(`
+        SELECT rsk.id AS kd_id, rsk.kd_name, rsk.raport_subject_id AS subject_id,
+               rsk.sort_order,
+               ksc.score AS kd_score
+        FROM raport_subject_kd rsk
+        LEFT JOIN raport_kd_scores ksc ON ksc.kd_id = rsk.id
+          AND ksc.student_id = $1 AND ksc.period_id = $2
+        WHERE rsk.raport_subject_id IN (${ph})
+        ORDER BY rsk.raport_subject_id ASC, rsk.sort_order ASC, rsk.id ASC
+      `, [student_id, period_id, ...subjectIdsSiswa]);
+
+      for (const kd of kdRowsSiswa) {
+        if (!kdMapSiswa[kd.subject_id]) kdMapSiswa[kd.subject_id] = [];
+        kdMapSiswa[kd.subject_id].push({ kd_id: kd.kd_id, kd_name: kd.kd_name, score: kd.kd_score });
+        maxKdSiswa[kd.subject_id] = (maxKdSiswa[kd.subject_id] || 0) + 1;
+      }
+    }
+
+    const globalMaxKdSiswa = Object.values(maxKdSiswa).length > 0
+      ? Math.max(...Object.values(maxKdSiswa)) : 0;
+
+    // Bangun kdNames untuk print-siswa
+    const kdNamesSiswa = [];
+    if (globalMaxKdSiswa > 0) {
+      for (let ki = 0; ki < globalMaxKdSiswa; ki++) {
+        let found = null;
+        for (const sid of Object.keys(kdMapSiswa)) {
+          if (kdMapSiswa[sid][ki] && kdMapSiswa[sid][ki].kd_name) { found = kdMapSiswa[sid][ki].kd_name; break; }
+        }
+        kdNamesSiswa.push(found || `TP ${ki + 1}`);
+      }
+    }
+
+    for (const grp of groups) {
+      for (const subj of grp.subjects) {
+        subj.kdScores = kdMapSiswa[subj.id] || [];
+      }
+    }
+    // --- end KD injection ---
 
     const schoolInfo = {
       name: process.env.SCHOOL_NAME || 'SMK NEGERI 1 KRAS',
@@ -4922,12 +5046,14 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
     res.render('admin/raport_print', {
       title: `Raport ${stu.full_name}`,
       layout: false,
-      student: { ...stu, groups: [...groupMap.values()] },
+      student: { ...stu, groups },
       period,
-      groups: [...groupMap.values()],
+      groups,
       schoolInfo,
       multiStudent: false,
-      allStudents: []
+      allStudents: [],
+      globalMaxKd: globalMaxKdSiswa || 0,
+      kdNames: kdNamesSiswa || []
     });
   } catch (e) {
     console.error(e);
