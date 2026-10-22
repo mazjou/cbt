@@ -4859,15 +4859,13 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
     const globalMaxKdKelas = Object.values(maxKdPerSubjectKelas).length > 0
       ? Math.max(...Object.values(maxKdPerSubjectKelas)) : 0;
 
+    // Bangun kdNames dari label custom admin (raport_tp_labels), fallback "TP N"
+    const [tpLabelRowsKelas] = await pool.query(`SELECT tp_index, label FROM raport_tp_labels WHERE period_id = $1 ORDER BY tp_index ASC`, [period_id]);
+    const tpLabelsMapKelas = {};
+    for (const r of tpLabelRowsKelas) tpLabelsMapKelas[r.tp_index] = r.label;
     const kdNamesKelas = [];
-    if (globalMaxKdKelas > 0) {
-      for (let ki = 0; ki < globalMaxKdKelas; ki++) {
-        let found = null;
-        for (const sid of Object.keys(kdNamesMapKelas)) {
-          if (kdNamesMapKelas[sid][ki]) { found = kdNamesMapKelas[sid][ki]; break; }
-        }
-        kdNamesKelas.push(found || `TP ${ki + 1}`);
-      }
+    for (let ki = 0; ki < globalMaxKdKelas; ki++) {
+      kdNamesKelas.push(tpLabelsMapKelas[ki + 1] || `TP ${ki + 1}`);
     }
 
     for (const stu of allStudents) {
@@ -5003,16 +5001,13 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
     const globalMaxKdSiswa = Object.values(maxKdSiswa).length > 0
       ? Math.max(...Object.values(maxKdSiswa)) : 0;
 
-    // Bangun kdNames untuk print-siswa
+    // Bangun kdNames dari label custom admin (raport_tp_labels), fallback "TP N"
+    const [tpLabelRowsSiswa] = await pool.query(`SELECT tp_index, label FROM raport_tp_labels WHERE period_id = $1 ORDER BY tp_index ASC`, [period_id]);
+    const tpLabelsMapSiswa = {};
+    for (const r of tpLabelRowsSiswa) tpLabelsMapSiswa[r.tp_index] = r.label;
     const kdNamesSiswa = [];
-    if (globalMaxKdSiswa > 0) {
-      for (let ki = 0; ki < globalMaxKdSiswa; ki++) {
-        let found = null;
-        for (const sid of Object.keys(kdMapSiswa)) {
-          if (kdMapSiswa[sid][ki] && kdMapSiswa[sid][ki].kd_name) { found = kdMapSiswa[sid][ki].kd_name; break; }
-        }
-        kdNamesSiswa.push(found || `TP ${ki + 1}`);
-      }
+    for (let ki = 0; ki < globalMaxKdSiswa; ki++) {
+      kdNamesSiswa.push(tpLabelsMapSiswa[ki + 1] || `TP ${ki + 1}`);
     }
 
     for (const grp of groups) {

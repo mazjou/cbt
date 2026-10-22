@@ -201,9 +201,11 @@
           (g.subjects || []).reduce((m, s) => Math.max(m, (s.kdScores || []).length), max), 0);
       const hasKd = maxKd > 0;
       const totalCols = hasKd ? 3 + maxKd + 1 : 4; // No + Mapel + TP1..N + Rata2/Nilai + Ket
-      // Nama kolom TP: selalu "TP 1", "TP 2", dst.
+      // Nama kolom TP: pakai label custom dari admin (kdNames), fallback "TP 1", "TP 2", dst.
       const safeKdNames = [];
-      for (let ki = 0; ki < maxKd; ki++) safeKdNames.push('TP ' + (ki + 1));
+      for (let ki = 0; ki < maxKd; ki++) {
+        safeKdNames.push((typeof kdNames !== 'undefined' && kdNames[ki]) ? kdNames[ki] : ('TP ' + (ki + 1)));
+      }
     %>
     <table class="tabel-nilai">
       <thead>
@@ -217,7 +219,7 @@
         </tr>
         <tr>
           <% for (var ki = 0; ki < maxKd; ki++) { %>
-            <th class="nilai">TP <%= ki + 1 %></th>
+            <th class="nilai"><%= safeKdNames[ki] %></th>
           <% } %>
         </tr>
         <% } else { %>

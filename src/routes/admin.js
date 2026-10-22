@@ -6046,6 +6046,84 @@ router.post('/raport/upload-watermark', async (req, res) => {
   });
 });
 
+// GET /admin/raport/:period_id/tp-labels - edit nama kolom TP per periode
+router.get('/raport/:period_id/tp-labels', async (req, res) => {
+  const { period_id } = req.params;
+  try {
+    const [[period]] = await pq(`SELECT * FROM raport_periods WHERE id = $1`, [period_id]);
+    if (!period) {
+      req.flash('error', 'Periode tidak ditemukan.');
+      return res.redirect('/admin/raport');
+    }
+    const [labelRows] = await pq(
+      `SELECT tp_index, label FROM raport_tp_labels WHERE period_id = $1 ORDER BY tp_index ASC`,
+      [period_id]
+    );
+    const labels = {};
+    for (const r of labelRows) labels[r.tp_index] = r.label;
+    const [[maxRow]] = await pq(`
+      SELECT COALESCE(MAX(c), 0) AS max_tp FROM (
+        SELECT COUNT(*)::int AS c
+        FROM raport_subject_kd rsk
+        JOIN raport_subjects rs ON rs.id = rsk.raport_subject_id
+        WHERE rs.period_id = $1
+        GROUP BY rsk.raport_subject_id
+      ) sub
+    `, [period_id]);
+    const maxTp = maxRow ? maxRow.max_tp : 0;
+    res.render('admin/raport_tp_labels', {
+      title: 'Edit Nama Kolom TP',
+      user: req.session.user,
+      period,
+      labels,
+      maxTp
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat halaman edit nama kolom TP.');
+    res.redirect('/admin/raport');
+  }
+});
+
+// POST /admin/raport/:period_id/tp-labels - simpan nama kolom TP per periode
+router.post('/raport/:period_id/tp-labels', async (req, res) => {
+  const { period_id } = req.params;
+  const labels = req.body.labels || {};
+  try {
+    const [[maxRow]] = await pq(`
+      SELECT COALESCE(MAX(c), 0) AS max_tp FROM (
+        SELECT COUNT(*)::int AS c
+        FROM raport_subject_kd rsk
+        JOIN raport_subjects rs ON rs.id = rsk.raport_subject_id
+        WHERE rs.period_id = $1
+        GROUP BY rsk.raport_subject_id
+      ) sub
+    `, [period_id]);
+    const maxTp = maxRow ? maxRow.max_tp : 0;
+    for (let i = 1; i <= maxTp; i++) {
+      const label = (labels[String(i)] || '').trim();
+      if (label) {
+        await pq(
+          `INSERT INTO raport_tp_labels (period_id, tp_index, label)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (period_id, tp_index) DO UPDATE SET label = EXCLUDED.label`,
+          [period_id, i, label]
+        );
+      } else {
+        await pq(
+          `DELETE FROM raport_tp_labels WHERE period_id = $1 AND tp_index = $2`,
+          [period_id, i]
+        );
+      }
+    }
+    req.flash('success', 'Nama kolom TP berhasil disimpan.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menyimpan nama kolom TP.');
+  }
+  res.redirect(`/admin/raport/${period_id}/tp-labels`);
+});
+
 // GET /admin/raport - daftar semua periode
 router.get('/raport', async (req, res) => {
   try {
@@ -6487,16 +6565,13 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
     const globalMaxKd = Object.values(maxKdPerSubject).length > 0
       ? Math.max(...Object.values(maxKdPerSubject)) : 0;
 
-    // Bangun kdNames dari kdMap
+    // Bangun kdNames dari label custom admin (raport_tp_labels), fallback "TP N"
+    const [tpLabelRows] = await pq(`SELECT tp_index, label FROM raport_tp_labels WHERE period_id = $1 ORDER BY tp_index ASC`, [period_id]);
+    const tpLabelsMap = {};
+    for (const r of tpLabelRows) tpLabelsMap[r.tp_index] = r.label;
     const kdNamesSingle = [];
-    if (globalMaxKd > 0) {
-      for (let ki = 0; ki < globalMaxKd; ki++) {
-        let found = null;
-        for (const sid of Object.keys(kdMap)) {
-          if (kdMap[sid][ki] && kdMap[sid][ki].kd_name) { found = kdMap[sid][ki].kd_name; break; }
-        }
-        kdNamesSingle.push(found || `TP ${ki + 1}`);
-      }
+    for (let ki = 0; ki < globalMaxKd; ki++) {
+      kdNamesSingle.push(tpLabelsMap[ki + 1] || `TP ${ki + 1}`);
     }
 
     // Inject kdScores ke subjects
@@ -6684,16 +6759,13 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
     const globalMaxKd = Object.values(maxKdPerSubjectAll).length > 0
       ? Math.max(...Object.values(maxKdPerSubjectAll)) : 0;
 
-    // Bangun kdNames: array nama TP index 0..globalMaxKd-1
+    // Bangun kdNames dari label custom admin (raport_tp_labels), fallback "TP N"
+    const [tpLabelRowsAll] = await pq(`SELECT tp_index, label FROM raport_tp_labels WHERE period_id = $1 ORDER BY tp_index ASC`, [period_id]);
+    const tpLabelsMapAll = {};
+    for (const r of tpLabelRowsAll) tpLabelsMapAll[r.tp_index] = r.label;
     const kdNames = [];
-    if (globalMaxKd > 0) {
-      for (let ki = 0; ki < globalMaxKd; ki++) {
-        let found = null;
-        for (const sid of Object.keys(globalKdNamesMap)) {
-          if (globalKdNamesMap[sid][ki]) { found = globalKdNamesMap[sid][ki]; break; }
-        }
-        kdNames.push(found || `TP ${ki + 1}`);
-      }
+    for (let ki = 0; ki < globalMaxKd; ki++) {
+      kdNames.push(tpLabelsMapAll[ki + 1] || `TP ${ki + 1}`);
     }
 
     // Inject kdScores ke setiap subject setiap siswa
