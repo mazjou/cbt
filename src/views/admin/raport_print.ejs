@@ -158,12 +158,12 @@
         <% if (email || web) { %>
         <p class="alamat">Pos.el : <u><%= email %></u>&nbsp;&nbsp; Laman : <u><%= web %></u></p>
         <% } %>
-        <!-- KEDIRI dalam kop-text agar lurus, garis tebal di bawah KEDIRI -->
-        <div class="kota-kota-wrap">
-          <span class="kota-kota"><%= (schoolInfo && schoolInfo.city ? schoolInfo.city.toUpperCase() : 'KEDIRI').split('').join(' ') %></span>
-        </div>
+        <!-- KEDIRI teks di dalam kop-text agar lurus -->
+        <p style="font-size:12pt;font-weight:bold;letter-spacing:5px;margin:3px 0 0 0;padding:0;"><%= (schoolInfo && schoolInfo.city ? schoolInfo.city.toUpperCase() : 'KEDIRI').split('').join(' ') %></p>
       </div>
     </div>
+    <!-- Garis full width di bawah kop, di luar flex container -->
+    <div style="border-top:1px solid #000; border-bottom:3px solid #000; height:4px; margin:2px 0 12px 0;"></div>
 
     <!-- Judul -->
     <div class="judul">
