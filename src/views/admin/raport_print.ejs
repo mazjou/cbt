@@ -130,7 +130,7 @@
   %>
   <div class="raport-page">
     <% /* Watermark logo di tengah halaman */ %>
-    <% const wmLogo = schoolInfo && schoolInfo.logoPath ? schoolInfo.logoPath : null; %>
+    <% const wmLogo = schoolInfo && schoolInfo.watermarkPath ? schoolInfo.watermarkPath : null; %>
     <% if (wmLogo) { %>
       <img src="<%= wmLogo %>" alt="" class="watermark" />
     <% } %>
