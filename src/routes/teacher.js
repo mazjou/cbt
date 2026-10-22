@@ -5423,8 +5423,8 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
           await conn.query(`
             INSERT INTO raport_kd_scores (period_id, student_id, raport_subject_id, kd_id, score, updated_by, updated_at)
             VALUES ($1, $2, $3, $4, $5, $6, NOW())
-            ON CONFLICT (period_id, student_id, raport_subject_id, kd_id)
-            DO UPDATE SET score = EXCLUDED.score, updated_by = EXCLUDED.updated_by, updated_at = NOW()
+            ON CONFLICT (period_id, student_id, kd_id)
+            DO UPDATE SET score = EXCLUDED.score, raport_subject_id = EXCLUDED.raport_subject_id, updated_by = EXCLUDED.updated_by, updated_at = NOW()
           `, params);
         }
         await conn.commit();
