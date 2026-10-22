@@ -205,7 +205,7 @@
                       name="kd_scores[<%= s.id %>][<%= kd.id %>]"
                       data-student="<%= s.id %>"
                       data-type="kd"
-                      value="<%= (kdScoreMap && kdScoreMap[s.id] && kdScoreMap[s.id][kd.id] !== undefined && kdScoreMap[s.id][kd.id] !== null) ? kdScoreMap[s.id][kd.id] : '' %>"
+                      value="<%= (kdScoreMap && kdScoreMap[s.id] && kdScoreMap[s.id][kd.id] !== undefined && kdScoreMap[s.id][kd.id] !== null) ? parseFloat(kdScoreMap[s.id][kd.id]) : '' %>"
                       min="0" max="100" step="0.01"
                       placeholder="—"
                       oninput="hitungRataRata('<%= s.id %>')"
