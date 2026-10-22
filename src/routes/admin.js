@@ -6404,6 +6404,40 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
     }
     const groups = [...groupMap.values()];
 
+    // Ambil KD per mapel beserta nilainya untuk siswa ini
+    const subjectIds = rows.map(r => r.subject_id).filter(Boolean);
+    let kdMap = {}; // { subject_id: [{kd_id, kd_name, score}] }
+    let maxKdPerSubject = {}; // jumlah KD terbanyak per subject
+    if (subjectIds.length > 0) {
+      const ph = subjectIds.map((_, i) => `$${i + 3}`).join(',');
+      const [kdRows] = await pq(`
+        SELECT rsk.id AS kd_id, rsk.kd_name, rsk.raport_subject_id AS subject_id,
+               rsk.sort_order,
+               ksc.score AS kd_score
+        FROM raport_subject_kd rsk
+        LEFT JOIN raport_kd_scores ksc ON ksc.kd_id = rsk.id
+          AND ksc.student_id = $1 AND ksc.period_id = $2
+        WHERE rsk.raport_subject_id IN (${ph})
+        ORDER BY rsk.raport_subject_id ASC, rsk.sort_order ASC, rsk.id ASC
+      `, [student_id, period_id, ...subjectIds]);
+
+      for (const kd of kdRows) {
+        if (!kdMap[kd.subject_id]) kdMap[kd.subject_id] = [];
+        kdMap[kd.subject_id].push({ kd_id: kd.kd_id, kd_name: kd.kd_name, score: kd.kd_score });
+        maxKdPerSubject[kd.subject_id] = (maxKdPerSubject[kd.subject_id] || 0) + 1;
+      }
+    }
+    // Cari jumlah TP maksimal di seluruh mapel (untuk header kolom konsisten)
+    const globalMaxKd = Object.values(maxKdPerSubject).length > 0
+      ? Math.max(...Object.values(maxKdPerSubject)) : 0;
+
+    // Inject kdScores ke subjects
+    for (const grp of groups) {
+      for (const subj of grp.subjects) {
+        subj.kdScores = kdMap[subj.id] || [];
+      }
+    }
+
     const schoolInfo = {
       name: process.env.SCHOOL_NAME || 'SMK NEGERI 1 KRAS',
       address: process.env.SCHOOL_ADDRESS || 'Demangan Setonorejo Kras Kediri Kode Pos 64172',
@@ -6438,7 +6472,8 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       groups,
       schoolInfo,
       multiStudent: false,
-      allStudents: []
+      allStudents: [],
+      globalMaxKd: globalMaxKd || 0
     });
   } catch (e) {
     console.error(e);
