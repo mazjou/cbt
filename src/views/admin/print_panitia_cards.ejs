@@ -30,7 +30,7 @@
     .settings input:focus{border-color:#6366f1;}
     .settings-note{font-size:10px;color:#94a3b8;margin-top:6px;}
 
-    /* ── Halaman A4 — 4 kartu (2×2) ─────────────────────────────────────
+    /* ── Halaman A4 landscape — 8 kartu (4×2) ───────────────────────────
        ID Card B2 dalam: 65 × 105 mm (lebar × tinggi) portrait
        A4 padding 10mm → area 190 × 277mm
        2 kolom: 65×2 + gap10 = 140mm < 190mm ✓
@@ -40,11 +40,11 @@
       width:297mm;height:210mm;
       margin:0 auto 16px;
       background:#d1d5db;
-      padding:10mm;
+      padding:8mm;
       display:grid;
-      grid-template-columns:65mm 65mm 65mm;
-      grid-template-rows:90mm;
-      gap:10mm;
+      grid-template-columns:repeat(4,65mm);
+      grid-template-rows:repeat(2,90mm);
+      gap:5mm;
       justify-content:center;
       align-content:center;
       overflow:hidden;
@@ -150,7 +150,7 @@
       .no-print{display:none!important;}
       .page{
         margin:0;width:297mm;height:210mm;
-        padding:10mm;background:white;
+        padding:8mm;background:white;
         page-break-after:always;overflow:hidden;
       }
       .page:last-child{page-break-after:auto;}
@@ -197,7 +197,7 @@
   var schoolName = schoolInfo.name || 'SMK Negeri 1 Kras';
   var schoolAddr = schoolInfo.address || 'Kediri, Jawa Timur';
   var webUrl = process.env.SCHOOL_WEB || 'www.smkn1kras.sch.id';
-  var PH = 4;
+  var PH = 8;
 %>
 
 <% for(var p = 0; p < panitia.length; p += PH){ %>
