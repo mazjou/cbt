@@ -256,11 +256,14 @@ function hitungRataRata(studentId) {
 
 // Hapus TP via AJAX DELETE
 async function hapusKD(kdId) {
-  if (!confirm('Hapus TP ini? Semua nilai TP yang sudah diinput akan ikut terhapus.')) return;
+  if (!confirm('⚠️ PERINGATAN!\n\nHapus TP ini?\n\nSEMUA NILAI siswa untuk TP ini akan IKUT TERHAPUS permanen dan tidak bisa dikembalikan!\n\nYakin ingin menghapus?')) return;
   try {
     const res = await fetch('/teacher/raport/kd/' + kdId, { method: 'DELETE' });
     const data = await res.json();
     if (data.ok) {
+      if (data.nilaiHapus > 0) {
+        alert(`TP berhasil dihapus. ${data.nilaiHapus} nilai siswa ikut terhapus.`);
+      }
       window.location.reload();
     } else {
       alert('Gagal menghapus TP: ' + (data.message || 'Error tidak diketahui'));

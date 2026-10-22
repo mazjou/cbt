@@ -5071,8 +5071,16 @@ router.delete('/raport/kd/:kd_id', async (req, res) => {
       LIMIT 1
     `, [req.params.kd_id, isAdmin, user.id]);
     if (!kd) return res.status(403).json({ ok: false, message: 'Akses ditolak.' });
+
+    // Cek berapa nilai yang akan ikut terhapus
+    const [[countRow]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM raport_kd_scores WHERE kd_id = $1`,
+      [req.params.kd_id]
+    );
+    const nilaiCount = parseInt(countRow?.cnt || 0);
+
     await pool.query(`DELETE FROM raport_subject_kd WHERE id = $1`, [req.params.kd_id]);
-    res.json({ ok: true });
+    res.json({ ok: true, nilaiHapus: nilaiCount });
   } catch(e) {
     console.error(e);
     res.status(500).json({ ok: false, message: e.message });
