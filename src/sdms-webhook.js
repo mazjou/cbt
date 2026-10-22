@@ -442,6 +442,21 @@ const handleBulkSync = async (payload) => {
   for (const m of mapel)   await runUpsert(upsertMapel,   m, 'mapel');
   for (const p of pegawai) await runUpsert(upsertPegawai, p, 'pegawai');
 
+  // Sync tempat_lahir & tanggal_lahir dari sdms_siswa ke tabel users
+  try {
+    await q(`
+      UPDATE users u
+      SET
+        tempat_lahir  = ss.tempat_lahir,
+        tanggal_lahir = ss.tanggal_lahir
+      FROM sdms_siswa ss
+      WHERE (u.username = ss.nisn OR u.username = ss.nis)
+        AND u.role = 'STUDENT'
+        AND (ss.tempat_lahir IS NOT NULL OR ss.tanggal_lahir IS NOT NULL)
+    `);
+    log('tempat_lahir & tanggal_lahir users siswa berhasil diupdate dari sdms_siswa');
+  } catch(e) { warn(`Gagal update TTL users: ${e.message}`); }
+
   log(`Bulk sync selesai — insert:${stats.inserted} update:${stats.updated} skip:${stats.skipped} err:${stats.errors}`);
   return stats;
 };

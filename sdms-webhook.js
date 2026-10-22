@@ -308,6 +308,21 @@ const handleBulkSync = async (payload) => {
     log('class_id users siswa berhasil diupdate');
   } catch(e) { warn(`Gagal update class_id: ${e.message}`); }
 
+  // Sync tempat_lahir & tanggal_lahir dari sdms_siswa ke tabel users
+  try {
+    await q(`
+      UPDATE users u
+      SET
+        tempat_lahir  = ss.tempat_lahir,
+        tanggal_lahir = ss.tanggal_lahir
+      FROM sdms_siswa ss
+      WHERE (u.username = ss.nisn OR u.username = ss.nis)
+        AND u.role = 'STUDENT'
+        AND (ss.tempat_lahir IS NOT NULL OR ss.tanggal_lahir IS NOT NULL)
+    `);
+    log('tempat_lahir & tanggal_lahir users siswa berhasil diupdate dari sdms_siswa');
+  } catch(e) { warn(`Gagal update TTL users: ${e.message}`); }
+
   const stats = { insert: 0, update: 0, skip: 0, err: 0 };
   const duration = 0;
   log(`Bulk sync selesai — insert:${stats.insert} update:${stats.update} skip:${stats.skip} err:${stats.err}`);
