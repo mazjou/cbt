@@ -6271,6 +6271,7 @@ router.delete('/raport/subjects/:sid', async (req, res) => {
 router.post('/raport/subjects/:sid/classes', async (req, res) => {
   const { sid } = req.params;
   const { class_id, teacher_id } = req.body;
+  const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
   try {
     const [[subj]] = await pq(
       `SELECT rs.id, rsg.period_id FROM raport_subjects rs
@@ -6278,19 +6279,35 @@ router.post('/raport/subjects/:sid/classes', async (req, res) => {
        WHERE rs.id = $1`, [sid]
     );
     if (!subj) {
+      if (isAjax) return res.json({ ok: false, message: 'Mata pelajaran tidak ditemukan.' });
       req.flash('error', 'Mata pelajaran tidak ditemukan.');
       return res.redirect('/admin/raport');
     }
-    await pq(
+    const [inserted] = await pq(
       `INSERT INTO raport_subject_classes (raport_subject_id, class_id, teacher_id)
        VALUES ($1, $2, $3)
-       ON CONFLICT (raport_subject_id, class_id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id`,
+       ON CONFLICT (raport_subject_id, class_id) DO UPDATE SET teacher_id = EXCLUDED.teacher_id
+       RETURNING id`,
       [sid, class_id, teacher_id || null]
     );
+    // Ambil nama kelas dan guru untuk response AJAX
+    const [[cls]] = await pq(`SELECT name FROM classes WHERE id=$1`, [class_id]);
+    let teacherName = null;
+    if (teacher_id) {
+      const [[tch]] = await pq(`SELECT full_name FROM users WHERE id=$1`, [teacher_id]);
+      if (tch) teacherName = tch.full_name;
+    }
+    if (isAjax) return res.json({
+      ok: true,
+      scId: inserted[0].id,
+      className: cls ? cls.name : class_id,
+      teacherName
+    });
     req.flash('success', 'Kelas berhasil ditambahkan ke mata pelajaran.');
     res.redirect('/admin/raport/' + subj.period_id);
   } catch (e) {
     console.error(e);
+    if (isAjax) return res.json({ ok: false, message: e.message });
     req.flash('error', 'Gagal menambahkan kelas: ' + e.message);
     res.redirect('back');
   }
