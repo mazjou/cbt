@@ -134,7 +134,7 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-between mb-4">
+    <div class="flex items-center justify-between mb-4" id="daftar-pengguna">
       <h2 class="text-lg font-semibold text-teal-900">Daftar Pengguna</h2>
       <div class="text-sm text-teal-700">Total: <span class="font-semibold"><%= pagination.total %></span> pengguna</div>
     </div>
@@ -285,7 +285,7 @@
         </div>
         <div class="flex gap-2">
           <% if (pagination.page > 1) { %>
-            <a href="?page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&role=<%= filters.role %>&class=<%= filters.class %>&status=<%= filters.status %>" 
+            <a href="?page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&role=<%= filters.role %>&class=<%= filters.class %>&status=<%= filters.status %>#daftar-pengguna" 
                class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-400 to-cyan-400 hover:from-blue-500 hover:to-cyan-500 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
               ← Sebelumnya
             </a>
@@ -296,14 +296,14 @@
             const endPage = Math.min(pagination.totalPages, pagination.page + 2);
             for (let i = startPage; i <= endPage; i++) { 
           %>
-            <a href="?page=<%= i %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&role=<%= filters.role %>&class=<%= filters.class %>&status=<%= filters.status %>" 
+            <a href="?page=<%= i %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&role=<%= filters.role %>&class=<%= filters.class %>&status=<%= filters.status %>#daftar-pengguna" 
                class="px-4 py-2 rounded-lg <%= i === pagination.page ? 'bg-gradient-to-r from-teal-500 to-emerald-500 text-white shadow-md' : 'bg-gradient-to-r from-gray-200 to-gray-300 hover:from-gray-300 hover:to-gray-400 text-gray-700' %> font-medium text-sm transition-all duration-200 hover:shadow-md transform hover:scale-105">
               <%= i %>
             </a>
           <% } %>
           
           <% if (pagination.page < pagination.totalPages) { %>
-            <a href="?page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&role=<%= filters.role %>&class=<%= filters.class %>&status=<%= filters.status %>" 
+            <a href="?page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>&search=<%= filters.search %>&role=<%= filters.role %>&class=<%= filters.class %>&status=<%= filters.status %>#daftar-pengguna" 
                class="px-4 py-2 rounded-lg bg-gradient-to-r from-blue-400 to-cyan-400 hover:from-blue-500 hover:to-cyan-500 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
               Selanjutnya →
             </a>
