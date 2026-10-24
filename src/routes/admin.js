@@ -1396,11 +1396,18 @@ router.post('/teachers/import/commit', async (req, res) => {
 
 router.delete('/subjects/:id', async (req, res) => {
   try {
-    await pool.query(`DELETE FROM subjects WHERE id=$1`, [req.params.id]);
-    req.flash('success', 'Mapel dihapus.');
+    const id = req.params.id;
+    // Hapus data terkait dulu (FK constraint)
+    await pool.query(`DELETE FROM exams WHERE subject_id=$1`, [id]);
+    await pool.query(`DELETE FROM materials WHERE subject_id=$1`, [id]);
+    await pool.query(`DELETE FROM question_bank WHERE subject_id=$1`, [id]);
+    await pool.query(`DELETE FROM assignments WHERE subject_id=$1`, [id]);
+    await pool.query(`DELETE FROM live_classes WHERE subject_id=$1`, [id]);
+    await pool.query(`DELETE FROM subjects WHERE id=$1`, [id]);
+    req.flash('success', 'Mapel berhasil dihapus beserta data terkait.');
   } catch (e) {
     console.error(e);
-    req.flash('error', 'Gagal menghapus mapel.');
+    req.flash('error', 'Gagal menghapus mapel: ' + e.message);
   }
   res.redirect('/admin/subjects');
 });
