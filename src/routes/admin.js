@@ -28,6 +28,40 @@ const CLASS_ORDER_SQL = `
 // Semua query: const [rows] = await pool.query(...) atau xResult[0][0] untuk single row
 const pq = pool.query.bind(pool);
 
+// ─── Helper tanggal/kota untuk baris "kota, tanggal" di cetak raport ───────────
+// Format tanggal Indonesia: "3 November 2025". '' jika null/invalid.
+function formatTanggalIndonesia(date) {
+  if (!date) return '';
+  const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  return d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+// Kota untuk cetak raport: SCHOOL_CITY → bagian pertama SCHOOL_ADDRESS → 'Kota'
+function getSchoolCity() {
+  if (process.env.SCHOOL_CITY) return process.env.SCHOOL_CITY;
+  const addr = process.env.SCHOOL_ADDRESS || '';
+  if (addr) {
+    const firstPart = addr.split(',')[0].trim();
+    if (firstPart) return firstPart;
+  }
+  return 'Kota';
+}
+
+// YYYY-MM-DD (tanggal lokal) untuk value <input type="date>. '' jika null/invalid.
+// Pakai getFullYear/getMonth/getDate lokal (bukan toISOString) agar tidak geser hari
+// akibat offset UTC+7 Asia/Jakarta.
+function toISODate(date) {
+  if (!date) return '';
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return y + '-' + m + '-' + day;
+}
+
 // Upload config for admin imports
 const importDir = path.join(__dirname, '..', 'public', 'uploads', 'imports');
 fs.mkdirSync(importDir, { recursive: true });
@@ -6301,6 +6335,33 @@ router.post('/raport/:id/delete', async (req, res) => {
   res.redirect('/admin/raport');
 });
 
+// POST /admin/raport/:id/report-date - isi tanggal cetak raport (admin only)
+router.post('/raport/:id/report-date', async (req, res) => {
+  const { id } = req.params;
+  try {
+    let raw = req.body.report_date;
+    if (typeof raw === 'string') raw = raw.trim();
+
+    let valueToStore = null;
+    if (raw) {
+      // Validasi format YYYY-MM-DD dan tanggal valid
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(raw) || isNaN(new Date(raw).getTime())) {
+        req.flash('error', 'Format tanggal tidak valid.');
+        return res.redirect('/admin/raport/' + id);
+      }
+      valueToStore = raw;
+    }
+
+    await pq(`UPDATE raport_periods SET report_date=$1 WHERE id=$2`, [valueToStore, id]);
+    req.flash('success', 'Tanggal raport berhasil disimpan.');
+    res.redirect('/admin/raport/' + id);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menyimpan tanggal raport: ' + e.message);
+    res.redirect('/admin/raport/' + id);
+  }
+});
+
 // POST /admin/raport/subjects/:sid/edit - edit mapel
 router.post('/raport/subjects/:sid/edit', async (req, res) => {
   const { sid } = req.params;
@@ -6479,7 +6540,9 @@ router.get('/raport/:id', async (req, res) => {
       groups,
       teachers,
       classes,
-      printClasses
+      printClasses,
+      reportDateValue: toISODate(period.report_date),
+      reportDateFormatted: formatTanggalIndonesia(period.report_date)
     });
   } catch (e) {
     console.error(e);
@@ -6615,6 +6678,9 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       }
     } catch(_) {}
 
+    const reportDateFormatted = formatTanggalIndonesia(period.report_date);
+    const schoolCity = getSchoolCity();
+
     res.render('admin/raport_print', {
       title: 'Raport Tengah Semester',
       layout: false,
@@ -6625,7 +6691,9 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       multiStudent: false,
       allStudents: [],
       globalMaxKd: globalMaxKd || 0,
-      kdNames: kdNamesSingle || []
+      kdNames: kdNamesSingle || [],
+      reportDateFormatted,
+      schoolCity
     });
   } catch (e) {
     console.error(e);
@@ -6809,6 +6877,9 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
       }
     } catch(_) {}
 
+    const reportDateFormatted = formatTanggalIndonesia(period.report_date);
+    const schoolCity = getSchoolCity();
+
     res.render('admin/raport_print', {
       title: 'Raport Tengah Semester - Semua Siswa',
       layout: false,
@@ -6819,7 +6890,9 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
       multiStudent: true,
       allStudents,
       globalMaxKd: globalMaxKd || 0,
-      kdNames: kdNames || []
+      kdNames: kdNames || [],
+      reportDateFormatted,
+      schoolCity
     });
   } catch (e) {
     console.error(e);

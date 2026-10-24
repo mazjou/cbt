@@ -273,6 +273,11 @@
     </table>
 
     <!-- Tanda Tangan: Kepala Sekolah KIRI, Wali Kelas KANAN -->
+    <% if (typeof reportDateFormatted !== 'undefined' && reportDateFormatted) { %>
+    <div style="text-align: right; margin-top: 20px; margin-bottom: 2px; font-size: 10pt;">
+      <%= schoolCity %>, <%= reportDateFormatted %>
+    </div>
+    <% } %>
     <div class="ttd-section">
       <div class="ttd-box">
         <p>Kepala Sekolah,</p>
