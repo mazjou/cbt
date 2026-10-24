@@ -4710,6 +4710,64 @@ router.get('/raport', async (req, res) => {
     }
     const periods = [...periodMap.values()];
 
+    // Hitung status per (subject_id, class_id): ada TP? ada nilai?
+    if (rows.length > 0) {
+      // Ambil subject_id unik yang guru ini ampu
+      const subjectIds = [...new Set(rows.map(r => r.subject_id))];
+      const classIds   = [...new Set(rows.map(r => r.class_id))];
+      const periodIds  = [...new Set(rows.map(r => r.period_id))];
+
+      // Jumlah TP per subject (class-specific or null)
+      const phS = subjectIds.map((_, i) => `$${i + 1}`).join(',');
+      const phC = classIds.map((_, i)   => `$${subjectIds.length + i + 1}`).join(',');
+      const [tpRows] = await pool.query(
+        `SELECT raport_subject_id AS subject_id, class_id, COUNT(*) AS tp_count
+         FROM raport_subject_kd
+         WHERE raport_subject_id IN (${phS})
+           AND (class_id IN (${phC}) OR class_id IS NULL)
+         GROUP BY raport_subject_id, class_id`,
+        [...subjectIds, ...classIds]
+      );
+      // key: `${subject_id}_${class_id}` -> tp_count (class_id=null treated per subject)
+      const tpMap = {};
+      for (const t of tpRows) {
+        // null class_id TP berlaku untuk semua kelas mapel ini
+        if (t.class_id === null) {
+          for (const cid of classIds) tpMap[`${t.subject_id}_${cid}`] = (tpMap[`${t.subject_id}_${cid}`] || 0) + Number(t.tp_count);
+        } else {
+          const k = `${t.subject_id}_${t.class_id}`;
+          tpMap[k] = (tpMap[k] || 0) + Number(t.tp_count);
+        }
+      }
+
+      // Jumlah siswa yang sudah ada nilai raport_scores per (period, subject, class)
+      const phP = periodIds.map((_, i) => `$${i + 1}`).join(',');
+      const phS2 = subjectIds.map((_, i) => `$${periodIds.length + i + 1}`).join(',');
+      const [scoreRows] = await pool.query(
+        `SELECT rs.period_id, rs.raport_subject_id AS subject_id, u.class_id,
+                COUNT(*) AS scored_count
+         FROM raport_scores rs
+         JOIN users u ON u.id = rs.student_id
+         WHERE rs.period_id IN (${phP})
+           AND rs.raport_subject_id IN (${phS2})
+           AND rs.score IS NOT NULL
+         GROUP BY rs.period_id, rs.raport_subject_id, u.class_id`,
+        [...periodIds, ...subjectIds]
+      );
+      const scoreMap = {};
+      for (const r of scoreRows) scoreMap[`${r.period_id}_${r.subject_id}_${r.class_id}`] = Number(r.scored_count);
+
+      // Tempelkan status ke tiap subject entry
+      // status: 'green' = ada TP + ada nilai, 'yellow' = ada TP saja, 'red' = tidak ada TP & tidak ada nilai
+      for (const period of periods) {
+        for (const s of period.subjects) {
+          const hasTp    = (tpMap[`${s.subject_id}_${s.class_id}`] || 0) > 0;
+          const hasScore = (scoreMap[`${period.id}_${s.subject_id}_${s.class_id}`] || 0) > 0;
+          s.status = hasTp && hasScore ? 'green' : hasTp ? 'yellow' : 'red';
+        }
+      }
+    }
+
     // Cek apakah guru ini adalah wali kelas
     const [[homeroomClass]] = await pool.query(`
       SELECT id, name AS class_name, homeroom_teacher_nip

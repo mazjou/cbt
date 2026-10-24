@@ -69,8 +69,13 @@
         <div class="p-4">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <% p.subjects.forEach(s => { %>
+              <%
+                var statusBorder = s.status === 'green'  ? 'border-green-300 hover:border-green-500'
+                                 : s.status === 'yellow' ? 'border-yellow-300 hover:border-yellow-500'
+                                 : 'border-red-200 hover:border-red-400';
+              %>
               <a href="/teacher/raport/<%= p.id %>/<%= s.subject_id %>/<%= s.class_id %>"
-                class="flex items-center gap-4 p-4 border-2 border-slate-100 rounded-xl hover:border-violet-300 hover:bg-violet-50 transition-all group">
+                class="flex items-center gap-4 p-4 border-2 <%= statusBorder %> rounded-xl hover:bg-violet-50 transition-all group">
                 <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-200 transition-colors">
                   <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                 </div>
@@ -78,7 +83,22 @@
                   <p class="font-semibold text-slate-800 group-hover:text-violet-700 transition-colors truncate"><%= s.subject_name %></p>
                   <p class="text-xs text-slate-500 truncate"><%= s.group_name %> &bull; <span class="text-indigo-600 font-medium"><%= s.class_name %></span></p>
                 </div>
-                <svg class="w-4 h-4 text-slate-300 group-hover:text-violet-400 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                <% if (s.status === 'green') { %>
+                  <span class="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 text-green-700 text-xs font-semibold" title="TP dan nilai sudah lengkap">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                    Lengkap
+                  </span>
+                <% } else if (s.status === 'yellow') { %>
+                  <span class="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-100 text-yellow-700 text-xs font-semibold" title="TP sudah ada, nilai belum diinput">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                    Belum Nilai
+                  </span>
+                <% } else { %>
+                  <span class="flex-shrink-0 flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 text-red-600 text-xs font-semibold" title="Belum ada TP dan nilai">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>
+                    Belum Diisi
+                  </span>
+                <% } %>
               </a>
             <% }) %>
           </div>
