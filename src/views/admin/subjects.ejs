@@ -90,12 +90,22 @@
                 <input type="checkbox" class="item-checkbox w-4 h-4 rounded border-orange-300 text-orange-600 focus:ring-orange-500 cursor-pointer" data-item-id="<%= s.id %>" />
               </td>
               <td class="py-2 font-mono subject-code text-orange-900"><%= s.code || '-' %></td>
-              <td class="py-2 subject-name text-orange-900"><%= s.name %></td>
+              <td class="py-2 subject-name text-orange-900">
+                <%= s.name %>
+                <% if (Number(s.exam_count) > 0) { %>
+                  <span class="ml-2 text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-medium"><%= s.exam_count %> ujian</span>
+                <% } %>
+              </td>
               <td class="py-2 text-right">
                 <button type="button" data-subject-id="<%= s.id %>" class="btn-open-subject-modal px-3 py-1.5 rounded-lg border border-orange-300 bg-white hover:bg-orange-50 text-orange-800 font-medium inline-block mr-2 transition-colors">Edit</button>
-                <form method="POST" action="/admin/subjects/<%= s.id %>?_method=DELETE" onsubmit="return confirm('Hapus mapel ini?');" class="inline">
-                  <button class="px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium transition-colors">Hapus</button>
-                </form>
+                <% if (Number(s.exam_count) > 0) { %>
+                  <button type="button" disabled title="Tidak bisa dihapus — masih ada <%= s.exam_count %> ujian terkait"
+                    class="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-100 text-slate-400 font-medium cursor-not-allowed" >Hapus</button>
+                <% } else { %>
+                  <form method="POST" action="/admin/subjects/<%= s.id %>?_method=DELETE" onsubmit="return confirm('Hapus mapel ini? Tindakan ini tidak bisa dibatalkan.');" class="inline">
+                    <button class="px-3 py-1.5 rounded-lg border border-rose-300 bg-rose-100 hover:bg-rose-200 text-rose-700 font-medium transition-colors">Hapus</button>
+                  </form>
+                <% } %>
               </td>
             </tr>
           <% }) %>

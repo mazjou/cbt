@@ -858,7 +858,12 @@ router.get('/subjects', async (req, res) => {
   const total = subjectCountResult[0][0].total;
 
   const subjectsResult = await pool.query(
-    `SELECT * FROM subjects ${whereClause} ORDER BY name ASC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
+    `SELECT s.*, COUNT(e.id) AS exam_count
+     FROM subjects s
+     LEFT JOIN exams e ON e.subject_id = s.id
+     ${whereClause}
+     GROUP BY s.id
+     ORDER BY s.name ASC LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}`,
     [...queryParams, limit, offset]
   );
   const subjects = subjectsResult[0];
@@ -1397,14 +1402,36 @@ router.post('/teachers/import/commit', async (req, res) => {
 router.delete('/subjects/:id', async (req, res) => {
   try {
     const id = req.params.id;
-    // Hapus data terkait dulu (FK constraint)
-    await pool.query(`DELETE FROM exams WHERE subject_id=$1`, [id]);
-    await pool.query(`DELETE FROM materials WHERE subject_id=$1`, [id]);
-    await pool.query(`DELETE FROM question_bank WHERE subject_id=$1`, [id]);
+
+    // Cek apakah masih ada data terkait
+    const [examCount] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM exams WHERE subject_id=$1`, [id]
+    );
+    const [matCount] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM materials WHERE subject_id=$1`, [id]
+    );
+    const [qbCount] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM question_bank WHERE subject_id=$1`, [id]
+    );
+
+    const ujianAda = Number(examCount[0].cnt) > 0;
+    const materiAda = Number(matCount[0].cnt) > 0;
+    const soalAda = Number(qbCount[0].cnt) > 0;
+
+    if (ujianAda || materiAda || soalAda) {
+      const info = [];
+      if (ujianAda) info.push(`${examCount[0].cnt} ujian`);
+      if (materiAda) info.push(`${matCount[0].cnt} materi`);
+      if (soalAda) info.push(`${qbCount[0].cnt} soal bank`);
+      req.flash('error', `Mapel tidak bisa dihapus karena masih memiliki: ${info.join(', ')}. Hapus data tersebut terlebih dahulu.`);
+      return res.redirect('/admin/subjects');
+    }
+
+    // Aman dihapus — tidak ada data terkait
     await pool.query(`DELETE FROM assignments WHERE subject_id=$1`, [id]);
     await pool.query(`DELETE FROM live_classes WHERE subject_id=$1`, [id]);
     await pool.query(`DELETE FROM subjects WHERE id=$1`, [id]);
-    req.flash('success', 'Mapel berhasil dihapus beserta data terkait.');
+    req.flash('success', 'Mapel berhasil dihapus.');
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal menghapus mapel: ' + e.message);
