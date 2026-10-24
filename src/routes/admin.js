@@ -6362,6 +6362,35 @@ router.post('/raport/:id/report-date', async (req, res) => {
   }
 });
 
+// POST /admin/raport/:id/report-settings - isi tanggal + kota cetak raport (admin only)
+router.post('/raport/:id/report-settings', async (req, res) => {
+  const { id } = req.params;
+  try {
+    let rawDate = req.body.report_date;
+    if (typeof rawDate === 'string') rawDate = rawDate.trim();
+
+    let dateToStore = null;
+    if (rawDate) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(rawDate) || isNaN(new Date(rawDate).getTime())) {
+        req.flash('error', 'Format tanggal tidak valid.');
+        return res.redirect('/admin/raport/' + id);
+      }
+      dateToStore = rawDate;
+    }
+
+    let cityToStore = req.body.report_city;
+    if (typeof cityToStore === 'string') cityToStore = cityToStore.trim() || null;
+
+    await pq(`UPDATE raport_periods SET report_date=$1, report_city=$2 WHERE id=$3`, [dateToStore, cityToStore, id]);
+    req.flash('success', 'Pengaturan raport berhasil disimpan.');
+    res.redirect('/admin/raport/' + id);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menyimpan pengaturan raport: ' + e.message);
+    res.redirect('/admin/raport/' + id);
+  }
+});
+
 // POST /admin/raport/subjects/:sid/edit - edit mapel
 router.post('/raport/subjects/:sid/edit', async (req, res) => {
   const { sid } = req.params;
@@ -6542,7 +6571,8 @@ router.get('/raport/:id', async (req, res) => {
       classes,
       printClasses,
       reportDateValue: toISODate(period.report_date),
-      reportDateFormatted: formatTanggalIndonesia(period.report_date)
+      reportDateFormatted: formatTanggalIndonesia(period.report_date),
+      reportCity: period.report_city || ''
     });
   } catch (e) {
     console.error(e);
@@ -6679,7 +6709,7 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
     } catch(_) {}
 
     const reportDateFormatted = formatTanggalIndonesia(period.report_date);
-    const schoolCity = getSchoolCity();
+    const schoolCity = period.report_city || getSchoolCity();
 
     res.render('admin/raport_print', {
       title: 'Raport Tengah Semester',
@@ -6878,7 +6908,7 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
     } catch(_) {}
 
     const reportDateFormatted = formatTanggalIndonesia(period.report_date);
-    const schoolCity = getSchoolCity();
+    const schoolCity = period.report_city || getSchoolCity();
 
     res.render('admin/raport_print', {
       title: 'Raport Tengah Semester - Semua Siswa',
