@@ -92,51 +92,17 @@ async function main() {
     }
   }
 
-  // Seed data default
-  await conn.query(`
-    INSERT INTO classes (code, name) VALUES ('X-RPL-1','X RPL 1')
-    ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name;
-  `);
-
-  await conn.query(`
-    INSERT INTO subjects (code, name) VALUES ('MAT','Matematika'),('BIN','Bahasa Indonesia')
-    ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name;
-  `);
-
+  // Seed data default — hanya akun admin (data lain tidak perlu di-seed)
   const adminPass = await bcrypt.hash('admin123', 10);
-  const teacherPass = await bcrypt.hash('guru123', 10);
-  const studentPass = await bcrypt.hash('siswa123', 10);
-  const principalPass = await bcrypt.hash('kepsek123', 10);
 
   await conn.query(`
     INSERT INTO users (username, full_name, role, password_hash, plain_password)
     VALUES ('admin','Administrator','ADMIN',$1,'admin123')
-    ON CONFLICT (username) DO UPDATE SET full_name=EXCLUDED.full_name, role=EXCLUDED.role, password_hash=EXCLUDED.password_hash, plain_password=EXCLUDED.plain_password;
+    ON CONFLICT (username) DO NOTHING;
   `, [adminPass]);
 
-  await conn.query(`
-    INSERT INTO users (username, full_name, role, password_hash, plain_password)
-    VALUES ('guru','Guru SMK','TEACHER',$1,'guru123')
-    ON CONFLICT (username) DO UPDATE SET full_name=EXCLUDED.full_name, role=EXCLUDED.role, password_hash=EXCLUDED.password_hash, plain_password=EXCLUDED.plain_password;
-  `, [teacherPass]);
-
-  await conn.query(`
-    INSERT INTO users (username, full_name, role, password_hash)
-    VALUES ('kepsek','Kepala Sekolah','PRINCIPAL',$1)
-    ON CONFLICT (username) DO UPDATE SET full_name=EXCLUDED.full_name, role=EXCLUDED.role, password_hash=EXCLUDED.password_hash;
-  `, [principalPass]);
-
-  const clsResult = await conn.query(`SELECT id FROM classes WHERE code='X-RPL-1' LIMIT 1;`);
-  const classId = clsResult.rows[0]?.id || null;
-
-  await conn.query(`
-    INSERT INTO users (username, full_name, role, class_id, password_hash)
-    VALUES ('siswa','Siswa Contoh','STUDENT',$1,$2)
-    ON CONFLICT (username) DO UPDATE SET full_name=EXCLUDED.full_name, role=EXCLUDED.role, class_id=EXCLUDED.class_id, password_hash=EXCLUDED.password_hash;
-  `, [classId, studentPass]);
-
   console.log('✓ Database & schema siap.');
-  console.log('✓ Akun default: admin/admin123, guru/guru123, siswa/siswa123, kepsek/kepsek123');
+  console.log('✓ Akun default: admin/admin123 (hanya dibuat jika belum ada)');
   await conn.end();
 }
 
