@@ -593,12 +593,14 @@
   }
 
   // Bulk delete functionality
-  (function () {
+  function initCheckboxes() {
     const selectAllCheckbox = document.getElementById('selectAll');
     const userCheckboxes = document.querySelectorAll('.user-checkbox');
     const bulkActionBar = document.getElementById('bulkActionBar');
     const selectedCountSpan = document.getElementById('selectedCount');
     const bulkDeleteIdsInput = document.getElementById('bulkDeleteIds');
+
+    if (!selectAllCheckbox || !bulkActionBar) return;
 
     // Karena setiap user punya 2 checkbox (desktop + mobile), gunakan Set untuk deduplikasi
     function getSelectedIds() {
@@ -726,7 +728,8 @@
       // Download excel with selected IDs
       window.location.href = `/admin/users/download?ids=${selectedIds.join(',')}`;
     };
-  })();
+  } // end initCheckboxes
+  initCheckboxes();
 
   // Modal edit functionality
   (function () {
@@ -980,6 +983,8 @@ function autoSubmitFilter() {
         const curSection = document.getElementById('users-table-section');
         if (newSection && curSection) {
           curSection.innerHTML = newSection.innerHTML;
+          // Re-attach event listeners setelah replace konten
+          initCheckboxes();
         }
         // Update URL di browser tanpa reload
         history.pushState({}, '', url.replace('#daftar-pengguna', ''));
