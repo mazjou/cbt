@@ -134,6 +134,7 @@
       </div>
     </div>
 
+    <div id="users-table-section">
     <div class="flex items-center justify-between mb-4" id="daftar-pengguna">
       <h2 class="text-lg font-semibold text-teal-900">Daftar Pengguna</h2>
       <div class="text-sm text-teal-700">Total: <span class="font-semibold"><%= pagination.total %></span> pengguna</div>
@@ -311,6 +312,7 @@
         </div>
       </div>
     <% } %>
+    </div><!-- /users-table-section -->
   </div>
 
   <!-- Card Tambah Pengguna -->
@@ -965,30 +967,34 @@ function autoSubmitFilter() {
   if (form) form.submit();
 }
 
-// ── Pagination scroll-restore ──────────────────────────────────────────────
+// ── Pagination AJAX — ganti halaman tanpa scroll ke atas ──────────────────
 (function() {
-  const STORAGE_KEY = 'users_table_scroll';
-
-  // Restore scroll setelah load
-  const savedY = sessionStorage.getItem(STORAGE_KEY);
-  if (savedY !== null) {
-    sessionStorage.removeItem(STORAGE_KEY);
-    requestAnimationFrame(function() {
-      requestAnimationFrame(function() {
-        window.scrollTo({ top: parseInt(savedY), behavior: 'instant' });
+  function loadPage(url) {
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(r => r.text())
+      .then(html => {
+        // Parse HTML response
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const newSection = doc.getElementById('users-table-section');
+        const curSection = document.getElementById('users-table-section');
+        if (newSection && curSection) {
+          curSection.innerHTML = newSection.innerHTML;
+        }
+        // Update URL di browser tanpa reload
+        history.pushState({}, '', url.replace('#daftar-pengguna', ''));
+      })
+      .catch(() => {
+        // Fallback: navigasi biasa
+        window.location.href = url;
       });
-    });
   }
 
-  // Simpan posisi tabel sebelum navigasi pagination
   document.addEventListener('click', function(e) {
     const link = e.target.closest('a[href*="page="]');
     if (!link) return;
-    const tableEl = document.getElementById('daftar-pengguna');
-    if (tableEl) {
-      const y = tableEl.getBoundingClientRect().top + window.scrollY - 16;
-      sessionStorage.setItem(STORAGE_KEY, Math.round(y));
-    }
+    e.preventDefault();
+    loadPage(link.href);
   });
 })();
 </script>
