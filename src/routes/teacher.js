@@ -5391,12 +5391,18 @@ router.get('/raport/:period_id/:subject_id/:class_id/export', async (req, res) =
       dataRows = students.map((s, idx) => {
         const kdValues = kdList.map(kd => {
           const v = kdScoreMap[s.id] && kdScoreMap[s.id][kd.id];
-          return (v !== undefined && v !== null) ? v : '';
+          return (v !== undefined && v !== null) ? Number(v) : '';
         });
+        // Hitung rata-rata dari kd_scores yang ada di template (bukan dari raport_scores)
+        // supaya sinkron dengan nilai TP yang aktif saat ini
+        const validKdVals = kdValues.filter(v => v !== '' && !isNaN(v));
+        const avgVal = validKdVals.length > 0
+          ? Math.round((validKdVals.reduce((a, b) => a + b, 0) / validKdVals.length) * 100) / 100
+          : '';
         return [idx + 1, s.id, s.full_name,
           String(s.username || '').split('@')[0],
           ...kdValues,
-          s.score !== null && s.score !== undefined ? s.score : '',
+          avgVal,
           s.notes || ''
         ];
       });
@@ -5412,7 +5418,7 @@ router.get('/raport/:period_id/:subject_id/:class_id/export', async (req, res) =
         s.id,
         s.full_name,
         String(s.username || '').split('@')[0],
-        s.score !== null && s.score !== undefined ? s.score : '',
+        s.score !== null && s.score !== undefined ? Math.round(Number(s.score) * 100) / 100 : '',
         s.notes || ''
       ]);
       colWidths = [
