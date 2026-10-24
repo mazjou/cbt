@@ -3789,6 +3789,7 @@ router.get('/grades', async (req, res) => {
   const exam_id = (req.query.exam_id || '').trim();
   const class_id = (req.query.class_id || '').trim();
   const teacher_id = (req.query.teacher_id || '').trim();
+  const subject_id = (req.query.subject_id || '').trim();
   const status = (req.query.status || '').trim();
   const result = (req.query.result || '').trim();
   const q = (req.query.q || '').trim();
@@ -3802,6 +3803,7 @@ router.get('/grades', async (req, res) => {
   const [exams] = await pq(`SELECT id, title FROM exams ORDER BY title ASC;`);
   const [classes] = await pq(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
   const [teachers] = await pq(`SELECT id, full_name FROM users WHERE role='TEACHER' ORDER BY full_name ASC;`);
+  const [subjects] = await pq(`SELECT id, name FROM subjects ORDER BY name ASC;`);
 
   const where = ['1=1'];
   const params = [];
@@ -3809,6 +3811,10 @@ router.get('/grades', async (req, res) => {
   if (exam_id) {
     params.push(exam_id);
     where.push(`e.id=$${params.length}`);
+  }
+  if (subject_id) {
+    params.push(subject_id);
+    where.push(`e.subject_id=$${params.length}`);
   }
   if (class_id) {
     params.push(class_id);
@@ -3948,7 +3954,8 @@ router.get('/grades', async (req, res) => {
     exams,
     classes,
     teachers,
-    filters: { exam_id, class_id, teacher_id, status, result, q },
+    subjects,
+    filters: { exam_id, class_id, teacher_id, subject_id, status, result, q },
     pagination: {
       page,
       limit,
