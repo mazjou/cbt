@@ -964,4 +964,31 @@ function autoSubmitFilter() {
   const form = document.getElementById('filterForm');
   if (form) form.submit();
 }
+
+// ── Pagination scroll-restore ──────────────────────────────────────────────
+(function() {
+  const STORAGE_KEY = 'users_table_scroll';
+
+  // Restore scroll setelah load
+  const savedY = sessionStorage.getItem(STORAGE_KEY);
+  if (savedY !== null) {
+    sessionStorage.removeItem(STORAGE_KEY);
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        window.scrollTo({ top: parseInt(savedY), behavior: 'instant' });
+      });
+    });
+  }
+
+  // Simpan posisi tabel sebelum navigasi pagination
+  document.addEventListener('click', function(e) {
+    const link = e.target.closest('a[href*="page="]');
+    if (!link) return;
+    const tableEl = document.getElementById('daftar-pengguna');
+    if (tableEl) {
+      const y = tableEl.getBoundingClientRect().top + window.scrollY - 16;
+      sessionStorage.setItem(STORAGE_KEY, Math.round(y));
+    }
+  });
+})();
 </script>
