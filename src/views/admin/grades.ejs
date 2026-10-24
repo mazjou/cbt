@@ -299,7 +299,7 @@
       <select onchange="window.location.href=this.value"
         class="rounded-xl border-2 border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer">
         <% [10,25,50,100].forEach(n => { %>
-          <option value="?page=1&limit=<%=n%>&exam_id=<%=filters.exam_id%>&class_id=<%=filters.class_id%>&teacher_id=<%=filters.teacher_id%>&status=<%=filters.status%>&result=<%=filters.result%>&q=<%=filters.q%>"
+          <option value="?page=1&limit=<%=n%>&subject_id=<%=filters.subject_id%>&exam_id=<%=filters.exam_id%>&class_id=<%=filters.class_id%>&teacher_id=<%=filters.teacher_id%>&status=<%=filters.status%>&result=<%=filters.result%>&q=<%=filters.q%>"
             <%=pagination.limit===n?'selected':''%>><%=n%></option>
         <% }) %>
       </select>
@@ -446,7 +446,7 @@
       </div>
       <div class="flex gap-2">
         <% if (pagination.page > 1) { %>
-          <a href="?page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>&exam_id=<%= filters.exam_id %>&class_id=<%= filters.class_id %>&teacher_id=<%= filters.teacher_id %>&status=<%= filters.status %>&result=<%= filters.result %>&q=<%= filters.q %>" 
+          <a href="?page=<%= pagination.page - 1 %>&limit=<%= pagination.limit %>&subject_id=<%= filters.subject_id %>&exam_id=<%= filters.exam_id %>&class_id=<%= filters.class_id %>&teacher_id=<%= filters.teacher_id %>&status=<%= filters.status %>&result=<%= filters.result %>&q=<%= filters.q %>" 
              class="bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 text-purple-800 font-semibold py-2 px-4 rounded-lg transition-all">
             ← Sebelumnya
           </a>
@@ -457,14 +457,14 @@
           const endPage = Math.min(pagination.totalPages, pagination.page + 2);
           for (let i = startPage; i <= endPage; i++) { 
         %>
-          <a href="?page=<%= i %>&limit=<%= pagination.limit %>&exam_id=<%= filters.exam_id %>&class_id=<%= filters.class_id %>&teacher_id=<%= filters.teacher_id %>&status=<%= filters.status %>&result=<%= filters.result %>&q=<%= filters.q %>" 
+          <a href="?page=<%= i %>&limit=<%= pagination.limit %>&subject_id=<%= filters.subject_id %>&exam_id=<%= filters.exam_id %>&class_id=<%= filters.class_id %>&teacher_id=<%= filters.teacher_id %>&status=<%= filters.status %>&result=<%= filters.result %>&q=<%= filters.q %>" 
              class="<%= i === pagination.page ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white' : 'bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 text-purple-800' %> font-semibold py-2 px-4 rounded-lg transition-all">
             <%= i %>
           </a>
         <% } %>
         
         <% if (pagination.page < pagination.totalPages) { %>
-          <a href="?page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>&exam_id=<%= filters.exam_id %>&class_id=<%= filters.class_id %>&teacher_id=<%= filters.teacher_id %>&status=<%= filters.status %>&result=<%= filters.result %>&q=<%= filters.q %>" 
+          <a href="?page=<%= pagination.page + 1 %>&limit=<%= pagination.limit %>&subject_id=<%= filters.subject_id %>&exam_id=<%= filters.exam_id %>&class_id=<%= filters.class_id %>&teacher_id=<%= filters.teacher_id %>&status=<%= filters.status %>&result=<%= filters.result %>&q=<%= filters.q %>" 
              class="bg-gradient-to-r from-purple-100 to-pink-100 hover:from-purple-200 hover:to-pink-200 text-purple-800 font-semibold py-2 px-4 rounded-lg transition-all">
             Selanjutnya →
           </a>
