@@ -3006,7 +3006,7 @@ router.get('/material-views', async (req, res) => {
   );
   const [classes] = await pool.query(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
 
-  const where = ['m.teacher_id=:tid', 'mv.completed_at IS NOT NULL'];
+  const where = ['m.teacher_id=:tid']; // tampilkan semua yang sudah buka, tidak hanya yang selesai
   const params = { tid: user.id };
 
   if (material_id) {
@@ -3036,6 +3036,7 @@ router.get('/material-views', async (req, res) => {
   // Get paginated viewed data
   const [rows] = await pool.query(
     `SELECT mv.id, mv.first_opened_at AS opened_at, mv.completed_at,
+            CASE WHEN mv.completed_at IS NOT NULL THEN true ELSE false END AS is_completed,
             m.id AS material_id, m.title AS material_title,
             u.full_name AS student_name, u.username,
             c.name AS class_name
@@ -3044,7 +3045,7 @@ router.get('/material-views', async (req, res) => {
      JOIN users u ON u.id=mv.student_id
      LEFT JOIN classes c ON c.id=u.class_id
      WHERE ${where.join(' AND ')}
-     ORDER BY mv.completed_at DESC
+     ORDER BY mv.first_opened_at DESC
      LIMIT :limit OFFSET :offset;`,
     { ...params, limit, offset }
   );

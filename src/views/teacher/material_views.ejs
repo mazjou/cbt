@@ -142,9 +142,15 @@
                 <%= r.opened_at ? new Date(r.opened_at).toLocaleString('id-ID') : '-' %>
               </td>
               <td class="px-4 py-3 text-sm">
-                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                  ✅ <%= r.completed_at ? new Date(r.completed_at).toLocaleString('id-ID') : '-' %>
-                </span>
+                <% if (r.completed_at) { %>
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    ✅ Selesai — <%= new Date(r.completed_at).toLocaleString('id-ID') %>
+                  </span>
+                <% } else { %>
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    👁️ Sedang Baca — dibuka <%= new Date(r.opened_at).toLocaleString('id-ID') %>
+                  </span>
+                <% } %>
               </td>
             </tr>
           <% }); %>
