@@ -193,6 +193,15 @@ function toYoutubeEmbedUrl(input) {
   return `https://www.youtube-nocookie.com/embed/${vid}?rel=0&modestbranding=1`;
 }
 
+// Konversi URL Google Drive /view → /preview agar bisa di-embed iframe
+function normalizePdfUrl(url) {
+  if (!url) return url;
+  const raw = String(url).trim();
+  const driveMatch = raw.match(/https:\/\/drive\.google\.com\/file\/d\/([^\/\?#]+)/);
+  if (driveMatch) return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+  return raw;
+}
+
 function normalizeHeader(h) {
   return String(h || '')
     .trim()
@@ -424,7 +433,7 @@ router.post('/materials', uploadMaterials.fields([{ name: 'docx', maxCount: 1 },
     }
   } else if (String(embed_mode || '').toUpperCase() === 'PDF') {
     embed_type = 'PDF';
-    embed_url = String(pdf_url || '').trim();
+    embed_url = normalizePdfUrl(String(pdf_url || '').trim());
     if (!embed_url) {
       req.flash('error', 'Link PDF kosong. Isi URL PDF (http/https) atau upload file PDF.');
       return res.redirect('/teacher/materials/new');
@@ -591,7 +600,7 @@ router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1
     }
   } else if (String(embed_mode || '').toUpperCase() === 'PDF') {
     embed_type = 'PDF';
-    embed_url = String(pdf_url || '').trim();
+    embed_url = normalizePdfUrl(String(pdf_url || '').trim());
     if (!embed_url) {
       req.flash('error', 'Link PDF kosong. Isi URL PDF (http/https) atau upload file PDF.');
       return res.redirect(`/teacher/materials/${materialId}/edit`);
