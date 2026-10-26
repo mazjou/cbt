@@ -3023,7 +3023,7 @@ router.get('/material-views', async (req, res) => {
   }
 
   // Count total viewed
-  const [[{ total }]] = await pool.query(
+  const [[{ total: totalRaw }]] = await pool.query(
     `SELECT COUNT(*) AS total
      FROM material_reads mv
      JOIN materials m ON m.id=mv.material_id
@@ -3032,6 +3032,7 @@ router.get('/material-views', async (req, res) => {
      WHERE ${where.join(' AND ')};`,
     params
   );
+  const total = parseInt(totalRaw) || 0;
 
   // Get paginated viewed data
   const [rows] = await pool.query(
@@ -3094,7 +3095,7 @@ router.get('/material-views', async (req, res) => {
          );`,
       notViewedParams
     );
-    notViewedTotal = notViewedCount;
+    notViewedTotal = parseInt(notViewedCount) || 0;
     
     // Get paginated not viewed data
     [notViewedStudents] = await pool.query(
@@ -3140,7 +3141,7 @@ router.get('/material-views', async (req, res) => {
          );`,
       notViewedParams
     );
-    notViewedTotal = notViewedCount;
+    notViewedTotal = parseInt(notViewedCount) || 0;
     
     // Get paginated not viewed data
     [notViewedStudents] = await pool.query(
