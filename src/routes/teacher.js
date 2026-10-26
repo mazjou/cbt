@@ -2994,9 +2994,9 @@ router.get('/material-views', async (req, res) => {
   const limit = parseInt(req.query.limit) || 10;
   const offset = (page - 1) * limit;
   
-  // Pagination for not viewed students
+  // Pagination for not viewed students — pakai limit yang sama
   const notViewedPage = parseInt(req.query.not_viewed_page) || 1;
-  const notViewedLimit = 10; // Fixed at 10 per page
+  const notViewedLimit = limit; // ikuti limit dari filter
   const notViewedOffset = (notViewedPage - 1) * notViewedLimit;
 
   // Get teacher's materials for filter
@@ -3054,7 +3054,7 @@ router.get('/material-views', async (req, res) => {
   let notViewedTotal = 0;
   
   if (material_id) {
-    // Get material's class_id first
+    // Ambil class_id dari tabel materials
     const [[materialInfo]] = await pool.query(
       `SELECT class_id FROM materials WHERE id=:material_id LIMIT 1;`,
       { material_id }
@@ -3064,8 +3064,8 @@ router.get('/material-views', async (req, res) => {
     const notViewedWhere = ["u.role='STUDENT'", 'u.is_active=true'];
     const notViewedParams = { material_id };
     
-    // If material has specific class, filter by that class
-    if (materialInfo && materialInfo.class_id) {
+    // Filter by kelas dari material
+    if (materialInfo && materialInfo.class_id && !class_id) {
       notViewedWhere.push('u.class_id=:material_class_id');
       notViewedParams.material_class_id = materialInfo.class_id;
     }
