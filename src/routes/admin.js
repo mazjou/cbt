@@ -4291,13 +4291,12 @@ router.get('/assignments', async (req, res) => {
         a.*,
         u.full_name as teacher_name,
         s.name as subject_name,
-        c.name as class_name,
+        (SELECT STRING_AGG(c2.name, ', ' ORDER BY c2.name) FROM assignment_classes ac2 JOIN classes c2 ON c2.id = ac2.class_id WHERE ac2.assignment_id = a.id) as class_name,
         (SELECT COUNT(*) FROM assignment_submissions WHERE assignment_id = a.id) as submission_count,
-        (SELECT COUNT(*) FROM users WHERE role='STUDENT' AND (a.class_id IS NULL OR class_id = a.class_id)) AS total_students
+        (SELECT COUNT(DISTINCT u2.id) FROM users u2 JOIN assignment_classes ac3 ON ac3.class_id = u2.class_id WHERE ac3.assignment_id = a.id AND u2.role='STUDENT' AND u2.is_active=true) AS total_students
       FROM assignments a
       JOIN users u ON a.teacher_id = u.id
       JOIN subjects s ON a.subject_id = s.id
-      LEFT JOIN classes c ON a.class_id = c.id
       WHERE ${whereClause}
       ORDER BY a.created_at DESC`,
       queryParams
@@ -4355,11 +4354,10 @@ router.get('/assignments/:id', async (req, res) => {
         u.full_name as teacher_name,
         s.name as subject_name,
         s.code as subject_code,
-        c.name as class_name
+        (SELECT STRING_AGG(c2.name, ', ' ORDER BY c2.name) FROM assignment_classes ac2 JOIN classes c2 ON c2.id = ac2.class_id WHERE ac2.assignment_id = a.id) as class_name
       FROM assignments a
       JOIN users u ON a.teacher_id = u.id
       JOIN subjects s ON a.subject_id = s.id
-      LEFT JOIN classes c ON a.class_id = c.id
       WHERE a.id = $1 LIMIT 1`,
       [assignmentId]
     );
