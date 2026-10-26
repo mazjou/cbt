@@ -191,8 +191,12 @@ router.post('/login', async (req, res) => {
       profile_photo: user.profile_photo
     };
 
-    req.flash('success', `Selamat datang, ${user.full_name}!`);
-    return res.redirect('/dashboard');
+    // Paksa simpan session ke Redis sebelum redirect agar tidak hilang di cluster mode
+    req.session.save((err) => {
+      if (err) console.error('[LOGIN] session.save error:', err.message);
+      req.flash('success', `Selamat datang, ${user.full_name}!`);
+      return res.redirect('/dashboard');
+    });
   } catch (e) {
     console.error(e);
     req.flash('error', 'Terjadi kesalahan saat login.');

@@ -238,17 +238,16 @@ async function initRedis() {
       port: Number(process.env.REDIS_PORT || 6379),
       connectTimeout: 10000,
       reconnectStrategy: (retries) => {
-        const delay = Math.min(retries * 200, 3000);
-        if (retries > 20) {
-          console.error('❌ Redis reconnect berhenti: terlalu banyak retry');
-          return new Error('Too many redis reconnect attempts');
+        const delay = Math.min(retries * 200, 5000);
+        if (retries > 50) {
+          console.error(`❌ Redis reconnect attempt ${retries}, masih mencoba...`);
         }
-        return delay;
+        return delay; // tidak pernah berhenti reconnect
       },
     },
-    username: process.env.REDIS_USERNAME || undefined,
     password: process.env.REDIS_PASSWORD || undefined,
-    disableOfflineQueue: true,
+    // username tidak diset — Redis pakai requirepass (user default), tidak ada ACL user
+    // disableOfflineQueue dibiarkan default (false) agar operasi di-queue saat disconnect
   });
   client.on('error', (err) => { isRedisConnected = false; console.error('❌ Redis error:', err.message); });
   client.on('ready', () => { isRedisConnected = true; console.log('✅ Redis ready'); });
