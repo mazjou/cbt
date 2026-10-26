@@ -464,14 +464,14 @@ router.post('/materials', uploadMaterials.fields([{ name: 'docx', maxCount: 1 },
 
     await pool.query(
       `INSERT INTO materials (subject_id, teacher_id, title, description, content_html, class_id, embed_type, embed_url, is_published, auto_complete_minutes)
-       VALUES (:subject_id,:teacher_id,:title,:description,:content_html,:class_id,:embed_type,:embed_url,0,:auto_complete_minutes);`,
+       VALUES (:subject_id,:teacher_id,:title,:description,:content_html,:class_id,:embed_type,:embed_url,false,:auto_complete_minutes);`,
       {
-        subject_id,
+        subject_id: parseInt(subject_id) || null,
         teacher_id: user.id,
         title,
         description: description || null,
         content_html: html,
-        class_id: class_id || null,
+        class_id: class_id ? parseInt(class_id) : null,
         embed_type,
         embed_url,
         auto_complete_minutes: autoCompleteValue
@@ -632,6 +632,7 @@ router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1
 
     const autoCompleteValue = parseInt(auto_complete_minutes) || 5;
 
+    const isAdmin = user.role === 'ADMIN';
     await pool.query(
       `UPDATE materials
        SET subject_id=:subject_id,
@@ -642,17 +643,18 @@ router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1
            embed_type=:embed_type,
            embed_url=:embed_url,
            auto_complete_minutes=:auto_complete_minutes
-       WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid);`,
+       WHERE id=:id AND (:isAdmin OR teacher_id=:tid);`,
       {
-        subject_id,
+        subject_id: parseInt(subject_id) || null,
         title,
         description: description || null,
         content_html: html,
-        class_id: class_id || null,
+        class_id: class_id ? parseInt(class_id) : null,
         embed_type,
         embed_url,
         auto_complete_minutes: autoCompleteValue,
         id: materialId,
+        isAdmin,
         tid: user.id
       }
     );
