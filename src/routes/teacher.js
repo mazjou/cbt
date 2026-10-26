@@ -3543,11 +3543,9 @@ router.get('/assignments/:id', async (req, res) => {
     const [[assignment]] = await pool.query(
       `SELECT 
         a.*, 
-        s.name AS subject_name,
-        c.name AS class_name
+        s.name AS subject_name
        FROM assignments a
        LEFT JOIN subjects s ON s.id = a.subject_id
-       LEFT JOIN classes c ON c.id = a.class_id
        WHERE a.id = :id AND a.teacher_id = :teacherId;`,
       { id: assignmentId, teacherId }
     );
@@ -3556,6 +3554,17 @@ router.get('/assignments/:id', async (req, res) => {
       req.flash('error', 'Tugas tidak ditemukan');
       return res.redirect('/teacher/assignments');
     }
+
+    // Ambil daftar kelas dari assignment_classes
+    const [assignmentClasses] = await pool.query(
+      `SELECT c.id, c.name FROM assignment_classes ac
+       JOIN classes c ON c.id = ac.class_id
+       WHERE ac.assignment_id = :aid
+       ORDER BY c.name ASC`,
+      { aid: assignmentId }
+    );
+    assignment.class_names = assignmentClasses.map(c => c.name).join(', ') || 'Semua Kelas';
+    assignment.class_ids   = assignmentClasses.map(c => c.id);
     
     const [submissions] = await pool.query(
       `SELECT 
@@ -3571,13 +3580,13 @@ router.get('/assignments/:id', async (req, res) => {
       { assignmentId }
     );
     
-    // Calculate total students and percentage
+    // Calculate total students from assignment_classes
     const [[totalStudents]] = await pool.query(
-      `SELECT COUNT(*) as total 
-       FROM users 
-       WHERE role = 'STUDENT' 
-       AND (${assignment.class_id ? 'class_id = :classId' : '1=1'});`,
-      { classId: assignment.class_id }
+      `SELECT COUNT(DISTINCT u.id) as total
+       FROM users u
+       INNER JOIN assignment_classes ac ON ac.class_id = u.class_id AND ac.assignment_id = :aid
+       WHERE u.role = 'STUDENT' AND u.is_active = true`,
+      { aid: assignmentId }
     );
     
     assignment.total_students = totalStudents.total || 0;
