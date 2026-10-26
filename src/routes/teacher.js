@@ -3023,8 +3023,8 @@ router.get('/material-views', async (req, res) => {
   }
 
   // Count total viewed
-  const [[{ total: totalRaw }]] = await pool.query(
-    `SELECT COUNT(*) AS total
+  const [[countViewedRow]] = await pool.query(
+    `SELECT COUNT(*) AS cnt
      FROM material_reads mv
      JOIN materials m ON m.id=mv.material_id
      JOIN users u ON u.id=mv.student_id
@@ -3032,7 +3032,7 @@ router.get('/material-views', async (req, res) => {
      WHERE ${where.join(' AND ')};`,
     params
   );
-  const total = parseInt(totalRaw) || 0;
+  const total = parseInt(countViewedRow?.cnt) || 0;
 
   // Get paginated viewed data
   const [rows] = await pool.query(
@@ -3046,7 +3046,7 @@ router.get('/material-views', async (req, res) => {
      JOIN users u ON u.id=mv.student_id
      LEFT JOIN classes c ON c.id=u.class_id
      WHERE ${where.join(' AND ')}
-     ORDER BY mv.first_opened_at DESC
+     ORDER BY c.name ASC, u.full_name ASC
      LIMIT :limit OFFSET :offset;`,
     { ...params, limit, offset }
   );
@@ -3083,9 +3083,9 @@ router.get('/material-views', async (req, res) => {
       notViewedParams.q = '%' + q + '%';
     }
     
-    // Count total not viewed
-    const [[{ notViewedCount }]] = await pool.query(
-      `SELECT COUNT(*) AS notViewedCount
+    // Count total not viewed (specific material)
+    const [[countRow1]] = await pool.query(
+      `SELECT COUNT(*) AS cnt
        FROM users u
        LEFT JOIN classes c ON c.id=u.class_id
        WHERE ${notViewedWhere.join(' AND ')}
@@ -3095,7 +3095,7 @@ router.get('/material-views', async (req, res) => {
          );`,
       notViewedParams
     );
-    notViewedTotal = parseInt(notViewedCount) || 0;
+    notViewedTotal = parseInt(countRow1?.cnt) || 0;
     
     // Get paginated not viewed data
     [notViewedStudents] = await pool.query(
@@ -3109,7 +3109,7 @@ router.get('/material-views', async (req, res) => {
            SELECT 1 FROM material_reads mv
            WHERE mv.student_id=u.id AND mv.material_id=:material_id
          )
-       ORDER BY u.full_name ASC
+       ORDER BY c.name ASC, u.full_name ASC
        LIMIT :limit OFFSET :offset;`,
       { ...notViewedParams, limit: notViewedLimit, offset: notViewedOffset }
     );
@@ -3128,9 +3128,9 @@ router.get('/material-views', async (req, res) => {
       notViewedParams.q = '%' + q + '%';
     }
     
-    // Count total not viewed
-    const [[{ notViewedCount }]] = await pool.query(
-      `SELECT COUNT(*) AS notViewedCount
+    // Count total not viewed (all materials)
+    const [[countRow2]] = await pool.query(
+      `SELECT COUNT(*) AS cnt
        FROM users u
        LEFT JOIN classes c ON c.id=u.class_id
        WHERE ${notViewedWhere.join(' AND ')}
@@ -3141,7 +3141,7 @@ router.get('/material-views', async (req, res) => {
          );`,
       notViewedParams
     );
-    notViewedTotal = parseInt(notViewedCount) || 0;
+    notViewedTotal = parseInt(countRow2?.cnt) || 0;
     
     // Get paginated not viewed data
     [notViewedStudents] = await pool.query(
@@ -3156,7 +3156,7 @@ router.get('/material-views', async (req, res) => {
            JOIN materials m ON m.id=mv.material_id
            WHERE mv.student_id=u.id AND m.teacher_id=:tid
          )
-       ORDER BY u.full_name ASC
+       ORDER BY c.name ASC, u.full_name ASC
        LIMIT :limit OFFSET :offset;`,
       { ...notViewedParams, limit: notViewedLimit, offset: notViewedOffset }
     );
