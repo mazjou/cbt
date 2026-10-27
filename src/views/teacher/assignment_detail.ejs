@@ -489,6 +489,8 @@ function resetIndividualSafe(button) {
 }
 
 function openGradeModal(submissionId, studentName, score, feedback) {
+  currentSubmissionId = submissionId;  // set global untuk AJAX handler
+  currentStudentName = studentName;
   const modal = document.getElementById('gradeModal');
   const form = document.getElementById('gradeForm');
   const studentNameEl = document.getElementById('studentName');

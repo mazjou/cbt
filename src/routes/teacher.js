@@ -3741,10 +3741,10 @@ router.post('/assignments/:id/submissions/:submissionId/grade', async (req, res)
        SET score = :score, feedback = :feedback, graded_at = NOW(), graded_by = :teacherId
        WHERE id = :submissionId;`,
       {
-        score: score !== '' && score !== null && score !== undefined ? score : null,
+        score: (score !== '' && score !== null && score !== undefined) ? Number(score) : null,
         feedback: feedback || null,
-        teacherId,
-        submissionId: req.params.submissionId
+        teacherId: parseInt(teacherId),
+        submissionId: parseInt(req.params.submissionId)
       }
     );
     
