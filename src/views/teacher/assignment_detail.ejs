@@ -159,11 +159,11 @@
               </td>
               <td class="px-4 py-3">
                 <% if (sub.score !== null) { %>
-                  <span class="inline-flex items-center px-2 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
+                  <span data-badge-sub="<%= sub.id %>" class="inline-flex items-center px-2 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
                     <%= sub.score %> / <%= assignment.max_score %>
                   </span>
                 <% } else { %>
-                  <span class="text-slate-400 text-sm">Belum dinilai</span>
+                  <span data-badge-sub="<%= sub.id %>" class="text-slate-400 text-sm">Belum dinilai</span>
                 <% } %>
               </td>
               <td class="px-4 py-3">
@@ -186,6 +186,7 @@
                   <!-- Grade Button -->
                   <button 
                     data-submission-id="<%= sub.id %>"
+                    data-grade-btn="<%= sub.id %>"
                     data-student-name="<%= sub.student_name %>"
                     data-score="<%= sub.score || '' %>"
                     data-feedback="<%= sub.feedback || '' %>"
@@ -230,7 +231,7 @@
         </button>
       </div>
     </div>
-    <form id="gradeForm" method="POST" action="">
+    <form id="gradeForm" method="POST" action="" onsubmit="handleGradeFormSubmit(event, 'gradeModal')">
       <div class="p-6 space-y-4">
         <div>
           <div class="text-sm text-slate-600 mb-2">Siswa:</div>
@@ -323,7 +324,7 @@
     
     <!-- Footer with Quick Grade Form -->
     <div class="p-6 border-t border-slate-200 bg-slate-50">
-      <form id="quickGradeForm" method="POST" action="" class="space-y-4">
+      <form id="quickGradeForm" method="POST" action="" class="space-y-4" onsubmit="handleGradeFormSubmit(event, 'viewModal')">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <!-- Score Input -->
           <div>
@@ -386,6 +387,72 @@ let currentSubmissionId = null;
 let currentStudentName = null;
 let currentScore = null;
 let currentFeedback = null;
+const assignmentId = <%= assignment.id %>;
+const maxScore = <%= assignment.max_score %>;
+
+// ── AJAX grade submit ──────────────────────────────────────────────────────
+async function submitGradeAjax(submissionId, score, feedback, onSuccess) {
+  const url = `/teacher/assignments/${assignmentId}/submissions/${submissionId}/grade`;
+  const body = new URLSearchParams({ score, feedback: feedback || '' });
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+    body: body.toString()
+  });
+  const data = await resp.json();
+  if (data.ok) {
+    // Update badge nilai di baris tabel
+    const badge = document.querySelector(`[data-badge-sub="${submissionId}"]`);
+    if (badge) {
+      badge.innerHTML = score !== '' && score !== null
+        ? `<span class="inline-flex items-center px-2 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">${score} / ${maxScore}</span>`
+        : `<span class="text-slate-400 text-sm">Belum dinilai</span>`;
+    }
+    // Update tombol Nilai/Edit
+    const gradeBtn = document.querySelector(`[data-grade-btn="${submissionId}"]`);
+    if (gradeBtn) {
+      gradeBtn.setAttribute('data-score', score);
+      gradeBtn.setAttribute('data-feedback', feedback || '');
+      gradeBtn.textContent = score !== '' ? '✏️ Edit' : '📝 Nilai';
+    }
+    showToastGrade('Nilai berhasil disimpan ✓');
+    if (onSuccess) onSuccess();
+  } else {
+    alert('Gagal menyimpan nilai: ' + (data.message || 'Coba lagi'));
+  }
+}
+
+function showToastGrade(msg) {
+  let t = document.getElementById('gradeToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'gradeToast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#16a34a;color:white;padding:10px 20px;border-radius:10px;font-size:14px;font-weight:600;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:opacity .3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg; t.style.opacity = '1';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(() => t.style.opacity = '0', 2500);
+}
+
+// Handler submit form grade (modal & quick)
+function handleGradeFormSubmit(e, modalId) {
+  e.preventDefault();
+  const form = e.target;
+  const submissionId = currentSubmissionId;
+  const score = form.querySelector('[name=score]').value;
+  const feedback = (form.querySelector('[name=feedback]') || {}).value || '';
+  const btn = form.querySelector('button[type=submit]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Menyimpan...'; }
+  submitGradeAjax(submissionId, score, feedback, () => {
+    // Tutup modal setelah berhasil
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.add('hidden');
+    if (btn) { btn.disabled = false; btn.textContent = btn.textContent.includes('Edit') ? '✏️ Edit' : 'Simpan Nilai'; }
+  }).catch(() => {
+    if (btn) { btn.disabled = false; }
+  });
+}
 
 // Safe wrapper functions that read from data attributes
 function openGradeModalSafe(button) {

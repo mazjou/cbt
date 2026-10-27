@@ -3731,6 +3731,7 @@ router.post('/assignments/:id/update', async (req, res) => {
 
 // Grade submission
 router.post('/assignments/:id/submissions/:submissionId/grade', async (req, res) => {
+  const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
   try {
     const teacherId = req.session.user.id;
     const { score, feedback } = req.body;
@@ -3740,17 +3741,20 @@ router.post('/assignments/:id/submissions/:submissionId/grade', async (req, res)
        SET score = :score, feedback = :feedback, graded_at = NOW(), graded_by = :teacherId
        WHERE id = :submissionId;`,
       {
-        score: score || null,
+        score: score !== '' && score !== null && score !== undefined ? score : null,
         feedback: feedback || null,
         teacherId,
         submissionId: req.params.submissionId
       }
     );
     
+    if (isAjax) return res.json({ ok: true, score: score !== '' ? Number(score) : null, feedback: feedback || null });
     req.flash('success', 'Nilai berhasil disimpan');
     res.redirect(`/teacher/assignments/${req.params.id}`);
   } catch (err) {
     console.error('Error grading submission:', err);
+    const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+    if (isAjax) return res.json({ ok: false, message: err.message });
     req.flash('error', 'Gagal menyimpan nilai');
     res.redirect(`/teacher/assignments/${req.params.id}`);
   }
