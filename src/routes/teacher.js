@@ -3578,7 +3578,7 @@ router.get('/assignments/:id', async (req, res) => {
        JOIN users u ON u.id = sub.student_id
        LEFT JOIN classes c ON c.id = u.class_id
        WHERE sub.assignment_id = :assignmentId
-       ORDER BY sub.submitted_at DESC;`,
+       ORDER BY u.full_name ASC;`,
       { assignmentId }
     );
     
