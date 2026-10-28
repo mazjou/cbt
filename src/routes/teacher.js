@@ -739,7 +739,11 @@ router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1
     } catch (_) {} // table mungkin belum ada di versi lama
 
     req.flash('success', 'Materi diperbarui.');
-    return res.redirect(`/teacher/materials/${materialId}`);
+    // Admin diarahkan kembali ke halaman admin materials, guru ke detail materinya
+    const redirectUrl = (user.role === 'ADMIN')
+      ? '/admin/materials'
+      : `/teacher/materials/${materialId}`;
+    return res.redirect(redirectUrl);
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal memperbarui materi.');
