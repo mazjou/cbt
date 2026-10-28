@@ -118,22 +118,36 @@
 
 <script>
   // Toggle "Semua Kelas" checkbox
-  document.getElementById('checkAllKelas').addEventListener('change', function() {
-    document.querySelectorAll('.kelas-check').forEach(cb => { cb.checked = false; });
-  });
-  document.querySelectorAll('.kelas-check').forEach(cb => {
-    cb.addEventListener('change', function() {
-      if (this.checked) document.getElementById('checkAllKelas').checked = false;
-    });
+  // ── Logika checkbox kelas ─────────────────────────────────────────────────
+  const checkAll = document.getElementById('checkAllKelas');
+  const kelasCbs = () => [...document.querySelectorAll('.kelas-check')];
+
+  function syncAllKelasState() {
+    checkAll.checked = !kelasCbs().some(cb => cb.checked);
+  }
+
+  checkAll.addEventListener('change', function() {
+    if (this.checked) {
+      kelasCbs().forEach(cb => { cb.checked = false; });
+    } else {
+      if (!kelasCbs().some(cb => cb.checked)) this.checked = true;
+    }
   });
 
+  kelasCbs().forEach(cb => {
+    cb.addEventListener('change', syncAllKelasState);
+  });
+
+  syncAllKelasState(); // inisialisasi: form baru = semua kelas tercentang otomatis
+
+  // ── Toggle field embed ────────────────────────────────────────────────────
   function toggleEmbedFields() {
     const mode = document.getElementById('embed_mode').value.toUpperCase();
     document.getElementById('field_youtube').style.display = (mode === 'YOUTUBE') ? '' : 'none';
     document.getElementById('field_pdf').style.display     = (mode === 'PDF')     ? '' : 'none';
     document.getElementById('field_web').style.display     = (mode === 'WEB')     ? '' : 'none';
   }
-  toggleEmbedFields(); // init state
+  toggleEmbedFields();
 
   (function() {
     const quill = new Quill('#editor', {
