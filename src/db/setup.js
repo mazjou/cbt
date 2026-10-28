@@ -74,6 +74,21 @@ async function main() {
     `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS start_at TIMESTAMP NULL`,
     `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS end_at TIMESTAMP NULL`,
     `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS duration_minutes INT NULL`,
+    // Material multi-kelas (junction table)
+    `CREATE TABLE IF NOT EXISTS material_classes (
+      id          SERIAL PRIMARY KEY,
+      material_id INT NOT NULL,
+      class_id    INT NOT NULL,
+      created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (material_id, class_id),
+      CONSTRAINT fk_mc_material FOREIGN KEY (material_id) REFERENCES materials(id) ON DELETE CASCADE,
+      CONSTRAINT fk_mc_class    FOREIGN KEY (class_id)    REFERENCES classes(id)   ON DELETE CASCADE
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_material_classes_material ON material_classes(material_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_material_classes_class    ON material_classes(class_id)`,
+    `INSERT INTO material_classes (material_id, class_id)
+     SELECT id, class_id FROM materials WHERE class_id IS NOT NULL
+     ON CONFLICT (material_id, class_id) DO NOTHING`,
   ];
   for (const sql of migrations) {
     try { await conn.query(sql); } catch(e) { /* abaikan jika sudah ada */ }
