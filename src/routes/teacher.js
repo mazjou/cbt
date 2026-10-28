@@ -442,6 +442,14 @@ router.post('/materials', uploadMaterials.fields([{ name: 'docx', maxCount: 1 },
       req.flash('error', 'Link PDF harus berupa URL http/https atau path lokal yang diawali /public/.');
       return res.redirect('/teacher/materials/new');
     }
+  } else if (String(embed_mode || '').toUpperCase() === 'WEB') {
+    const rawWeb = String(req.body.web_url || '').trim();
+    if (!rawWeb || !/^https?:\/\//i.test(rawWeb)) {
+      req.flash('error', 'URL Web tidak valid. Harus diawali https://');
+      return res.redirect('/teacher/materials/new');
+    }
+    embed_type = 'WEB';
+    embed_url  = rawWeb;
   }
 
   try {
@@ -572,13 +580,14 @@ router.get('/materials/:id', async (req, res) => {
 
 router.get('/materials/:id/edit', async (req, res) => {
   const user = req.session.user;
+  const isAdmin = user.role === 'ADMIN';
   const [[material]] = await pool.query(
     `SELECT m.*, s.name AS subject_name
      FROM materials m
      JOIN subjects s ON s.id=m.subject_id
-     WHERE m.id=:id AND m.teacher_id=:tid
+     WHERE m.id=:id AND (:isAdmin OR m.teacher_id=:tid)
      LIMIT 1;`,
-    { id: req.params.id, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
+    { id: req.params.id, tid: user.id, isAdmin }
   );
   if (!material) return res.status(404).render('error', { title: 'Tidak ditemukan', message: 'Materi tidak ditemukan.', user });
 
@@ -644,6 +653,14 @@ router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1
       req.flash('error', 'Link PDF harus berupa URL http/https atau path lokal yang diawali /public/.');
       return res.redirect(`/teacher/materials/${materialId}/edit`);
     }
+  } else if (String(embed_mode || '').toUpperCase() === 'WEB') {
+    const rawWeb = String(req.body.web_url || '').trim();
+    if (!rawWeb || !/^https?:\/\//i.test(rawWeb)) {
+      req.flash('error', 'URL Web tidak valid. Harus diawali https://');
+      return res.redirect(`/teacher/materials/${materialId}/edit`);
+    }
+    embed_type = 'WEB';
+    embed_url  = rawWeb;
   } else {
     // NONE
     embed_type = null;

@@ -80,10 +80,11 @@
       <div class="mt-3 grid md:grid-cols-2 gap-4">
         <div>
           <label class="text-sm text-slate-600">Mode Embed</label>
-          <select name="embed_mode" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+          <select name="embed_mode" id="embed_mode" onchange="toggleEmbedFields()" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
             <option value="" <%= material.embed_type ? '' : 'selected' %>>Tidak ada</option>
             <option value="YOUTUBE" <%= material.embed_type === 'YOUTUBE' ? 'selected' : '' %>>YouTube</option>
             <option value="PDF" <%= material.embed_type === 'PDF' ? 'selected' : '' %>>PDF (link)</option>
+            <option value="WEB" <%= material.embed_type === 'WEB' ? 'selected' : '' %>>🌐 Web URL (Canva, Google Slides, dll)</option>
           </select>
         </div>
 
@@ -95,14 +96,19 @@
       </div>
 
       <div class="mt-3 grid md:grid-cols-2 gap-4">
-        <div>
+        <div id="field_youtube">
           <label class="text-sm text-slate-600">Link YouTube (opsional)</label>
           <input name="youtube_url" value="<%= material.embed_type === 'YOUTUBE' ? material.embed_url : '' %>" placeholder="https://youtu.be/VIDEO_ID atau https://www.youtube.com/watch?v=VIDEO_ID" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2" />
           <p class="mt-2 text-xs text-slate-500">Boleh paste URL biasa / embed. Sistem akan normalisasi.</p>
         </div>
-        <div>
+        <div id="field_pdf">
           <label class="text-sm text-slate-600">Link PDF (opsional)</label>
           <input name="pdf_url" value="<%= material.embed_type === 'PDF' ? material.embed_url : '' %>" placeholder="https://contoh.com/file.pdf atau /public/uploads/materials/file.pdf" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2" />
+        </div>
+        <div id="field_web" class="md:col-span-2">
+          <label class="text-sm text-slate-600 font-semibold">🌐 URL Website / Embed</label>
+          <input name="web_url" value="<%= material.embed_type === 'WEB' ? material.embed_url : '' %>" placeholder="https://www.canva.com/... atau https://docs.google.com/presentation/..." class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2" />
+          <p class="mt-1 text-xs text-slate-500">Tempel URL halaman web yang ingin ditampilkan. Cocok untuk Canva, Google Slides, Genially, dll.</p>
         </div>
       </div>
     </div>
@@ -121,6 +127,14 @@
       if (this.checked) document.getElementById('checkAllKelas').checked = false;
     });
   });
+
+  function toggleEmbedFields() {
+    const mode = document.getElementById('embed_mode').value.toUpperCase();
+    document.getElementById('field_youtube').style.display = (mode === 'YOUTUBE') ? '' : 'none';
+    document.getElementById('field_pdf').style.display     = (mode === 'PDF')     ? '' : 'none';
+    document.getElementById('field_web').style.display     = (mode === 'WEB')     ? '' : 'none';
+  }
+  toggleEmbedFields(); // init on load
 
   (function() {
     const quill = new Quill('#editor', {

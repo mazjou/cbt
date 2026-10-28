@@ -60,6 +60,24 @@
     </div>
   <% } %>
 
+  <% if (material.embed_type === 'WEB' && material.embed_url) { %>
+    <div class="mb-6">
+      <div class="w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
+        <iframe class="w-full" style="height: 80vh; min-height: 500px;"
+          src="<%= material.embed_url %>"
+          title="Konten Web"
+          frameborder="0"
+          allowfullscreen
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+        ></iframe>
+      </div>
+      <div class="mt-2 text-xs text-slate-500">
+        Jika konten tidak tampil, kemungkinan website tidak mengizinkan embed.
+        <a class="underline text-indigo-600" href="<%= material.embed_url %>" target="_blank" rel="noopener">Buka di tab baru →</a>
+      </div>
+    </div>
+  <% } %>
+
   <div class="prose max-w-none">
     <%- material.content_html %>
   </div>

@@ -74,6 +74,8 @@ async function main() {
     `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS start_at TIMESTAMP NULL`,
     `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS end_at TIMESTAMP NULL`,
     `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS duration_minutes INT NULL`,
+    // Tambah nilai WEB ke enum embed_type jika belum ada
+    `DO $$ BEGIN ALTER TYPE embed_type ADD VALUE IF NOT EXISTS 'WEB'; EXCEPTION WHEN others THEN NULL; END $$`,
     // Material multi-kelas (junction table)
     `CREATE TABLE IF NOT EXISTS material_classes (
       id          SERIAL PRIMARY KEY,

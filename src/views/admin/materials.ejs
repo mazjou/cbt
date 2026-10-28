@@ -284,6 +284,10 @@
                   <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-orange-100 to-orange-200 text-orange-800 border border-orange-300">
                     PDF
                   </span>
+                <% } else if (material.embed_type === 'WEB') { %>
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-violet-100 to-violet-200 text-violet-800 border border-violet-300">
+                    🌐 Web
+                  </span>
                 <% } else if (material.content_html) { %>
                   <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-300">
                     HTML
@@ -342,6 +346,12 @@
                   >
                     Detail
                   </button>
+                  <a href="/teacher/materials/<%= material.id %>/edit"
+                    class="px-3 py-1.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white text-xs font-semibold rounded-lg shadow-md transform hover:scale-105 transition-all"
+                    title="Edit Materi"
+                  >
+                    Edit
+                  </a>
                   <form method="POST" action="/admin/materials/<%= material.id %>/toggle-publish" class="inline">
                     <% if (material.is_published) { %>
                       <button 
