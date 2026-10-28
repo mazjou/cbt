@@ -134,8 +134,14 @@
     });
   });
 
-  // Inisialisasi: cek apakah semua kelas spesifik tercentang
+  // Inisialisasi: jika materi untuk semua kelas, centang semua
+  <% if (isAllClasses) { %>
+  checkAllEl.checked = true;
+  getKelasCbs().forEach(cb => { cb.checked = true; });
+  <% } else { %>
+  // cek apakah semua kelas spesifik tercentang
   checkAllEl.checked = getKelasCbs().every(c => c.checked);
+  <% } %>
 
   // ── Toggle field embed ────────────────────────────────────────────────────
   function toggleEmbedFields() {

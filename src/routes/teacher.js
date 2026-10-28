@@ -606,8 +606,11 @@ router.get('/materials/:id/edit', async (req, res) => {
   if (selectedClassIds.length === 0 && material.class_id) {
     selectedClassIds = [material.class_id];
   }
+  // Jika selectedClassIds masih kosong = materi untuk semua kelas
+  // kirim flag ke view agar "Semua Kelas" + semua checkbox tercentang
+  const isAllClasses = selectedClassIds.length === 0;
 
-  res.render('teacher/material_edit', { title: `Edit Materi: ${material.title}`, material, subjects, classes, selectedClassIds });
+  res.render('teacher/material_edit', { title: `Edit Materi: ${material.title}`, material, subjects, classes, selectedClassIds, isAllClasses });
 });
 
 router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
@@ -617,11 +620,12 @@ router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1
 
   const [[existing]] = await pool.query(
     `SELECT * FROM materials WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid) LIMIT 1;`,
-    { id: materialId, tid: user.id }
+    { id: materialId, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
   );
   if (!existing) {
     req.flash('error', 'Materi tidak ditemukan.');
-    return res.redirect('/teacher/materials');
+    const redirectUrl = user.role === 'ADMIN' ? '/admin/materials' : '/teacher/materials';
+    return res.redirect(redirectUrl);
   }
 
   let html = String(content_html || '').trim() || null;
