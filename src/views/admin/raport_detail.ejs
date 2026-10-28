@@ -215,7 +215,19 @@
                         <% (s.classes || []).forEach(sc => { %>
                           <div class="flex items-center gap-2 text-xs" id="sc-row-<%= sc.sc_id %>">
                             <span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full font-medium"><%= sc.class_name %></span>
-                            <span class="text-slate-500"><%= sc.teacher_name || s.teacher_name || 'Guru default' %></span>
+                            <% if (sc.filled) { %>
+                              <span class="text-green-600 font-medium flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                <%= sc.teacher_name || s.teacher_name || 'Guru default' %>
+                              </span>
+                              <span class="text-green-500 text-xs ml-0.5">(<%= sc.scored %>/<%= sc.total_siswa %>)</span>
+                            <% } else { %>
+                              <span class="text-slate-500 flex items-center gap-1">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <%= sc.teacher_name || s.teacher_name || 'Guru default' %>
+                              </span>
+                              <span class="text-red-400 text-xs ml-0.5">(<%= sc.scored %>/<%= sc.total_siswa %>)</span>
+                            <% } %>
                             <button onclick="hapusSubjectClass(<%= sc.sc_id %>)"
                               class="ml-auto p-1 text-red-400 hover:text-red-600 rounded transition-all" title="Hapus kelas ini">
                               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">

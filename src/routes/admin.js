@@ -6582,16 +6582,67 @@ router.get('/raport/:id', async (req, res) => {
       ORDER BY c.name ASC
     `, [id]);
 
-    // Index classRows per subject_id
+    // Query 3: hitung siswa yang sudah diisi nilainya per (subject_id, class_id)
+    const subjectIdsForScore = [...new Set(classRows.map(cr => cr.raport_subject_id))];
+    const classIdsForScore   = [...new Set(classRows.map(cr => cr.class_id))];
+    const scoreStatusMap = {}; // key: `${subject_id}_${class_id}` => { scored, total }
+
+    if (subjectIdsForScore.length > 0 && classIdsForScore.length > 0) {
+      // Total siswa aktif per kelas
+      const phC = classIdsForScore.map((_, i) => `$${i + 1}`).join(',');
+      const [totalRows] = await pq(
+        `SELECT class_id, COUNT(*) AS total FROM users
+         WHERE role = 'STUDENT' AND is_active = true AND class_id IN (${phC})
+         GROUP BY class_id`,
+        classIdsForScore
+      );
+      const totalMap = {};
+      for (const r of totalRows) totalMap[r.class_id] = Number(r.total);
+
+      // Siswa yang sudah ada nilai (score not null) per (subject_id, class_id)
+      const phS  = subjectIdsForScore.map((_, i) => `$${i + 1}`).join(',');
+      const phC2 = classIdsForScore.map((_, i) => `$${subjectIdsForScore.length + i + 1}`).join(',');
+      const pidIdx = subjectIdsForScore.length + classIdsForScore.length + 1;
+      const [scoredRows] = await pq(
+        `SELECT rs.raport_subject_id AS subject_id, u.class_id, COUNT(*) AS scored
+         FROM raport_scores rs
+         JOIN users u ON u.id = rs.student_id
+         WHERE rs.period_id = $${pidIdx}
+           AND rs.raport_subject_id IN (${phS})
+           AND u.class_id IN (${phC2})
+           AND rs.score IS NOT NULL
+         GROUP BY rs.raport_subject_id, u.class_id`,
+        [...subjectIdsForScore, ...classIdsForScore, id]
+      );
+      for (const r of scoredRows) {
+        scoreStatusMap[`${r.subject_id}_${r.class_id}`] = {
+          scored: Number(r.scored),
+          total:  totalMap[r.class_id] || 0
+        };
+      }
+      // Pastikan semua kombinasi ada di map meski scored=0
+      for (const cr of classRows) {
+        const key = `${cr.raport_subject_id}_${cr.class_id}`;
+        if (!scoreStatusMap[key]) {
+          scoreStatusMap[key] = { scored: 0, total: totalMap[cr.class_id] || 0 };
+        }
+      }
+    }
+
+    // Index classRows per subject_id — sertakan status pengisian
     const classMap = new Map();
     for (const cr of classRows) {
       if (!classMap.has(cr.raport_subject_id)) classMap.set(cr.raport_subject_id, []);
+      const ss = scoreStatusMap[`${cr.raport_subject_id}_${cr.class_id}`] || { scored: 0, total: 0 };
       classMap.get(cr.raport_subject_id).push({
         sc_id:        cr.sc_id,
         class_id:     cr.class_id,
         class_name:   cr.class_name,
         teacher_id:   cr.teacher_id,
-        teacher_name: cr.teacher_name
+        teacher_name: cr.teacher_name,
+        scored:       ss.scored,
+        total_siswa:  ss.total,
+        filled:       ss.total > 0 && ss.scored >= ss.total
       });
     }
 
