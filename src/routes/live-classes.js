@@ -11,7 +11,14 @@ async function getStudentCounts(classId) {
   try {
     const cid = classId || 0;
     const [[mc]] = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM materials WHERE is_published=true AND (class_id IS NULL OR class_id=:cid)`,
+      `SELECT COUNT(*) AS cnt FROM materials m
+       WHERE m.is_published=true
+         AND (
+           EXISTS (SELECT 1 FROM material_classes mc2 WHERE mc2.material_id = m.id AND mc2.class_id = :cid)
+           OR
+           (NOT EXISTS (SELECT 1 FROM material_classes mc2 WHERE mc2.material_id = m.id)
+            AND (m.class_id IS NULL OR m.class_id = :cid))
+         )`,
       { cid }
     );
     const [[ac]] = await pool.query(

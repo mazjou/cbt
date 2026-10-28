@@ -22,13 +22,20 @@
         </select>
       </div>
       <div>
-        <label class="text-sm text-slate-600">Kelas (opsional)</label>
-        <select name="class_id" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
-          <option value="">Semua</option>
+        <label class="text-sm text-slate-600">Kelas (opsional — bisa pilih banyak)</label>
+        <div class="mt-1 max-h-48 overflow-y-auto rounded-xl border border-slate-200 bg-white p-2 space-y-1">
+          <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-50 cursor-pointer text-sm font-medium text-slate-600">
+            <input type="checkbox" id="checkAllKelas" class="rounded border-slate-300"> Semua Kelas
+          </label>
+          <hr class="my-1 border-slate-100">
           <% classes.forEach(c => { %>
-            <option value="<%= c.id %>"><%= c.name %></option>
+            <label class="flex items-center gap-2 px-2 py-1 rounded hover:bg-indigo-50 cursor-pointer text-sm text-slate-700">
+              <input type="checkbox" name="class_ids[]" value="<%= c.id %>" class="kelas-check rounded border-slate-300 text-indigo-600">
+              <%= c.name %>
+            </label>
           <% }) %>
-        </select>
+        </div>
+        <p class="mt-1 text-xs text-slate-500">Kosongkan semua = materi untuk semua kelas.</p>
       </div>
     </div>
 
@@ -104,6 +111,16 @@
 </div>
 
 <script>
+  // Toggle "Semua Kelas" checkbox
+  document.getElementById('checkAllKelas').addEventListener('change', function() {
+    document.querySelectorAll('.kelas-check').forEach(cb => { cb.checked = false; });
+  });
+  document.querySelectorAll('.kelas-check').forEach(cb => {
+    cb.addEventListener('change', function() {
+      if (this.checked) document.getElementById('checkAllKelas').checked = false;
+    });
+  });
+
   (function() {
     const quill = new Quill('#editor', {
       theme: 'snow',

@@ -471,21 +471,43 @@ router.post('/materials', uploadMaterials.fields([{ name: 'docx', maxCount: 1 },
 
     const autoCompleteValue = parseInt(auto_complete_minutes) || 5;
 
-    await pool.query(
+    // Ambil class_ids dari form (bisa array multi-kelas atau string single)
+    let classIds = [];
+    if (req.body.class_ids) {
+      const raw = Array.isArray(req.body.class_ids) ? req.body.class_ids : [req.body.class_ids];
+      classIds = raw.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0);
+    }
+
+    const [insertResult] = await pool.query(
       `INSERT INTO materials (subject_id, teacher_id, title, description, content_html, class_id, embed_type, embed_url, is_published, auto_complete_minutes)
-       VALUES (:subject_id,:teacher_id,:title,:description,:content_html,:class_id,:embed_type,:embed_url,false,:auto_complete_minutes);`,
+       VALUES (:subject_id,:teacher_id,:title,:description,:content_html,:class_id,:embed_type,:embed_url,false,:auto_complete_minutes)
+       RETURNING id;`,
       {
         subject_id: parseInt(subject_id) || null,
         teacher_id: user.id,
         title,
         description: description || null,
         content_html: html,
-        class_id: class_id ? parseInt(class_id) : null,
+        class_id: classIds.length === 1 ? classIds[0] : null, // backward compat
         embed_type,
         embed_url,
         auto_complete_minutes: autoCompleteValue
       }
     );
+    const newId = insertResult[0]?.id || insertResult?.insertId;
+
+    // Simpan ke material_classes (junction table multi-kelas)
+    if (newId && classIds.length > 0) {
+      for (const cid of classIds) {
+        try {
+          await pool.query(
+            `INSERT INTO material_classes (material_id, class_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+            [newId, cid]
+          );
+        } catch (_) {}
+      }
+    }
+
     req.flash('success', 'Materi dibuat.');
     return res.redirect('/teacher/materials');
   } catch (e) {
@@ -551,10 +573,9 @@ router.get('/materials/:id', async (req, res) => {
 router.get('/materials/:id/edit', async (req, res) => {
   const user = req.session.user;
   const [[material]] = await pool.query(
-    `SELECT m.*, s.name AS subject_name, c.name AS class_name
+    `SELECT m.*, s.name AS subject_name
      FROM materials m
      JOIN subjects s ON s.id=m.subject_id
-     LEFT JOIN classes c ON c.id=m.class_id
      WHERE m.id=:id AND m.teacher_id=:tid
      LIMIT 1;`,
     { id: req.params.id, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
@@ -563,7 +584,21 @@ router.get('/materials/:id/edit', async (req, res) => {
 
   const [subjects] = await pool.query(`SELECT * FROM subjects ORDER BY name ASC;`);
   const [classes] = await pool.query(`SELECT * FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
-  res.render('teacher/material_edit', { title: `Edit Materi: ${material.title}`, material, subjects, classes });
+
+  // Ambil kelas-kelas yang sudah dipilih (dari material_classes, fallback ke class_id lama)
+  let selectedClassIds = [];
+  try {
+    const [mcRows] = await pool.query(
+      `SELECT class_id FROM material_classes WHERE material_id = $1`, [req.params.id]
+    );
+    selectedClassIds = mcRows.map(r => r.class_id);
+  } catch (_) {}
+  // fallback ke kolom class_id lama jika material_classes kosong
+  if (selectedClassIds.length === 0 && material.class_id) {
+    selectedClassIds = [material.class_id];
+  }
+
+  res.render('teacher/material_edit', { title: `Edit Materi: ${material.title}`, material, subjects, classes, selectedClassIds });
 });
 
 router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
@@ -641,6 +676,13 @@ router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1
 
     const autoCompleteValue = parseInt(auto_complete_minutes) || 5;
 
+    // Ambil class_ids dari form (multi-kelas)
+    let classIds = [];
+    if (req.body.class_ids) {
+      const raw = Array.isArray(req.body.class_ids) ? req.body.class_ids : [req.body.class_ids];
+      classIds = raw.map(id => parseInt(id)).filter(id => !isNaN(id) && id > 0);
+    }
+
     const isAdmin = user.role === 'ADMIN';
     await pool.query(
       `UPDATE materials
@@ -658,7 +700,7 @@ router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1
         title,
         description: description || null,
         content_html: html,
-        class_id: class_id ? parseInt(class_id) : null,
+        class_id: classIds.length === 1 ? classIds[0] : null, // backward compat
         embed_type,
         embed_url,
         auto_complete_minutes: autoCompleteValue,
@@ -667,6 +709,17 @@ router.put('/materials/:id', uploadMaterials.fields([{ name: 'docx', maxCount: 1
         tid: user.id
       }
     );
+
+    // Update material_classes: hapus lama, isi baru
+    try {
+      await pool.query(`DELETE FROM material_classes WHERE material_id = $1`, [materialId]);
+      for (const cid of classIds) {
+        await pool.query(
+          `INSERT INTO material_classes (material_id, class_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+          [materialId, cid]
+        );
+      }
+    } catch (_) {} // table mungkin belum ada di versi lama
 
     req.flash('success', 'Materi diperbarui.');
     return res.redirect(`/teacher/materials/${materialId}`);

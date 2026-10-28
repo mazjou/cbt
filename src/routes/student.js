@@ -11,7 +11,14 @@ async function getStudentCounts(classId) {
   try {
     const cid = classId || 0;
     const [[mc]] = await pool.query(
-      `SELECT COUNT(*) AS cnt FROM materials WHERE is_published=true AND (class_id IS NULL OR class_id=:cid)`,
+      `SELECT COUNT(*) AS cnt FROM materials m
+       WHERE m.is_published=true
+         AND (
+           EXISTS (SELECT 1 FROM material_classes mc2 WHERE mc2.material_id = m.id AND mc2.class_id = :cid)
+           OR
+           (NOT EXISTS (SELECT 1 FROM material_classes mc2 WHERE mc2.material_id = m.id)
+            AND (m.class_id IS NULL OR m.class_id = :cid))
+         )`,
       { cid }
     );
     const [[ac]] = await pool.query(
@@ -114,14 +121,28 @@ router.get('/materials', async (req, res) => {
   const user = req.session.user;
   const [materials] = await pool.query(
     `SELECT m.id, m.title, m.description, m.created_at, m.is_published,
-            s.name AS subject_name, c.name AS class_name,
+            s.name AS subject_name,
+            COALESCE(
+              (SELECT STRING_AGG(c2.name, ', ' ORDER BY c2.name)
+               FROM material_classes mc2
+               JOIN classes c2 ON c2.id = mc2.class_id
+               WHERE mc2.material_id = m.id),
+              c.name
+            ) AS class_name,
             mr.first_opened_at, mr.completed_at
      FROM materials m
      JOIN subjects s ON s.id=m.subject_id
      LEFT JOIN classes c ON c.id=m.class_id
      LEFT JOIN material_reads mr ON mr.material_id=m.id AND mr.student_id=:sid
      WHERE m.is_published=true
-       AND (m.class_id IS NULL OR m.class_id=:class_id)
+       AND (
+         -- materi baru (pakai material_classes)
+         EXISTS (SELECT 1 FROM material_classes mc WHERE mc.material_id = m.id AND mc.class_id = :class_id)
+         OR
+         -- materi lama (pakai kolom class_id langsung, belum di-migrasi)
+         (NOT EXISTS (SELECT 1 FROM material_classes mc WHERE mc.material_id = m.id)
+          AND (m.class_id IS NULL OR m.class_id = :class_id))
+       )
      ORDER BY m.id DESC;`,
     { sid: user.id, class_id: user.class_id || 0 }
   );
@@ -134,12 +155,26 @@ router.get('/materials/:id', async (req, res) => {
   const materialId = req.params.id;
 
   const [[material]] = await pool.query(
-    `SELECT m.*, s.name AS subject_name, c.name AS class_name, u.full_name AS teacher_name
+    `SELECT m.*, s.name AS subject_name,
+            COALESCE(
+              (SELECT STRING_AGG(c2.name, ', ' ORDER BY c2.name)
+               FROM material_classes mc2
+               JOIN classes c2 ON c2.id = mc2.class_id
+               WHERE mc2.material_id = m.id),
+              c.name
+            ) AS class_name,
+            u.full_name AS teacher_name
      FROM materials m
      JOIN subjects s ON s.id=m.subject_id
      JOIN users u ON u.id=m.teacher_id
      LEFT JOIN classes c ON c.id=m.class_id
-     WHERE m.id=:id AND m.is_published=true AND (m.class_id IS NULL OR m.class_id=:class_id)
+     WHERE m.id=:id AND m.is_published=true
+       AND (
+         EXISTS (SELECT 1 FROM material_classes mc WHERE mc.material_id = m.id AND mc.class_id = :class_id)
+         OR
+         (NOT EXISTS (SELECT 1 FROM material_classes mc WHERE mc.material_id = m.id)
+          AND (m.class_id IS NULL OR m.class_id = :class_id))
+       )
      LIMIT 1;`,
     { id: materialId, class_id: user.class_id || 0 }
   );

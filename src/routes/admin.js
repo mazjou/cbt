@@ -3282,10 +3282,27 @@ router.get('/materials', async (req, res) => {
       m.id, m.title, m.description, m.embed_type, m.embed_url, m.is_published, m.created_at,
       s.code AS subject_code, s.name AS subject_name,
       u.full_name AS teacher_name,
-      c.name AS class_name,
+      COALESCE(
+        (SELECT STRING_AGG(c2.name, ', ' ORDER BY c2.name)
+         FROM material_classes mc2
+         JOIN classes c2 ON c2.id = mc2.class_id
+         WHERE mc2.material_id = m.id),
+        c.name
+      ) AS class_name,
       m.class_id,
-      (SELECT COUNT(*) FROM material_reads WHERE material_id = m.id) AS read_count,
-      (SELECT COUNT(*) FROM users WHERE role='STUDENT' AND (m.class_id IS NULL OR class_id = m.class_id)) AS total_students
+      (SELECT COUNT(*)::int FROM material_reads WHERE material_id = m.id) AS read_count,
+      (
+        SELECT COUNT(*)::int FROM users u2
+        WHERE u2.role = 'STUDENT' AND u2.is_active = true
+          AND (
+            -- multi-kelas: ada di material_classes
+            EXISTS (SELECT 1 FROM material_classes mc WHERE mc.material_id = m.id AND mc.class_id = u2.class_id)
+            OR
+            -- fallback: pakai class_id lama di kolom materials (untuk materi lama)
+            (NOT EXISTS (SELECT 1 FROM material_classes mc WHERE mc.material_id = m.id)
+             AND (m.class_id IS NULL OR m.class_id = u2.class_id))
+          )
+      ) AS total_students
      FROM materials m
      LEFT JOIN subjects s ON s.id = m.subject_id
      LEFT JOIN users u ON u.id = m.teacher_id
@@ -3297,8 +3314,10 @@ router.get('/materials', async (req, res) => {
   );
   const materials = materialsResult[0];
   
-  // Calculate read percentage for each material
+  // Calculate read percentage for each material (cast ke int dulu)
   materials.forEach(m => {
+    m.read_count     = Number(m.read_count     || 0);
+    m.total_students = Number(m.total_students || 0);
     m.read_percentage = m.total_students > 0 ? Math.round((m.read_count / m.total_students) * 100) : 0;
   });
   
