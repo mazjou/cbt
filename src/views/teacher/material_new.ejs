@@ -136,9 +136,8 @@
     });
   });
 
-  // Inisialisasi: form baru = centang "Semua Kelas" + semua kelas
-  checkAllEl.checked = true;
-  getKelasCbs().forEach(cb => { cb.checked = true; });
+  // Inisialisasi: form baru = kosong semua (guru pilih sendiri)
+  // Tidak ada default centang
 
   // ── Toggle field embed ────────────────────────────────────────────────────
   function toggleEmbedFields() {
