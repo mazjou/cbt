@@ -130,6 +130,91 @@
   </div>
 </div>
 
+<%# ── Status Pengisian Raport Guru ─────────────────────────── %>
+<% if (raportStatusGuru && raportStatusGuru.length > 0) { %>
+<div class="mt-8">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-lg font-semibold text-slate-800">📋 Status Pengisian Raport Guru <span class="text-sm font-normal text-slate-500">(Periode Aktif)</span></h2>
+    <a href="/admin/raport" class="text-sm text-violet-600 hover:underline">Lihat Detail →</a>
+  </div>
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-soft overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 border-b border-slate-200">
+        <tr>
+          <th class="text-left px-4 py-3 font-semibold text-slate-600 w-8">No</th>
+          <th class="text-left px-4 py-3 font-semibold text-slate-600">Nama Guru</th>
+          <th class="text-left px-4 py-3 font-semibold text-slate-600 hidden md:table-cell">Mapel / Kelas</th>
+          <th class="text-center px-4 py-3 font-semibold text-slate-600">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        <% raportStatusGuru.forEach((guru, idx) => { %>
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-4 py-3 text-slate-400"><%= idx + 1 %></td>
+          <td class="px-4 py-3">
+            <span class="font-medium text-slate-800"><%= guru.teacher_name %></span>
+            <div class="mt-0.5 text-xs text-slate-400 md:hidden">
+              <% guru.entries.forEach(e => { %>
+                <span class="inline-flex items-center gap-1 mr-2">
+                  <% if (e.filled) { %><span class="text-green-500">✅</span><% } else { %><span class="text-red-500">❌</span><% } %>
+                  <%= e.subject_name %> – <%= e.class_name %>
+                </span>
+              <% }) %>
+            </div>
+          </td>
+          <td class="px-4 py-3 hidden md:table-cell">
+            <div class="flex flex-wrap gap-1">
+              <% guru.entries.forEach(e => { %>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border
+                  <%= e.filled ? 'bg-green-50 border-green-200 text-green-700' : 'bg-red-50 border-red-200 text-red-700' %>">
+                  <% if (e.filled) { %>✅<% } else { %>❌<% } %>
+                  <%= e.subject_name %> – <%= e.class_name %>
+                  <span class="opacity-60">(<%= e.scored_siswa %>/<%= e.total_siswa %>)</span>
+                </span>
+              <% }) %>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <% if (guru.all_filled) { %>
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                ✅ Sudah Semua
+              </span>
+            <% } else { %>
+              <% const filledCount = guru.entries.filter(e => e.filled).length; %>
+              <% if (filledCount === 0) { %>
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                  ❌ Belum Diisi
+                </span>
+              <% } else { %>
+                <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                  ⚠️ Sebagian (<%= filledCount %>/<%= guru.entries.length %>)
+                </span>
+              <% } %>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <div class="px-4 py-2 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex gap-4">
+      <span>✅ Sudah isi semua siswa</span>
+      <span>⚠️ Baru sebagian</span>
+      <span>❌ Belum diisi sama sekali</span>
+    </div>
+  </div>
+</div>
+<% } else { %>
+<div class="mt-8">
+  <div class="flex items-center justify-between mb-3">
+    <h2 class="text-lg font-semibold text-slate-800">📋 Status Pengisian Raport Guru</h2>
+    <a href="/admin/raport" class="text-sm text-violet-600 hover:underline">Kelola Raport →</a>
+  </div>
+  <div class="rounded-2xl border border-slate-200 bg-white shadow-soft p-6 text-center text-slate-400 text-sm">
+    Belum ada periode raport aktif atau belum ada guru yang ditugaskan ke mapel raport.
+  </div>
+</div>
+<% } %>
+
 <script>
 async function updateRankingData() {
   const button = event.target.closest('button');

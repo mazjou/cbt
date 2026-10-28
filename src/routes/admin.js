@@ -220,10 +220,74 @@ router.get('/', async (req, res) => {
       tugas:    Number(total_tugas?.total   || 0),
       bank:     Number(total_bank?.total    || 0),
     };
-    res.render('admin/index', { title: 'Panel Admin', stats });
+
+    // ── Status pengisian raport guru (periode aktif) ──────────────────────
+    let raportStatusGuru = [];
+    try {
+      // Ambil periode raport yang aktif
+      const [[activePeriod]] = await pq(`SELECT id, name FROM raport_periods WHERE is_active = true LIMIT 1`);
+      if (activePeriod) {
+        // Ambil semua guru yang terdaftar di raport_subject_classes untuk periode aktif
+        // beserta jumlah kelas yang diampu dan jumlah kelas yang sudah ada nilainya
+        const [raportRows] = await pq(`
+          SELECT
+            u.id          AS teacher_id,
+            u.full_name   AS teacher_name,
+            rs.subject_name,
+            c.name        AS class_name,
+            rsc.id        AS sc_id,
+            rsc.class_id,
+            rsc.raport_subject_id AS subject_id,
+            -- hitung jumlah siswa aktif di kelas ini
+            (SELECT COUNT(*) FROM users s WHERE s.role = 'STUDENT' AND s.is_active = true AND s.class_id = rsc.class_id) AS total_siswa,
+            -- hitung jumlah siswa yang sudah ada nilai di mapel+kelas+periode ini
+            (SELECT COUNT(*) FROM raport_scores sc2
+               JOIN users s2 ON s2.id = sc2.student_id
+               WHERE sc2.period_id = $1
+                 AND sc2.raport_subject_id = rsc.raport_subject_id
+                 AND s2.class_id = rsc.class_id
+                 AND sc2.score IS NOT NULL) AS scored_siswa
+          FROM raport_subject_classes rsc
+          JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id
+          JOIN raport_subject_groups rsg ON rsg.id = rs.group_id AND rsg.period_id = $1
+          JOIN users u ON u.id = rsc.teacher_id
+          JOIN classes c ON c.id = rsc.class_id
+          WHERE u.is_active = true
+          ORDER BY u.full_name ASC, c.name ASC, rs.subject_name ASC
+        `, [activePeriod.id]);
+
+        // Kelompokkan per guru
+        const guruMap = new Map();
+        for (const row of raportRows) {
+          if (!guruMap.has(row.teacher_id)) {
+            guruMap.set(row.teacher_id, {
+              teacher_id:   row.teacher_id,
+              teacher_name: row.teacher_name,
+              entries:      [],
+              all_filled:   true
+            });
+          }
+          const g = guruMap.get(row.teacher_id);
+          const filled = Number(row.total_siswa) > 0 && Number(row.scored_siswa) >= Number(row.total_siswa);
+          g.entries.push({
+            subject_name: row.subject_name,
+            class_name:   row.class_name,
+            total_siswa:  Number(row.total_siswa),
+            scored_siswa: Number(row.scored_siswa),
+            filled
+          });
+          if (!filled) g.all_filled = false;
+        }
+        raportStatusGuru = [...guruMap.values()];
+      }
+    } catch(e2) {
+      console.error('Gagal ambil status raport guru:', e2.message);
+    }
+
+    res.render('admin/index', { title: 'Panel Admin', stats, raportStatusGuru });
   } catch(e) {
     console.error(e);
-    res.render('admin/index', { title: 'Panel Admin', stats: { siswa: 0, guru: 0, kelas: 0, mapel: 0, ujian: 0, ujian_published: 0, materi: 0, tugas: 0, bank: 0 } });
+    res.render('admin/index', { title: 'Panel Admin', stats: { siswa: 0, guru: 0, kelas: 0, mapel: 0, ujian: 0, ujian_published: 0, materi: 0, tugas: 0, bank: 0 }, raportStatusGuru: [] });
   }
 });
 
