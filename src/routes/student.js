@@ -6,6 +6,46 @@ const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 const router = express.Router();
 router.use(requireRole('STUDENT'));
 
+// ── Helper: ambil counts materi/tugas/ujian/live-class untuk badge navigasi ──
+async function getStudentCounts(classId) {
+  try {
+    const cid = classId || 0;
+    const [[mc]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM materials WHERE is_published=true AND (class_id IS NULL OR class_id=:cid)`,
+      { cid }
+    );
+    const [[ac]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM assignments a
+       INNER JOIN assignment_classes ac ON ac.assignment_id=a.id
+       WHERE a.is_published=true AND ac.class_id=:cid`,
+      { cid }
+    );
+    const [[ec]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM exams e
+       WHERE e.is_published=true
+         AND (
+           NOT EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id)
+           OR EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id AND ec.class_id=:cid)
+         )`,
+      { cid }
+    );
+    const [[lc]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM live_classes
+       WHERE class_id=:cid AND status IN ('LIVE','SCHEDULED')`,
+      { cid }
+    );
+    return {
+      materials:   Number(mc?.cnt || 0),
+      assignments: Number(ac?.cnt || 0),
+      exams:       Number(ec?.cnt || 0),
+      liveClasses: Number(lc?.cnt || 0),
+    };
+  } catch (e) {
+    console.error('getStudentCounts error:', e.message);
+    return { materials: 0, assignments: 0, exams: 0, liveClasses: 0 };
+  }
+}
+
 // ── Cache soal ujian di Redis (TTL 10 menit) ─────────────────────────────────
 // Mengurangi query DB saat banyak siswa mulai ujian bersamaan
 const EXAM_CACHE_TTL = 600; // 10 menit
@@ -85,7 +125,8 @@ router.get('/materials', async (req, res) => {
      ORDER BY m.id DESC;`,
     { sid: user.id, class_id: user.class_id || 0 }
   );
-  res.render('student/materials', { title: 'Materi', materials });
+  const counts = await getStudentCounts(user.class_id);
+  res.render('student/materials', { title: 'Materi', materials, counts });
 });
 
 router.get('/materials/:id', async (req, res) => {
@@ -267,7 +308,7 @@ router.get('/exams', async (req, res) => {
     }
   }
 
-  res.render('student/exams', { title: 'Daftar Ujian', exams });
+  res.render('student/exams', { title: 'Daftar Ujian', exams, counts: await getStudentCounts(user.class_id) });
 });
 
 router.get('/exams/:id', async (req, res) => {
@@ -1013,7 +1054,7 @@ router.get('/history', async (req, res) => {
      LIMIT 100;`,
     { sid: user.id }
   );
-  res.render('student/history', { title: 'Riwayat Ujian', rows });
+  res.render('student/history', { title: 'Riwayat Ujian', rows, counts: await getStudentCounts(req.session.user.class_id) });
 });
 
 router.get('/material-history', async (req, res) => {
@@ -1030,7 +1071,7 @@ router.get('/material-history', async (req, res) => {
      LIMIT 100;`,
     { sid: user.id }
   );
-  res.render('student/material_history', { title: 'Riwayat Materi', rows });
+  res.render('student/material_history', { title: 'Riwayat Materi', rows, counts: await getStudentCounts(req.session.user.class_id) });
 });
 
 // ===== ASSIGNMENTS (TUGAS) =====
@@ -1085,7 +1126,8 @@ router.get('/assignments', async (req, res) => {
     
     res.render('student/assignments', {
       title: 'Tugas Saya',
-      assignments
+      assignments,
+      counts: await getStudentCounts(user.class_id)
     });
   } catch (err) {
     console.error('Error loading assignments:', err);

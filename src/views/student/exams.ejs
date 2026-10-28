@@ -5,13 +5,7 @@
   </div>
 </div>
 
-<div class="mt-4 flex flex-wrap gap-2">
-  <a href="/student/materials" class="px-4 py-2 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200 text-teal-800 font-medium transition-all">Materi</a>
-  <a href="/student/assignments" class="px-4 py-2 rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 text-green-800 font-medium transition-all">Tugas</a>
-  <a href="/student/live-classes" class="px-4 py-2 rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 text-red-800 font-medium transition-all">🎥 Live Classes</a>
-  <a href="/student/history" class="px-4 py-2 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-800 font-medium transition-all">Riwayat Ujian</a>
-  <a href="/student/material-history" class="px-4 py-2 rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 text-cyan-800 font-medium transition-all">Riwayat Materi</a>
-</div>
+<%- include('../partials/student_nav', { activePage: 'exams', counts: counts }) %>
 
 <div class="mt-6 grid md:grid-cols-2 xl:grid-cols-3 gap-4">
   <% if (!exams.length) { %>

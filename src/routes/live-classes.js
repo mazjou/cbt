@@ -6,6 +6,46 @@ const { createNotificationForClass } = require('../utils/notifications');
 
 const router = express.Router();
 
+// ── Helper: counts badge navigasi siswa ──────────────────────────────────────
+async function getStudentCounts(classId) {
+  try {
+    const cid = classId || 0;
+    const [[mc]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM materials WHERE is_published=true AND (class_id IS NULL OR class_id=:cid)`,
+      { cid }
+    );
+    const [[ac]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM assignments a
+       INNER JOIN assignment_classes ac ON ac.assignment_id=a.id
+       WHERE a.is_published=true AND ac.class_id=:cid`,
+      { cid }
+    );
+    const [[ec]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM exams e
+       WHERE e.is_published=true
+         AND (
+           NOT EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id)
+           OR EXISTS (SELECT 1 FROM exam_classes ec WHERE ec.exam_id=e.id AND ec.class_id=:cid)
+         )`,
+      { cid }
+    );
+    const [[lc]] = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM live_classes
+       WHERE class_id=:cid AND status IN ('LIVE','SCHEDULED')`,
+      { cid }
+    );
+    return {
+      materials:   Number(mc?.cnt || 0),
+      assignments: Number(ac?.cnt || 0),
+      exams:       Number(ec?.cnt || 0),
+      liveClasses: Number(lc?.cnt || 0),
+    };
+  } catch (e) {
+    console.error('getStudentCounts error:', e.message);
+    return { materials: 0, assignments: 0, exams: 0, liveClasses: 0 };
+  }
+}
+
 // ===== TEACHER ROUTES =====
 
 // Get all live classes for teacher
@@ -391,7 +431,8 @@ router.get('/student/live-classes', requireRole('STUDENT'), async (req, res) => 
 
     res.render('student/live_classes', {
       title: 'Live Classes',
-      liveClasses
+      liveClasses,
+      counts: await getStudentCounts(user.class_id)
     });
   } catch (error) {
     console.error('Error fetching live classes:', error);

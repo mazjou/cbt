@@ -1,0 +1,91 @@
+<%#
+  Partial: Navigasi halaman siswa dengan badge jumlah item
+  Variables expected:
+    - activePage: 'exams' | 'materials' | 'assignments' | 'live-classes' | 'history' | 'material-history'
+    - counts: { exams, materials, assignments, liveClasses }
+%>
+<div class="mt-4 flex flex-wrap gap-2">
+
+  <%# -- Materi -- %>
+  <% if (locals.activePage !== 'materials') { %>
+  <a href="/student/materials" class="relative inline-flex items-center px-4 py-2 rounded-xl border border-teal-200 bg-gradient-to-br from-teal-50 to-teal-100 hover:from-teal-100 hover:to-teal-200 text-teal-800 font-medium transition-all">
+    Materi
+    <% if (locals.counts && counts.materials > 0) { %>
+      <span class="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-teal-600 text-white text-xs font-bold leading-none"><%= counts.materials %></span>
+    <% } %>
+  </a>
+  <% } else { %>
+  <span class="relative inline-flex items-center px-4 py-2 rounded-xl border-2 border-teal-400 bg-teal-100 text-teal-900 font-semibold cursor-default">
+    Materi
+    <% if (locals.counts && counts.materials > 0) { %>
+      <span class="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-teal-600 text-white text-xs font-bold leading-none"><%= counts.materials %></span>
+    <% } %>
+  </span>
+  <% } %>
+
+  <%# -- Tugas -- %>
+  <% if (locals.activePage !== 'assignments') { %>
+  <a href="/student/assignments" class="relative inline-flex items-center px-4 py-2 rounded-xl border border-green-200 bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 text-green-800 font-medium transition-all">
+    Tugas
+    <% if (locals.counts && counts.assignments > 0) { %>
+      <span class="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-green-600 text-white text-xs font-bold leading-none"><%= counts.assignments %></span>
+    <% } %>
+  </a>
+  <% } else { %>
+  <span class="relative inline-flex items-center px-4 py-2 rounded-xl border-2 border-green-400 bg-green-100 text-green-900 font-semibold cursor-default">
+    Tugas
+    <% if (locals.counts && counts.assignments > 0) { %>
+      <span class="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-green-600 text-white text-xs font-bold leading-none"><%= counts.assignments %></span>
+    <% } %>
+  </span>
+  <% } %>
+
+  <%# -- Ujian -- %>
+  <% if (locals.activePage !== 'exams') { %>
+  <a href="/student/exams" class="relative inline-flex items-center px-4 py-2 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-indigo-100 hover:from-indigo-100 hover:to-indigo-200 text-indigo-800 font-medium transition-all">
+    Ujian
+    <% if (locals.counts && counts.exams > 0) { %>
+      <span class="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-indigo-600 text-white text-xs font-bold leading-none"><%= counts.exams %></span>
+    <% } %>
+  </a>
+  <% } else { %>
+  <span class="relative inline-flex items-center px-4 py-2 rounded-xl border-2 border-indigo-400 bg-indigo-100 text-indigo-900 font-semibold cursor-default">
+    Ujian
+    <% if (locals.counts && counts.exams > 0) { %>
+      <span class="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-indigo-600 text-white text-xs font-bold leading-none"><%= counts.exams %></span>
+    <% } %>
+  </span>
+  <% } %>
+
+  <%# -- Live Classes -- %>
+  <% if (locals.activePage !== 'live-classes') { %>
+  <a href="/student/live-classes" class="relative inline-flex items-center px-4 py-2 rounded-xl border border-red-200 bg-gradient-to-br from-red-50 to-red-100 hover:from-red-100 hover:to-red-200 text-red-800 font-medium transition-all">
+    🎥 Live Classes
+    <% if (locals.counts && counts.liveClasses > 0) { %>
+      <span class="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-red-600 text-white text-xs font-bold leading-none"><%= counts.liveClasses %></span>
+    <% } %>
+  </a>
+  <% } else { %>
+  <span class="relative inline-flex items-center px-4 py-2 rounded-xl border-2 border-red-400 bg-red-100 text-red-900 font-semibold cursor-default">
+    🎥 Live Classes
+    <% if (locals.counts && counts.liveClasses > 0) { %>
+      <span class="ml-1.5 inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full bg-red-600 text-white text-xs font-bold leading-none"><%= counts.liveClasses %></span>
+    <% } %>
+  </span>
+  <% } %>
+
+  <%# -- Riwayat Ujian -- %>
+  <% if (locals.activePage !== 'history') { %>
+  <a href="/student/history" class="px-4 py-2 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-800 font-medium transition-all">Riwayat Ujian</a>
+  <% } else { %>
+  <span class="px-4 py-2 rounded-xl border-2 border-purple-400 bg-purple-100 text-purple-900 font-semibold cursor-default">Riwayat Ujian</span>
+  <% } %>
+
+  <%# -- Riwayat Materi -- %>
+  <% if (locals.activePage !== 'material-history') { %>
+  <a href="/student/material-history" class="px-4 py-2 rounded-xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 text-cyan-800 font-medium transition-all">Riwayat Materi</a>
+  <% } else { %>
+  <span class="px-4 py-2 rounded-xl border-2 border-cyan-400 bg-cyan-100 text-cyan-900 font-semibold cursor-default">Riwayat Materi</span>
+  <% } %>
+
+</div>

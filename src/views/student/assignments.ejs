@@ -3,6 +3,8 @@
   <p class="mt-1 text-slate-600">Lihat dan kumpulkan tugas dari guru.</p>
 </div>
 
+<%- include('../partials/student_nav', { activePage: 'assignments', counts: counts }) %>
+
 <% if (assignments.length === 0) { %>
   <div class="bg-white rounded-xl shadow-soft border border-slate-200 p-12 text-center">
     <div class="text-6xl mb-4">📋</div>
