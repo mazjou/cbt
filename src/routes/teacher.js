@@ -5333,24 +5333,43 @@ router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
 
     // Ambil siswa kelas ini beserta nilai akhir yang sudah ada
     // Prioritaskan user NISN plain (tanpa @domain)
+    // Nilai lama yang tersimpan di user @domain juga ditarik via COALESCE
     const [students] = await pool.query(`
-      SELECT u.id, u.full_name, u.username,
-             c.name AS class_name,
-             sc.score AS final_score, sc.notes
+      SELECT
+        u.id, u.full_name, u.username,
+        c.name AS class_name,
+        COALESCE(
+          sc_plain.score,
+          sc_domain.score
+        ) AS final_score,
+        COALESCE(
+          sc_plain.notes,
+          sc_domain.notes
+        ) AS notes
       FROM users u
       LEFT JOIN classes c ON c.id = u.class_id
-      LEFT JOIN raport_scores sc
-        ON sc.student_id        = u.id
-        AND sc.period_id         = $1
-        AND sc.raport_subject_id = $2
-      WHERE u.role      = 'STUDENT'
+      -- Nilai dari user NISN plain
+      LEFT JOIN raport_scores sc_plain
+        ON sc_plain.student_id = u.id
+        AND sc_plain.period_id = $1
+        AND sc_plain.raport_subject_id = $2
+      -- Nilai dari user NISN@domain (lama) — jika ada
+      LEFT JOIN users u_domain
+        ON u_domain.username = u.username || '@smkn1kras.sch.id'
+        AND u_domain.role = 'STUDENT'
+      LEFT JOIN raport_scores sc_domain
+        ON sc_domain.student_id = u_domain.id
+        AND sc_domain.period_id = $1
+        AND sc_domain.raport_subject_id = $2
+      WHERE u.role = 'STUDENT'
         AND u.is_active = true
-        AND u.class_id  = $3
+        AND u.class_id = $3
         AND u.username NOT LIKE '%@%'
       ORDER BY u.full_name ASC
     `, [period_id, subject_id, class_id]);
 
     // Ambil semua nilai KD untuk siswa di kelas ini
+    // Termasuk nilai KD lama yang tersimpan di user @domain
     const studentIds = students.map(s => s.id);
     let kdScoreMap = {};
     if (studentIds.length > 0 && kdList.length > 0) {
@@ -5364,6 +5383,32 @@ router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
       for (const ks of kdScores) {
         if (!kdScoreMap[ks.student_id]) kdScoreMap[ks.student_id] = {};
         kdScoreMap[ks.student_id][ks.kd_id] = ks.score;
+      }
+
+      // Jika ada siswa yang belum punya nilai KD (dari user plain),
+      // coba ambil dari user @domain yang lama
+      for (const stu of students) {
+        if (!kdScoreMap[stu.id] || Object.keys(kdScoreMap[stu.id]).length === 0) {
+          try {
+            const [[domainUser]] = await pool.query(
+              `SELECT id FROM users WHERE username = $1 AND role = 'STUDENT' LIMIT 1`,
+              [stu.username + '@smkn1kras.sch.id']
+            );
+            if (domainUser) {
+              const [oldKd] = await pool.query(`
+                SELECT student_id, kd_id, score
+                FROM raport_kd_scores
+                WHERE period_id = $1 AND raport_subject_id = $2 AND student_id = $3
+              `, [period_id, subject_id, domainUser.id]);
+              if (oldKd.length > 0) {
+                if (!kdScoreMap[stu.id]) kdScoreMap[stu.id] = {};
+                for (const ks of oldKd) {
+                  kdScoreMap[stu.id][ks.kd_id] = ks.score;
+                }
+              }
+            }
+          } catch(_) {}
+        }
       }
     }
 

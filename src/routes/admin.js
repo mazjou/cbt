@@ -6696,7 +6696,7 @@ router.get('/raport/:id', async (req, res) => {
     const scoreStatusMap = {}; // key: `${subject_id}_${class_id}` => { scored, total }
 
     if (subjectIdsForScore.length > 0 && classIdsForScore.length > 0) {
-      // Total siswa aktif per kelas
+      // Total siswa per kelas — semua user STUDENT aktif tanpa filter @domain
       const phC = classIdsForScore.map((_, i) => `$${i + 1}`).join(',');
       const [totalRows] = await pq(
         `SELECT class_id, COUNT(*) AS total FROM users
@@ -6704,35 +6704,66 @@ router.get('/raport/:id', async (req, res) => {
          GROUP BY class_id`,
         classIdsForScore
       );
+      // Untuk kelas yang jumlah NISN plain saja lebih representatif, hitung terpisah
+      const [totalPlainRows] = await pq(
+        `SELECT class_id, COUNT(*) AS total FROM users
+         WHERE role = 'STUDENT' AND is_active = true
+           AND class_id IN (${phC})
+           AND username NOT LIKE '%@%'
+         GROUP BY class_id`,
+        classIdsForScore
+      );
       const totalMap = {};
+      const totalPlainMap = {};
       for (const r of totalRows) totalMap[r.class_id] = Number(r.total);
+      for (const r of totalPlainRows) totalPlainMap[r.class_id] = Number(r.total);
 
-      // Siswa yang sudah ada nilai (score not null) per (subject_id, class_id)
+      // Gunakan totalPlain jika sudah ada user NISN plain, fallback ke total semua
+      const effectiveTotalMap = {};
+      for (const cid of classIdsForScore) {
+        effectiveTotalMap[cid] = totalPlainMap[cid] > 0 ? totalPlainMap[cid] : (totalMap[cid] || 0);
+      }
+
+      // Hitung scored: JOIN ke raport_subject_classes untuk dapat class_id
+      // karena user @domain mungkin class_id NULL, kita pakai rsc.class_id sebagai lookup
       const phS  = subjectIdsForScore.map((_, i) => `$${i + 1}`).join(',');
       const phC2 = classIdsForScore.map((_, i) => `$${subjectIdsForScore.length + i + 1}`).join(',');
       const pidIdx = subjectIdsForScore.length + classIdsForScore.length + 1;
       const [scoredRows] = await pq(
-        `SELECT rs.raport_subject_id AS subject_id, u.class_id, COUNT(*) AS scored
+        `SELECT
+           rs.raport_subject_id AS subject_id,
+           rsc.class_id,
+           COUNT(DISTINCT rs.student_id) AS scored
          FROM raport_scores rs
+         JOIN raport_subject_classes rsc
+           ON rsc.raport_subject_id = rs.raport_subject_id
+           AND rsc.class_id IN (${phC2})
          JOIN users u ON u.id = rs.student_id
          WHERE rs.period_id = $${pidIdx}
            AND rs.raport_subject_id IN (${phS})
-           AND u.class_id IN (${phC2})
            AND rs.score IS NOT NULL
-         GROUP BY rs.raport_subject_id, u.class_id`,
+           AND (
+             u.class_id = rsc.class_id
+             OR SPLIT_PART(u.username,'@',1) IN (
+               SELECT u2.username FROM users u2
+               WHERE u2.class_id = rsc.class_id AND u2.role = 'STUDENT'
+                 AND u2.username NOT LIKE '%@%'
+             )
+           )
+         GROUP BY rs.raport_subject_id, rsc.class_id`,
         [...subjectIdsForScore, ...classIdsForScore, id]
       );
       for (const r of scoredRows) {
         scoreStatusMap[`${r.subject_id}_${r.class_id}`] = {
           scored: Number(r.scored),
-          total:  totalMap[r.class_id] || 0
+          total:  effectiveTotalMap[r.class_id] || 0
         };
       }
       // Pastikan semua kombinasi ada di map meski scored=0
       for (const cr of classRows) {
         const key = `${cr.raport_subject_id}_${cr.class_id}`;
         if (!scoreStatusMap[key]) {
-          scoreStatusMap[key] = { scored: 0, total: totalMap[cr.class_id] || 0 };
+          scoreStatusMap[key] = { scored: 0, total: effectiveTotalMap[cr.class_id] || 0 };
         }
       }
     }
