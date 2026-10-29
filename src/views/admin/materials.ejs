@@ -624,6 +624,52 @@ function viewMaterialDetail(materialId) {
                 </span>
               </p>
             </div>
+
+            <!-- Konten Materi -->
+            ${m.embed_type === 'YOUTUBE' && m.embed_url ? `
+            <div class="rounded-2xl overflow-hidden border-2 border-red-100">
+              <div class="bg-red-50 px-5 py-3">
+                <label class="text-sm font-bold text-red-800 uppercase tracking-wide">▶ Konten YouTube</label>
+              </div>
+              <div class="aspect-video w-full">
+                <iframe class="w-full h-full" src="${m.embed_url}"
+                  frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+              </div>
+              <div class="px-5 py-2 bg-red-50 text-xs text-red-600">Jika video tidak tampil, pemilik video mungkin menonaktifkan embed.</div>
+            </div>` : ''}
+
+            ${m.embed_type === 'PDF' && m.embed_url ? `
+            <div class="rounded-2xl overflow-hidden border-2 border-orange-100">
+              <div class="bg-orange-50 px-5 py-3">
+                <label class="text-sm font-bold text-orange-800 uppercase tracking-wide">📄 Konten PDF</label>
+              </div>
+              <iframe class="w-full" style="height:60vh;" src="${m.embed_url}" title="PDF"></iframe>
+              <div class="px-5 py-2 bg-orange-50 text-xs text-orange-600">
+                <a href="${m.embed_url}" target="_blank" class="underline">Buka PDF di tab baru →</a>
+              </div>
+            </div>` : ''}
+
+            ${m.embed_type === 'WEB' && m.embed_url ? `
+            <div class="rounded-2xl overflow-hidden border-2 border-violet-100">
+              <div class="bg-violet-50 px-5 py-3">
+                <label class="text-sm font-bold text-violet-800 uppercase tracking-wide">🌐 Konten Web</label>
+              </div>
+              <iframe class="w-full" style="height:60vh;" src="${m.embed_url}"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"></iframe>
+              <div class="px-5 py-2 bg-violet-50 text-xs text-violet-600">
+                <a href="${m.embed_url}" target="_blank" class="underline">Buka di tab baru →</a>
+              </div>
+            </div>` : ''}
+
+            ${m.content_html ? `
+            <div class="rounded-2xl border-2 border-slate-100">
+              <div class="bg-slate-50 px-5 py-3 border-b border-slate-100">
+                <label class="text-sm font-bold text-slate-700 uppercase tracking-wide">📝 Konten Materi</label>
+              </div>
+              <div class="p-5 prose max-w-none overflow-auto" style="max-height:60vh;">
+                ${m.content_html}
+              </div>
+            </div>` : ''}
           </div>
         `;
       } else {
