@@ -1504,6 +1504,7 @@ router.get('/users', async (req, res) => {
   const roleFilter = (req.query.role || '').trim();
   const classFilter = (req.query.class || '').trim();
   const statusFilter = (req.query.status || '').trim();
+  const sdmsFilter = (req.query.sdms_status || '').trim(); // 'ok' | 'missing' | 'inactive'
 
   const [classes] = await pq(`SELECT id, code, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
   
@@ -1530,6 +1531,21 @@ router.get('/users', async (req, res) => {
     queryParams.push(statusFilter === 'active');
     whereConditions.push(`u.is_active = $${queryParams.length}`);
   }
+
+  // Filter berdasarkan status SDMS (hanya berlaku untuk STUDENT)
+  if (sdmsFilter === 'missing') {
+    // Siswa yang NISN-nya tidak ada di sdms_siswa sama sekali
+    whereConditions.push(`u.role = 'STUDENT' AND u.username NOT LIKE '%@%'
+      AND NOT EXISTS (SELECT 1 FROM sdms_siswa ss WHERE ss.nisn = u.username OR ss.nis = u.username)`);
+  } else if (sdmsFilter === 'inactive') {
+    // Siswa yang ada di sdms_siswa tapi sudah dihapus/tidak aktif
+    whereConditions.push(`u.role = 'STUDENT' AND u.username NOT LIKE '%@%'
+      AND EXISTS (
+        SELECT 1 FROM sdms_siswa ss
+        WHERE (ss.nisn = u.username OR ss.nis = u.username)
+          AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+      )`);
+  }
   
   const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
   
@@ -1540,9 +1556,25 @@ router.get('/users', async (req, res) => {
   );
   const total = userCountResult[0][0].total;
   
-  // Get paginated users
+  // Get paginated users — sertakan sdms_status untuk indikator
   const usersResult = await pool.query(
-    `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.class_id, c.name AS class_name
+    `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.class_id, c.name AS class_name,
+            -- Deteksi status SDMS untuk siswa NISN plain
+            CASE
+              WHEN u.role != 'STUDENT' OR u.username LIKE '%@%' THEN NULL
+              WHEN NOT EXISTS (SELECT 1 FROM sdms_siswa ss WHERE ss.nisn = u.username OR ss.nis = u.username)
+                THEN 'missing'
+              WHEN EXISTS (
+                SELECT 1 FROM sdms_siswa ss
+                WHERE (ss.nisn = u.username OR ss.nis = u.username)
+                  AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+              ) THEN 'inactive'
+              ELSE 'ok'
+            END AS sdms_status,
+            -- Ambil status text dari sdms_siswa jika ada
+            (SELECT ss.status FROM sdms_siswa ss
+             WHERE (ss.nisn = u.username OR ss.nis = u.username)
+             LIMIT 1) AS sdms_status_text
      FROM users u
      LEFT JOIN classes c ON c.id=u.class_id
      ${whereClause}
@@ -1560,6 +1592,28 @@ router.get('/users', async (req, res) => {
     [...queryParams, limit, offset]
   );
   const users = usersResult[0];
+
+  // Hitung jumlah siswa bermasalah (untuk badge di filter)
+  let sdmsMissingCount = 0, sdmsInactiveCount = 0;
+  try {
+    const [[mc]] = await pq(`
+      SELECT COUNT(*) AS c FROM users u
+      WHERE u.role = 'STUDENT' AND u.is_active = true AND u.username NOT LIKE '%@%'
+        AND NOT EXISTS (SELECT 1 FROM sdms_siswa ss WHERE ss.nisn = u.username OR ss.nis = u.username)
+    `);
+    sdmsMissingCount = Number(mc?.c || 0);
+
+    const [[ic]] = await pq(`
+      SELECT COUNT(*) AS c FROM users u
+      WHERE u.role = 'STUDENT' AND u.is_active = true AND u.username NOT LIKE '%@%'
+        AND EXISTS (
+          SELECT 1 FROM sdms_siswa ss
+          WHERE (ss.nisn = u.username OR ss.nis = u.username)
+            AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+        )
+    `);
+    sdmsInactiveCount = Number(ic?.c || 0);
+  } catch (_) {}
   
   const totalPages = Math.ceil(total / limit);
   
@@ -1567,19 +1621,53 @@ router.get('/users', async (req, res) => {
     title: 'Kelola Pengguna', 
     users, 
     classes,
-    pagination: {
-      page,
-      limit,
-      total,
-      totalPages
-    },
-    filters: {
-      search,
-      role: roleFilter,
-      class: classFilter,
-      status: statusFilter
-    }
+    pagination: { page, limit, total, totalPages },
+    filters: { search, role: roleFilter, class: classFilter, status: statusFilter, sdms_status: sdmsFilter },
+    sdmsMissingCount,
+    sdmsInactiveCount,
   });
+});
+
+// POST /admin/users/bulk-deactivate-sdms — nonaktifkan semua siswa yg tidak aktif di SDMS
+router.post('/users/bulk-deactivate-sdms', async (req, res) => {
+  const { type } = req.body; // 'missing' | 'inactive' | 'all'
+  try {
+    let condition = '';
+    if (type === 'missing') {
+      condition = `u.role = 'STUDENT' AND u.is_active = true AND u.username NOT LIKE '%@%'
+        AND NOT EXISTS (SELECT 1 FROM sdms_siswa ss WHERE ss.nisn = u.username OR ss.nis = u.username)`;
+    } else if (type === 'inactive') {
+      condition = `u.role = 'STUDENT' AND u.is_active = true AND u.username NOT LIKE '%@%'
+        AND EXISTS (
+          SELECT 1 FROM sdms_siswa ss
+          WHERE (ss.nisn = u.username OR ss.nis = u.username)
+            AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+        )`;
+    } else {
+      // all = missing + inactive
+      condition = `u.role = 'STUDENT' AND u.is_active = true AND u.username NOT LIKE '%@%'
+        AND (
+          NOT EXISTS (SELECT 1 FROM sdms_siswa ss WHERE ss.nisn = u.username OR ss.nis = u.username)
+          OR EXISTS (
+            SELECT 1 FROM sdms_siswa ss
+            WHERE (ss.nisn = u.username OR ss.nis = u.username)
+              AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+          )
+        )`;
+    }
+
+    const result = await pool.query(
+      `UPDATE users u SET is_active = false, updated_at = NOW()
+       WHERE ${condition}
+       RETURNING id`
+    );
+    const count = result[0]?.length || 0;
+    req.flash('success', `${count} siswa berhasil dinonaktifkan berdasarkan status SDMS.`);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menonaktifkan siswa: ' + e.message);
+  }
+  res.redirect('/admin/users?role=STUDENT&sdms_status=' + (req.body.type || 'all'));
 });
 
 // Download users as Excel

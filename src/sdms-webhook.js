@@ -547,6 +547,25 @@ const handleBulkSync = async (payload) => {
     log('tempat_lahir & tanggal_lahir users siswa berhasil diupdate dari sdms_siswa');
   } catch(e) { warn(`Gagal update TTL users: ${e.message}`); }
 
+  // Nonaktifkan user LMS yang siswa SDMS-nya sudah tidak aktif (keluar/lulus/pindah)
+  try {
+    const deactivated = await q(`
+      UPDATE users u
+      SET is_active = false, updated_at = NOW()
+      FROM sdms_siswa ss
+      WHERE (u.username = ss.nisn OR u.username = ss.nis)
+        AND u.role = 'STUDENT'
+        AND u.is_active = true
+        AND u.username NOT LIKE '%@%'
+        AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+      RETURNING u.username, ss.status
+    `);
+    if (deactivated.length > 0) {
+      log(`Nonaktifkan ${deactivated.length} siswa yang tidak aktif di SDMS: ${deactivated.slice(0,5).map(r=>r.username).join(', ')}${deactivated.length > 5 ? '...' : ''}`);
+      stats.updated += deactivated.length;
+    }
+  } catch(e) { warn(`Gagal nonaktifkan siswa dari SDMS: ${e.message}`); }
+
   log(`Bulk sync selesai — insert:${stats.inserted} update:${stats.updated} skip:${stats.skipped} err:${stats.errors}`);
   return stats;
 };
