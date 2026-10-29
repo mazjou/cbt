@@ -654,10 +654,16 @@ function viewMaterialDetail(materialId) {
               <div class="bg-violet-50 px-5 py-3">
                 <label class="text-sm font-bold text-violet-800 uppercase tracking-wide">🌐 Konten Web</label>
               </div>
-              <iframe class="w-full" style="height:60vh;" src="${m.embed_url}"
-                sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"></iframe>
-              <div class="px-5 py-2 bg-violet-50 text-xs text-violet-600">
-                <a href="${m.embed_url}" target="_blank" class="underline">Buka di tab baru →</a>
+              <div style="background:linear-gradient(135deg,#f5f3ff,#eef2ff);padding:2.5rem;text-align:center;">
+                <div style="font-size:3rem;margin-bottom:1rem;">🌐</div>
+                <p style="font-weight:700;font-size:1.1rem;color:#1e1b4b;margin-bottom:0.5rem;">${m.title}</p>
+                <p style="font-size:0.8rem;color:#6b7280;margin-bottom:1.5rem;">${(()=>{try{return new URL(m.embed_url).hostname}catch(e){return m.embed_url}})()} </p>
+                <a href="${m.embed_url}" target="_blank" rel="noopener"
+                  style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:12px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;font-weight:700;text-decoration:none;box-shadow:0 4px 12px rgba(79,70,229,.4);">
+                  <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                  Buka Materi
+                </a>
+                <p style="margin-top:0.75rem;font-size:0.75rem;color:#9ca3af;">Materi akan terbuka di tab baru</p>
               </div>
             </div>` : ''}
 
