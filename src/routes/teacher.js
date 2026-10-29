@@ -4915,7 +4915,7 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
     const [[period]] = await pool.query(`SELECT * FROM raport_periods WHERE id = $1`, [period_id]);
     if (!period) return res.status(404).send('Periode tidak ditemukan.');
 
-    // Ambil semua siswa di kelas ini
+    // Ambil semua siswa di kelas ini — prioritaskan user NISN plain (tanpa @domain)
     const [students] = await pool.query(`
       SELECT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir,
              c.name AS class_name, u.class_id,
@@ -4923,6 +4923,7 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
       FROM users u
       JOIN classes c ON c.id = u.class_id
       WHERE u.role = 'STUDENT' AND u.is_active = true AND u.class_id = $1
+        AND u.username NOT LIKE '%@%'
       ORDER BY u.full_name ASC
     `, [homeroomClass.id]);
 
@@ -5331,6 +5332,7 @@ router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
     );
 
     // Ambil siswa kelas ini beserta nilai akhir yang sudah ada
+    // Prioritaskan user NISN plain (tanpa @domain)
     const [students] = await pool.query(`
       SELECT u.id, u.full_name, u.username,
              c.name AS class_name,
@@ -5344,6 +5346,7 @@ router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
       WHERE u.role      = 'STUDENT'
         AND u.is_active = true
         AND u.class_id  = $3
+        AND u.username NOT LIKE '%@%'
       ORDER BY u.full_name ASC
     `, [period_id, subject_id, class_id]);
 
@@ -5408,7 +5411,8 @@ router.post('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
 
     // Ambil daftar student_id yang valid di kelas ini (keamanan)
     const [validStudents] = await pool.query(
-      `SELECT id FROM users WHERE role = 'STUDENT' AND is_active = true AND class_id = $1`,
+      `SELECT id FROM users WHERE role = 'STUDENT' AND is_active = true AND class_id = $1
+       AND username NOT LIKE '%@%'`,
       [class_id]
     );
     const validIds = new Set(validStudents.map(s => String(s.id)));
@@ -5507,7 +5511,7 @@ router.get('/raport/:period_id/:subject_id/:class_id/export', async (req, res) =
       return res.redirect('/teacher/raport');
     }
 
-    // Ambil siswa kelas beserta nilai yang sudah ada
+    // Ambil siswa kelas beserta nilai yang sudah ada — hanya user NISN plain
     const [students] = await pool.query(`
       SELECT u.id, u.full_name, u.username,
              sc.score, sc.notes
@@ -5517,6 +5521,7 @@ router.get('/raport/:period_id/:subject_id/:class_id/export', async (req, res) =
         AND sc.period_id = $1
         AND sc.raport_subject_id = $2
       WHERE u.role = 'STUDENT' AND u.is_active = true AND u.class_id = $3
+        AND u.username NOT LIKE '%@%'
       ORDER BY u.full_name ASC
     `, [period_id, subject_id, class_id]);
 
@@ -5676,9 +5681,10 @@ router.post('/raport/:period_id/:subject_id/:class_id/import',
         return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
       }
 
-      // Ambil set student_id valid di kelas ini (keamanan)
+      // Ambil set student_id valid di kelas ini (keamanan) — hanya NISN plain
       const [validStudents] = await pool.query(
-        `SELECT id FROM users WHERE role = 'STUDENT' AND is_active = true AND class_id = $1`,
+        `SELECT id FROM users WHERE role = 'STUDENT' AND is_active = true AND class_id = $1
+         AND username NOT LIKE '%@%'`,
         [class_id]
       );
       const validStudentIds = new Set(validStudents.map(s => String(s.id)));

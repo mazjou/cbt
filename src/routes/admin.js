@@ -6529,6 +6529,7 @@ router.get('/raport/:period_id/students', async (req, res) => {
       JOIN raport_subject_classes rsc ON rsc.class_id = u.class_id
       JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id AND rs.period_id = $1
       WHERE u.role = 'STUDENT' AND u.is_active = true
+        AND u.username NOT LIKE '%@%'
         AND (LOWER(u.full_name) LIKE LOWER($2) OR LOWER(u.username) LIKE LOWER($2))
       ORDER BY c.name ASC, u.full_name ASC
       LIMIT 30
@@ -6712,7 +6713,9 @@ router.get('/raport/:id', async (req, res) => {
 router.get('/raport/:period_id/print/:student_id', async (req, res) => {
   const { period_id, student_id } = req.params;
   try {
-    const [[student]] = await pq(`
+    // Ambil data siswa — prioritaskan user NISN plain (tanpa @domain)
+    // Jika student_id milik user @domain, fallback ke user NISN plain dari SDMS sync
+    const [[studentById]] = await pq(`
       SELECT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir,
              c.name AS class_name, u.class_id,
              c.homeroom_teacher_name, c.homeroom_teacher_nip
@@ -6720,6 +6723,24 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       LEFT JOIN classes c ON c.id = u.class_id
       WHERE u.id = $1
     `, [student_id]);
+
+    let student = studentById || null;
+
+    // Jika user ditemukan tapi username mengandung @domain,
+    // cari versi NISN plain-nya yang punya data lengkap dari sync SDMS
+    if (student && student.username && student.username.includes('@')) {
+      const nisnPlain = student.username.split('@')[0];
+      const [[plainUser]] = await pq(`
+        SELECT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir,
+               c.name AS class_name, u.class_id,
+               c.homeroom_teacher_name, c.homeroom_teacher_nip
+        FROM users u
+        LEFT JOIN classes c ON c.id = u.class_id
+        WHERE u.username = $1 AND u.role = 'STUDENT'
+        LIMIT 1
+      `, [nisnPlain]);
+      if (plainUser) student = plainUser;
+    }
 
     const [[period]] = await pq(`SELECT * FROM raport_periods WHERE id = $1`, [period_id]);
 
@@ -6875,6 +6896,7 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
       JOIN raport_subject_classes rsc ON rsc.class_id = u.class_id
       JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id AND rs.period_id = $1
       WHERE u.role = 'STUDENT' AND u.is_active = true
+        AND u.username NOT LIKE '%@%'
     `;
     const params = [period_id];
     if (class_id) {
