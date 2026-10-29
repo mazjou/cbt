@@ -1628,6 +1628,32 @@ router.get('/users', async (req, res) => {
   });
 });
 
+// POST /admin/users/bulk-deactivate-domain — nonaktifkan massal akun @domain
+router.post('/users/bulk-deactivate-domain', async (req, res) => {
+  const { domain_type } = req.body;
+  try {
+    let whereClause = '';
+    if (domain_type === 'student_domain') {
+      whereClause = `role = 'STUDENT' AND username LIKE '%@smkn1kras.sch.id'`;
+    } else {
+      // all_domain — semua role yang punya @ di username
+      whereClause = `username LIKE '%@%'`;
+    }
+
+    const result = await pool.query(
+      `UPDATE users SET is_active = false, updated_at = NOW()
+       WHERE ${whereClause} AND is_active = true
+       RETURNING id, username`
+    );
+    const count = result[0]?.length || 0;
+    req.flash('success', `${count} akun @domain berhasil dinonaktifkan. Data ujian tetap aman.`);
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menonaktifkan akun: ' + e.message);
+  }
+  res.redirect('/admin/users');
+});
+
 // POST /admin/users/bulk-deactivate-sdms — nonaktifkan semua siswa yg tidak aktif di SDMS
 router.post('/users/bulk-deactivate-sdms', async (req, res) => {
   const { type } = req.body; // 'missing' | 'inactive' | 'all'
