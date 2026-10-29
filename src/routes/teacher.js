@@ -4881,20 +4881,24 @@ router.get('/raport', async (req, res) => {
         for (const r of totalRows) totalPerKelas[r.class_id] = Number(r.total);
       }
 
-      // status: 'green' = semua siswa sudah ada nilai, 'yellow' = sebagian, 'red' = belum ada
+      // status: 'green' = ada TP + semua nilai sudah diisi
+      //         'yellow' = ada TP tapi nilai belum/baru sebagian
+      //         'red'    = belum ada TP (dan belum isi nilai sama sekali)
       for (const period of periods) {
         for (const s of period.subjects) {
           const hasTp      = (tpMap[`${s.subject_id}_${s.class_id}`] || 0) > 0;
           const scored     = scoreMap[`${period.id}_${s.subject_id}_${s.class_id}`] || 0;
           const totalSiswa = totalPerKelas[s.class_id] || 0;
+
           if (!hasTp) {
-            s.status = 'red';
-          } else if (scored === 0) {
+            // Belum ada TP → merah (belum mulai sama sekali)
             s.status = 'red';
           } else if (totalSiswa > 0 && scored >= totalSiswa) {
-            s.status = 'green'; // semua siswa sudah diisi
+            // Ada TP + semua siswa sudah diisi → hijau
+            s.status = 'green';
           } else {
-            s.status = 'yellow'; // baru sebagian
+            // Ada TP tapi nilai belum/baru sebagian → kuning
+            s.status = 'yellow';
           }
         }
       }
