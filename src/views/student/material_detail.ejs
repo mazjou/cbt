@@ -62,56 +62,54 @@
 
   <% if (material.embed_type === 'WEB' && material.embed_url) { %>
     <div class="mb-6">
-      <%# Coba embed dulu, jika gagal ada tombol buka di tab baru %>
-      <div class="w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50" id="webEmbedWrapper">
+      <%# Tombol default ditampilkan dulu — iframe disembunyikan dulu %>
+      <div id="webEmbedFallback" class="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-8 text-center">
+        <div class="text-5xl mb-3">🌐</div>
+        <p class="text-slate-700 font-semibold mb-1">Konten Web Eksternal</p>
+        <p class="text-sm text-slate-500 mb-4">Klik tombol di bawah untuk membuka materi.</p>
+        <a href="<%= material.embed_url %>" target="_blank" rel="noopener"
+          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-md transition-all">
+          🔗 Buka Materi
+        </a>
+        <p class="mt-3 text-xs text-slate-400 break-all"><%= material.embed_url %></p>
+      </div>
+      <%# Iframe disembunyikan dulu, ditampilkan hanya jika berhasil load %>
+      <div id="webEmbedWrapper" class="hidden w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
         <iframe id="webEmbedFrame" class="w-full" style="height: 80vh; min-height: 500px;"
           src="<%= material.embed_url %>"
           title="Konten Web"
           frameborder="0"
           allowfullscreen
           sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
-          onerror="showWebFallback()"
         ></iframe>
-      </div>
-      <%# Fallback — tombol buka jika iframe diblokir %>
-      <div id="webEmbedFallback" class="hidden mt-3 rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-6 text-center">
-        <div class="text-4xl mb-3">🌐</div>
-        <p class="text-slate-700 font-semibold mb-1">Konten tidak bisa ditampilkan langsung</p>
-        <p class="text-sm text-slate-500 mb-4">Website ini tidak mengizinkan tampil dalam halaman (embed diblokir).</p>
-        <a href="<%= material.embed_url %>" target="_blank" rel="noopener"
-          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-md transition-all">
-          🔗 Buka Materi di Tab Baru
-        </a>
-      </div>
-      <div class="mt-2 flex items-center justify-between text-xs text-slate-500">
-        <span>Jika konten tidak tampil, klik tombol di bawah.</span>
-        <a href="<%= material.embed_url %>" target="_blank" rel="noopener"
-          class="text-indigo-600 hover:underline font-medium">Buka di tab baru →</a>
+        <div class="px-4 py-2 text-xs text-slate-500 flex justify-between">
+          <span>Konten dari website eksternal</span>
+          <a href="<%= material.embed_url %>" target="_blank" rel="noopener" class="text-indigo-600 hover:underline">Buka di tab baru →</a>
+        </div>
       </div>
     </div>
     <script>
     (function() {
-      const frame = document.getElementById('webEmbedFrame');
+      const frame   = document.getElementById('webEmbedFrame');
+      const wrapper = document.getElementById('webEmbedWrapper');
       const fallback = document.getElementById('webEmbedFallback');
-      // Deteksi jika iframe gagal load (diblokir X-Frame-Options)
-      let loaded = false;
+
       frame.addEventListener('load', function() {
-        loaded = true;
+        // Coba deteksi apakah iframe benar-benar berhasil (bukan error page)
         try {
-          // Jika bisa akses contentDocument, berarti berhasil
-          if (frame.contentDocument === null && frame.contentWindow === null) {
-            fallback.classList.remove('hidden');
+          // Jika cross-origin dan tidak diblokir, contentDocument akan null
+          // tapi window tetap ada — artinya berhasil di-embed
+          if (frame.contentWindow) {
+            // Berhasil — tampilkan iframe, sembunyikan tombol
+            wrapper.classList.remove('hidden');
+            fallback.classList.add('hidden');
           }
         } catch(e) {
-          // Cross-origin — anggap berhasil jika tidak ada error eksplisit
+          // Error akses cross-origin = berhasil di-embed, tampilkan iframe
+          wrapper.classList.remove('hidden');
+          fallback.classList.add('hidden');
         }
       });
-      // Timeout 5 detik — jika tidak load tampilkan fallback
-      setTimeout(function() {
-        if (!loaded) {
-          fallback.classList.remove('hidden');
-        }
-      }, 5000);
     })();
     </script>
   <% } %>
