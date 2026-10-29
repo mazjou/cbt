@@ -173,21 +173,21 @@
     <div class="data-siswa">
       <table>
         <tr>
-          <td>Nama Siswa</td>
-          <td>:</td>
+          <td width="80">Nama Siswa</td>
+          <td width="8">:</td>
           <td><strong><%= stu.full_name %></strong></td>
-          <td width="20"></td>
-          <td width="120">Kelas</td>
-          <td width="10">:</td>
+          <td width="15"></td>
+          <td width="50">Kelas</td>
+          <td width="8">:</td>
           <td><%= stu.class_name || '-' %></td>
         </tr>
         <tr>
-          <td>TTL</td>
-          <td>:</td>
+          <td width="80">TTL</td>
+          <td width="8">:</td>
           <td><%= (stu.tempat_lahir || stu.tanggal_lahir) ? ((stu.tempat_lahir ? stu.tempat_lahir + ', ' : '') + (stu.tanggal_lahir ? formatTTL(stu.tanggal_lahir) : '')) : '-' %></td>
-          <td></td>
-          <td>NISN</td>
-          <td>:</td>
+          <td width="15"></td>
+          <td width="50">NISN</td>
+          <td width="8">:</td>
           <td><%= stu.username ? stu.username.split('@')[0] : '-' %></td>
         </tr>
       </table>
