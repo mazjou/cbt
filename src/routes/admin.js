@@ -4519,7 +4519,7 @@ router.get('/assignments/:id', async (req, res) => {
       JOIN users u ON asub.student_id = u.id
       LEFT JOIN classes c ON u.class_id = c.id
       WHERE asub.assignment_id = $1
-      ORDER BY asub.submitted_at DESC`,
+      ORDER BY u.full_name ASC`,
       [assignmentId]
     );
     const submissions = submResult[0];
