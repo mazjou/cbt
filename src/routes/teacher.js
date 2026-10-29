@@ -4845,6 +4845,7 @@ router.get('/raport', async (req, res) => {
       }
 
       // Jumlah siswa yang sudah ada nilai raport_scores per (period, subject, class)
+      // Hanya dari user NISN plain (sistem baru) untuk akurasi indikator
       const phP = periodIds.map((_, i) => `$${i + 1}`).join(',');
       const phS2 = subjectIds.map((_, i) => `$${periodIds.length + i + 1}`).join(',');
       const [scoreRows] = await pool.query(
@@ -4855,6 +4856,8 @@ router.get('/raport', async (req, res) => {
          WHERE rs.period_id IN (${phP})
            AND rs.raport_subject_id IN (${phS2})
            AND rs.score IS NOT NULL
+           AND u.username NOT LIKE '%@%'
+           AND u.class_id IS NOT NULL
          GROUP BY rs.period_id, rs.raport_subject_id, u.class_id`,
         [...periodIds, ...subjectIds]
       );
@@ -4862,12 +4865,37 @@ router.get('/raport', async (req, res) => {
       for (const r of scoreRows) scoreMap[`${r.period_id}_${r.subject_id}_${r.class_id}`] = Number(r.scored_count);
 
       // Tempelkan status ke tiap subject entry
-      // status: 'green' = ada TP + ada nilai, 'yellow' = ada TP saja, 'red' = tidak ada TP & tidak ada nilai
+      // Ambil juga total siswa NISN plain per kelas untuk cek kelengkapan
+      const classIdsList = [...new Set(rows.map(r => r.class_id))];
+      const totalPerKelas = {};
+      if (classIdsList.length > 0) {
+        const phCls = classIdsList.map((_, i) => `$${i + 1}`).join(',');
+        const [totalRows] = await pool.query(
+          `SELECT class_id, COUNT(*) AS total FROM users
+           WHERE role = 'STUDENT' AND is_active = true
+             AND class_id IN (${phCls})
+             AND username NOT LIKE '%@%'
+           GROUP BY class_id`,
+          classIdsList
+        );
+        for (const r of totalRows) totalPerKelas[r.class_id] = Number(r.total);
+      }
+
+      // status: 'green' = semua siswa sudah ada nilai, 'yellow' = sebagian, 'red' = belum ada
       for (const period of periods) {
         for (const s of period.subjects) {
-          const hasTp    = (tpMap[`${s.subject_id}_${s.class_id}`] || 0) > 0;
-          const hasScore = (scoreMap[`${period.id}_${s.subject_id}_${s.class_id}`] || 0) > 0;
-          s.status = hasTp && hasScore ? 'green' : hasTp ? 'yellow' : 'red';
+          const hasTp      = (tpMap[`${s.subject_id}_${s.class_id}`] || 0) > 0;
+          const scored     = scoreMap[`${period.id}_${s.subject_id}_${s.class_id}`] || 0;
+          const totalSiswa = totalPerKelas[s.class_id] || 0;
+          if (!hasTp) {
+            s.status = 'red';
+          } else if (scored === 0) {
+            s.status = 'red';
+          } else if (totalSiswa > 0 && scored >= totalSiswa) {
+            s.status = 'green'; // semua siswa sudah diisi
+          } else {
+            s.status = 'yellow'; // baru sebagian
+          }
         }
       }
     }
