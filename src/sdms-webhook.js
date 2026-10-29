@@ -442,6 +442,27 @@ const handleBulkSync = async (payload) => {
   for (const m of mapel)   await runUpsert(upsertMapel,   m, 'mapel');
   for (const p of pegawai) await runUpsert(upsertPegawai, p, 'pegawai');
 
+  // ── Soft-delete siswa yang tidak ada di bulk sync (sudah dihapus dari SDMS) ──
+  // Jika SDMS mengirim data siswa (array tidak kosong), berarti ini data lengkap
+  // Siswa yang tidak ada di daftar ini dianggap sudah tidak aktif
+  if (siswa.length > 0) {
+    try {
+      const sdmsIdsFromSync = siswa.map(s => s.id).filter(Boolean);
+      if (sdmsIdsFromSync.length > 0) {
+        const ph = sdmsIdsFromSync.map((_, i) => `$${i + 1}`).join(',');
+        const deactivated = await q(
+          `UPDATE sdms_siswa SET is_active = false, synced_at = NOW()
+           WHERE sdms_id NOT IN (${ph}) AND is_active = true
+           RETURNING nisn, nis, nama`,
+          sdmsIdsFromSync
+        );
+        if (deactivated.length > 0) {
+          log(`Soft-delete ${deactivated.length} siswa tidak ada di bulk sync: ${deactivated.slice(0,3).map(r=>r.nama).join(', ')}${deactivated.length>3?'...':''}`);
+        }
+      }
+    } catch(e) { warn(`Gagal soft-delete siswa tidak ada di sync: ${e.message}`); }
+  }
+
   // ── Sync user siswa dari sdms_siswa ke tabel users ──────────────────────
   // Username = NISN (plain, tanpa @domain) — ini adalah akun utama siswa
   // User NISN@domain (untuk ujian CBT) TIDAK disentuh
@@ -477,7 +498,9 @@ const handleBulkSync = async (payload) => {
       const isActive    = (s.status || 'Aktif').toLowerCase() !== 'tidak aktif' &&
                           (s.status || 'Aktif').toLowerCase() !== 'non aktif' &&
                           (s.status || 'Aktif').toLowerCase() !== 'lulus' &&
-                          (s.status || 'Aktif').toLowerCase() !== 'keluar';
+                          (s.status || 'Aktif').toLowerCase() !== 'keluar' &&
+                          (s.status || 'Aktif').toLowerCase() !== 'pindah' &&
+                          (s.status || 'Aktif').toLowerCase() !== 'mutasi';
       const classId     = s.class_id || null;
       const tempatLahir = s.tempat_lahir || null;
       const tglLahir    = s.tanggal_lahir || null;

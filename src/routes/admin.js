@@ -1543,7 +1543,7 @@ router.get('/users', async (req, res) => {
       AND EXISTS (
         SELECT 1 FROM sdms_siswa ss
         WHERE (ss.nisn = u.username OR ss.nis = u.username)
-          AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+          AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar','pindah','mutasi'))
       )`);
   }
   
@@ -1567,7 +1567,7 @@ router.get('/users', async (req, res) => {
               WHEN EXISTS (
                 SELECT 1 FROM sdms_siswa ss
                 WHERE (ss.nisn = u.username OR ss.nis = u.username)
-                  AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+                  AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar','pindah','mutasi'))
               ) THEN 'inactive'
               ELSE 'ok'
             END AS sdms_status,
@@ -1609,7 +1609,7 @@ router.get('/users', async (req, res) => {
         AND EXISTS (
           SELECT 1 FROM sdms_siswa ss
           WHERE (ss.nisn = u.username OR ss.nis = u.username)
-            AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+            AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar','pindah','mutasi'))
         )
     `);
     sdmsInactiveCount = Number(ic?.c || 0);
@@ -1673,7 +1673,7 @@ router.post('/users/bulk-deactivate-sdms', async (req, res) => {
         AND EXISTS (
           SELECT 1 FROM sdms_siswa ss
           WHERE (ss.nisn = u.username OR ss.nis = u.username)
-            AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+            AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar','pindah','mutasi'))
         )`;
     } else {
       // all = missing + inactive
@@ -1683,7 +1683,7 @@ router.post('/users/bulk-deactivate-sdms', async (req, res) => {
           OR EXISTS (
             SELECT 1 FROM sdms_siswa ss
             WHERE (ss.nisn = u.username OR ss.nis = u.username)
-              AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar'))
+              AND (ss.is_active = false OR LOWER(ss.status) IN ('tidak aktif','non aktif','lulus','keluar','pindah','mutasi'))
           )
         )`;
     }
@@ -7203,3 +7203,4 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
 });
 
 module.exports = router;
+
