@@ -41,28 +41,50 @@ router.get('/sso/callback', async (req, res) => {
     const pool = req.app.locals.pool;
 
     // 2. Cari user di LMS berdasarkan username dari SDMS
-    // Pool wrapper LMS mengembalikan [rows, fields] — ambil index 0
-    const [existingRows] = await pool.query(
-      'SELECT id, username, full_name, role, is_active FROM users WHERE username = $1 LIMIT 1',
-      [decoded.username]
-    );
+    // SDMS bisa mengirim username dalam format NISN@smkn1kras.sch.id atau NISN plain
+    // Kita harus cari user yang cocok dengan salah satu format tersebut
+    // agar tidak membuat duplikat
+    const nisnPlain = decoded.username ? decoded.username.split('@')[0].trim() : '';
+    const lmsRole   = mapRole(decoded.role);
 
-    let lmsUser = existingRows[0];
+    // Cari berdasarkan NISN plain dulu (akun utama), lalu username asli dari SDMS
+    let lmsUser = null;
+    if (nisnPlain) {
+      const [byNisn] = await pool.query(
+        `SELECT id, username, full_name, role, is_active, class_id FROM users
+         WHERE username = $1 AND role = $2 LIMIT 1`,
+        [nisnPlain, lmsRole]
+      );
+      lmsUser = byNisn[0] || null;
+    }
 
-    // 3. Kalau belum ada → buat user baru otomatis
+    // Kalau belum ketemu dengan NISN plain, coba dengan username asli (NISN@domain)
+    if (!lmsUser && decoded.username) {
+      const [byFull] = await pool.query(
+        `SELECT id, username, full_name, role, is_active, class_id FROM users
+         WHERE username = $1 LIMIT 1`,
+        [decoded.username]
+      );
+      lmsUser = byFull[0] || null;
+    }
+
+    // 3. Kalau belum ada → buat user baru dengan NISN plain sebagai username
     if (!lmsUser) {
-      const lmsRole   = mapRole(decoded.role);
-      const dummyHash = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+      // Username pakai NISN plain (tanpa @domain) agar konsisten dengan sync SDMS
+      const usernameToCreate = nisnPlain || decoded.username;
+      const plainPass  = 'smkn1kras';
+      const passHash   = await bcrypt.hash(plainPass, 10);
 
       const [newRows] = await pool.query(
-        `INSERT INTO users (username, full_name, role, password_hash, is_active, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, true, NOW(), NOW())
-         RETURNING id, username, full_name, role, is_active`,
-        [decoded.username, decoded.full_name || decoded.username, lmsRole, dummyHash]
+        `INSERT INTO users
+           (username, full_name, role, password_hash, plain_password, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
+         RETURNING id, username, full_name, role, is_active, class_id`,
+        [usernameToCreate, decoded.full_name || usernameToCreate, lmsRole, passHash, plainPass]
       );
 
       lmsUser = newRows[0];
-      console.log(`[SSO] ✅ User baru dibuat: ${decoded.username} (${lmsRole})`);
+      console.log(`[SSO] ✅ User baru dibuat: ${usernameToCreate} (${lmsRole})`);
     }
 
     // 4. Cek user aktif
@@ -80,12 +102,13 @@ router.get('/sso/callback', async (req, res) => {
       lmsUser.full_name = decoded.full_name;
     }
 
-    // 6. Buat session LMS
+    // 6. Buat session LMS — sertakan class_id untuk filter konten siswa
     req.session.user = {
       id:        lmsUser.id,
       username:  lmsUser.username,
       full_name: lmsUser.full_name,
       role:      lmsUser.role,
+      class_id:  lmsUser.class_id || null,
       sso:       true,
       sdms_id:   decoded.sub,
     };

@@ -442,13 +442,98 @@ const handleBulkSync = async (payload) => {
   for (const m of mapel)   await runUpsert(upsertMapel,   m, 'mapel');
   for (const p of pegawai) await runUpsert(upsertPegawai, p, 'pegawai');
 
-  // Sync tempat_lahir & tanggal_lahir dari sdms_siswa ke tabel users
+  // ── Sync user siswa dari sdms_siswa ke tabel users ──────────────────────
+  // Username = NISN (plain, tanpa @domain) — ini adalah akun utama siswa
+  // User NISN@domain (untuk ujian CBT) TIDAK disentuh
+  try {
+    const bcrypt = require('bcryptjs');
+    const DEFAULT_PASSWORD = 'smkn1kras';
+    const defaultHash = await bcrypt.hash(DEFAULT_PASSWORD, 10);
+
+    // Ambil semua siswa aktif dari sdms_siswa beserta class_id LMS
+    const siswaRows = await q(`
+      SELECT
+        ss.nisn, ss.nis, ss.nama, ss.status,
+        ss.tempat_lahir, ss.tanggal_lahir, ss.kelas_nama,
+        c.id AS class_id
+      FROM sdms_siswa ss
+      LEFT JOIN classes c ON LOWER(c.name) = LOWER(ss.kelas_nama)
+                          OR LOWER(c.code) = LOWER(
+                               REPLACE(REPLACE(UPPER(COALESCE(ss.kelas_nama,'')), ' ', '-'), '  ', '-')
+                             )
+      WHERE ss.is_active = true
+        AND (ss.nisn IS NOT NULL OR ss.nis IS NOT NULL)
+    `);
+
+    let uInsert = 0, uUpdate = 0, uSkip = 0, uErr = 0;
+
+    for (const s of siswaRows) {
+      const username = (s.nisn || s.nis || '').trim();
+      if (!username) { uSkip++; continue; }
+
+      // Jangan sentuh user dengan username NISN@domain — itu khusus ujian
+      // Hanya kelola user dengan username = NISN plain (tanpa @)
+      const fullName    = (s.nama || '').trim();
+      const isActive    = (s.status || 'Aktif').toLowerCase() !== 'tidak aktif' &&
+                          (s.status || 'Aktif').toLowerCase() !== 'non aktif' &&
+                          (s.status || 'Aktif').toLowerCase() !== 'lulus' &&
+                          (s.status || 'Aktif').toLowerCase() !== 'keluar';
+      const classId     = s.class_id || null;
+      const tempatLahir = s.tempat_lahir || null;
+      const tglLahir    = s.tanggal_lahir || null;
+
+      try {
+        // Cari apakah user NISN plain sudah ada
+        const existing = await q(
+          `SELECT id, username FROM users WHERE username = $1 LIMIT 1`,
+          [username]
+        );
+
+        if (existing.length > 0) {
+          // Update data user yang sudah ada — JANGAN ubah password_hash
+          await q(`
+            UPDATE users SET
+              full_name     = $1,
+              is_active     = $2,
+              class_id      = COALESCE($3, class_id),
+              tempat_lahir  = COALESCE($4, tempat_lahir),
+              tanggal_lahir = COALESCE($5, tanggal_lahir),
+              updated_at    = NOW()
+            WHERE username = $6
+          `, [fullName, isActive, classId, tempatLahir, tglLahir, username]);
+          uUpdate++;
+        } else {
+          // Buat user baru dengan password default smkn1kras
+          await q(`
+            INSERT INTO users
+              (username, full_name, role, password_hash, plain_password,
+               class_id, is_active, tempat_lahir, tanggal_lahir, created_at)
+            VALUES ($1, $2, 'STUDENT', $3, $4, $5, $6, $7, $8, NOW())
+          `, [username, fullName, defaultHash, DEFAULT_PASSWORD,
+              classId, isActive, tempatLahir, tglLahir]);
+          uInsert++;
+        }
+      } catch(e) {
+        uErr++;
+        if (uErr <= 5) warn(`Sync user siswa ${username}: ${e.message}`);
+      }
+    }
+
+    log(`Sync users siswa — insert:${uInsert} update:${uUpdate} skip:${uSkip} err:${uErr}`);
+    stats.inserted += uInsert;
+    stats.updated  += uUpdate;
+  } catch(e) {
+    warn(`Gagal sync users siswa: ${e.message}`);
+  }
+
+  // Sync tempat_lahir & tanggal_lahir dari sdms_siswa ke tabel users (untuk user @domain juga)
   try {
     await q(`
       UPDATE users u
       SET
-        tempat_lahir  = ss.tempat_lahir,
-        tanggal_lahir = ss.tanggal_lahir
+        tempat_lahir  = COALESCE(ss.tempat_lahir,  u.tempat_lahir),
+        tanggal_lahir = COALESCE(ss.tanggal_lahir, u.tanggal_lahir),
+        updated_at    = NOW()
       FROM sdms_siswa ss
       WHERE (
         u.username = ss.nisn OR
