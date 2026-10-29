@@ -61,57 +61,40 @@
   <% } %>
 
   <% if (material.embed_type === 'WEB' && material.embed_url) { %>
+    <%
+      let webDomain = '';
+      try { webDomain = new URL(material.embed_url).hostname; } catch(e) {}
+    %>
     <div class="mb-6">
-      <%# Tombol default ditampilkan dulu — iframe disembunyikan dulu %>
-      <div id="webEmbedFallback" class="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-8 text-center">
-        <div class="text-5xl mb-3">🌐</div>
-        <p class="text-slate-700 font-semibold mb-1">Konten Web Eksternal</p>
-        <p class="text-sm text-slate-500 mb-4">Klik tombol di bawah untuk membuka materi.</p>
-        <a href="<%= material.embed_url %>" target="_blank" rel="noopener"
-          class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-md transition-all">
-          🔗 Buka Materi
-        </a>
-        <p class="mt-3 text-xs text-slate-400 break-all"><%= material.embed_url %></p>
-      </div>
-      <%# Iframe disembunyikan dulu, ditampilkan hanya jika berhasil load %>
-      <div id="webEmbedWrapper" class="hidden w-full rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
-        <iframe id="webEmbedFrame" class="w-full" style="height: 80vh; min-height: 500px;"
-          src="<%= material.embed_url %>"
-          title="Konten Web"
-          frameborder="0"
-          allowfullscreen
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
-        ></iframe>
-        <div class="px-4 py-2 text-xs text-slate-500 flex justify-between">
-          <span>Konten dari website eksternal</span>
-          <a href="<%= material.embed_url %>" target="_blank" rel="noopener" class="text-indigo-600 hover:underline">Buka di tab baru →</a>
+      <div class="w-full rounded-2xl border-2 border-indigo-200 overflow-hidden" style="background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);">
+        <div class="flex items-center gap-2 px-4 py-2.5 bg-white/80 border-b border-indigo-100">
+          <div class="flex gap-1.5">
+            <div class="w-3 h-3 rounded-full bg-red-400"></div>
+            <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
+            <div class="w-3 h-3 rounded-full bg-green-400"></div>
+          </div>
+          <div class="flex-1 bg-slate-100 rounded-lg px-3 py-1 text-xs text-slate-500 font-mono truncate">
+            <%= material.embed_url %>
+          </div>
+        </div>
+        <div class="p-10 text-center">
+          <div class="text-6xl mb-4">🌐</div>
+          <h3 class="text-xl font-bold text-slate-800 mb-2"><%= material.title %></h3>
+          <% if (webDomain) { %>
+            <p class="text-sm text-slate-500 mb-6">Sumber: <span class="font-medium text-indigo-600"><%= webDomain %></span></p>
+          <% } %>
+          <a href="<%= material.embed_url %>" target="_blank" rel="noopener"
+            class="inline-flex items-center gap-3 px-8 py-4 rounded-2xl text-white font-bold text-base shadow-lg transition-all"
+            style="background: linear-gradient(135deg, #4f46e5, #7c3aed);">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+            </svg>
+            Buka Materi
+          </a>
+          <p class="mt-3 text-xs text-slate-400">Materi akan terbuka di tab baru</p>
         </div>
       </div>
     </div>
-    <script>
-    (function() {
-      const frame   = document.getElementById('webEmbedFrame');
-      const wrapper = document.getElementById('webEmbedWrapper');
-      const fallback = document.getElementById('webEmbedFallback');
-
-      frame.addEventListener('load', function() {
-        // Coba deteksi apakah iframe benar-benar berhasil (bukan error page)
-        try {
-          // Jika cross-origin dan tidak diblokir, contentDocument akan null
-          // tapi window tetap ada — artinya berhasil di-embed
-          if (frame.contentWindow) {
-            // Berhasil — tampilkan iframe, sembunyikan tombol
-            wrapper.classList.remove('hidden');
-            fallback.classList.add('hidden');
-          }
-        } catch(e) {
-          // Error akses cross-origin = berhasil di-embed, tampilkan iframe
-          wrapper.classList.remove('hidden');
-          fallback.classList.add('hidden');
-        }
-      });
-    })();
-    </script>
   <% } %>
 
   <div class="prose max-w-none">
@@ -135,9 +118,7 @@
       // Auto complete via fetch
       fetch('/student/materials/<%= material.id %>/complete', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        }
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       }).then(() => {
         window.location.reload();
       }).catch(err => {
@@ -145,19 +126,14 @@
       });
       return;
     }
-    
     const minutes = Math.floor(remaining / 60000);
     const seconds = Math.floor((remaining % 60000) / 1000);
-    
     if (timerElement) {
       timerElement.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
     }
   }
-  
   updateTimer();
   const interval = setInterval(updateTimer, 1000);
-  
-  // Cleanup on page unload
   window.addEventListener('beforeunload', () => clearInterval(interval));
 })();
 </script>
