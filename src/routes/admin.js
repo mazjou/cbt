@@ -1630,13 +1630,13 @@ router.get('/users', async (req, res) => {
 
 // POST /admin/users/bulk-deactivate-domain — nonaktifkan massal akun @domain
 router.post('/users/bulk-deactivate-domain', async (req, res) => {
-  const { domain_type } = req.body;
+  const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+  const { domain_type } = isAjax ? req.body : req.body;
   try {
     let whereClause = '';
     if (domain_type === 'student_domain') {
       whereClause = `role = 'STUDENT' AND username LIKE '%@smkn1kras.sch.id'`;
     } else {
-      // all_domain — semua role yang punya @ di username
       whereClause = `username LIKE '%@%'`;
     }
 
@@ -1646,9 +1646,15 @@ router.post('/users/bulk-deactivate-domain', async (req, res) => {
        RETURNING id, username`
     );
     const count = result[0]?.length || 0;
-    req.flash('success', `${count} akun @domain berhasil dinonaktifkan. Data ujian tetap aman.`);
+    const msg = count > 0
+      ? `${count} akun @domain berhasil dinonaktifkan. Data ujian tetap aman.`
+      : 'Tidak ada akun aktif yang perlu dinonaktifkan (mungkin sudah dinonaktifkan sebelumnya).';
+
+    if (isAjax) return res.json({ ok: true, message: msg, count });
+    req.flash('success', msg);
   } catch (e) {
     console.error(e);
+    if (isAjax) return res.json({ ok: false, message: 'Gagal menonaktifkan akun: ' + e.message });
     req.flash('error', 'Gagal menonaktifkan akun: ' + e.message);
   }
   res.redirect('/admin/users');

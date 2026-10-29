@@ -1103,6 +1103,7 @@
             Batal
           </button>
           <button type="button" onclick="submitNonaktifDomain()"
+            id="btnNonaktifkanSubmit"
             class="flex-1 px-4 py-2.5 rounded-xl text-white font-semibold text-sm transition shadow-md"
             style="background: linear-gradient(135deg, #334155, #1e293b);">
             🚫 Nonaktifkan Sekarang
@@ -1167,22 +1168,55 @@ function autoSubmitFilter() {
 </script>
 
 <script>
-function submitNonaktifDomain() {
+async function submitNonaktifDomain() {
   const konfirmasi = document.getElementById('confirmDomainInput').value.trim();
   if (konfirmasi !== 'NONAKTIFKAN') {
     alert('Ketik NONAKTIFKAN untuk konfirmasi.');
     return;
   }
-  document.getElementById('formNonaktifDomain').submit();
+  const domain_type = document.querySelector('input[name="domain_type"]:checked')?.value || 'student_domain';
+  const btn = document.getElementById('btnNonaktifkanSubmit');
+  btn.disabled = true;
+  btn.textContent = '⏳ Memproses...';
+
+  try {
+    const res = await fetch('/admin/users/bulk-deactivate-domain', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      body: JSON.stringify({ domain_type })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      document.getElementById('modalNonaktifDomain').classList.add('hidden');
+      document.getElementById('modalNonaktifDomain').style.display = '';
+      // Tampilkan toast sukses
+      showDomainToast('✅ ' + data.message, 'green');
+      // Reload tabel setelah 1.5 detik
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      showDomainToast('❌ ' + (data.message || 'Gagal menonaktifkan akun.'), 'red');
+    }
+  } catch (e) {
+    showDomainToast('❌ Terjadi kesalahan: ' + e.message, 'red');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🚫 Nonaktifkan Sekarang';
+  }
 }
-// Tampilkan modal dengan flex agar konten terlihat
-document.getElementById('modalNonaktifDomain').addEventListener('click', function(e) {
-  if (e.target === this) this.classList.add('hidden');
-});
-document.querySelector('[onclick*="modalNonaktifDomain"]') &&
-  document.querySelector('[onclick*="modalNonaktifDomain"]').addEventListener('click', function() {
-    const modal = document.getElementById('modalNonaktifDomain');
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
-  });
+
+function showDomainToast(msg, color) {
+  let t = document.getElementById('domainToast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'domainToast';
+    t.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);transition:opacity .3s;max-width:360px;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = color === 'green' ? '#16a34a' : '#dc2626';
+  t.style.color = '#fff';
+  t.style.opacity = '1';
+  clearTimeout(t._hide);
+  t._hide = setTimeout(() => { t.style.opacity = '0'; }, 4000);
+}
 </script>
