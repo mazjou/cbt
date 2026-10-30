@@ -6726,8 +6726,32 @@ router.get('/raport/:id', async (req, res) => {
     const subjectIdsForScore = [...new Set(classRows.map(cr => cr.raport_subject_id))];
     const classIdsForScore   = [...new Set(classRows.map(cr => cr.class_id))];
     const scoreStatusMap = {}; // key: `${subject_id}_${class_id}` => { scored, total }
+    let tpMap = {};             // key: `${subject_id}_${class_id}` => tp_count
 
     if (subjectIdsForScore.length > 0 && classIdsForScore.length > 0) {
+      // Query jumlah TP per (subject_id, class_id) untuk indikator kuning
+      const phStp = subjectIdsForScore.map((_, i) => `$${i + 1}`).join(',');
+      const phCtp = classIdsForScore.map((_, i) => `$${subjectIdsForScore.length + i + 1}`).join(',');
+      const [tpRows] = await pq(
+        `SELECT raport_subject_id AS subject_id, class_id, COUNT(*) AS tp_count
+         FROM raport_subject_kd
+         WHERE raport_subject_id IN (${phStp})
+           AND (class_id IN (${phCtp}) OR class_id IS NULL)
+         GROUP BY raport_subject_id, class_id`,
+        [...subjectIdsForScore, ...classIdsForScore]
+      );
+      const tpRows2 = tpRows;
+      for (const t of tpRows2) {
+        if (t.class_id === null) {
+          for (const cid of classIdsForScore) {
+            tpMap[`${t.subject_id}_${cid}`] = (tpMap[`${t.subject_id}_${cid}`] || 0) + Number(t.tp_count);
+          }
+        } else {
+          const k = `${t.subject_id}_${t.class_id}`;
+          tpMap[k] = (tpMap[k] || 0) + Number(t.tp_count);
+        }
+      }
+
       // Total siswa per kelas — hanya NISN plain (sistem baru)
       const phC = classIdsForScore.map((_, i) => `$${i + 1}`).join(',');
       const [totalRows] = await pq(
@@ -6777,6 +6801,8 @@ router.get('/raport/:id', async (req, res) => {
     for (const cr of classRows) {
       if (!classMap.has(cr.raport_subject_id)) classMap.set(cr.raport_subject_id, []);
       const ss = scoreStatusMap[`${cr.raport_subject_id}_${cr.class_id}`] || { scored: 0, total: 0 };
+      const hasTp = (tpMap ? (tpMap[`${cr.raport_subject_id}_${cr.class_id}`] || 0) : 0) > 0;
+      const filled = ss.total > 0 && ss.scored >= ss.total;
       classMap.get(cr.raport_subject_id).push({
         sc_id:        cr.sc_id,
         class_id:     cr.class_id,
@@ -6785,7 +6811,10 @@ router.get('/raport/:id', async (req, res) => {
         teacher_name: cr.teacher_name,
         scored:       ss.scored,
         total_siswa:  ss.total,
-        filled:       ss.total > 0 && ss.scored >= ss.total
+        has_tp:       hasTp,
+        filled:       filled,
+        // status: 'green' semua nilai, 'yellow' ada TP belum nilai, 'red' belum ada TP
+        status: filled ? 'green' : (hasTp ? 'yellow' : 'red')
       });
     }
 
