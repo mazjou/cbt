@@ -283,19 +283,19 @@
       <div class="ttd-box">
         <p>Kepala Sekolah,</p>
         <% if (schoolInfo && schoolInfo.principalSignPath) { %>
-          <div style="height:70px;display:flex;align-items:center;">
+          <div class="ttd-garis" style="height:80px;display:flex;align-items:center;overflow:hidden;">
             <img src="<%= schoolInfo.principalSignPath %>" alt="TTD Kepala Sekolah"
-              style="max-height:130px;max-width:260px;object-fit:contain;display:block;">
+              style="height:78px;max-width:240px;object-fit:contain;display:block;">
           </div>
         <% } else { %>
-          <div class="ttd-garis"></div>
+          <div class="ttd-garis" style="height:80px;"></div>
         <% } %>
         <p class="ttd-nama"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
         <p class="ttd-nip">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
       </div>
       <div class="ttd-box">
         <p>Wali Kelas,</p>
-        <div class="ttd-garis"></div>
+        <div class="ttd-garis" style="height:80px;"></div>
         <p class="ttd-nama"><%= stu.homeroom_teacher_name || '.................................' %></p>
         <p class="ttd-nip">NIP. <%= stu.homeroom_teacher_nip || '-' %></p>
       </div>
