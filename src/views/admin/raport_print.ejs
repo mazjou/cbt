@@ -66,7 +66,7 @@
     .ttd-section { display: flex; justify-content: space-between; margin-top: 20px; }
     .ttd-box { text-align: left; min-width: 180px; }
     .ttd-box p { font-size: 10pt; margin-bottom: 2px; }
-    .ttd-box .ttd-garis { height: 80px; width: 200px; } /* garis dihapus */
+    .ttd-box .ttd-garis { height: 55px; width: 200px; } /* garis dihapus */
     .ttd-box .ttd-nama { font-weight: bold; margin-top: 4px; text-decoration: underline; font-size: 10pt; }
     .ttd-box .ttd-nip { font-size: 9pt; }
 
@@ -195,12 +195,12 @@
 
     <!-- Tabel Nilai -->
     <%
-      // Hitung jumlah KD maksimal dari semua subjects
-      const maxKd = (typeof globalMaxKd !== 'undefined' && globalMaxKd > 0) ? globalMaxKd :
-        stuGroups.reduce((max, g) =>
-          (g.subjects || []).reduce((m, s) => Math.max(m, (s.kdScores || []).length), max), 0);
+      // Hitung maxKd dari KD aktual siswa ini (bukan globalMaxKd yang mencakup semua mapel)
+      // Ini mencegah kolom TP kosong yang berlebihan saat cetak semua kelas
+      const maxKd = stuGroups.reduce((max, g) =>
+        (g.subjects || []).reduce((m, s) => Math.max(m, (s.kdScores || []).length), max), 0);
       const hasKd = maxKd > 0;
-      const totalCols = hasKd ? 3 + maxKd + 1 : 4; // No + Mapel + TP1..N + Rata2/Nilai + Ket
+      const totalCols = hasKd ? 3 + maxKd + 1 : 4;
       // Nama kolom TP: pakai label custom dari admin (kdNames), fallback "TP 1", "TP 2", dst.
       const safeKdNames = [];
       for (let ki = 0; ki < maxKd; ki++) {
@@ -283,9 +283,9 @@
       <div class="ttd-box">
         <p>Kepala Sekolah,</p>
         <% if (schoolInfo && schoolInfo.principalSignPath) { %>
-          <div class="ttd-garis" style="height:80px;display:flex;align-items:center;">
+          <div class="ttd-garis" style="height:55px;position:relative;overflow:visible;">
             <img src="<%= schoolInfo.principalSignPath %>" alt="TTD Kepala Sekolah"
-              style="max-height:75px;max-width:200px;object-fit:contain;">
+              style="position:absolute;top:50%;transform:translateY(-50%);max-height:90px;max-width:220px;object-fit:contain;">
           </div>
         <% } else { %>
           <div class="ttd-garis"></div>
