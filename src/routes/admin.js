@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const bcrypt = require('bcryptjs');
 const { nanoid } = require('nanoid');
 const path = require('path');
@@ -6167,7 +6167,7 @@ router.get('/panitia/print-cards', async (req, res) => {
   }
 });
 
-// ===== RAPORT TENGAH SEMESTER =====
+// ===== Laporan Hasil Belajar Murid =====
 
 // POST /admin/raport/upload-logo - upload logo sekolah
 router.post('/raport/upload-logo', async (req, res) => {
@@ -6447,7 +6447,7 @@ router.get('/raport', async (req, res) => {
       ORDER BY p.created_at DESC
     `);
     const principalSign = (await getSetting('principal_sign')) || process.env.PRINCIPAL_SIGN || null;
-    res.render('admin/raport', { title: 'Raport Tengah Semester', user: req.session.user, periods, principalSign });
+    res.render('admin/raport', { title: 'Laporan Hasil Belajar Murid', user: req.session.user, periods, principalSign });
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal memuat data raport.');
@@ -7105,7 +7105,7 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
     const schoolCity = period.report_city || getSchoolCity();
 
     res.render('admin/raport_print', {
-      title: 'Raport Tengah Semester',
+      title: 'Laporan Hasil Belajar Murid',
       layout: false,
       student,
       period,
@@ -7306,7 +7306,7 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
     const schoolCity = period.report_city || getSchoolCity();
 
     res.render('admin/raport_print', {
-      title: 'Raport Tengah Semester - Semua Siswa',
+      title: 'Laporan Hasil Belajar Murid - Semua Siswa',
       layout: false,
       student: allStudents[0],
       period,

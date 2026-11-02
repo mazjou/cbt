@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
@@ -66,7 +66,7 @@
     .ttd-section { display: flex; justify-content: space-between; margin-top: 20px; }
     .ttd-box { text-align: left; min-width: 180px; }
     .ttd-box p { font-size: 10pt; margin-bottom: 2px; }
-    .ttd-box .ttd-garis { height: 55px; width: 160px; } /* garis dihapus */
+    .ttd-box .ttd-garis { height: 80px; width: 200px; } /* garis dihapus */
     .ttd-box .ttd-nama { font-weight: bold; margin-top: 4px; text-decoration: underline; font-size: 10pt; }
     .ttd-box .ttd-nip { font-size: 9pt; }
 
@@ -165,7 +165,7 @@
 
     <!-- Judul -->
     <div class="judul">
-      <h2>Laporan Tengah Semester</h2>
+      <h2>Laporan Hasil Belajar Murid</h2>
       <p>Semester <%= period.semester %> Tahun Pelajaran <%= period.school_year %></p>
     </div>
 
@@ -283,9 +283,9 @@
       <div class="ttd-box">
         <p>Kepala Sekolah,</p>
         <% if (schoolInfo && schoolInfo.principalSignPath) { %>
-          <div class="ttd-garis" style="height:60px;display:flex;align-items:center;">
+          <div class="ttd-garis" style="height:80px;display:flex;align-items:center;">
             <img src="<%= schoolInfo.principalSignPath %>" alt="TTD Kepala Sekolah"
-              style="max-height:56px;max-width:150px;object-fit:contain;">
+              style="max-height:75px;max-width:200px;object-fit:contain;">
           </div>
         <% } else { %>
           <div class="ttd-garis"></div>

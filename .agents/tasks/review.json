@@ -1,0 +1,7 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    "Empty uniqueClassIds in print-all — If all students in a print run have class_id = NULL, uniqueClassIds is [] and the ANY('{}') arm matches nothing, silently dropping class-scoped TP rows (legacy NULL rows still appear). Add a guard when uniqueClassIds.length === 0 to avoid this silent exclusion."
+  ],
+  "reviewDoc": "d:\\WEBSITE\\cbt\\.agents\\tasks\\review.md"
+}

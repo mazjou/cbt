@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const { nanoid } = require('nanoid');
 const path = require('path');
 const fs = require('fs');
@@ -4763,7 +4763,7 @@ router.get('/exams/:id/export', async (req, res) => {
   }
 });
 
-// ===== RAPORT TENGAH SEMESTER =====
+// ===== Laporan Hasil Belajar Murid =====
 
 // GET /teacher/raport - daftar periode aktif + mapel yang diampu guru ini (via raport_subject_classes)
 router.get('/raport', async (req, res) => {
@@ -4918,7 +4918,7 @@ router.get('/raport', async (req, res) => {
       SELECT id, name, semester, school_year FROM raport_periods WHERE is_active = true LIMIT 1
     `).catch(() => [[null]]);
 
-    res.render('teacher/raport', { title: 'Raport Tengah Semester', user, periods, homeroomClass: homeroomClass || null, activePeriod: activePeriod || null });
+    res.render('teacher/raport', { title: 'Laporan Hasil Belajar Murid', user, periods, homeroomClass: homeroomClass || null, activePeriod: activePeriod || null });
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal memuat data raport.');
