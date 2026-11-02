@@ -121,7 +121,7 @@
       <h3 class="font-bold text-slate-800">Tanda Tangan Kepala Sekolah</h3>
       <p class="text-xs text-slate-500">Gambar TTD akan tampil di bagian bawah raport. Gunakan gambar PNG transparan untuk hasil terbaik. Max 2MB.</p>
     </div>
-    <% const signPath = process.env.PRINCIPAL_SIGN; %>
+    <% const signPath = locals.principalSign || null; %>
     <% if (signPath) { %>
       <div class="ml-auto">
         <img src="<%= signPath %>" alt="TTD Kepala Sekolah" class="h-14 object-contain rounded-xl border border-slate-200 shadow-sm bg-slate-50 px-2" />

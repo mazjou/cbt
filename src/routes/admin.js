@@ -12,6 +12,25 @@ const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 const router = express.Router();
 router.use(requireRole('ADMIN'));
 
+// ── Helper: baca/simpan setting sekolah dari DB (persistent) ─────────────────
+async function getSetting(key, fallback = null) {
+  try {
+    const result = await pool.query(`SELECT value FROM school_settings WHERE key=$1`, [key]);
+    const row = result[0]?.[0] || result.rows?.[0];
+    return row?.value || fallback;
+  } catch (_) { return fallback; }
+}
+async function setSetting(key, value) {
+  try {
+    await pool.query(
+      `INSERT INTO school_settings (key, value, updated_at) VALUES ($1,$2,NOW())
+       ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value, updated_at=NOW()`,
+      [key, value]
+    );
+    return true;
+  } catch (_) { return false; }
+}
+
 // SQL untuk urut kelas natural: X < XI < XII, lalu jurusan alfabet, lalu nomor
 const CLASS_ORDER_SQL = `
   CASE
@@ -6267,16 +6286,16 @@ router.post('/raport/upload-watermark', async (req, res) => {
 // POST /admin/raport/upload-ttd-kepsek - upload tanda tangan kepala sekolah
 router.post('/raport/upload-ttd-kepsek', async (req, res) => {
   const multer  = require('multer');
-  const path    = require('path');
+  const pathMod = require('path');
   const fs      = require('fs');
 
-  const imgDir = path.join(__dirname, '..', 'public', 'images');
-  fs.mkdirSync(imgDir, { recursive: true });
+  const imgDir = pathMod.join(__dirname, '..', 'public', 'images');
+  try { fs.mkdirSync(imgDir, { recursive: true }); } catch(_) {}
 
   const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, imgDir),
     filename:    (req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase() || '.png';
+      const ext = pathMod.extname(file.originalname).toLowerCase() || '.png';
       cb(null, 'principal-sign' + ext);
     }
   });
@@ -6298,22 +6317,40 @@ router.post('/raport/upload-ttd-kepsek', async (req, res) => {
       req.flash('error', 'Pilih file gambar TTD terlebih dahulu.');
       return res.redirect('/admin/raport');
     }
+
     const signWebPath = '/public/images/' + req.file.filename;
-    // Update .env
-    try {
-      const envPath = path.join(__dirname, '..', '..', '.env');
-      let envContent = fs.readFileSync(envPath, 'utf8');
-      if (envContent.includes('PRINCIPAL_SIGN=')) {
-        envContent = envContent.replace(/PRINCIPAL_SIGN=.*/g, `PRINCIPAL_SIGN=${signWebPath}`);
-      } else {
-        envContent += `\nPRINCIPAL_SIGN=${signWebPath}`;
+    console.log('[TTD Upload] Saved to:', req.file.path, '| web path:', signWebPath);
+
+    // Set langsung ke process.env agar aktif tanpa restart
+    process.env.PRINCIPAL_SIGN = signWebPath;
+
+    // Simpan ke DB (persistent, tidak hilang saat restart)
+    await setSetting('principal_sign', signWebPath);
+
+    // Update .env — coba berbagai kemungkinan lokasi
+    const possibleEnvPaths = [
+      pathMod.join(process.cwd(), '.env'),
+      pathMod.join(__dirname, '..', '..', '.env'),
+      '/cbt/.env',
+    ];
+    for (const envPath of possibleEnvPaths) {
+      try {
+        if (!fs.existsSync(envPath)) continue;
+        let envContent = fs.readFileSync(envPath, 'utf8');
+        if (envContent.includes('PRINCIPAL_SIGN=')) {
+          envContent = envContent.replace(/PRINCIPAL_SIGN=.*/g, `PRINCIPAL_SIGN=${signWebPath}`);
+        } else {
+          envContent = envContent.trimEnd() + `\nPRINCIPAL_SIGN=${signWebPath}\n`;
+        }
+        fs.writeFileSync(envPath, envContent);
+        console.log('[TTD Upload] .env updated at:', envPath);
+        break;
+      } catch (e) {
+        console.warn('[TTD Upload] Cannot update', envPath, ':', e.message);
       }
-      fs.writeFileSync(envPath, envContent);
-      process.env.PRINCIPAL_SIGN = signWebPath;
-    } catch (e) {
-      console.error('Failed to update .env PRINCIPAL_SIGN:', e.message);
     }
-    req.flash('success', 'Tanda tangan kepala sekolah berhasil diupload.');
+
+    req.flash('success', 'TTD kepala sekolah berhasil diupload dan langsung aktif.');
     res.redirect('/admin/raport');
   });
 });
@@ -6409,7 +6446,8 @@ router.get('/raport', async (req, res) => {
       GROUP BY p.id
       ORDER BY p.created_at DESC
     `);
-    res.render('admin/raport', { title: 'Raport Tengah Semester', user: req.session.user, periods });
+    const principalSign = (await getSetting('principal_sign')) || process.env.PRINCIPAL_SIGN || null;
+    res.render('admin/raport', { title: 'Raport Tengah Semester', user: req.session.user, periods, principalSign });
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal memuat data raport.');
@@ -7049,7 +7087,7 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       principalNip: process.env.PRINCIPAL_NIP || '',
       logoPath: process.env.SCHOOL_LOGO || null,
       watermarkPath: process.env.SCHOOL_WATERMARK || process.env.SCHOOL_LOGO || null,
-      principalSignPath: process.env.PRINCIPAL_SIGN || null
+      principalSignPath: (await getSetting('principal_sign')) || process.env.PRINCIPAL_SIGN || null
     };
 
     // Ambil kepala sekolah dari DB (role PRINCIPAL) jika ada
@@ -7249,7 +7287,8 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
       principalName: process.env.PRINCIPAL_NAME || '',
       principalNip: process.env.PRINCIPAL_NIP || '',
       logoPath: process.env.SCHOOL_LOGO || null,
-      watermarkPath: process.env.SCHOOL_WATERMARK || process.env.SCHOOL_LOGO || null
+      watermarkPath: process.env.SCHOOL_WATERMARK || process.env.SCHOOL_LOGO || null,
+      principalSignPath: (await getSetting('principal_sign')) || process.env.PRINCIPAL_SIGN || null
     };
 
     // Ambil kepala sekolah dari DB

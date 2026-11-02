@@ -76,6 +76,12 @@ async function main() {
     `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS start_at TIMESTAMP NULL`,
     `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS end_at TIMESTAMP NULL`,
     `ALTER TABLE exam_classes ADD COLUMN IF NOT EXISTS duration_minutes INT NULL`,
+    // Tabel konfigurasi sekolah (persistent, tidak hilang saat restart)
+    `CREATE TABLE IF NOT EXISTS school_settings (
+      key   VARCHAR(100) PRIMARY KEY,
+      value TEXT,
+      updated_at TIMESTAMP DEFAULT NOW()
+    )`,
     // Tambah nilai WEB ke enum embed_type jika belum ada
     `DO $$ BEGIN ALTER TYPE embed_type ADD VALUE IF NOT EXISTS 'WEB'; EXCEPTION WHEN others THEN NULL; END $$`,
     // Material multi-kelas (junction table)
