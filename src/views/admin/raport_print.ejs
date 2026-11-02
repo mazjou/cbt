@@ -282,7 +282,14 @@
     <div class="ttd-section" style="margin-top: <%= hasDate ? '4px' : '20px' %>;">
       <div class="ttd-box">
         <p>Kepala Sekolah,</p>
-        <div class="ttd-garis"></div>
+        <% if (schoolInfo && schoolInfo.principalSignPath) { %>
+          <div class="ttd-garis" style="height:60px;display:flex;align-items:center;justify-content:center;">
+            <img src="<%= schoolInfo.principalSignPath %>" alt="TTD Kepala Sekolah"
+              style="max-height:56px;max-width:150px;object-fit:contain;">
+          </div>
+        <% } else { %>
+          <div class="ttd-garis"></div>
+        <% } %>
         <p class="ttd-nama"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
         <p class="ttd-nip">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
       </div>

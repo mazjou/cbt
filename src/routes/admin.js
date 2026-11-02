@@ -6264,6 +6264,60 @@ router.post('/raport/upload-watermark', async (req, res) => {
   });
 });
 
+// POST /admin/raport/upload-ttd-kepsek - upload tanda tangan kepala sekolah
+router.post('/raport/upload-ttd-kepsek', async (req, res) => {
+  const multer  = require('multer');
+  const path    = require('path');
+  const fs      = require('fs');
+
+  const imgDir = path.join(__dirname, '..', 'public', 'images');
+  fs.mkdirSync(imgDir, { recursive: true });
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, imgDir),
+    filename:    (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || '.png';
+      cb(null, 'principal-sign' + ext);
+    }
+  });
+  const upload = multer({
+    storage,
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      if (!file.mimetype.startsWith('image/')) return cb(new Error('Hanya file gambar yang diizinkan'));
+      cb(null, true);
+    }
+  }).single('ttd');
+
+  upload(req, res, async (err) => {
+    if (err) {
+      req.flash('error', 'Upload gagal: ' + err.message);
+      return res.redirect('/admin/raport');
+    }
+    if (!req.file) {
+      req.flash('error', 'Pilih file gambar TTD terlebih dahulu.');
+      return res.redirect('/admin/raport');
+    }
+    const signWebPath = '/public/images/' + req.file.filename;
+    // Update .env
+    try {
+      const envPath = path.join(__dirname, '..', '..', '.env');
+      let envContent = fs.readFileSync(envPath, 'utf8');
+      if (envContent.includes('PRINCIPAL_SIGN=')) {
+        envContent = envContent.replace(/PRINCIPAL_SIGN=.*/g, `PRINCIPAL_SIGN=${signWebPath}`);
+      } else {
+        envContent += `\nPRINCIPAL_SIGN=${signWebPath}`;
+      }
+      fs.writeFileSync(envPath, envContent);
+      process.env.PRINCIPAL_SIGN = signWebPath;
+    } catch (e) {
+      console.error('Failed to update .env PRINCIPAL_SIGN:', e.message);
+    }
+    req.flash('success', 'Tanda tangan kepala sekolah berhasil diupload.');
+    res.redirect('/admin/raport');
+  });
+});
+
 // GET /admin/raport/:period_id/tp-labels - edit nama kolom TP per periode
 router.get('/raport/:period_id/tp-labels', async (req, res) => {
   const { period_id } = req.params;
@@ -6994,7 +7048,8 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       principalName: process.env.PRINCIPAL_NAME || '',
       principalNip: process.env.PRINCIPAL_NIP || '',
       logoPath: process.env.SCHOOL_LOGO || null,
-      watermarkPath: process.env.SCHOOL_WATERMARK || process.env.SCHOOL_LOGO || null
+      watermarkPath: process.env.SCHOOL_WATERMARK || process.env.SCHOOL_LOGO || null,
+      principalSignPath: process.env.PRINCIPAL_SIGN || null
     };
 
     // Ambil kepala sekolah dari DB (role PRINCIPAL) jika ada

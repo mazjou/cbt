@@ -109,6 +109,43 @@
   <% } %>
 </div>
 
+<!-- Card Upload TTD Kepala Sekolah -->
+<div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-5 mb-6">
+  <div class="flex items-center gap-3 mb-4">
+    <div class="bg-emerald-100 rounded-xl p-2">
+      <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+      </svg>
+    </div>
+    <div>
+      <h3 class="font-bold text-slate-800">Tanda Tangan Kepala Sekolah</h3>
+      <p class="text-xs text-slate-500">Gambar TTD akan tampil di bagian bawah raport. Gunakan gambar PNG transparan untuk hasil terbaik. Max 2MB.</p>
+    </div>
+    <% const signPath = process.env.PRINCIPAL_SIGN; %>
+    <% if (signPath) { %>
+      <div class="ml-auto">
+        <img src="<%= signPath %>" alt="TTD Kepala Sekolah" class="h-14 object-contain rounded-xl border border-slate-200 shadow-sm bg-slate-50 px-2" />
+      </div>
+    <% } else { %>
+      <div class="ml-auto w-20 h-14 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs">
+        TTD
+      </div>
+    <% } %>
+  </div>
+  <form action="/admin/raport/upload-ttd-kepsek" method="POST" enctype="multipart/form-data" class="flex items-center gap-3">
+    <input type="file" name="ttd" accept="image/*" required
+      class="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2 text-sm file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200 focus:outline-none focus:border-emerald-400" />
+    <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold text-sm shadow-md hover:from-emerald-600 hover:to-teal-700 transition-all whitespace-nowrap">
+      Upload TTD
+    </button>
+  </form>
+  <% if (signPath) { %>
+    <p class="text-xs text-emerald-600 mt-2">✅ TTD aktif: <code class="bg-slate-100 px-1 rounded"><%= signPath %></code></p>
+  <% } else { %>
+    <p class="text-xs text-amber-600 mt-2">⚠️ Belum ada TTD kepala sekolah. Upload gambar TTD agar tampil di raport.</p>
+  <% } %>
+</div>
+
 <!-- Tabel Daftar Periode -->
 <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
   <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
