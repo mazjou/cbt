@@ -70,7 +70,7 @@
     .ttd-box p { font-size: 10pt; margin-bottom: 2px; }
     .ttd-box .ttd-garis { height: 55px; width: 200px; } /* garis dihapus */
     .ttd-box .ttd-nama { font-weight: bold; margin-top: 4px; text-decoration: underline; font-size: 10pt; }
-    .ttd-box .ttd-nip { font-size: 9pt; }
+    .ttd-box .ttd-nip { font-size: 10pt; }
 
     @media print {
       @page { size: A4 portrait; margin: 1.5cm; }
@@ -309,7 +309,7 @@
         <div style="height:55px;"></div>
       <% } %>
       <p class="ttd-nama" style="text-align:center;font-weight:bold;text-decoration:underline;font-size:10pt;"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
-      <p class="ttd-nip" style="text-align:center;font-size:9pt;">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
+      <p class="ttd-nip" style="text-align:center;">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
     </div>
   </div>
 <% }) %>
