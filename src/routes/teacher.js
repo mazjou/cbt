@@ -5400,7 +5400,7 @@ router.get('/raport/:period_id/:subject_id/:class_id', async (req, res) => {
     }
 
     res.render('teacher/raport_scores', {
-      title:      'Input Nilai Raport',
+      title:      'Input Nilai Laporan',
       user,
       subject:    scRow,
       period_id,
