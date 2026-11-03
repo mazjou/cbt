@@ -101,12 +101,12 @@
     } catch(e) { return '-'; }
   }
 
-  // Helper: format nilai (buang trailing zero, misal 90.00 → 90, 89.67 → 89.67)
+  // Helper: format nilai — bulat tanpa angka di belakang koma
   function formatNilai(n) {
     if (n === null || n === undefined || n === '') return '-';
     const num = parseFloat(n);
     if (isNaN(num)) return '-';
-    return parseFloat(num.toFixed(2)).toString();
+    return Math.round(num).toString();
   }
 
   // Data yang akan dicetak
@@ -126,7 +126,7 @@
         }
       });
     });
-    const avgScore = scoreCount > 0 ? (totalScore / scoreCount).toFixed(2) : '-';
+    const avgScore = scoreCount > 0 ? Math.round(totalScore / scoreCount).toString() : '-';
     let noUrut = 0;
   %>
   <div class="raport-page">
@@ -248,7 +248,7 @@
               <td><%= s.name %></td>
               <% if (hasKd) { %>
                 <% for (var ki2 = 0; ki2 < maxKd; ki2++) { %>
-                  <td class="nilai"><%= (s.kdScores && s.kdScores[ki2] && s.kdScores[ki2].score !== null && s.kdScores[ki2].score !== undefined) ? parseFloat(parseFloat(s.kdScores[ki2].score).toFixed(2)).toString() : '-' %></td>
+                  <td class="nilai"><%= (s.kdScores && s.kdScores[ki2] && s.kdScores[ki2].score !== null && s.kdScores[ki2].score !== undefined) ? Math.round(parseFloat(s.kdScores[ki2].score)).toString() : '-' %></td>
                 <% } %>
                 <td class="nilai"><%= formatNilai(s.score) %></td>
               <% } else { %>
@@ -261,7 +261,7 @@
         <% if (scoreCount > 0) { %>
           <tr class="summary">
             <td colspan="<%= hasKd ? 2 + maxKd : 2 %>" style="text-align:right;">Jumlah Nilai</td>
-            <td class="nilai"><%= totalScore.toFixed(2) %></td>
+            <td class="nilai"><%= Math.round(totalScore) %></td>
             <td></td>
           </tr>
           <tr class="summary">
