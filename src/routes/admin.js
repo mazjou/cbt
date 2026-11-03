@@ -7078,7 +7078,7 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
       address: process.env.SCHOOL_ADDRESS || 'Demangan Setonorejo Kras Kediri Kode Pos 64172',
       headerLine1: process.env.SCHOOL_HEADER1 || 'PEMERINTAH PROVINSI JAWA TIMUR',
       headerLine2: process.env.SCHOOL_HEADER2 || 'DINAS PENDIDIKAN',
-      headerLine3: process.env.SCHOOL_HEADER3 || 'SEKOLAH MENENGAH KEJURUAN NEGERI 1',
+      headerLine3: process.env.SCHOOL_HEADER3 || 'SEKOLAH MENENGAH KEJURUAN NEGERI 1 KRAS',
       schoolShortName: process.env.SCHOOL_SHORT_NAME || 'KRAS',
       city: process.env.SCHOOL_CITY || 'KEDIRI',
       email: process.env.SCHOOL_EMAIL || 'smkn1kras@gmail.com',

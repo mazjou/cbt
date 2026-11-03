@@ -146,8 +146,8 @@
       <div class="kop-text">
         <p class="provinsi"><%= schoolInfo && schoolInfo.headerLine1 ? schoolInfo.headerLine1 : 'PEMERINTAH PROVINSI JAWA TIMUR' %></p>
         <p class="dinas"><%= schoolInfo && schoolInfo.headerLine2 ? schoolInfo.headerLine2 : 'DINAS PENDIDIKAN' %></p>
-        <p class="sekolah"><%= schoolInfo && schoolInfo.headerLine3 ? schoolInfo.headerLine3 : 'SEKOLAH MENENGAH KEJURUAN NEGERI 1' %></p>
-        <p class="kota-nama"><%= (schoolInfo && schoolInfo.schoolShortName ? schoolInfo.schoolShortName.toUpperCase() : 'KRAS').split('').join(' ') %></p>
+        <p class="sekolah"><%= schoolInfo && schoolInfo.headerLine3 ? schoolInfo.headerLine3 : 'SEKOLAH MENENGAH KEJURUAN NEGERI 1 KRAS' %></p>
+        <p class="kota-nama">KABUPATEN KEDIRI</p>
         <p class="alamat">Alamat : <%= schoolInfo && schoolInfo.address ? schoolInfo.address : '' %></p>
         <%
           const email = (schoolInfo && schoolInfo.email) ? schoolInfo.email : (process.env.SCHOOL_EMAIL || '');
