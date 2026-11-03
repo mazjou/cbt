@@ -13,7 +13,7 @@
           </svg>
         </div>
         <div>
-          <h1 class="text-2xl font-bold text-white tracking-tight">Input Nilai â€” <%= subject.subject_name %></h1>
+          <h1 class="text-2xl font-bold text-white tracking-tight">Input Nilai &mdash; <%= subject.subject_name %></h1>
           <p class="mt-1 text-blue-100">
             <%= subject.group_name %> &bull; <%= subject.period_name %> &bull;
             Sem. <%= subject.semester %> T.P. <%= subject.school_year %> &bull;
@@ -66,7 +66,7 @@
       </div>
     <% } else { %>
       <div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
-        <strong>Belum ada TP</strong> â€” tambahkan TP terlebih dahulu untuk bisa input nilai.
+        <strong>Belum ada TP</strong> &mdash; tambahkan TP terlebih dahulu untuk bisa input nilai.
       </div>
     <% } %>
 
@@ -97,7 +97,7 @@
 <div class="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
   <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
     <div>
-      <h2 class="text-lg font-bold text-slate-800">Input Nilai Siswa â€” <%= students.length %> siswa</h2>
+      <h2 class="text-lg font-bold text-slate-800">Input Nilai Murid &mdash; <%= students.length %> murid</h2>
       <p class="text-sm text-indigo-600 font-medium mt-0.5">Kelas: <%= subject.class_name %></p>
     </div>
     <span class="text-sm text-slate-500">Kosongkan nilai jika belum diisi</span>
