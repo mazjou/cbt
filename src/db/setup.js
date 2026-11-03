@@ -43,6 +43,8 @@ async function main() {
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_photo VARCHAR(255) NULL`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS tempat_lahir VARCHAR(100) NULL`,
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS tanggal_lahir DATE NULL`,
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS nama_ayah VARCHAR(200) NULL`,
+    `ALTER TABLE sdms_siswa ADD COLUMN IF NOT EXISTS nama_ayah VARCHAR(200) NULL`,
     `ALTER TABLE options ADD COLUMN IF NOT EXISTS option_image VARCHAR(255) NULL`,
     `ALTER TABLE assignment_submissions ADD COLUMN IF NOT EXISTS link_url VARCHAR(500) NULL`,
     `ALTER TABLE attempts ADD COLUMN IF NOT EXISTS submission_status VARCHAR(20) NULL DEFAULT 'PENDING'`,

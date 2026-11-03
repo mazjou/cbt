@@ -538,6 +538,11 @@
       </div>
 
       <div>
+        <label class="text-sm text-slate-600">Nama Orang Tua (Ayah) <span class="text-slate-400 font-normal">(dari SDMS, bisa edit manual)</span></label>
+        <input name="nama_ayah" id="um_nama_ayah" placeholder="Nama ayah siswa" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+      </div>
+
+      <div>
         <label class="text-sm text-slate-600">Nomor Peserta <span class="text-slate-400 font-normal">(opsional - tampil di kartu cetak)</span></label>
         <input name="nomor_peserta" id="um_nomor_peserta" placeholder="Contoh: 001, 2024-001" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
@@ -835,7 +840,7 @@
     const elRole = document.getElementById('um_role');
     const elClassId = document.getElementById('um_class_id');
     const elActive = document.getElementById('um_is_active');
-    const elNewPwd = document.getElementById('um_new_password');
+    const elNamaAyah = document.getElementById('um_nama_ayah');
 
     function showModal() {
       modal.classList.remove('hidden');
@@ -882,6 +887,7 @@
         elRole.value = j.user.role || 'STUDENT';
         elClassId.value = (j.user.class_id === null || j.user.class_id === undefined) ? '' : String(j.user.class_id);
         elActive.value = String(j.user.is_active ? 1 : 0);
+        if (elNamaAyah) elNamaAyah.value = j.user.nama_ayah || '';
         showModal();
       } catch (e) {
         alert(e.message || 'Gagal memuat data pengguna.');
@@ -912,6 +918,7 @@
           role: elRole.value,
           class_id: elClassId.value,
           is_active: elActive.value,
+          nama_ayah: elNamaAyah ? elNamaAyah.value : '',
           new_password: elNewPwd.value
         };
         const r = await fetch(`/admin/users/${id}/ajax-update`, {

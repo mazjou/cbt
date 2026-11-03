@@ -218,7 +218,7 @@ const upsertSiswa = async (data) => {
   const existing = await q(
     `SELECT nama, nisn, nis, jenis_kelamin, jurusan_kode,
             tahun_masuk, status, tempat_lahir, tanggal_lahir::text,
-            agama, no_hp, alamat, kelas_id, kelas_nama
+            agama, no_hp, alamat, kelas_id, kelas_nama, nama_ayah
      FROM sdms_siswa WHERE sdms_id=$1`,
     [data.id]
   );
@@ -239,16 +239,19 @@ const upsertSiswa = async (data) => {
       e.no_hp         === (data.no_hp            || null) &&
       e.alamat        === (data.alamat           || null) &&
       e.kelas_id      === kelasId &&
-      e.kelas_nama    === kelasNama;
+      e.kelas_nama    === kelasNama &&
+      e.nama_ayah     === (data.nama_ayah || data.ayah?.nama || null);
     if (same) { return 'skipped'; }
   }
+
+  const namaAyah = data.nama_ayah || data.ayah?.nama || null;
 
   const rows = await q(`
     INSERT INTO sdms_siswa
       (sdms_id, nama, nisn, nis, jenis_kelamin, jurusan_kode,
        tahun_masuk, status, tempat_lahir, tanggal_lahir,
-       agama, no_hp, alamat, kelas_id, kelas_nama, is_active, synced_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,true,NOW())
+       agama, no_hp, alamat, kelas_id, kelas_nama, nama_ayah, is_active, synced_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,true,NOW())
     ON CONFLICT (sdms_id) DO UPDATE SET
       nama=EXCLUDED.nama, nisn=EXCLUDED.nisn, nis=EXCLUDED.nis,
       jenis_kelamin=EXCLUDED.jenis_kelamin,
@@ -260,6 +263,7 @@ const upsertSiswa = async (data) => {
       alamat=EXCLUDED.alamat,
       kelas_id=EXCLUDED.kelas_id,
       kelas_nama=EXCLUDED.kelas_nama,
+      nama_ayah=EXCLUDED.nama_ayah,
       is_active=true, synced_at=NOW()
     RETURNING (xmax = 0) AS is_new
   `, [
@@ -268,7 +272,7 @@ const upsertSiswa = async (data) => {
     data.tahun_masuk||null, data.status||'Aktif',
     data.tempat_lahir||null, data.tanggal_lahir||null,
     data.agama||null, data.no_hp||null, data.alamat||null,
-    kelasId, kelasNama,
+    kelasId, kelasNama, namaAyah,
   ]);
 
   const isNew = rows[0]?.is_new;
@@ -549,13 +553,14 @@ const handleBulkSync = async (payload) => {
     warn(`Gagal sync users siswa: ${e.message}`);
   }
 
-  // Sync tempat_lahir & tanggal_lahir dari sdms_siswa ke tabel users (untuk user @domain juga)
+  // Sync tempat_lahir & tanggal_lahir & nama_ayah dari sdms_siswa ke tabel users
   try {
     await q(`
       UPDATE users u
       SET
         tempat_lahir  = COALESCE(ss.tempat_lahir,  u.tempat_lahir),
         tanggal_lahir = COALESCE(ss.tanggal_lahir, u.tanggal_lahir),
+        nama_ayah     = COALESCE(ss.nama_ayah,     u.nama_ayah),
         updated_at    = NOW()
       FROM sdms_siswa ss
       WHERE (
@@ -565,10 +570,10 @@ const handleBulkSync = async (payload) => {
         SPLIT_PART(u.username, '@', 1) = ss.nis
       )
         AND u.role = 'STUDENT'
-        AND (ss.tempat_lahir IS NOT NULL OR ss.tanggal_lahir IS NOT NULL)
+        AND (ss.tempat_lahir IS NOT NULL OR ss.tanggal_lahir IS NOT NULL OR ss.nama_ayah IS NOT NULL)
     `);
-    log('tempat_lahir & tanggal_lahir users siswa berhasil diupdate dari sdms_siswa');
-  } catch(e) { warn(`Gagal update TTL users: ${e.message}`); }
+    log('tempat_lahir, tanggal_lahir & nama_ayah users siswa berhasil diupdate dari sdms_siswa');
+  } catch(e) { warn(`Gagal update data siswa dari sdms: ${e.message}`); }
 
   // Nonaktifkan user LMS yang siswa SDMS-nya sudah tidak aktif (keluar/lulus/pindah)
   try {
