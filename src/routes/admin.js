@@ -1647,6 +1647,37 @@ router.get('/users', async (req, res) => {
   });
 });
 
+// POST /admin/users/sync-nama-ayah — sync nama_ayah dari sdms_siswa ke users
+router.post('/users/sync-nama-ayah', async (req, res) => {
+  const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+  try {
+    const result = await pool.query(`
+      UPDATE users u
+      SET nama_ayah = ss.nama_ayah, updated_at = NOW()
+      FROM sdms_siswa ss
+      WHERE (
+        u.username = ss.nisn OR
+        u.username = ss.nis  OR
+        SPLIT_PART(u.username, '@', 1) = ss.nisn OR
+        SPLIT_PART(u.username, '@', 1) = ss.nis
+      )
+        AND u.role = 'STUDENT'
+        AND ss.nama_ayah IS NOT NULL
+        AND ss.nama_ayah <> ''
+      RETURNING u.id
+    `);
+    const count = result[0]?.length || 0;
+    const msg = `${count} data nama orang tua berhasil disinkronkan ke LMS.`;
+    if (isAjax) return res.json({ ok: true, message: msg, count });
+    req.flash('success', msg);
+  } catch (e) {
+    console.error(e);
+    if (isAjax) return res.json({ ok: false, message: 'Gagal sync: ' + e.message });
+    req.flash('error', 'Gagal sync nama orang tua: ' + e.message);
+  }
+  res.redirect('/admin/users');
+});
+
 // POST /admin/users/bulk-deactivate-domain — nonaktifkan massal akun @domain
 router.post('/users/bulk-deactivate-domain', async (req, res) => {
   const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
@@ -7130,7 +7161,7 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
     if (!period) return res.status(404).send('Periode tidak ditemukan.');
 
     let studentQuery = `
-      SELECT DISTINCT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir,
+      SELECT DISTINCT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir, u.nama_ayah,
              c.name AS class_name, u.class_id,
              c.homeroom_teacher_name, c.homeroom_teacher_nip
       FROM users u
