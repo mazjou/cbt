@@ -276,20 +276,14 @@
 
     <!-- Tanda Tangan: Kepala Sekolah KIRI, Wali Kelas KANAN -->
     <% var hasDate = typeof reportDateFormatted !== 'undefined' && reportDateFormatted; %>
+
+    <%# Baris 1: Orang Tua (kiri) + Tanggal+Wali Kelas (kanan) %>
     <div class="ttd-section" style="margin-top:20px;">
       <div class="ttd-box" style="padding-left:2cm;">
         <% if (hasDate) { %><p style="visibility:hidden;font-size:10pt;margin-bottom:4px;">&nbsp;</p><% } %>
-        <p>Kepala Sekolah,</p>
-        <% if (schoolInfo && schoolInfo.principalSignPath) { %>
-          <div class="ttd-garis" style="height:55px;display:flex;align-items:center;overflow:visible;">
-            <img src="<%= schoolInfo.principalSignPath %>" alt="TTD Kepala Sekolah"
-              style="max-height:119px;max-width:259px;object-fit:contain;display:block;margin-left:-10mm;margin-top:5mm;">
-          </div>
-        <% } else { %>
-          <div class="ttd-garis" style="height:55px;"></div>
-        <% } %>
-        <p class="ttd-nama"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
-        <p class="ttd-nip">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
+        <p>Orang Tua / Wali Murid,</p>
+        <div class="ttd-garis" style="height:55px;"></div>
+        <p class="ttd-nama"><%= (stu.nama_ayah && stu.nama_ayah.trim()) ? stu.nama_ayah : '.................................' %></p>
       </div>
       <div class="ttd-box">
         <% if (hasDate) { %>
@@ -300,6 +294,22 @@
         <p class="ttd-nama"><%= stu.homeroom_teacher_name || '.................................' %></p>
         <p class="ttd-nip">NIP. <%= stu.homeroom_teacher_nip || '-' %></p>
       </div>
+    </div>
+
+    <%# Baris 2: Mengetahui Kepala Sekolah (center) %>
+    <div style="text-align:center; margin-top:18px;">
+      <p style="font-size:10pt; margin-bottom:2px;">Mengetahui,</p>
+      <p style="font-size:10pt; margin-bottom:2px;">Kepala SMK Negeri 1 Kras</p>
+      <% if (schoolInfo && schoolInfo.principalSignPath) { %>
+        <div style="height:55px;display:flex;align-items:center;justify-content:center;overflow:visible;margin:0 auto;">
+          <img src="<%= schoolInfo.principalSignPath %>" alt="TTD Kepala Sekolah"
+            style="max-height:119px;max-width:259px;object-fit:contain;display:block;margin-left:-10mm;margin-top:5mm;">
+        </div>
+      <% } else { %>
+        <div style="height:55px;"></div>
+      <% } %>
+      <p class="ttd-nama" style="text-align:center;"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
+      <p class="ttd-nip" style="text-align:center;">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
     </div>
   </div>
 <% }) %>

@@ -6961,9 +6961,7 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
     // Ambil data siswa — prioritaskan user NISN plain (tanpa @domain)
     // Jika student_id milik user @domain, fallback ke user NISN plain dari SDMS sync
     const [[studentById]] = await pq(`
-      SELECT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir,
-             c.name AS class_name, u.class_id,
-             c.homeroom_teacher_name, c.homeroom_teacher_nip
+      SELECT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir, u.nama_ayah, c.name AS class_name, u.class_id, c.homeroom_teacher_name, c.homeroom_teacher_nip
       FROM users u
       LEFT JOIN classes c ON c.id = u.class_id
       WHERE u.id = $1
@@ -6976,9 +6974,7 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
     if (student && student.username && student.username.includes('@')) {
       const nisnPlain = student.username.split('@')[0];
       const [[plainUser]] = await pq(`
-        SELECT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir,
-               c.name AS class_name, u.class_id,
-               c.homeroom_teacher_name, c.homeroom_teacher_nip
+        SELECT u.id, u.full_name, u.username, u.tanggal_lahir, u.tempat_lahir, u.nama_ayah, c.name AS class_name, u.class_id, c.homeroom_teacher_name, c.homeroom_teacher_nip
         FROM users u
         LEFT JOIN classes c ON c.id = u.class_id
         WHERE u.username = $1 AND u.role = 'STUDENT'
