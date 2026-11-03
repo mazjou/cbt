@@ -5260,7 +5260,7 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
 router.delete('/raport/kd/:kd_id', async (req, res) => {
   const user = req.session.user;
   try {
-    // Validasi guru berhak atas KD ini (ADMIN bisa hapus KD siapapun)
+    // Validasi guru berhak atas TP ini (ADMIN bisa hapus KD siapapun)
     const isAdmin = user.role === 'ADMIN';
     const [[kd]] = await pool.query(`
       SELECT rsk.id FROM raport_subject_kd rsk
@@ -5314,17 +5314,17 @@ router.post('/raport/:period_id/:subject_id/kd', async (req, res) => {
       }
     }
     if (!kd_name || !kd_name.trim()) {
-      req.flash('error', 'Nama KD tidak boleh kosong.');
+      req.flash('error', 'Nama TP tidak boleh kosong.');
       return res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
     }
     await pool.query(
       `INSERT INTO raport_subject_kd (raport_subject_id, kd_name, sort_order, class_id) VALUES ($1, $2, $3, $4)`,
       [subject_id, kd_name.trim(), parseInt(sort_order) || 0, class_id || null]
     );
-    req.flash('success', 'KD berhasil ditambahkan.');
+    req.flash('success', 'TP berhasil ditambahkan.');
   } catch(e) {
     console.error(e);
-    req.flash('error', 'Gagal menambah KD: ' + e.message);
+    req.flash('error', 'Gagal menambah TP: ' + e.message);
   }
   res.redirect(`/teacher/raport/${period_id}/${subject_id}/${class_id}`);
 });
