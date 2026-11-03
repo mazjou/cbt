@@ -30,12 +30,13 @@
     .kop-logo { width: 100px; height: 100px; object-fit: contain; flex-shrink: 0; }
     .kop-logo-placeholder { width: 100px; height: 100px; border: 2px solid #999; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10pt; color: #999; flex-shrink: 0; }
     .kop-text { text-align: center; flex: 1; }
-    .kop-text p { margin: 0; padding: 0; line-height: 1.35; }
+    .kop-text p { margin: 0; padding: 0; line-height: 1.15; }
     .kop-text .provinsi  { font-size: 10pt; font-weight: normal; }
     .kop-text .dinas     { font-size: 10pt; font-weight: normal; }
     .kop-text .sekolah   { font-size: 13pt; font-weight: bold; text-transform: uppercase; }
     .kop-text .kota-nama { font-size: 13pt; font-weight: bold; letter-spacing: 4px; text-transform: uppercase; }
     .kop-text .alamat    { font-size: 8pt; }
+    .kop-text .postel    { font-size: 8.5pt; }
     .kop-text .kota-kota { font-size: 12pt; font-weight: bold; letter-spacing: 5px; margin-top: 3px; display: block; }
     /* Watermark */
     .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; height: 380px; opacity: 0.08; pointer-events: none; z-index: 0; }
@@ -154,7 +155,7 @@
           const web   = (schoolInfo && (schoolInfo.website || schoolInfo.web)) ? (schoolInfo.website || schoolInfo.web) : (process.env.SCHOOL_WEB || '');
         %>
         <% if (email || web) { %>
-        <p class="alamat">Pos.el : <u><%= email %></u>&nbsp;&nbsp; Laman : <u><%= web %></u></p>
+        <p class="postel">Pos.el : <u><%= email %></u>&nbsp;&nbsp;&nbsp; Laman : <u><%= web %></u></p>
         <% } %>
         <!-- KEDIRI teks di dalam kop-text agar lurus -->
         <p style="font-size:12pt;font-weight:bold;letter-spacing:5px;margin:3px 0 0 0;padding:0;"><%= (schoolInfo && schoolInfo.city ? schoolInfo.city.toUpperCase() : 'KEDIRI').split('').join(' ') %></p>
