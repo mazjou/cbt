@@ -274,7 +274,12 @@
 
     <!-- Tanda Tangan: Kepala Sekolah KIRI, Wali Kelas KANAN -->
     <% var hasDate = typeof reportDateFormatted !== 'undefined' && reportDateFormatted; %>
-    <div class="ttd-section" style="margin-top: 20px;">
+    <% if (hasDate) { %>
+    <div style="text-align:right; margin-top:20px; margin-bottom:4px; font-size:10pt;">
+      <%= schoolCity %>, <%= reportDateFormatted %>
+    </div>
+    <% } %>
+    <div class="ttd-section" style="margin-top:<%= hasDate ? '4px' : '20px' %>;">
       <div class="ttd-box" style="padding-left:2cm;">
         <p>Kepala Sekolah,</p>
         <% if (schoolInfo && schoolInfo.principalSignPath) { %>
@@ -289,11 +294,6 @@
         <p class="ttd-nip">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
       </div>
       <div class="ttd-box">
-        <% if (hasDate) { %>
-        <p style="text-align:left;font-size:10pt;margin-bottom:4px;"><%= schoolCity %>, <%= reportDateFormatted %></p>
-        <% } else { %>
-        <p>&nbsp;</p>
-        <% } %>
         <p>Wali Kelas,</p>
         <div class="ttd-garis" style="height:55px;"></div>
         <p class="ttd-nama"><%= stu.homeroom_teacher_name || '.................................' %></p>
