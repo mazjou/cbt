@@ -14,7 +14,7 @@
         </div>
         <div>
           <h1 class="text-3xl font-bold text-white tracking-tight">Laporan Hasil Belajar Murid</h1>
-          <p class="mt-1 text-purple-100">Kelola periode raport dan struktur mata pelajaran</p>
+          <p class="mt-1 text-purple-100">Kelola periode laporan dan struktur mata pelajaran</p>
         </div>
       </div>
       <div class="flex gap-3">
@@ -44,8 +44,8 @@
       </svg>
     </div>
     <div>
-      <h3 class="font-bold text-slate-800">Logo Sekolah untuk Raport</h3>
-      <p class="text-xs text-slate-500">Logo tampil di kop surat raport. Format: PNG/JPG/SVG, max 2MB.</p>
+      <h3 class="font-bold text-slate-800">Logo Sekolah untuk Laporan</h3>
+      <p class="text-xs text-slate-500">Logo tampil di kop surat laporan. Format: PNG/JPG/SVG, max 2MB.</p>
     </div>
     <% const logoPath = process.env.SCHOOL_LOGO; %>
     <% if (logoPath) { %>
@@ -72,7 +72,7 @@
   <% } %>
 </div>
 
-<!-- Card Upload Watermark Raport -->
+<!-- Card Upload Watermark Laporan -->
 <div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-5 mb-6">
   <div class="flex items-center gap-3 mb-4">
     <div class="bg-blue-100 rounded-xl p-2">
@@ -81,13 +81,13 @@
       </svg>
     </div>
     <div>
-      <h3 class="font-bold text-slate-800">Watermark Raport</h3>
-      <p class="text-xs text-slate-500">Logo yang tampil transparan di tengah halaman raport (default: sama dengan logo kop). Format: PNG/JPG/SVG, max 2MB.</p>
+      <h3 class="font-bold text-slate-800">Watermark Laporan</h3>
+      <p class="text-xs text-slate-500">Logo yang tampil transparan di tengah halaman laporan (default: sama dengan logo kop). Format: PNG/JPG/SVG, max 2MB.</p>
     </div>
     <% const watermarkPath = process.env.SCHOOL_WATERMARK; %>
     <% if (watermarkPath) { %>
       <div class="ml-auto">
-        <img src="<%= watermarkPath %>" alt="Watermark Raport" class="h-14 w-14 object-contain rounded-xl border border-slate-200 shadow-sm" />
+        <img src="<%= watermarkPath %>" alt="Watermark Laporan" class="h-14 w-14 object-contain rounded-xl border border-slate-200 shadow-sm" />
       </div>
     <% } else { %>
       <div class="ml-auto w-14 h-14 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 text-xs">

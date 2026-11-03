@@ -1,4 +1,4 @@
-<!-- Header Banner -->
+﻿<!-- Header Banner -->
 <div class="relative rounded-2xl bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 shadow-xl mb-6">
   <div class="absolute inset-0 opacity-10">
     <div class="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -mr-32 -mt-32"></div>
@@ -29,7 +29,7 @@
           <button id="cetakBtn" type="button"
             class="inline-flex items-center gap-2 px-4 py-2 bg-white text-violet-700 font-semibold rounded-xl hover:bg-violet-50 transition-all shadow-md">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-            Cetak Raport
+            Cetak Laporan
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
           </button>
           <!-- Dropdown Menu -->
@@ -68,19 +68,19 @@
 <!-- Flash Messages -->
 <%- include('../partials/flash') %>
 
-<!-- Tanggal Cetak Raport (admin) -->
+<!-- Tanggal Cetak Laporan (admin) -->
 <div class="bg-white rounded-2xl shadow-lg border border-slate-100 p-6 mb-6">
   <h3 class="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
     <span class="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center">
       <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
     </span>
-    Tanggal Cetak Raport
+    Tanggal Cetak Laporan
   </h3>
   <p class="text-sm text-slate-600 mb-3">
     <% if (reportDateFormatted) { %>
       Tanggal saat ini: <span class="font-semibold text-slate-800"><%= reportDateFormatted %></span>
     <% } else { %>
-      <span class="text-slate-400">Belum diatur &mdash; tanggal tidak akan tampil di cetak raport.</span>
+      <span class="text-slate-400">Belum diatur &mdash; tanggal tidak akan tampil di Cetak Laporan.</span>
     <% } %>
   </p>
   <form method="POST" action="/admin/raport/<%= period.id %>/report-settings" class="flex flex-col sm:flex-row sm:items-end gap-3">
@@ -103,7 +103,7 @@
       </button>
     </div>
   </form>
-  <p class="text-xs text-slate-400 mt-2">Kota &amp; tanggal tampil di atas tanda tangan pada cetak raport. Kosongkan tanggal untuk menyembunyikan baris tersebut.</p>
+  <p class="text-xs text-slate-400 mt-2">Kota &amp; tanggal tampil di atas tanda tangan pada Cetak Laporan. Kosongkan tanggal untuk menyembunyikan baris tersebut.</p>
 </div>
 
 <!-- Ringkasan Kelas -->
@@ -210,7 +210,7 @@
                       <%# Daftar kelas terdaftar %>
                       <div class="ml-9 space-y-1" id="classes-list-<%= s.id %>">
                         <% if (!s.classes || !s.classes.length) { %>
-                          <p class="text-xs text-amber-600 italic">Belum ada kelas — tambahkan kelas agar guru bisa mengisi nilai</p>
+                          <p class="text-xs text-amber-600 italic">Belum ada kelas â€” tambahkan kelas agar guru bisa mengisi nilai</p>
                         <% } %>
                         <% (s.classes || []).forEach(sc => { %>
                           <div class="flex items-center gap-2 text-xs" id="sc-row-<%= sc.sc_id %>">
@@ -457,7 +457,7 @@ async function hapusSubjectClass(scId) {
   }
 }
 
-// Edit Mapel — hanya nama dan urutan, guru/kelas dikelola via +Tambah Kelas
+// Edit Mapel â€” hanya nama dan urutan, guru/kelas dikelola via +Tambah Kelas
 function editMapel(id, name, sortOrder) {
   document.getElementById('editMapelName').value = name;
   document.getElementById('editMapelSortOrder').value = sortOrder;
@@ -495,7 +495,7 @@ function editGrup(id, name, sortOrder) {
         <input type="number" id="editMapelSortOrder" name="sort_order" min="0"
           class="w-full px-4 py-2.5 border-2 border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all">
       </div>
-      <p class="text-xs text-slate-400">💡 Untuk mengubah guru atau kelas, gunakan tombol + Tambah Kelas di bawah mapel.</p>
+      <p class="text-xs text-slate-400">ðŸ’¡ Untuk mengubah guru atau kelas, gunakan tombol + Tambah Kelas di bawah mapel.</p>
       <div class="flex gap-3 pt-2">
         <button type="button" onclick="document.getElementById('modalEditMapel').classList.add('hidden')"
           class="flex-1 px-4 py-2.5 border-2 border-slate-200 text-slate-700 font-semibold rounded-xl hover:bg-slate-50">Batal</button>
@@ -541,7 +541,7 @@ function editGrup(id, name, sortOrder) {
 <div id="modalCariSiswa" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
     <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-      <h3 class="text-lg font-bold text-slate-800">Cari &amp; Cetak Raport Siswa</h3>
+      <h3 class="text-lg font-bold text-slate-800">Cari &amp; Cetak Laporan Siswa</h3>
       <button onclick="document.getElementById('modalCariSiswa').classList.add('hidden')"
         class="p-2 hover:bg-slate-100 rounded-lg text-slate-500">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
