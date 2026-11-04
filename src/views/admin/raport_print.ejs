@@ -92,7 +92,8 @@
       @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; }
       .no-print { display: none !important; }
-      .raport-page { display: block; position: relative; box-shadow: none; border: none; margin: 0; padding: 1.5cm; width: 100%; box-sizing: border-box; overflow: hidden; break-after: page; page-break-after: always; }
+      .page-break-wrapper { display: block; break-after: page; page-break-after: always; }
+      .raport-page { display: block; position: relative; box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; box-sizing: border-box; overflow: hidden; }
       /* watermark: absolute di tengah raport-page, tidak pakai fixed agar print preview tidak hang */
       .watermark { width: 100mm; height: 100mm; opacity: 0.07; }
       .wm-p1 { top: calc(148.5mm - 50mm); }
@@ -150,6 +151,7 @@
     const avgScore = scoreCount > 0 ? Math.round(totalScore / scoreCount).toString() : '-';
     let noUrut = 0;
   %>
+  <div class="page-break-wrapper">
   <div class="raport-page">
     <% /* Watermark logo di tengah setiap halaman */ %>
     <% const wmLogo = schoolInfo && schoolInfo.watermarkPath ? schoolInfo.watermarkPath : null; %>
@@ -332,6 +334,7 @@
       <p class="ttd-nama" style="text-align:center;font-weight:bold;text-decoration:underline;font-size:10pt;"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
       <p class="ttd-nip" style="text-align:center;">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
     </div>
+  </div>
   </div>
 <% }) %>
 
