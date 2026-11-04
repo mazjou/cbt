@@ -39,12 +39,12 @@
     .kop-text .postel    { font-size: 8pt; display: block; width: 100%; letter-spacing: 0.3px; word-spacing: 4px; }
     .kop-text .kota-kota { font-size: 12pt; font-weight: bold; letter-spacing: 5px; margin-top: 3px; display: block; }
     /* Watermark */
-    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; height: 380px; opacity: 0.08; pointer-events: none; z-index: 0; }
+    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 220px; height: 220px; opacity: 0.055; pointer-events: none; z-index: 0; filter: grayscale(100%); }
     .raport-page { position: relative; overflow: hidden; }
 
     @media print {
       /* Watermark pakai fixed agar selalu di tengah setiap halaman cetak */
-      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; height: 380px; opacity: 0.08; pointer-events: none; z-index: 0; }
+      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 220px; height: 220px; opacity: 0.055; pointer-events: none; z-index: 0; filter: grayscale(100%); }
     }
 
     /* Judul */
