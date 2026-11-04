@@ -5087,8 +5087,15 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
       website: process.env.SCHOOL_WEB || process.env.SCHOOL_WEBSITE || 'http://www.smkn1kras.sch.id',
       principalName: process.env.PRINCIPAL_NAME || '',
       principalNip: process.env.PRINCIPAL_NIP || '',
-      logoPath: process.env.SCHOOL_LOGO || null
+      logoPath: process.env.SCHOOL_LOGO || null,
+      watermarkPath: process.env.SCHOOL_WATERMARK || process.env.SCHOOL_LOGO || null,
+      principalSignPath: null
     };
+    try {
+      const signResult = await pool.query(`SELECT value FROM school_settings WHERE key='principal_sign'`, []);
+      const signRow = signResult[0]?.[0];
+      schoolInfo.principalSignPath = signRow?.value || process.env.PRINCIPAL_SIGN || null;
+    } catch(_) {}
     try {
       const [[principal]] = await pool.query(
         `SELECT full_name, username FROM users WHERE role='PRINCIPAL' AND is_active=true LIMIT 1`
@@ -5109,7 +5116,9 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
       multiStudent: true,
       allStudents,
       globalMaxKd: globalMaxKdKelas || 0,
-      kdNames: kdNamesKelas || []
+      kdNames: kdNamesKelas || [],
+      reportDateFormatted: (typeof formatTanggalIndonesia === 'function' ? formatTanggalIndonesia(period.report_date) : (period.report_date || '')),
+      schoolCity: period.report_city || process.env.SCHOOL_CITY || 'Kediri'
     });
   } catch (e) {
     console.error(e);
@@ -5228,8 +5237,15 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
       website: process.env.SCHOOL_WEB || process.env.SCHOOL_WEBSITE || 'http://www.smkn1kras.sch.id',
       principalName: process.env.PRINCIPAL_NAME || '',
       principalNip: process.env.PRINCIPAL_NIP || '',
-      logoPath: process.env.SCHOOL_LOGO || null
+      logoPath: process.env.SCHOOL_LOGO || null,
+      watermarkPath: process.env.SCHOOL_WATERMARK || process.env.SCHOOL_LOGO || null,
+      principalSignPath: null
     };
+    try {
+      const signResult = await pool.query(`SELECT value FROM school_settings WHERE key='principal_sign'`, []);
+      const signRow = signResult[0]?.[0];
+      schoolInfo.principalSignPath = signRow?.value || process.env.PRINCIPAL_SIGN || null;
+    } catch(_) {}
     try {
       const [[principal]] = await pool.query(
         `SELECT full_name, username FROM users WHERE role='PRINCIPAL' AND is_active=true LIMIT 1`
@@ -5247,7 +5263,9 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
       multiStudent: false,
       allStudents: [],
       globalMaxKd: globalMaxKdSiswa || 0,
-      kdNames: kdNamesSiswa || []
+      kdNames: kdNamesSiswa || [],
+      reportDateFormatted: (typeof formatTanggalIndonesia === 'function' ? formatTanggalIndonesia(period.report_date) : (period.report_date || '')),
+      schoolCity: period.report_city || process.env.SCHOOL_CITY || 'Kediri'
     });
   } catch (e) {
     console.error(e);

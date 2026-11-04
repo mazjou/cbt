@@ -14,19 +14,47 @@
     .btn-print { background: #4f46e5; color: #fff; }
     .btn-back { background: #f1f5f9; color: #475569; }
 
-    /* Halaman 1 — mengalir bebas sesuai konten, browser yang atur page break saat print */
+    /* Halaman 1 — konten tabel mengalir bebas, tidak dipotong */
     .raport-page {
       background: #fff;
       width: 210mm;
       min-height: 297mm;
-      margin: 0 auto 20px;
+      margin: 0 auto 24px;
       padding: 1.5cm;
-      box-shadow: 0 4px 24px rgba(0,0,0,.15);
+      box-shadow: 0 4px 24px rgba(0,0,0,.18);
       position: relative;
     }
 
+    /* Halaman 2 — tanda tangan, selalu halaman baru */
+    .raport-page-2 {
+      background: #fff;
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto 24px;
+      padding: 1.5cm;
+      box-shadow: 0 4px 24px rgba(0,0,0,.18);
+      position: relative;
+    }
+
+    /* Watermark — di belakang konten, tengah halaman */
+    .watermark {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 300px;
+      height: 300px;
+      opacity: 0.06;
+      pointer-events: none;
+      z-index: 0;
+      object-fit: contain;
+    }
+    /* Semua konten di atas watermark */
+    .raport-page > *:not(.watermark),
+    .raport-page-2 > *:not(.watermark) { position: relative; z-index: 1; }
+
     /* Kop surat */
-    .kop { display: flex; align-items: flex-start; gap: 12px; padding-bottom: 0; margin-bottom: 0; }
+    .kop { display: flex; align-items: flex-start; gap: 12px; }
     .kop-logo { width: 100px; height: 100px; object-fit: contain; flex-shrink: 0; }
     .kop-logo-placeholder { width: 100px; height: 100px; border: 2px solid #999; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10pt; color: #999; flex-shrink: 0; }
     .kop-text { text-align: center; flex: 1; }
@@ -35,34 +63,19 @@
     .kop-text .dinas     { font-size: 10pt; font-weight: normal; }
     .kop-text .sekolah   { font-size: 13pt; font-weight: bold; text-transform: uppercase; }
     .kop-text .kota-nama { font-size: 13pt; font-weight: bold; letter-spacing: 4px; text-transform: uppercase; }
-    .kop-text .alamat    { font-size: 8pt; display: block; width: 100%; letter-spacing: 0.3px; word-spacing: 2px; }
-    .kop-text .postel    { font-size: 8pt; display: block; width: 100%; letter-spacing: 0.3px; word-spacing: 4px; }
-    .kop-text .kota-kota { font-size: 12pt; font-weight: bold; letter-spacing: 5px; margin-top: 3px; display: block; }
-
-    /* Watermark */
-    .watermark {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      width: 380px;
-      height: 380px;
-      opacity: 0.07;
-      pointer-events: none;
-      z-index: 0;
-      object-fit: contain;
-    }
+    .kop-text .alamat    { font-size: 8pt; display: block; width: 100%; }
+    .kop-text .postel    { font-size: 8pt; display: block; width: 100%; }
 
     /* Judul */
     .judul { text-align: center; margin: 14px 0 16px; }
     .judul h2 { font-size: 13pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; text-decoration: underline; }
-    .judul p { font-size: 10pt; margin-top: 3px; }
+    .judul p  { font-size: 10pt; margin-top: 3px; }
 
     /* Data siswa */
     .data-siswa { margin-bottom: 14px; }
     .data-siswa table { width: 100%; border-collapse: collapse; }
     .data-siswa td { padding: 2px 4px; font-size: 10.5pt; vertical-align: top; }
-    .data-siswa td:first-child { width: 160px; font-weight: normal; }
+    .data-siswa td:first-child { width: 160px; }
     .data-siswa td:nth-child(2) { width: 12px; text-align: center; }
 
     /* Tabel nilai */
@@ -79,48 +92,27 @@
     .ttd-section { display: flex; justify-content: space-between; margin-top: 20px; }
     .ttd-box { text-align: left; min-width: 180px; }
     .ttd-box p { font-size: 10pt; margin-bottom: 2px; }
-    .ttd-box .ttd-garis { height: 55px; width: 200px; }
+    .ttd-box .ttd-garis { height: 55px; }
     .ttd-box .ttd-nama { font-weight: bold; margin-top: 4px; text-decoration: underline; font-size: 10pt; }
-    .ttd-box .ttd-nip { font-size: 10pt; }
-
-    /* Halaman 2: tanda tangan — selalu mulai di halaman baru */
-    .raport-page-2 {
-      background: #fff;
-      width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto 20px;
-      padding: 1.5cm;
-      box-shadow: 0 4px 24px rgba(0,0,0,.15);
-      position: relative;
-      page-break-before: always;
-      break-before: page;
-    }
+    .ttd-box .ttd-nip  { font-size: 10pt; }
 
     @media print {
       @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; padding: 0; }
       .no-print { display: none !important; }
-      /* Halaman 1: konten mengalir, page break otomatis oleh browser */
       .raport-page {
-        width: 100%;
-        min-height: auto;
-        margin: 0;
-        padding: 0;
+        width: 100%; min-height: auto;
+        margin: 0; padding: 0;
         box-shadow: none;
-        border: none;
       }
-      /* Halaman 2 TTD: selalu halaman baru */
       .raport-page-2 {
-        width: 100%;
-        min-height: auto;
-        margin: 0;
-        padding: 0;
+        width: 100%; min-height: auto;
+        margin: 0; padding: 0;
         box-shadow: none;
-        border: none;
         page-break-before: always;
         break-before: page;
       }
-      .watermark { width: 100mm; height: 100mm; opacity: 0.07; }
+      .watermark { width: 200px; height: 200px; }
     }
   </style>
 </head>
