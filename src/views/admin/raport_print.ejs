@@ -15,7 +15,7 @@
     .btn-back { background: #f1f5f9; color: #475569; }
 
     /* Page wrapper */
-    .page-break-wrapper { display: block; }
+    .page-break-wrapper { display: block; position: relative; }
     .raport-page {
       background: #fff;
       width: 210mm;
@@ -93,8 +93,8 @@
       @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; padding: 0; }
       .no-print { display: none !important; }
-      .page-break-wrapper { display: block; break-after: page; page-break-after: always; break-inside: avoid-page; }
-      .raport-page { display: block; position: relative; box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; box-sizing: border-box; overflow: hidden; break-after: page; page-break-after: always; }
+      .page-break-wrapper { display: block; break-after: page; page-break-after: always; }
+      .raport-page { display: block; position: relative; box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; box-sizing: border-box; overflow: visible; }
       .watermark { width: 100mm; height: 100mm; opacity: 0.07; }
       .wm-p1 { top: calc(148.5mm - 50mm); }
       .wm-p2 { top: calc(297mm + 148.5mm - 50mm - 45mm); }
@@ -153,11 +153,10 @@
   %>
   <div class="page-break-wrapper">
   <div class="raport-page">
-    <% /* Watermark logo di tengah setiap halaman */ %>
+    <% /* Watermark logo halaman 1 */ %>
     <% const wmLogo = schoolInfo && schoolInfo.watermarkPath ? schoolInfo.watermarkPath : null; %>
     <% if (wmLogo) { %>
       <img src="<%= wmLogo %>" alt="" class="watermark wm-p1" />
-      <img src="<%= wmLogo %>" alt="" class="watermark wm-p2" />
     <% } %>
 
     <!-- Kop Surat -->
@@ -335,6 +334,9 @@
       <p class="ttd-nip" style="text-align:center;">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
     </div>
   </div>
+  <% if (wmLogo) { %>
+    <img src="<%= wmLogo %>" alt="" class="watermark wm-p2" />
+  <% } %>
   </div>
 <% }) %>
 
