@@ -23,6 +23,8 @@
       padding: 1.5cm;
       box-shadow: 0 4px 24px rgba(0,0,0,.1);
       page-break-after: always;
+      position: relative;
+      overflow: hidden;
     }
 
     /* Kop surat */
@@ -39,8 +41,7 @@
     .kop-text .postel    { font-size: 8pt; display: block; width: 100%; letter-spacing: 0.3px; word-spacing: 4px; }
     .kop-text .kota-kota { font-size: 12pt; font-weight: bold; letter-spacing: 5px; margin-top: 3px; display: block; }
     /* Watermark */
-    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; height: 380px; opacity: 0.08; pointer-events: none; z-index: 0; }
-    .raport-page { position: relative; overflow: hidden; }
+    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; height: 380px; opacity: 0.06; pointer-events: none; z-index: 0; }
 
     /* Judul */
     .judul { text-align: center; margin: 14px 0 16px; }
@@ -76,9 +77,9 @@
       @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; }
       .no-print { display: none !important; }
-      .raport-page { box-shadow: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; }
+      .raport-page { box-shadow: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; break-after: page; }
       /* Watermark fixed = selalu di tengah setiap halaman cetak */
-      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.08; }
+      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.06; }
     }
   </style>
 </head>
