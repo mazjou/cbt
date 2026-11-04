@@ -51,9 +51,12 @@
       opacity: 0.08;
       pointer-events: none;
       z-index: 0;
+      object-fit: contain;
     }
-    .watermark-p1 { top: calc(148.5mm - 190px); }  /* tengah halaman 1 */
-    .watermark-p2 { top: calc(445.5mm - 190px); }  /* tengah halaman 2 */
+    /* tengah halaman 1: 297mm/2 - 50mm (setengah tinggi gambar ~100mm) */
+    .watermark-p1 { top: calc(148.5mm - 50mm); }
+    /* tengah halaman 2: 297mm + 148.5mm - 50mm */
+    .watermark-p2 { top: calc(297mm + 148.5mm - 50mm); }
 
     /* Judul */
     .judul { text-align: center; margin: 14px 0 16px; }
@@ -90,6 +93,10 @@
       body { background: #fff; }
       .no-print { display: none !important; }
       .raport-page { box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; break-after: page; page-break-after: always; }
+      /* Watermark ukuran mm agar posisi konsisten di semua printer */
+      .watermark { width: 100mm; height: 100mm; }
+      .watermark-p1 { top: calc(148.5mm - 50mm); }
+      .watermark-p2 { top: calc(297mm + 148.5mm - 50mm); }
     }
   </style>
 </head>
