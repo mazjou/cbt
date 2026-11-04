@@ -14,19 +14,18 @@
     .btn-print { background: #4f46e5; color: #fff; }
     .btn-back { background: #f1f5f9; color: #475569; }
 
-    /* Page wrapper */
-    .page-break-wrapper { display: block; position: relative; }
+    /* Setiap halaman A4 = kotak tersendiri di layar */
     .raport-page {
       background: #fff;
       width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto 30px;
+      height: 297mm;
+      margin: 0 auto 20px;
       padding: 1.5cm;
       box-shadow: 0 4px 24px rgba(0,0,0,.15);
-      page-break-after: always;
-      break-after: page;
       position: relative;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
     /* Kop surat */
@@ -42,11 +41,13 @@
     .kop-text .alamat    { font-size: 8pt; display: block; width: 100%; letter-spacing: 0.3px; word-spacing: 2px; }
     .kop-text .postel    { font-size: 8pt; display: block; width: 100%; letter-spacing: 0.3px; word-spacing: 4px; }
     .kop-text .kota-kota { font-size: 12pt; font-weight: bold; letter-spacing: 5px; margin-top: 3px; display: block; }
+
     /* Watermark */
     .watermark {
       position: absolute;
       left: 50%;
-      transform: translateX(-50%);
+      top: 50%;
+      transform: translate(-50%, -50%);
       width: 380px;
       height: 380px;
       opacity: 0.07;
@@ -54,52 +55,66 @@
       z-index: 0;
       object-fit: contain;
     }
-    /* Halaman 1: tengah A4 = 148.5mm dari atas, dikurangi setengah tinggi gambar */
-    .wm-p1 { top: calc(148.5mm - 190px); }
-    /* Halaman 2: dikurangi 45mm agar naik ke tengah */
-    .wm-p2 { top: calc(297mm + 148.5mm - 190px - 45mm); }
 
     /* Judul */
-    .judul { text-align: center; margin: 10px 0 12px; }
-    .judul h2 { font-size: 12pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; text-decoration: underline; }
-    .judul p { font-size: 9.5pt; margin-top: 2px; }
+    .judul { text-align: center; margin: 14px 0 16px; }
+    .judul h2 { font-size: 13pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; text-decoration: underline; }
+    .judul p { font-size: 10pt; margin-top: 3px; }
 
     /* Data siswa */
-    .data-siswa { margin-bottom: 10px; }
+    .data-siswa { margin-bottom: 14px; }
     .data-siswa table { width: 100%; border-collapse: collapse; }
-    .data-siswa td { padding: 1px 4px; font-size: 10pt; vertical-align: top; }
+    .data-siswa td { padding: 2px 4px; font-size: 10.5pt; vertical-align: top; }
     .data-siswa td:first-child { width: 160px; font-weight: normal; }
     .data-siswa td:nth-child(2) { width: 12px; text-align: center; }
 
     /* Tabel nilai */
-    .tabel-nilai { width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9pt; }
-    .tabel-nilai th { background: #f0f0f0; border: 1px solid #555; padding: 3px 5px; text-align: center; font-weight: bold; vertical-align: middle; }
-    .tabel-nilai td { border: 1px solid #555; padding: 2px 5px; vertical-align: top; line-height: 1.3; }
-    .tabel-nilai td.no { text-align: center; width: 28px; }
-    .tabel-nilai td.nilai { text-align: center; width: 34px; }
-    .tabel-nilai th.nilai { white-space: nowrap; font-size: 7.5pt; }
-    .tabel-nilai tr.group-header td { background: #e8e8e8; font-weight: bold; font-style: italic; padding: 3px 5px; }
+    .tabel-nilai { width: 100%; border-collapse: collapse; margin-bottom: 14px; font-size: 10pt; }
+    .tabel-nilai th { background: #f0f0f0; border: 1px solid #555; padding: 5px 8px; text-align: center; font-weight: bold; vertical-align: middle; }
+    .tabel-nilai td { border: 1px solid #555; padding: 4px 8px; vertical-align: top; }
+    .tabel-nilai td.no { text-align: center; width: 32px; }
+    .tabel-nilai td.nilai { text-align: center; width: 37px; }
+    .tabel-nilai th.nilai { white-space: nowrap; font-size: 8pt; }
+    .tabel-nilai tr.group-header td { background: #e8e8e8; font-weight: bold; font-style: italic; padding: 4px 8px; }
     .tabel-nilai tr.summary td { font-weight: bold; background: #f8f8f8; }
-    /* Kolom keterangan: font kecil & rapat agar muat A4 */
-    .tabel-nilai td.ket { font-size: 7.5pt; line-height: 1.25; }
 
     /* Tanda tangan */
-    .ttd-section { display: flex; justify-content: space-between; margin-top: 14px; }
+    .ttd-section { display: flex; justify-content: space-between; margin-top: 20px; }
     .ttd-box { text-align: left; min-width: 180px; }
-    .ttd-box p { font-size: 9.5pt; margin-bottom: 2px; }
-    .ttd-box .ttd-garis { height: 45px; width: 200px; }
-    .ttd-box .ttd-nama { font-weight: bold; margin-top: 2px; text-decoration: underline; font-size: 9.5pt; }
-    .ttd-box .ttd-nip { font-size: 9.5pt; }
+    .ttd-box p { font-size: 10pt; margin-bottom: 2px; }
+    .ttd-box .ttd-garis { height: 55px; width: 200px; }
+    .ttd-box .ttd-nama { font-weight: bold; margin-top: 4px; text-decoration: underline; font-size: 10pt; }
+    .ttd-box .ttd-nip { font-size: 10pt; }
+
+    /* Halaman 2: konten sisa (tanda tangan dll) */
+    .raport-page-2 {
+      background: #fff;
+      width: 210mm;
+      height: 297mm;
+      margin: 0 auto 20px;
+      padding: 1.5cm;
+      box-shadow: 0 4px 24px rgba(0,0,0,.15);
+      position: relative;
+      overflow: hidden;
+    }
 
     @media print {
-      @page { size: A4 portrait; margin: 1.5cm; }
+      @page { size: A4 portrait; margin: 0; }
       body { background: #fff; padding: 0; }
       .no-print { display: none !important; }
-      .page-break-wrapper { display: block; break-after: page; page-break-after: always; }
-      .raport-page { display: block; position: relative; box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; box-sizing: border-box; overflow: visible; }
+      /* Setiap .raport-page dan .raport-page-2 = 1 halaman cetak */
+      .raport-page, .raport-page-2 {
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        padding: 1.5cm;
+        box-shadow: none;
+        border: none;
+        overflow: hidden;
+        page-break-after: always;
+        break-after: page;
+      }
       .watermark { width: 100mm; height: 100mm; opacity: 0.07; }
-      .wm-p1 { top: calc(148.5mm - 50mm); }
-      .wm-p2 { top: calc(297mm + 148.5mm - 50mm - 45mm); }
     }
   </style>
 </head>
@@ -153,12 +168,12 @@
     const avgScore = scoreCount > 0 ? Math.round(totalScore / scoreCount).toString() : '-';
     let noUrut = 0;
   %>
-  <div class="page-break-wrapper">
+
+  <!-- ═══════════════ HALAMAN 1: KOP + TABEL NILAI ═══════════════ -->
   <div class="raport-page">
-    <% /* Watermark logo halaman 1 */ %>
     <% const wmLogo = schoolInfo && schoolInfo.watermarkPath ? schoolInfo.watermarkPath : null; %>
     <% if (wmLogo) { %>
-      <img src="<%= wmLogo %>" alt="" class="watermark wm-p1" />
+      <img src="<%= wmLogo %>" alt="" class="watermark" />
     <% } %>
 
     <!-- Kop Surat -->
@@ -181,13 +196,11 @@
         <% if (email || web) { %>
         <p class="postel">Pos.el : <u><%= email %></u>&nbsp;&nbsp;&nbsp; Laman : <u><%= web %></u></p>
         <% } %>
-        <!-- KEDIRI teks di dalam kop-text agar lurus -->
         <p style="font-size:12pt;font-weight:bold;letter-spacing:5px;margin:3px 0 0 0;padding:0;"><%= (schoolInfo && schoolInfo.city ? schoolInfo.city.toUpperCase() : 'KEDIRI').split('').join(' ') %></p>
       </div>
     </div>
-    <!-- Garis full width di bawah kop: tipis atas + tebal bawah -->
     <div style="border-top:1px solid #000; margin:2px 0 1px 0;"></div>
-    <div style="border-top:3px solid #000; margin:0 0 8px 0;"></div>
+    <div style="border-top:3px solid #000; margin:0 0 12px 0;"></div>
 
     <!-- Judul -->
     <div class="judul">
@@ -221,13 +234,10 @@
 
     <!-- Tabel Nilai -->
     <%
-      // Hitung maxKd dari KD aktual siswa ini (bukan globalMaxKd yang mencakup semua mapel)
-      // Ini mencegah kolom TP kosong yang berlebihan saat cetak semua kelas
       const maxKd = stuGroups.reduce((max, g) =>
         (g.subjects || []).reduce((m, s) => Math.max(m, (s.kdScores || []).length), max), 0);
       const hasKd = maxKd > 0;
       const totalCols = hasKd ? 3 + maxKd + 1 : 4;
-      // Nama kolom TP: pakai label custom dari admin (kdNames), fallback "TP 1", "TP 2", dst.
       const safeKdNames = [];
       for (let ki = 0; ki < maxKd; ki++) {
         safeKdNames.push((typeof kdNames !== 'undefined' && kdNames[ki]) ? kdNames[ki] : ('TP' + (ki + 1)));
@@ -279,7 +289,7 @@
               <% } else { %>
                 <td class="nilai"><%= formatNilai(s.score) %></td>
               <% } %>
-              <td class="ket"><%= s.notes || '' %></td>
+              <td><%= s.notes || '' %></td>
             </tr>
           <% }) %>
         <% }) %>
@@ -297,49 +307,52 @@
         <% } %>
       </tbody>
     </table>
+  </div><!-- end raport-page halaman 1 -->
 
-    <!-- Tanda Tangan: Kepala Sekolah KIRI, Wali Kelas KANAN -->
+  <!-- ═══════════════ HALAMAN 2: TANDA TANGAN ═══════════════ -->
+  <div class="raport-page-2">
+    <% if (wmLogo) { %>
+      <img src="<%= wmLogo %>" alt="" class="watermark" />
+    <% } %>
+
     <% var hasDate = typeof reportDateFormatted !== 'undefined' && reportDateFormatted; %>
 
-    <%# Baris 1: Orang Tua (kiri) + Tanggal+Wali Kelas (kanan) %>
-    <div class="ttd-section" style="margin-top:14px;">
+    <!-- Tanda Tangan: Orang Tua (kiri) + Wali Kelas (kanan) -->
+    <div class="ttd-section" style="margin-top:20px;">
       <div class="ttd-box" style="padding-left:2cm;">
-        <% if (hasDate) { %><p style="visibility:hidden;font-size:9.5pt;margin-bottom:4px;">&nbsp;</p><% } %>
+        <% if (hasDate) { %><p style="visibility:hidden;font-size:10pt;margin-bottom:4px;">&nbsp;</p><% } %>
         <p>Orang Tua / Wali Murid,</p>
-        <div class="ttd-garis" style="height:45px;"></div>
-        <p class="ttd-nama" style="font-weight:bold;text-decoration:underline;font-size:9.5pt;">.................................</p>
+        <div class="ttd-garis" style="height:55px;"></div>
+        <p class="ttd-nama" style="font-weight:bold;text-decoration:underline;font-size:10pt;">.................................</p>
       </div>
       <div class="ttd-box">
         <% if (hasDate) { %>
-        <p style="font-size:9.5pt;margin-bottom:4px;"><%= schoolCity %>, <%= reportDateFormatted %></p>
+        <p style="font-size:10pt;margin-bottom:4px;"><%= schoolCity %>, <%= reportDateFormatted %></p>
         <% } %>
         <p>Wali Kelas,</p>
-        <div class="ttd-garis" style="height:45px;"></div>
+        <div class="ttd-garis" style="height:55px;"></div>
         <p class="ttd-nama"><%= stu.homeroom_teacher_name || '.................................' %></p>
         <p class="ttd-nip">NIP. <%= stu.homeroom_teacher_nip || '-' %></p>
       </div>
     </div>
 
-    <%# Baris 2: Mengetahui Kepala Sekolah (center) %>
-    <div style="text-align:center; margin-top:14px;">
-      <p style="font-size:9.5pt; margin-bottom:2px;">Mengetahui,</p>
-      <p style="font-size:9.5pt; margin-bottom:2px;">Kepala SMK Negeri 1 Kras</p>
+    <!-- Mengetahui Kepala Sekolah (center) -->
+    <div style="text-align:center; margin-top:18px;">
+      <p style="font-size:10pt; margin-bottom:2px;">Mengetahui,</p>
+      <p style="font-size:10pt; margin-bottom:2px;">Kepala SMK Negeri 1 Kras</p>
       <% if (schoolInfo && schoolInfo.principalSignPath) { %>
-        <div style="height:45px;display:flex;align-items:center;justify-content:center;overflow:visible;margin:0 auto;">
+        <div style="height:55px;display:flex;align-items:center;justify-content:center;overflow:visible;margin:0 auto;">
           <img src="<%= schoolInfo.principalSignPath %>" alt="TTD Kepala Sekolah"
-            style="max-height:100px;max-width:220px;object-fit:contain;display:block;margin-left:-10mm;margin-top:3mm;">
+            style="max-height:119px;max-width:259px;object-fit:contain;display:block;margin-left:-10mm;margin-top:5mm;">
         </div>
       <% } else { %>
-        <div style="height:45px;"></div>
+        <div style="height:55px;"></div>
       <% } %>
-      <p class="ttd-nama" style="text-align:center;font-weight:bold;text-decoration:underline;font-size:9.5pt;"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
+      <p class="ttd-nama" style="text-align:center;font-weight:bold;text-decoration:underline;font-size:10pt;"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
       <p class="ttd-nip" style="text-align:center;">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
     </div>
-  </div>
-  <% if (wmLogo) { %>
-    <img src="<%= wmLogo %>" alt="" class="watermark wm-p2" />
-  <% } %>
-  </div>
+  </div><!-- end raport-page-2 halaman 2 -->
+
 <% }) %>
 
 </body>
