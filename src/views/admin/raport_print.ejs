@@ -55,8 +55,8 @@
     }
     /* Halaman 1: tengah A4 = 148.5mm dari atas, dikurangi setengah tinggi gambar */
     .wm-p1 { top: calc(148.5mm - 190px); }
-    /* Halaman 2: 297mm (halaman 1 penuh) + 148.5mm (tengah hal 2) - setengah gambar */
-    .wm-p2 { top: calc(297mm + 148.5mm - 190px); }
+    /* Halaman 2: dikurangi 35mm agar naik ke tengah */
+    .wm-p2 { top: calc(297mm + 148.5mm - 190px - 35mm); }
 
     /* Judul */
     .judul { text-align: center; margin: 14px 0 16px; }
@@ -96,7 +96,7 @@
       /* watermark: absolute di tengah raport-page, tidak pakai fixed agar print preview tidak hang */
       .watermark { width: 100mm; height: 100mm; opacity: 0.07; }
       .wm-p1 { top: calc(148.5mm - 50mm); }
-      .wm-p2 { top: calc(297mm + 148.5mm - 50mm); }
+      .wm-p2 { top: calc(297mm + 148.5mm - 50mm - 35mm); }
     }
   </style>
 </head>
