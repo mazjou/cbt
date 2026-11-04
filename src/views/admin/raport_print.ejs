@@ -19,12 +19,15 @@
       background: #fff;
       width: 210mm;
       min-height: 297mm;
-      margin: 0 auto 20px;
+      margin: 0 auto 30px;
       padding: 1.5cm;
-      box-shadow: 0 4px 24px rgba(0,0,0,.1);
+      box-shadow: 0 4px 24px rgba(0,0,0,.15);
       page-break-after: always;
+      break-after: page;
       position: relative;
       overflow: hidden;
+      /* Simulasi batas halaman di layar */
+      border-top: 3px solid #ccc;
     }
 
     /* Kop surat */
@@ -77,9 +80,9 @@
       @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; }
       .no-print { display: none !important; }
-      .raport-page { box-shadow: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; break-after: page; }
-      /* Watermark fixed = selalu di tengah setiap halaman cetak */
-      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.06; }
+      .raport-page { box-shadow: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; break-after: page; page-break-after: always; }
+      /* Watermark fixed = selalu di tengah setiap halaman cetak, opacity sangat kecil */
+      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.03; width: 380px; height: 380px; }
     }
   </style>
 </head>
