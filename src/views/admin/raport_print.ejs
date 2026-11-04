@@ -55,8 +55,8 @@
     }
     /* tengah halaman 1: 297mm/2 - 50mm (setengah tinggi gambar ~100mm) */
     .watermark-p1 { top: calc(148.5mm - 50mm); }
-    /* tengah halaman 2: 297mm + 148.5mm - 50mm */
-    .watermark-p2 { top: calc(297mm + 148.5mm - 50mm); }
+    /* tengah halaman 2 */
+    .watermark-p2 { top: calc(210mm + 98.5mm); }
 
     /* Judul */
     .judul { text-align: center; margin: 14px 0 16px; }
@@ -334,6 +334,23 @@
     </div>
   </div>
 <% }) %>
+
+<script>
+// Hitung posisi watermark-p2 secara dinamis berdasarkan tinggi A4 dalam px
+(function() {
+  // 1mm = 3.7795px pada 96dpi
+  var MM_TO_PX = 3.7795;
+  var A4_H_MM = 297;
+  var A4_H_PX = A4_H_MM * MM_TO_PX; // ~1122px
+
+  document.querySelectorAll('.watermark-p2').forEach(function(wm) {
+    // tengah halaman ke-2 = A4_H_PX + A4_H_PX/2 - tinggiGambar/2
+    var imgH = wm.offsetHeight || (100 * MM_TO_PX);
+    var topPx = A4_H_PX + (A4_H_PX / 2) - (imgH / 2);
+    wm.style.top = topPx + 'px';
+  });
+})();
+</script>
 
 </body>
 </html>
