@@ -39,13 +39,8 @@
     .kop-text .postel    { font-size: 8pt; display: block; width: 100%; letter-spacing: 0.3px; word-spacing: 4px; }
     .kop-text .kota-kota { font-size: 12pt; font-weight: bold; letter-spacing: 5px; margin-top: 3px; display: block; }
     /* Watermark */
-    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; height: 380px; opacity: 0.08; pointer-events: none; z-index: 0; filter: grayscale(100%); }
+    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; height: 380px; opacity: 0.08; pointer-events: none; z-index: 0; }
     .raport-page { position: relative; overflow: hidden; }
-
-    @media print {
-      /* Watermark pakai fixed agar selalu di tengah setiap halaman cetak */
-      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; height: 380px; opacity: 0.055; pointer-events: none; z-index: 0; filter: grayscale(100%); }
-    }
 
     /* Judul */
     .judul { text-align: center; margin: 14px 0 16px; }
@@ -81,7 +76,9 @@
       @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; }
       .no-print { display: none !important; }
-      .raport-page { box-shadow: none; margin: 0; padding: 0; width: 100%; min-height: auto; }
+      .raport-page { box-shadow: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; }
+      /* Watermark fixed = selalu di tengah setiap halaman cetak */
+      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.08; }
     }
   </style>
 </head>
