@@ -90,7 +90,7 @@
       body { background: #fff; }
       .no-print { display: none !important; }
       .raport-page { box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; break-after: page; page-break-after: always; }
-      /* watermark fixed = tengah setiap halaman cetak, opacity kecil */
+      /* filter:opacity() bekerja di Chrome print, berbeda dengan property opacity yang diabaikan pada fixed elements */
       .watermark {
         position: fixed;
         top: 50%;
@@ -98,7 +98,8 @@
         transform: translate(-50%, -50%);
         width: 100mm;
         height: 100mm;
-        opacity: 0.05;
+        opacity: 1;
+        filter: opacity(6%);
       }
     }
   </style>
