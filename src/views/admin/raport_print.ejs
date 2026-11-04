@@ -6,7 +6,7 @@
   <title><%= title %></title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; color: #000; background: #f0f0f0; }
+    body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; color: #000; background: #d0d0d0; padding: 20px 0; }
 
     /* Control bar — hide on print */
     .no-print { background: #fff; padding: 12px 20px; box-shadow: 0 2px 8px rgba(0,0,0,.12); margin-bottom: 12px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -26,8 +26,6 @@
       break-after: page;
       position: relative;
       overflow: hidden;
-      /* Simulasi batas halaman di layar */
-      border-top: 3px solid #ccc;
     }
 
     /* Kop surat */
@@ -80,9 +78,9 @@
       @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; }
       .no-print { display: none !important; }
-      .raport-page { box-shadow: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; break-after: page; page-break-after: always; }
-      /* Watermark fixed = selalu di tengah setiap halaman cetak, opacity sangat kecil */
-      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.03; width: 380px; height: 380px; }
+      .raport-page { box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: hidden; break-after: page; page-break-after: always; }
+      /* Watermark tetap absolute di dalam raport-page, sama seperti di layar */
+      .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.06; width: 380px; height: 380px; }
     }
   </style>
 </head>
