@@ -42,7 +42,18 @@
     .kop-text .postel    { font-size: 8pt; display: block; width: 100%; letter-spacing: 0.3px; word-spacing: 4px; }
     .kop-text .kota-kota { font-size: 12pt; font-weight: bold; letter-spacing: 5px; margin-top: 3px; display: block; }
     /* Watermark */
-    .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; height: 380px; opacity: 0.06; pointer-events: none; z-index: 0; }
+    .watermark {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 380px;
+      height: 380px;
+      opacity: 0.08;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .watermark-p1 { top: calc(148.5mm - 190px); }  /* tengah halaman 1 */
+    .watermark-p2 { top: calc(445.5mm - 190px); }  /* tengah halaman 2 */
 
     /* Judul */
     .judul { text-align: center; margin: 14px 0 16px; }
@@ -79,8 +90,6 @@
       body { background: #fff; }
       .no-print { display: none !important; }
       .raport-page { box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; break-after: page; page-break-after: always; }
-      /* Watermark: absolute, opacity sangat kecil khusus print */
-      .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.08 !important; width: 380px; height: 380px; }
     }
   </style>
 </head>
@@ -135,12 +144,11 @@
     let noUrut = 0;
   %>
   <div class="raport-page">
-    <% /* Watermark logo di tengah halaman */ %>
+    <% /* Watermark logo di tengah setiap halaman */ %>
     <% const wmLogo = schoolInfo && schoolInfo.watermarkPath ? schoolInfo.watermarkPath : null; %>
     <% if (wmLogo) { %>
-      <img src="<%= wmLogo %>" alt="" class="watermark" />
-      <%# Watermark ke-2 untuk halaman ke-2 jika konten panjang %>
-      <img src="<%= wmLogo %>" alt="" class="watermark" style="top:150%;" />
+      <img src="<%= wmLogo %>" alt="" class="watermark watermark-p1" />
+      <img src="<%= wmLogo %>" alt="" class="watermark watermark-p2" />
     <% } %>
 
     <!-- Kop Surat -->
