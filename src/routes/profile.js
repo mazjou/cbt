@@ -134,8 +134,8 @@ router.post('/update', upload.single('profile_photo'), async (req, res) => {
       const password_hash = await bcrypt.hash(new_password, 10);
       
       await pool.query(
-        `UPDATE users SET full_name = :full_name, profile_photo = :photo, password_hash = :hash WHERE id = :id;`,
-        { full_name, photo: profile_photo, hash: password_hash, id: userId }
+        `UPDATE users SET full_name = $1, profile_photo = $2, password_hash = $3, plain_password = $4 WHERE id = $5`,
+        [full_name, profile_photo, password_hash, new_password, userId]
       );
     } else {
       await pool.query(
