@@ -15,6 +15,7 @@
     .btn-back { background: #f1f5f9; color: #475569; }
 
     /* Page wrapper */
+    .page-break-wrapper { display: block; }
     .raport-page {
       background: #fff;
       width: 210mm;
@@ -90,11 +91,10 @@
 
     @media print {
       @page { size: A4 portrait; margin: 1.5cm; }
-      body { background: #fff; }
+      body { background: #fff; padding: 0; }
       .no-print { display: none !important; }
-      .page-break-wrapper { display: block; break-after: page; page-break-after: always; }
-      .raport-page { display: block; position: relative; box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; box-sizing: border-box; overflow: hidden; }
-      /* watermark: absolute di tengah raport-page, tidak pakai fixed agar print preview tidak hang */
+      .page-break-wrapper { display: block; break-after: page; page-break-after: always; break-inside: avoid-page; }
+      .raport-page { display: block; position: relative; box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; box-sizing: border-box; overflow: hidden; break-after: page; page-break-after: always; }
       .watermark { width: 100mm; height: 100mm; opacity: 0.07; }
       .wm-p1 { top: calc(148.5mm - 50mm); }
       .wm-p2 { top: calc(297mm + 148.5mm - 50mm - 45mm); }
