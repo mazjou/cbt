@@ -10,6 +10,21 @@ const pool = require('../db/pool');
 const { requireRole } = require('../middleware/auth');
 const { createNotificationForClass, createNotificationForMultipleClasses } = require('../utils/notifications');
 
+// Helper: format tanggal Indonesia "3 November 2025"
+function formatTanggalIndonesia(date) {
+  if (!date) return '';
+  const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  return d.getDate() + ' ' + bulan[d.getMonth()] + ' ' + d.getFullYear();
+}
+function getSchoolCity() {
+  if (process.env.SCHOOL_CITY) return process.env.SCHOOL_CITY;
+  const addr = process.env.SCHOOL_ADDRESS || '';
+  if (addr) { const p = addr.split(',')[0].trim(); if (p) return p; }
+  return 'Kediri';
+}
+
 // ── Invalidasi cache soal ujian di Redis + in-memory ─────────────────────────
 async function invalidateExamQuestionsCache(examId, redisClient) {
   try {
@@ -5117,8 +5132,8 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
       allStudents,
       globalMaxKd: globalMaxKdKelas || 0,
       kdNames: kdNamesKelas || [],
-      reportDateFormatted: (typeof formatTanggalIndonesia === 'function' ? formatTanggalIndonesia(period.report_date) : (period.report_date || '')),
-      schoolCity: period.report_city || process.env.SCHOOL_CITY || 'Kediri'
+      reportDateFormatted: formatTanggalIndonesia(period.report_date),
+      schoolCity: period.report_city || getSchoolCity()
     });
   } catch (e) {
     console.error(e);
@@ -5264,8 +5279,8 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
       allStudents: [],
       globalMaxKd: globalMaxKdSiswa || 0,
       kdNames: kdNamesSiswa || [],
-      reportDateFormatted: (typeof formatTanggalIndonesia === 'function' ? formatTanggalIndonesia(period.report_date) : (period.report_date || '')),
-      schoolCity: period.report_city || process.env.SCHOOL_CITY || 'Kediri'
+      reportDateFormatted: formatTanggalIndonesia(period.report_date),
+      schoolCity: period.report_city || getSchoolCity()
     });
   } catch (e) {
     console.error(e);

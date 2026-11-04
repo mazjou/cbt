@@ -15,18 +15,8 @@
     .btn-back { background: #f1f5f9; color: #475569; }
 
     /* Halaman 1 — konten tabel mengalir bebas, tidak dipotong */
+    /* Satu div per siswa — konten mengalir bebas, browser atur page break saat print */
     .raport-page {
-      background: #fff;
-      width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto 24px;
-      padding: 1.5cm;
-      box-shadow: 0 4px 24px rgba(0,0,0,.18);
-      position: relative;
-    }
-
-    /* Halaman 2 — tanda tangan, selalu halaman baru */
-    .raport-page-2 {
       background: #fff;
       width: 210mm;
       min-height: 297mm;
@@ -104,17 +94,13 @@
       @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; padding: 0; }
       .no-print { display: none !important; }
+      /* Setiap raport-page = 1 set halaman untuk 1 siswa */
       .raport-page {
         width: 100%; min-height: auto;
         margin: 0; padding: 0;
         box-shadow: none;
-      }
-      .raport-page-2 {
-        width: 100%; min-height: auto;
-        margin: 0; padding: 0;
-        box-shadow: none;
-        page-break-before: always;
-        break-before: page;
+        page-break-after: always;
+        break-after: page;
       }
       .watermark { width: 380px; height: 380px; opacity: 0.07; }
     }
@@ -171,7 +157,6 @@
     let noUrut = 0;
   %>
 
-  <!-- ═══════════════ HALAMAN 1: KOP + TABEL NILAI ═══════════════ -->
   <div class="raport-page">
     <% const wmLogo = schoolInfo && schoolInfo.watermarkPath ? schoolInfo.watermarkPath : null; %>
     <% if (wmLogo) { %>
@@ -214,21 +199,17 @@
     <div class="data-siswa">
       <table>
         <tr>
-          <td width="80">Nama Siswa</td>
-          <td width="8">:</td>
+          <td width="80">Nama Siswa</td><td width="8">:</td>
           <td><strong><%= stu.full_name %></strong></td>
           <td width="15"></td>
-          <td width="50">Kelas</td>
-          <td width="8">:</td>
+          <td width="50">Kelas</td><td width="8">:</td>
           <td><%= stu.class_name || '-' %></td>
         </tr>
         <tr>
-          <td width="80">TTL</td>
-          <td width="8">:</td>
+          <td>TTL</td><td>:</td>
           <td><%= (stu.tempat_lahir || stu.tanggal_lahir) ? ((stu.tempat_lahir ? stu.tempat_lahir + ', ' : '') + (stu.tanggal_lahir ? formatTTL(stu.tanggal_lahir) : '')) : '-' %></td>
-          <td width="15"></td>
-          <td width="50">NISN</td>
-          <td width="8">:</td>
+          <td></td>
+          <td>NISN</td><td>:</td>
           <td><%= stu.username ? stu.username.split('@')[0] : '-' %></td>
         </tr>
       </table>
@@ -262,24 +243,18 @@
         </tr>
         <% } else { %>
         <tr>
-          <th class="no">No</th>
-          <th>Mata Pelajaran</th>
-          <th class="nilai">Nilai</th>
-          <th>Keterangan</th>
+          <th class="no">No</th><th>Mata Pelajaran</th>
+          <th class="nilai">Nilai</th><th>Keterangan</th>
         </tr>
         <% } %>
       </thead>
       <tbody>
         <% if (!stuGroups || stuGroups.length === 0) { %>
-          <tr>
-            <td colspan="<%= totalCols %>" style="text-align:center; padding: 12px; color: #888; font-style: italic;">Belum ada nilai yang diisi untuk siswa ini.</td>
-          </tr>
+          <tr><td colspan="<%= totalCols %>" style="text-align:center;padding:12px;color:#888;font-style:italic;">Belum ada nilai.</td></tr>
         <% } %>
         <% stuGroups.forEach(function(g) { noUrut = 0; %>
-          <tr class="group-header">
-            <td colspan="<%= totalCols %>"><%= g.name %></td>
-          </tr>
-          <% (g.subjects || []).forEach(function(s, si) { noUrut++; %>
+          <tr class="group-header"><td colspan="<%= totalCols %>"><%= g.name %></td></tr>
+          <% (g.subjects || []).forEach(function(s) { noUrut++; %>
             <tr>
               <td class="no"><%= noUrut %></td>
               <td><%= s.name %></td>
@@ -298,64 +273,57 @@
         <% if (scoreCount > 0) { %>
           <tr class="summary">
             <td colspan="<%= hasKd ? 2 + maxKd : 2 %>" style="text-align:right;">Jumlah Nilai</td>
-            <td class="nilai"><%= Math.round(totalScore) %></td>
-            <td></td>
+            <td class="nilai"><%= Math.round(totalScore) %></td><td></td>
           </tr>
           <tr class="summary">
             <td colspan="<%= hasKd ? 2 + maxKd : 2 %>" style="text-align:right;">Rata-rata</td>
-            <td class="nilai"><%= avgScore %></td>
-            <td></td>
+            <td class="nilai"><%= avgScore %></td><td></td>
           </tr>
         <% } %>
       </tbody>
     </table>
-  </div><!-- end raport-page halaman 1 -->
 
-  <!-- ═══════════════ HALAMAN 2: TANDA TANGAN ═══════════════ -->
-  <div class="raport-page-2">
-    <% if (wmLogo) { %>
-      <img src="<%= wmLogo %>" alt="" class="watermark" />
-    <% } %>
-
+    <!-- Tanda Tangan -->
     <% var hasDate = typeof reportDateFormatted !== 'undefined' && reportDateFormatted; %>
-
-    <!-- Tanda Tangan: Orang Tua (kiri) + Wali Kelas (kanan) -->
-    <div class="ttd-section" style="margin-top:20px;">
+    <div class="ttd-section">
       <div class="ttd-box" style="padding-left:2cm;">
-        <% if (hasDate) { %><p style="visibility:hidden;font-size:10pt;margin-bottom:4px;">&nbsp;</p><% } %>
+        <% if (hasDate) { %><p style="visibility:hidden;">&nbsp;</p><% } %>
         <p>Orang Tua / Wali Murid,</p>
-        <div class="ttd-garis" style="height:55px;"></div>
-        <p class="ttd-nama" style="font-weight:bold;text-decoration:underline;font-size:10pt;">.................................</p>
+        <div class="ttd-garis"></div>
+        <p class="ttd-nama">.................................</p>
       </div>
       <div class="ttd-box">
         <% if (hasDate) { %>
-        <p style="font-size:10pt;margin-bottom:4px;"><%= schoolCity %>, <%= reportDateFormatted %></p>
+          <p style="font-size:10pt;margin-bottom:4px;"><%= schoolCity %>, <%= reportDateFormatted %></p>
         <% } %>
         <p>Wali Kelas,</p>
-        <div class="ttd-garis" style="height:55px;"></div>
+        <div class="ttd-garis"></div>
         <p class="ttd-nama"><%= stu.homeroom_teacher_name || '.................................' %></p>
         <p class="ttd-nip">NIP. <%= stu.homeroom_teacher_nip || '-' %></p>
       </div>
     </div>
 
-    <!-- Mengetahui Kepala Sekolah (center) -->
     <div style="text-align:center; margin-top:18px;">
-      <p style="font-size:10pt; margin-bottom:2px;">Mengetahui,</p>
-      <p style="font-size:10pt; margin-bottom:2px;">Kepala SMK Negeri 1 Kras</p>
+      <p style="font-size:10pt;margin-bottom:2px;">Mengetahui,</p>
+      <p style="font-size:10pt;margin-bottom:2px;">Kepala SMK Negeri 1 Kras</p>
       <% if (schoolInfo && schoolInfo.principalSignPath) { %>
-        <div style="height:55px;display:flex;align-items:center;justify-content:center;overflow:visible;margin:0 auto;">
+        <div style="height:55px;display:flex;align-items:center;justify-content:center;margin:0 auto;">
           <img src="<%= schoolInfo.principalSignPath %>" alt="TTD Kepala Sekolah"
             style="max-height:119px;max-width:259px;object-fit:contain;display:block;margin-left:-10mm;margin-top:5mm;">
         </div>
       <% } else { %>
         <div style="height:55px;"></div>
       <% } %>
-      <p class="ttd-nama" style="text-align:center;font-weight:bold;text-decoration:underline;font-size:10pt;"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
+      <p class="ttd-nama" style="text-align:center;"><%= schoolInfo && schoolInfo.principalName ? schoolInfo.principalName : '.................................' %></p>
       <p class="ttd-nip" style="text-align:center;">NIP. <%= schoolInfo && schoolInfo.principalNip ? schoolInfo.principalNip : '-' %></p>
     </div>
-  </div><!-- end raport-page-2 halaman 2 -->
+
+  </div><!-- end raport-page -->
 
 <% }) %>
+
+</body>
+</html>
 
 </body>
 </html>
