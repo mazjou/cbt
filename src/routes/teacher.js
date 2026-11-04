@@ -3983,28 +3983,53 @@ router.get('/assignments/:id/export-grades', async (req, res) => {
     );
     const classNames = assignmentClasses.map(c => c.name).join(', ') || 'Semua Kelas';
 
-    // Ambil semua siswa yang harusnya mengumpulkan (dari kelas terdaftar)
-    const [allStudents] = await pool.query(
+    // Ambil semua submission terlebih dahulu (termasuk siswa nonaktif)
+    const [submissions] = await pool.query(
+      `SELECT sub.student_id, sub.score, sub.feedback, sub.submitted_at, sub.file_name, sub.link_url,
+              u.full_name AS student_name, u.username AS student_username, c.name AS class_name
+       FROM assignment_submissions sub
+       JOIN users u ON u.id = sub.student_id
+       LEFT JOIN classes c ON c.id = u.class_id
+       WHERE sub.assignment_id = :assignmentId
+       ORDER BY c.name ASC, u.full_name ASC`,
+      { assignmentId }
+    );
+    const submissionMap = {};
+    const submittedStudentIds = new Set();
+    for (const sub of submissions) {
+      submissionMap[sub.student_id] = sub;
+      submittedStudentIds.add(sub.student_id);
+    }
+
+    // Ambil siswa aktif dari kelas terdaftar yang BELUM submit (tanpa filter is_active agar inklusif)
+    const [classStudents] = await pool.query(
       `SELECT u.id, u.full_name, u.username, c.name AS class_name
        FROM users u
        INNER JOIN assignment_classes ac ON ac.class_id = u.class_id AND ac.assignment_id = :aid
        INNER JOIN classes c ON c.id = u.class_id
-       WHERE u.role = 'STUDENT' AND u.is_active = true
+       WHERE u.role = 'STUDENT'
        ORDER BY c.name ASC, u.full_name ASC`,
       { aid: assignmentId }
     );
 
-    // Ambil semua submission
-    const [submissions] = await pool.query(
-      `SELECT sub.student_id, sub.score, sub.feedback, sub.submitted_at, sub.file_name, sub.link_url
-       FROM assignment_submissions sub
-       WHERE sub.assignment_id = :assignmentId`,
-      { assignmentId }
-    );
-    const submissionMap = {};
-    for (const sub of submissions) {
-      submissionMap[sub.student_id] = sub;
+    // Gabungkan: siswa di kelas + siswa yang sudah submit (meski tidak aktif/pindah kelas)
+    const allStudentMap = new Map();
+    for (const stu of classStudents) {
+      allStudentMap.set(stu.id, stu);
     }
+    // Tambahkan siswa yang submit tapi tidak ada di kelas (misal sudah nonaktif)
+    for (const sub of submissions) {
+      if (!allStudentMap.has(sub.student_id)) {
+        allStudentMap.set(sub.student_id, {
+          id: sub.student_id,
+          full_name: sub.student_name,
+          username: sub.student_username,
+          class_name: sub.class_name || '-'
+        });
+      }
+    }
+    const allStudents = Array.from(allStudentMap.values())
+      .sort((a, b) => (a.class_name || '').localeCompare(b.class_name || '') || a.full_name.localeCompare(b.full_name));
 
     // Susun data Excel
     const data = allStudents.map((stu, idx) => {
