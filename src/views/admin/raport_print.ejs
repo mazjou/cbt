@@ -79,8 +79,8 @@
       body { background: #fff; }
       .no-print { display: none !important; }
       .raport-page { box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; break-after: page; page-break-after: always; }
-      /* Watermark fixed = muncul di tengah setiap halaman cetak */
-      .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.06; width: 380px; height: 380px; }
+      /* Watermark: absolute, opacity sangat kecil khusus print */
+      .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.08 !important; width: 380px; height: 380px; }
     }
   </style>
 </head>
@@ -139,6 +139,8 @@
     <% const wmLogo = schoolInfo && schoolInfo.watermarkPath ? schoolInfo.watermarkPath : null; %>
     <% if (wmLogo) { %>
       <img src="<%= wmLogo %>" alt="" class="watermark" />
+      <%# Watermark ke-2 untuk halaman ke-2 jika konten panjang %>
+      <img src="<%= wmLogo %>" alt="" class="watermark" style="top:150%;" />
     <% } %>
 
     <!-- Kop Surat -->
