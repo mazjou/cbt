@@ -42,9 +42,9 @@
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      width: 300px;
-      height: 300px;
-      opacity: 0.06;
+      width: 380px;
+      height: 380px;
+      opacity: 0.07;
       pointer-events: none;
       z-index: 0;
       object-fit: contain;
@@ -96,6 +96,10 @@
     .ttd-box .ttd-nama { font-weight: bold; margin-top: 4px; text-decoration: underline; font-size: 10pt; }
     .ttd-box .ttd-nip  { font-size: 10pt; }
 
+    /* Cegah baris tabel terpotong saat print */
+    .tabel-nilai tr { page-break-inside: avoid; break-inside: avoid; }
+    .tabel-nilai thead { display: table-header-group; }
+
     @media print {
       @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; padding: 0; }
@@ -112,7 +116,7 @@
         page-break-before: always;
         break-before: page;
       }
-      .watermark { width: 200px; height: 200px; }
+      .watermark { width: 380px; height: 380px; opacity: 0.07; }
     }
   </style>
 </head>
