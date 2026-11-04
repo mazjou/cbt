@@ -49,7 +49,7 @@
       transform: translate(-50%, -50%);
       width: 380px;
       height: 380px;
-      opacity: 0.08;
+      opacity: 0.07;
       pointer-events: none;
       z-index: 0;
       object-fit: contain;
@@ -90,7 +90,7 @@
       body { background: #fff; }
       .no-print { display: none !important; }
       .raport-page { box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; break-after: page; page-break-after: always; }
-      /* fixed + opacity kecil + multiply = watermark di tengah setiap halaman, tidak menutupi teks */
+      /* watermark fixed = tengah setiap halaman cetak, opacity kecil */
       .watermark {
         position: fixed;
         top: 50%;
@@ -98,8 +98,7 @@
         transform: translate(-50%, -50%);
         width: 100mm;
         height: 100mm;
-        opacity: 0.07;
-        mix-blend-mode: multiply;
+        opacity: 0.05;
       }
     }
   </style>
