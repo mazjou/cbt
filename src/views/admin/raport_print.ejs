@@ -14,18 +14,15 @@
     .btn-print { background: #4f46e5; color: #fff; }
     .btn-back { background: #f1f5f9; color: #475569; }
 
-    /* Setiap halaman A4 = kotak tersendiri di layar */
+    /* Halaman 1 — mengalir bebas sesuai konten, browser yang atur page break saat print */
     .raport-page {
       background: #fff;
       width: 210mm;
-      height: 297mm;
+      min-height: 297mm;
       margin: 0 auto 20px;
       padding: 1.5cm;
       box-shadow: 0 4px 24px rgba(0,0,0,.15);
       position: relative;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
     }
 
     /* Kop surat */
@@ -86,33 +83,42 @@
     .ttd-box .ttd-nama { font-weight: bold; margin-top: 4px; text-decoration: underline; font-size: 10pt; }
     .ttd-box .ttd-nip { font-size: 10pt; }
 
-    /* Halaman 2: konten sisa (tanda tangan dll) */
+    /* Halaman 2: tanda tangan — selalu mulai di halaman baru */
     .raport-page-2 {
       background: #fff;
       width: 210mm;
-      height: 297mm;
+      min-height: 297mm;
       margin: 0 auto 20px;
       padding: 1.5cm;
       box-shadow: 0 4px 24px rgba(0,0,0,.15);
       position: relative;
-      overflow: hidden;
+      page-break-before: always;
+      break-before: page;
     }
 
     @media print {
-      @page { size: A4 portrait; margin: 0; }
+      @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; padding: 0; }
       .no-print { display: none !important; }
-      /* Setiap .raport-page dan .raport-page-2 = 1 halaman cetak */
-      .raport-page, .raport-page-2 {
-        width: 210mm;
-        height: 297mm;
+      /* Halaman 1: konten mengalir, page break otomatis oleh browser */
+      .raport-page {
+        width: 100%;
+        min-height: auto;
         margin: 0;
-        padding: 1.5cm;
+        padding: 0;
         box-shadow: none;
         border: none;
-        overflow: hidden;
-        page-break-after: always;
-        break-after: page;
+      }
+      /* Halaman 2 TTD: selalu halaman baru */
+      .raport-page-2 {
+        width: 100%;
+        min-height: auto;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border: none;
+        page-break-before: always;
+        break-before: page;
       }
       .watermark { width: 100mm; height: 100mm; opacity: 0.07; }
     }
