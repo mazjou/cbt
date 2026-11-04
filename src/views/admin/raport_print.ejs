@@ -14,8 +14,7 @@
     .btn-print { background: #4f46e5; color: #fff; }
     .btn-back { background: #f1f5f9; color: #475569; }
 
-    /* Halaman 1 — konten tabel mengalir bebas, tidak dipotong */
-    /* Satu div per siswa — konten mengalir bebas, browser atur page break saat print */
+    /* Satu div per siswa di layar — lebar A4, min-height A4, konten bebas mengalir */
     .raport-page {
       background: #fff;
       width: 210mm;
@@ -26,7 +25,7 @@
       position: relative;
     }
 
-    /* Watermark — di belakang konten, tengah halaman */
+    /* Watermark di layar — tengah div */
     .watermark {
       position: absolute;
       left: 50%;
@@ -40,8 +39,12 @@
       object-fit: contain;
     }
     /* Semua konten di atas watermark */
-    .raport-page > *:not(.watermark),
-    .raport-page-2 > *:not(.watermark) { position: relative; z-index: 1; }
+    .raport-page > *:not(.watermark) { position: relative; z-index: 1; }
+
+    /* Watermark saat print — fixed agar muncul di SETIAP halaman, posisi tengah */
+    .watermark-print {
+      display: none;
+    }
 
     /* Kop surat */
     .kop { display: flex; align-items: flex-start; gap: 12px; }
@@ -86,7 +89,7 @@
     .ttd-box .ttd-nama { font-weight: bold; margin-top: 4px; text-decoration: underline; font-size: 10pt; }
     .ttd-box .ttd-nip  { font-size: 10pt; }
 
-    /* Cegah baris tabel terpotong saat print */
+    /* Cegah baris tabel terpotong di tengah saat print */
     .tabel-nilai tr { page-break-inside: avoid; break-inside: avoid; }
     .tabel-nilai thead { display: table-header-group; }
 
@@ -94,15 +97,37 @@
       @page { size: A4 portrait; margin: 1.5cm; }
       body { background: #fff; padding: 0; }
       .no-print { display: none !important; }
-      /* Setiap raport-page = 1 set halaman untuk 1 siswa */
+
+      /* Watermark di layar disembunyikan saat print */
+      .watermark { display: none !important; }
+
+      /* Watermark print: fixed = muncul di tengah SETIAP halaman cetak */
+      .watermark-print {
+        display: block;
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 380px;
+        height: 380px;
+        opacity: 0.07;
+        pointer-events: none;
+        z-index: 0;
+        object-fit: contain;
+      }
+
+      /* Setiap siswa mulai di halaman baru */
       .raport-page {
-        width: 100%; min-height: auto;
-        margin: 0; padding: 0;
+        width: 100%;
+        min-height: auto;
+        margin: 0;
+        padding: 0;
         box-shadow: none;
         page-break-after: always;
         break-after: page;
+        position: static;
       }
-      .watermark { width: 380px; height: 380px; opacity: 0.07; }
+      .raport-page > *:not(.watermark) { position: static; z-index: auto; }
     }
   </style>
 </head>
@@ -116,6 +141,16 @@
   <a href="javascript:history.back()" class="btn btn-back">Kembali</a>
   <span style="font-size:12px;color:#64748b;"><%= multiStudent ? allStudents.length + ' siswa' : (student ? student.full_name : '') %></span>
 </div>
+
+<%
+  // watermark path untuk fixed print (ambil dari siswa pertama)
+  const _firstWm = (multiStudent && allStudents.length > 0 && allStudents[0])
+    ? (schoolInfo && schoolInfo.watermarkPath)
+    : (schoolInfo && schoolInfo.watermarkPath);
+%>
+<% if (_firstWm) { %>
+  <img src="<%= _firstWm %>" alt="" class="watermark-print" />
+<% } %>
 
 <%
   // Helper: format tanggal lahir
@@ -162,7 +197,6 @@
     <% if (wmLogo) { %>
       <img src="<%= wmLogo %>" alt="" class="watermark" />
     <% } %>
-
     <!-- Kop Surat -->
     <div class="kop">
       <% if (schoolInfo && schoolInfo.logoPath) { %>
