@@ -44,9 +44,8 @@
     /* Watermark */
     .watermark {
       position: absolute;
-      top: 50%;
       left: 50%;
-      transform: translate(-50%, -50%);
+      transform: translateX(-50%);
       width: 380px;
       height: 380px;
       opacity: 0.07;
@@ -54,6 +53,10 @@
       z-index: 0;
       object-fit: contain;
     }
+    /* Halaman 1: tengah A4 = 148.5mm dari atas, dikurangi setengah tinggi gambar */
+    .wm-p1 { top: calc(148.5mm - 190px); }
+    /* Halaman 2: 297mm (halaman 1 penuh) + 148.5mm (tengah hal 2) - setengah gambar */
+    .wm-p2 { top: calc(297mm + 148.5mm - 190px); }
 
     /* Judul */
     .judul { text-align: center; margin: 14px 0 16px; }
@@ -91,7 +94,9 @@
       .no-print { display: none !important; }
       .raport-page { box-shadow: none; border: none; margin: 0; padding: 0; width: 100%; min-height: auto; overflow: visible; break-after: page; page-break-after: always; }
       /* watermark: absolute di tengah raport-page, tidak pakai fixed agar print preview tidak hang */
-      .watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 100mm; height: 100mm; opacity: 0.07; }
+      .watermark { width: 100mm; height: 100mm; opacity: 0.07; }
+      .wm-p1 { top: calc(148.5mm - 50mm); }
+      .wm-p2 { top: calc(297mm + 148.5mm - 50mm); }
     }
   </style>
 </head>
@@ -149,8 +154,8 @@
     <% /* Watermark logo di tengah setiap halaman */ %>
     <% const wmLogo = schoolInfo && schoolInfo.watermarkPath ? schoolInfo.watermarkPath : null; %>
     <% if (wmLogo) { %>
-      <img src="<%= wmLogo %>" alt="" class="watermark" style="top:50%;" />
-      <img src="<%= wmLogo %>" alt="" class="watermark" style="top:calc(297mm + 148mm);" />
+      <img src="<%= wmLogo %>" alt="" class="watermark wm-p1" />
+      <img src="<%= wmLogo %>" alt="" class="watermark wm-p2" />
     <% } %>
 
     <!-- Kop Surat -->
