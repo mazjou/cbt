@@ -3955,6 +3955,143 @@ router.post('/assignments/:id/reset-all', async (req, res) => {
   }
 });
 
+// ===== EXPORT NILAI TUGAS KE EXCEL =====
+router.get('/assignments/:id/export-grades', async (req, res) => {
+  try {
+    const teacherId = req.session.user.id;
+    const assignmentId = req.params.id;
+
+    // Verifikasi kepemilikan tugas
+    const [[assignment]] = await pool.query(
+      `SELECT a.*, s.name AS subject_name
+       FROM assignments a
+       LEFT JOIN subjects s ON s.id = a.subject_id
+       WHERE a.id = :id AND a.teacher_id = :teacherId`,
+      { id: assignmentId, teacherId }
+    );
+    if (!assignment) {
+      req.flash('error', 'Tugas tidak ditemukan.');
+      return res.redirect('/teacher/assignments');
+    }
+
+    // Ambil kelas yang terkait
+    const [assignmentClasses] = await pool.query(
+      `SELECT c.id, c.name FROM assignment_classes ac
+       JOIN classes c ON c.id = ac.class_id
+       WHERE ac.assignment_id = :aid ORDER BY c.name ASC`,
+      { aid: assignmentId }
+    );
+    const classNames = assignmentClasses.map(c => c.name).join(', ') || 'Semua Kelas';
+
+    // Ambil semua siswa yang harusnya mengumpulkan (dari kelas terdaftar)
+    const [allStudents] = await pool.query(
+      `SELECT u.id, u.full_name, u.username, c.name AS class_name
+       FROM users u
+       INNER JOIN assignment_classes ac ON ac.class_id = u.class_id AND ac.assignment_id = :aid
+       INNER JOIN classes c ON c.id = u.class_id
+       WHERE u.role = 'STUDENT' AND u.is_active = true
+       ORDER BY c.name ASC, u.full_name ASC`,
+      { aid: assignmentId }
+    );
+
+    // Ambil semua submission
+    const [submissions] = await pool.query(
+      `SELECT sub.student_id, sub.score, sub.feedback, sub.submitted_at, sub.file_name, sub.link_url
+       FROM assignment_submissions sub
+       WHERE sub.assignment_id = :assignmentId`,
+      { assignmentId }
+    );
+    const submissionMap = {};
+    for (const sub of submissions) {
+      submissionMap[sub.student_id] = sub;
+    }
+
+    // Susun data Excel
+    const data = allStudents.map((stu, idx) => {
+      const sub = submissionMap[stu.id] || null;
+      const submitTime = sub && sub.submitted_at
+        ? new Date(sub.submitted_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta', hour12: false })
+        : '';
+      return {
+        'No':              idx + 1,
+        'Nama Siswa':      stu.full_name,
+        'Username/NIS':    stu.username ? stu.username.split('@')[0] : stu.username,
+        'Kelas':           stu.class_name,
+        'Status':          sub ? 'Sudah Mengumpulkan' : 'Belum Mengumpulkan',
+        'Waktu Submit':    submitTime,
+        'File/Link':       sub ? (sub.file_name || sub.link_url || '-') : '-',
+        'Nilai':           sub && sub.score !== null && sub.score !== undefined ? sub.score : '',
+        'Feedback':        sub && sub.feedback ? sub.feedback : '',
+      };
+    });
+
+    const XLSX = require('xlsx');
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(data, {
+      header: ['No','Nama Siswa','Username/NIS','Kelas','Status','Waktu Submit','File/Link','Nilai','Feedback']
+    });
+
+    // Lebar kolom
+    ws['!cols'] = [
+      { wch: 5 },  // No
+      { wch: 30 }, // Nama Siswa
+      { wch: 22 }, // Username/NIS
+      { wch: 18 }, // Kelas
+      { wch: 22 }, // Status
+      { wch: 22 }, // Waktu Submit
+      { wch: 35 }, // File/Link
+      { wch: 8 },  // Nilai
+      { wch: 40 }, // Feedback
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Nilai Tugas');
+
+    // Info ringkasan di sheet ke-2
+    const sudahDinilai  = submissions.filter(s => s.score !== null && s.score !== undefined).length;
+    const sudahKumpul   = submissions.length;
+    const belumKumpul   = allStudents.length - sudahKumpul;
+    const nilaiAngka    = submissions.filter(s => s.score !== null).map(s => Number(s.score));
+    const rataRata      = nilaiAngka.length > 0
+      ? (nilaiAngka.reduce((a, b) => a + b, 0) / nilaiAngka.length).toFixed(1)
+      : '-';
+    const tertinggi     = nilaiAngka.length > 0 ? Math.max(...nilaiAngka) : '-';
+    const terendah      = nilaiAngka.length > 0 ? Math.min(...nilaiAngka) : '-';
+
+    const wsSummary = XLSX.utils.aoa_to_sheet([
+      ['REKAP NILAI TUGAS'],
+      [],
+      ['Nama Tugas',    assignment.title],
+      ['Mata Pelajaran',assignment.subject_name || '-'],
+      ['Kelas',         classNames],
+      ['Max Nilai',     assignment.max_score || 100],
+      [],
+      ['Total Siswa',   allStudents.length],
+      ['Sudah Kumpul',  sudahKumpul],
+      ['Belum Kumpul',  belumKumpul],
+      ['Sudah Dinilai', sudahDinilai],
+      ['Belum Dinilai', sudahKumpul - sudahDinilai],
+      [],
+      ['Rata-rata Nilai', rataRata],
+      ['Nilai Tertinggi',  tertinggi],
+      ['Nilai Terendah',   terendah],
+    ]);
+    wsSummary['!cols'] = [{ wch: 20 }, { wch: 35 }];
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Rekap');
+
+    const safeTitle = assignment.title.replace(/[^a-zA-Z0-9_\-]/g, '_').substring(0, 40);
+    const filename  = `NilaiTugas_${safeTitle}.xlsx`;
+
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buf);
+  } catch (err) {
+    console.error('Export grades error:', err);
+    req.flash('error', 'Gagal export nilai: ' + err.message);
+    res.redirect('/teacher/assignments/' + req.params.id);
+  }
+});
+
 // Toggle publish
 router.post('/assignments/:id/toggle-publish', async (req, res) => {
   try {
