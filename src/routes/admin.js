@@ -7162,23 +7162,30 @@ router.get('/raport/:period_id/legger', async (req, res) => {
     if (!period) return res.status(404).send('Periode tidak ditemukan.');
 
     // Ambil siswa (filter kelas jika ada) — hanya NISN plain, urut kelas → alfabet nama
-    let studentQ = `
-      SELECT DISTINCT u.id, u.full_name, u.username,
-             c.id AS class_id, c.name AS class_name,
-             c.homeroom_teacher_name, c.homeroom_teacher_nip
-      FROM users u
-      JOIN classes c ON c.id = u.class_id
-      JOIN raport_subject_classes rsc ON rsc.class_id = u.class_id
-      JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id AND rs.period_id = $1
-      WHERE u.role = 'STUDENT' AND u.is_active = true AND u.username NOT LIKE '%@%'
-    `;
+    // Gunakan subquery agar ORDER BY ekspresi bebas (tidak terikat SELECT DISTINCT)
     const sparams = [period_id];
-    if (class_id) { sparams.push(class_id); studentQ += ` AND u.class_id = $2`; }
-    studentQ += ` ORDER BY
-      CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END,
-      regexp_replace(upper(c.name), '^(XII|XI|X)\\s+', '') ASC,
-      (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
-      u.full_name ASC`;
+    let classFilter = '';
+    if (class_id) { sparams.push(class_id); classFilter = ` AND u.class_id = $2`; }
+
+    const studentQ = `
+      SELECT id, full_name, username, class_id, class_name,
+             homeroom_teacher_name, homeroom_teacher_nip
+      FROM (
+        SELECT DISTINCT u.id, u.full_name, u.username,
+               c.id AS class_id, c.name AS class_name,
+               c.homeroom_teacher_name, c.homeroom_teacher_nip
+        FROM users u
+        JOIN classes c ON c.id = u.class_id
+        JOIN raport_subject_classes rsc ON rsc.class_id = u.class_id
+        JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id AND rs.period_id = $1
+        WHERE u.role = 'STUDENT' AND u.is_active = true AND u.username NOT LIKE '%@%'
+        ${classFilter}
+      ) sub
+      ORDER BY
+        CASE WHEN class_name ~* '^XII' THEN 3 WHEN class_name ~* '^XI' THEN 2 WHEN class_name ~* '^X' THEN 1 ELSE 4 END,
+        regexp_replace(upper(class_name), '^(XII|XI|X)\\s+', '') ASC,
+        (regexp_match(class_name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+        full_name ASC`;
     const [students] = await pq(studentQ, sparams);
 
     if (!students.length) {
