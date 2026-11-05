@@ -5112,6 +5112,124 @@ router.get('/raport', async (req, res) => {
   }
 });
 
+// GET /teacher/raport/:period_id/legger - download legger nilai raport kelas wali (Excel)
+router.get('/raport/:period_id/legger', async (req, res) => {
+  const user = req.session.user;
+  const { period_id } = req.params;
+  try {
+    // Cari kelas wali
+    const [[homeroomClass]] = await pool.query(`
+      SELECT id, name FROM classes
+      WHERE homeroom_teacher_name = (SELECT full_name FROM users WHERE id = $1 LIMIT 1)
+         OR homeroom_teacher_nip = (SELECT username FROM users WHERE id = $1 LIMIT 1)
+      LIMIT 1
+    `, [user.id]);
+
+    if (!homeroomClass) {
+      req.flash('error', 'Anda tidak terdaftar sebagai wali kelas manapun.');
+      return res.redirect('/teacher/raport');
+    }
+
+    const [[period]] = await pool.query(`SELECT * FROM raport_periods WHERE id = $1`, [period_id]);
+    if (!period) return res.status(404).send('Periode tidak ditemukan.');
+
+    // Ambil siswa kelas ini — NISN plain, urut alfabet
+    const [students] = await pool.query(`
+      SELECT u.id, u.full_name, u.username,
+             c.id AS class_id, c.name AS class_name
+      FROM users u
+      JOIN classes c ON c.id = u.class_id
+      WHERE u.role = 'STUDENT' AND u.is_active = true
+        AND u.class_id = $1 AND u.username NOT LIKE '%@%'
+      ORDER BY u.full_name ASC
+    `, [homeroomClass.id]);
+
+    if (!students.length) {
+      req.flash('error', 'Belum ada siswa aktif di kelas ini.');
+      return res.redirect('/teacher/raport');
+    }
+
+    // Ambil mapel yang berlaku untuk kelas ini (terurut)
+    const [subjectRows] = await pool.query(`
+      SELECT rs.id AS subject_id, rs.subject_name,
+             rsg.sort_order AS group_sort, rsg.name AS group_name,
+             rs.sort_order AS subject_sort
+      FROM raport_subject_groups rsg
+      JOIN raport_subjects rs ON rs.group_id = rsg.id AND rsg.period_id = $1
+      JOIN raport_subject_classes rsc ON rsc.raport_subject_id = rs.id AND rsc.class_id = $2
+      ORDER BY rsg.sort_order ASC, rs.sort_order ASC, rs.id ASC
+    `, [period_id, homeroomClass.id]);
+
+    // Ambil semua nilai sekaligus
+    const studentIds = students.map(s => s.id);
+    const phStu = studentIds.map((_, i) => `$${i + 2}`).join(',');
+    const [scoreRows] = await pool.query(`
+      SELECT sc.student_id, sc.raport_subject_id, sc.score
+      FROM raport_scores sc
+      WHERE sc.period_id = $1 AND sc.student_id IN (${phStu})
+    `, [period_id, ...studentIds]);
+
+    const scoreLookup = {};
+    for (const r of scoreRows) {
+      scoreLookup[`${r.student_id}_${r.raport_subject_id}`] = r.score;
+    }
+
+    // ── Buat workbook Excel ──────────────────────────────────────────────────
+    const XLSX = require('xlsx');
+    const wb = XLSX.utils.book_new();
+
+    const headerRow = ['No', 'NISN', 'Nama Siswa', ...subjectRows.map(s => s.subject_name), 'Rata-rata'];
+    const sheetData = [headerRow];
+
+    students.forEach((stu, idx) => {
+      const scores = subjectRows.map(subj => {
+        const v = scoreLookup[`${stu.id}_${subj.subject_id}`];
+        return v != null ? Number(v) : '';
+      });
+      const filled = scores.filter(v => v !== '');
+      const avg = filled.length > 0
+        ? Math.round(filled.reduce((a, b) => a + b, 0) / filled.length * 10) / 10
+        : '';
+      sheetData.push([idx + 1, stu.username, stu.full_name, ...scores, avg]);
+    });
+
+    // Baris rata-rata kelas
+    const avgRow = ['', '', 'RATA-RATA KELAS'];
+    for (const subj of subjectRows) {
+      const vals = students
+        .map(stu => scoreLookup[`${stu.id}_${subj.subject_id}`])
+        .filter(v => v != null).map(Number);
+      avgRow.push(vals.length > 0
+        ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10
+        : '');
+    }
+    avgRow.push('');
+    sheetData.push(avgRow);
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    ws['!cols'] = [
+      { wch: 4 }, { wch: 18 }, { wch: 32 },
+      ...subjectRows.map(() => ({ wch: 14 })),
+      { wch: 10 },
+    ];
+    ws['!freeze'] = { xSplit: 3, ySplit: 1 };
+    XLSX.utils.book_append_sheet(wb, ws, homeroomClass.name.slice(0, 31));
+
+    const periodeLabel = period.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    const kelasLabel   = homeroomClass.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    const filename     = `Legger_${periodeLabel}_${kelasLabel}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    return res.send(buffer);
+  } catch (e) {
+    console.error('[Legger Teacher] Error:', e.message);
+    req.flash('error', 'Gagal mengunduh legger: ' + e.message);
+    return res.redirect('/teacher/raport');
+  }
+});
+
 // GET /teacher/raport/:period_id/print-kelas - cetak raport kelas wali (wali kelas only)
 router.get('/raport/:period_id/print-kelas', async (req, res) => {
   const user = req.session.user;

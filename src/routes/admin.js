@@ -7152,6 +7152,206 @@ router.get('/raport/:period_id/print/:student_id', async (req, res) => {
   }
 });
 
+// GET /admin/raport/:period_id/legger - download legger nilai raport per kelas (Excel)
+// Query: ?class_id= (opsional; kosong = semua kelas di periode ini)
+router.get('/raport/:period_id/legger', async (req, res) => {
+  const { period_id } = req.params;
+  const { class_id } = req.query;
+  try {
+    const [[period]] = await pq(`SELECT * FROM raport_periods WHERE id = $1`, [period_id]);
+    if (!period) return res.status(404).send('Periode tidak ditemukan.');
+
+    // Ambil siswa (filter kelas jika ada) — hanya NISN plain, urut kelas → alfabet nama
+    let studentQ = `
+      SELECT DISTINCT u.id, u.full_name, u.username,
+             c.id AS class_id, c.name AS class_name,
+             c.homeroom_teacher_name, c.homeroom_teacher_nip
+      FROM users u
+      JOIN classes c ON c.id = u.class_id
+      JOIN raport_subject_classes rsc ON rsc.class_id = u.class_id
+      JOIN raport_subjects rs ON rs.id = rsc.raport_subject_id AND rs.period_id = $1
+      WHERE u.role = 'STUDENT' AND u.is_active = true AND u.username NOT LIKE '%@%'
+    `;
+    const sparams = [period_id];
+    if (class_id) { sparams.push(class_id); studentQ += ` AND u.class_id = $2`; }
+    studentQ += ` ORDER BY
+      CASE WHEN c.name ~* '^XII' THEN 3 WHEN c.name ~* '^XI' THEN 2 WHEN c.name ~* '^X' THEN 1 ELSE 4 END,
+      regexp_replace(upper(c.name), '^(XII|XI|X)\\s+', '') ASC,
+      (regexp_match(c.name, '(\\d+)\\s*$'))[1]::int NULLS LAST,
+      u.full_name ASC`;
+    const [students] = await pq(studentQ, sparams);
+
+    if (!students.length) {
+      req.flash('error', 'Belum ada siswa aktif di kelas yang terdaftar pada periode ini.');
+      return res.redirect('/admin/raport/' + period_id);
+    }
+
+    // Ambil semua mapel per kelas yang terdaftar di periode ini (terurut)
+    const classIds = [...new Set(students.map(s => s.class_id))];
+    const phCls = classIds.map((_, i) => `$${i + 2}`).join(',');
+    const [subjectRows] = await pq(`
+      SELECT DISTINCT
+        rs.id AS subject_id, rs.subject_name, rs.sort_order AS subject_sort,
+        rsg.sort_order AS group_sort, rsg.name AS group_name,
+        rsc.class_id
+      FROM raport_subject_groups rsg
+      JOIN raport_subjects rs ON rs.group_id = rsg.id AND rs.period_id = $1
+      JOIN raport_subject_classes rsc ON rsc.raport_subject_id = rs.id AND rsc.class_id IN (${phCls})
+      ORDER BY rsg.sort_order ASC, rs.sort_order ASC, rs.id ASC
+    `, [period_id, ...classIds]);
+
+    // Peta subject per kelas: classId → [{subject_id, subject_name}]
+    const subjectsByClass = {};
+    for (const r of subjectRows) {
+      if (!subjectsByClass[r.class_id]) subjectsByClass[r.class_id] = [];
+      if (!subjectsByClass[r.class_id].find(s => s.subject_id === r.subject_id)) {
+        subjectsByClass[r.class_id].push({ subject_id: r.subject_id, subject_name: r.subject_name });
+      }
+    }
+
+    // Ambil semua nilai raport sekaligus
+    const studentIds = students.map(s => s.id);
+    const phStu = studentIds.map((_, i) => `$${i + 2}`).join(',');
+    const [scoreRows] = await pq(`
+      SELECT sc.student_id, sc.raport_subject_id, sc.score
+      FROM raport_scores sc
+      WHERE sc.period_id = $1 AND sc.student_id IN (${phStu})
+    `, [period_id, ...studentIds]);
+
+    // Buat lookup nilai: studentId_subjectId → score
+    const scoreLookup = {};
+    for (const r of scoreRows) {
+      scoreLookup[`${r.student_id}_${r.raport_subject_id}`] = r.score;
+    }
+
+    // ── Buat workbook Excel ──────────────────────────────────────────────────
+    const wb = XLSX.utils.book_new();
+
+    // Jika satu kelas → satu sheet legger
+    // Jika semua kelas → satu sheet per kelas + sheet ringkasan semua
+    const allClassIds = class_id ? [parseInt(class_id)] : classIds;
+
+    // Kumpulkan semua baris untuk sheet ringkasan semua kelas (jika multi-kelas)
+    const summaryAllRows = [];
+
+    for (const cid of allClassIds) {
+      const classStudents = students.filter(s => s.class_id === cid);
+      if (!classStudents.length) continue;
+      const subjects = subjectsByClass[cid] || [];
+      const className = classStudents[0].class_name;
+
+      // Header baris
+      const headerRow = ['No', 'NISN', 'Nama Siswa', ...subjects.map(s => s.subject_name), 'Rata-rata'];
+      const sheetData = [headerRow];
+
+      classStudents.forEach((stu, idx) => {
+        const scores = subjects.map(subj => {
+          const v = scoreLookup[`${stu.id}_${subj.subject_id}`];
+          return v != null ? Number(v) : '';
+        });
+        const filled = scores.filter(v => v !== '');
+        const avg = filled.length > 0
+          ? Math.round(filled.reduce((a, b) => a + b, 0) / filled.length * 10) / 10
+          : '';
+        const row = [idx + 1, stu.username, stu.full_name, ...scores, avg];
+        sheetData.push(row);
+        summaryAllRows.push([className, idx + 1, stu.username, stu.full_name, ...scores, avg]);
+      });
+
+      // Baris rata-rata kelas
+      const avgRow = ['', '', 'RATA-RATA KELAS'];
+      for (const subj of subjects) {
+        const vals = classStudents
+          .map(stu => scoreLookup[`${stu.id}_${subj.subject_id}`])
+          .filter(v => v != null)
+          .map(Number);
+        avgRow.push(vals.length > 0
+          ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10
+          : '');
+      }
+      avgRow.push(''); // Rata-rata kolom rata-rata (kosongkan)
+      sheetData.push(avgRow);
+
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+      // Style lebar kolom
+      ws['!cols'] = [
+        { wch: 4 },   // No
+        { wch: 18 },  // NISN
+        { wch: 32 },  // Nama
+        ...subjects.map(() => ({ wch: 14 })),  // Nilai mapel
+        { wch: 10 },  // Rata-rata
+      ];
+
+      // Beku baris header (freeze panes)
+      ws['!freeze'] = { xSplit: 3, ySplit: 1 };
+
+      // Nama sheet: nama kelas (max 31 karakter, batasan Excel)
+      const sheetName = className.slice(0, 31);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+
+    // Sheet ringkasan semua kelas (hanya jika multi-kelas)
+    if (!class_id && allClassIds.length > 1 && summaryAllRows.length > 0) {
+      // Kolom mapel di ringkasan: gabungan semua mapel unik (bisa berbeda per kelas)
+      // Untuk ringkasan: cukup Kelas | No | NISN | Nama | Nilai-mapel...
+      // Karena tiap kelas bisa punya mapel berbeda, buat header dari subject unik
+      const allSubjectsUniq = [];
+      for (const cid of allClassIds) {
+        for (const s of (subjectsByClass[cid] || [])) {
+          if (!allSubjectsUniq.find(x => x.subject_id === s.subject_id)) {
+            allSubjectsUniq.push(s);
+          }
+        }
+      }
+      const summaryHeader = ['Kelas', 'No', 'NISN', 'Nama Siswa',
+        ...allSubjectsUniq.map(s => s.subject_name), 'Rata-rata'];
+
+      const summaryData = [summaryHeader];
+      for (const cid of allClassIds) {
+        const classStudents = students.filter(s => s.class_id === cid);
+        if (!classStudents.length) continue;
+        const className = classStudents[0].class_name;
+        classStudents.forEach((stu, idx) => {
+          const scores = allSubjectsUniq.map(subj => {
+            const v = scoreLookup[`${stu.id}_${subj.subject_id}`];
+            return v != null ? Number(v) : '';
+          });
+          const filled = scores.filter(v => v !== '');
+          const avg = filled.length > 0
+            ? Math.round(filled.reduce((a, b) => a + b, 0) / filled.length * 10) / 10
+            : '';
+          summaryData.push([className, idx + 1, stu.username, stu.full_name, ...scores, avg]);
+        });
+      }
+
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+      wsSummary['!cols'] = [
+        { wch: 16 }, { wch: 4 }, { wch: 18 }, { wch: 32 },
+        ...allSubjectsUniq.map(() => ({ wch: 14 })),
+        { wch: 10 },
+      ];
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Semua Kelas');
+    }
+
+    // ── Kirim file ───────────────────────────────────────────────────────────
+    const label = class_id
+      ? (students[0]?.class_name || `kelas_${class_id}`).replace(/\s+/g, '_')
+      : 'semua_kelas';
+    const periodeLabel = period.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    const filename = `Legger_${periodeLabel}_${label}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    return res.send(buffer);
+  } catch (e) {
+    console.error('[Legger Admin] Error:', e.message);
+    req.flash('error', 'Gagal mengunduh legger: ' + e.message);
+    return res.redirect('/admin/raport/' + period_id);
+  }
+});
+
 // GET /admin/raport/:period_id/print-all - cetak semua siswa
 router.get('/raport/:period_id/print-all', async (req, res) => {
   const { period_id } = req.params;
