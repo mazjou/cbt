@@ -25,6 +25,15 @@ function getSchoolCity() {
   return 'Kediri';
 }
 
+// Helper: baca setting dari DB school_settings (sama dengan admin.js)
+async function getSetting(key, fallback = null) {
+  try {
+    const result = await pool.query(`SELECT value FROM school_settings WHERE key=$1`, [key]);
+    const row = result[0]?.[0] || result.rows?.[0];
+    return row?.value || fallback;
+  } catch (_) { return fallback; }
+}
+
 // ── Invalidasi cache soal ujian di Redis + in-memory ─────────────────────────
 async function invalidateExamQuestionsCache(examId, redisClient) {
   try {
@@ -5266,16 +5275,11 @@ router.get('/raport/:period_id/print-kelas', async (req, res) => {
       principalNip: process.env.PRINCIPAL_NIP || '',
       logoPath: process.env.SCHOOL_LOGO || null,
       watermarkPath: process.env.SCHOOL_WATERMARK || process.env.SCHOOL_LOGO || null,
-      principalSignPath: null
+      principalSignPath: (await getSetting('principal_sign')) || process.env.PRINCIPAL_SIGN || null
     };
     try {
-      const signResult = await pool.query(`SELECT value FROM school_settings WHERE key='principal_sign'`, []);
-      const signRow = signResult[0]?.[0];
-      schoolInfo.principalSignPath = signRow?.value || process.env.PRINCIPAL_SIGN || null;
-    } catch(_) {}
-    try {
       const [[principal]] = await pool.query(
-        `SELECT full_name, username FROM users WHERE role='PRINCIPAL' AND is_active=true LIMIT 1`
+        `SELECT full_name, username FROM users WHERE role='PRINCIPAL' AND is_active=true ORDER BY id ASC LIMIT 1`
       );
       if (principal) {
         schoolInfo.principalName = principal.full_name;
@@ -5416,16 +5420,11 @@ router.get('/raport/:period_id/print-siswa/:student_id', async (req, res) => {
       principalNip: process.env.PRINCIPAL_NIP || '',
       logoPath: process.env.SCHOOL_LOGO || null,
       watermarkPath: process.env.SCHOOL_WATERMARK || process.env.SCHOOL_LOGO || null,
-      principalSignPath: null
+      principalSignPath: (await getSetting('principal_sign')) || process.env.PRINCIPAL_SIGN || null
     };
     try {
-      const signResult = await pool.query(`SELECT value FROM school_settings WHERE key='principal_sign'`, []);
-      const signRow = signResult[0]?.[0];
-      schoolInfo.principalSignPath = signRow?.value || process.env.PRINCIPAL_SIGN || null;
-    } catch(_) {}
-    try {
       const [[principal]] = await pool.query(
-        `SELECT full_name, username FROM users WHERE role='PRINCIPAL' AND is_active=true LIMIT 1`
+        `SELECT full_name, username FROM users WHERE role='PRINCIPAL' AND is_active=true ORDER BY id ASC LIMIT 1`
       );
       if (principal) { schoolInfo.principalName = principal.full_name; schoolInfo.principalNip = (principal.username||'').split('@')[0]; }
     } catch(_) {}
