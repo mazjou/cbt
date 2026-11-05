@@ -5178,7 +5178,7 @@ router.get('/raport/:period_id/legger', async (req, res) => {
     const XLSX = require('xlsx');
     const wb = XLSX.utils.book_new();
 
-    const headerRow = ['No', 'NISN', 'Nama Siswa', ...subjectRows.map(s => s.subject_name), 'Rata-rata'];
+    const headerRow = ['No', 'NISN', 'Nama Siswa', ...subjectRows.map(s => s.subject_name), 'Jumlah Nilai', 'Rata-rata'];
     const sheetData = [headerRow];
 
     students.forEach((stu, idx) => {
@@ -5187,10 +5187,11 @@ router.get('/raport/:period_id/legger', async (req, res) => {
         return v != null ? Number(v) : '';
       });
       const filled = scores.filter(v => v !== '');
+      const jumlah = filled.length > 0 ? Math.round(filled.reduce((a, b) => a + b, 0)) : '';
       const avg = filled.length > 0
         ? Math.round(filled.reduce((a, b) => a + b, 0) / filled.length * 10) / 10
         : '';
-      sheetData.push([idx + 1, stu.username, stu.full_name, ...scores, avg]);
+      sheetData.push([idx + 1, stu.username, stu.full_name, ...scores, jumlah, avg]);
     });
 
     // Baris rata-rata kelas
@@ -5203,14 +5204,16 @@ router.get('/raport/:period_id/legger', async (req, res) => {
         ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10
         : '');
     }
-    avgRow.push('');
+    avgRow.push(''); // Jumlah Nilai — kosongkan
+    avgRow.push(''); // Rata-rata — kosongkan
     sheetData.push(avgRow);
 
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
     ws['!cols'] = [
       { wch: 4 }, { wch: 18 }, { wch: 32 },
       ...subjectRows.map(() => ({ wch: 14 })),
-      { wch: 10 },
+      { wch: 14 }, // Jumlah Nilai
+      { wch: 10 }, // Rata-rata
     ];
     ws['!freeze'] = { xSplit: 3, ySplit: 1 };
     XLSX.utils.book_append_sheet(wb, ws, homeroomClass.name.slice(0, 31));

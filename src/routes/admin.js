@@ -7248,7 +7248,7 @@ router.get('/raport/:period_id/legger', async (req, res) => {
       const className = classStudents[0].class_name;
 
       // Header baris
-      const headerRow = ['No', 'NISN', 'Nama Siswa', ...subjects.map(s => s.subject_name), 'Rata-rata'];
+      const headerRow = ['No', 'NISN', 'Nama Siswa', ...subjects.map(s => s.subject_name), 'Jumlah Nilai', 'Rata-rata'];
       const sheetData = [headerRow];
 
       classStudents.forEach((stu, idx) => {
@@ -7257,12 +7257,13 @@ router.get('/raport/:period_id/legger', async (req, res) => {
           return v != null ? Number(v) : '';
         });
         const filled = scores.filter(v => v !== '');
+        const jumlah = filled.length > 0 ? Math.round(filled.reduce((a, b) => a + b, 0)) : '';
         const avg = filled.length > 0
           ? Math.round(filled.reduce((a, b) => a + b, 0) / filled.length * 10) / 10
           : '';
-        const row = [idx + 1, stu.username, stu.full_name, ...scores, avg];
+        const row = [idx + 1, stu.username, stu.full_name, ...scores, jumlah, avg];
         sheetData.push(row);
-        summaryAllRows.push([className, idx + 1, stu.username, stu.full_name, ...scores, avg]);
+        summaryAllRows.push([className, idx + 1, stu.username, stu.full_name, ...scores, jumlah, avg]);
       });
 
       // Baris rata-rata kelas
@@ -7276,7 +7277,8 @@ router.get('/raport/:period_id/legger', async (req, res) => {
           ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length * 10) / 10
           : '');
       }
-      avgRow.push(''); // Rata-rata kolom rata-rata (kosongkan)
+      avgRow.push(''); // Jumlah Nilai — kosongkan untuk baris rata-rata kelas
+      avgRow.push(''); // Rata-rata — kosongkan untuk baris rata-rata kelas
       sheetData.push(avgRow);
 
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
@@ -7287,6 +7289,7 @@ router.get('/raport/:period_id/legger', async (req, res) => {
         { wch: 18 },  // NISN
         { wch: 32 },  // Nama
         ...subjects.map(() => ({ wch: 14 })),  // Nilai mapel
+        { wch: 14 },  // Jumlah Nilai
         { wch: 10 },  // Rata-rata
       ];
 
@@ -7312,7 +7315,7 @@ router.get('/raport/:period_id/legger', async (req, res) => {
         }
       }
       const summaryHeader = ['Kelas', 'No', 'NISN', 'Nama Siswa',
-        ...allSubjectsUniq.map(s => s.subject_name), 'Rata-rata'];
+        ...allSubjectsUniq.map(s => s.subject_name), 'Jumlah Nilai', 'Rata-rata'];
 
       const summaryData = [summaryHeader];
       for (const cid of allClassIds) {
@@ -7325,10 +7328,11 @@ router.get('/raport/:period_id/legger', async (req, res) => {
             return v != null ? Number(v) : '';
           });
           const filled = scores.filter(v => v !== '');
+          const jumlah = filled.length > 0 ? Math.round(filled.reduce((a, b) => a + b, 0)) : '';
           const avg = filled.length > 0
             ? Math.round(filled.reduce((a, b) => a + b, 0) / filled.length * 10) / 10
             : '';
-          summaryData.push([className, idx + 1, stu.username, stu.full_name, ...scores, avg]);
+          summaryData.push([className, idx + 1, stu.username, stu.full_name, ...scores, jumlah, avg]);
         });
       }
 
@@ -7336,7 +7340,8 @@ router.get('/raport/:period_id/legger', async (req, res) => {
       wsSummary['!cols'] = [
         { wch: 16 }, { wch: 4 }, { wch: 18 }, { wch: 32 },
         ...allSubjectsUniq.map(() => ({ wch: 14 })),
-        { wch: 10 },
+        { wch: 14 }, // Jumlah Nilai
+        { wch: 10 }, // Rata-rata
       ];
       XLSX.utils.book_append_sheet(wb, wsSummary, 'Semua Kelas');
     }
