@@ -6,25 +6,38 @@ const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 const router = express.Router();
 router.use(requireRole('STUDENT'));
 
-// ── Rate limiter sederhana berbasis memory ────────────────────────────────────
-const submitRateMap  = new Map(); // key: userId, value: { count, resetAt }
-const autosaveRateMap = new Map();
-function checkRateLimit(map, userId, maxCount, windowMs) {
+// ── Rate limiter berbasis Redis (fallback ke memory jika Redis tidak ada) ─────
+// Menggunakan Redis agar konsisten di semua worker PM2 cluster
+const _memRateMap = new Map(); // fallback jika Redis tidak tersedia
+
+async function checkRateLimitRedis(req, key, maxCount, windowSec) {
+  try {
+    const redis = req.app.locals.redisClient;
+    if (redis && req.app.locals.isRedisConnected) {
+      const rkey = `rl:${key}`;
+      const multi = redis.multi();
+      multi.incr(rkey);
+      multi.expire(rkey, windowSec);
+      const [count] = await multi.exec();
+      return count <= maxCount;
+    }
+  } catch (_) { /* fallback ke memory */ }
+
+  // Fallback memory (single worker)
   const now = Date.now();
-  const entry = map.get(userId);
+  const entry = _memRateMap.get(key);
   if (!entry || now > entry.resetAt) {
-    map.set(userId, { count: 1, resetAt: now + windowMs });
+    _memRateMap.set(key, { count: 1, resetAt: now + windowSec * 1000 });
     return true;
   }
   if (entry.count >= maxCount) return false;
   entry.count++;
   return true;
 }
-// Bersihkan map setiap 30 menit agar tidak bocor memori
+// Bersihkan memory fallback setiap 30 menit
 setInterval(() => {
   const now = Date.now();
-  for (const [k, v] of submitRateMap)  { if (now > v.resetAt) submitRateMap.delete(k); }
-  for (const [k, v] of autosaveRateMap){ if (now > v.resetAt) autosaveRateMap.delete(k); }
+  for (const [k, v] of _memRateMap) { if (now > v.resetAt) _memRateMap.delete(k); }
 }, 30 * 60 * 1000);
 
 // ── Helper: ambil counts materi/tugas/ujian/live-class untuk badge navigasi ──
@@ -810,8 +823,8 @@ router.post('/attempts/:id/answer', async (req, res) => {
   const attemptId = req.params.id;
   const { question_id, option_id, option_ids } = req.body; // option_ids untuk COMPLEX
 
-  // Rate limit: maks 120 request per menit per user
-  if (!checkRateLimit(autosaveRateMap, user.id, 120, 60 * 1000)) {
+  // Rate limit: maks 120 request per menit per user (Redis-based, konsisten di semua worker)
+  if (!(await checkRateLimitRedis(req, `autosave:${user.id}`, 120, 60))) {
     return res.status(429).json({ ok: false, message: 'Terlalu banyak permintaan. Coba lagi sebentar.' });
   }
 
@@ -992,8 +1005,8 @@ router.post('/attempts/:id/submit', async (req, res) => {
 
   console.log(`📥 Submission received for attempt ${attemptId}, retry: ${retryCount}`);
 
-  // Rate limit: maks 5 request per 10 menit per user
-  if (!checkRateLimit(submitRateMap, user.id, 5, 10 * 60 * 1000)) {
+  // Rate limit: maks 5 request per 10 menit per user (Redis-based, konsisten di semua worker)
+  if (!(await checkRateLimitRedis(req, `submit:${user.id}`, 5, 600))) {
     return res.status(429).json({ ok: false, message: 'Terlalu banyak permintaan submit. Coba lagi nanti.' });
   }
 
