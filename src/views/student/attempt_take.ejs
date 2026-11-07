@@ -958,6 +958,25 @@ function jumpAndClose(no) {
     locked: false
   };
 
+  // Grace period: pertama kali keluar fullscreen tidak langsung dicatat pelanggaran
+  let fullscreenExited = false;
+
+  // Cegah siswa menutup tab/browser tanpa sengaja
+  window.addEventListener('beforeunload', function(e) {
+    e.preventDefault();
+    e.returnValue = 'Anda sedang mengerjakan ujian. Yakin ingin meninggalkan halaman?';
+    return e.returnValue;
+  });
+
+  // Heartbeat setiap 30 detik via fetch POST
+  setInterval(function() {
+    fetch('/student/attempts/<%= attempt.id %>/heartbeat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    }).catch(function() {});
+  }, 30000);
+
   function nowMs() { return Date.now(); }
 
   function toast(msg) {
@@ -1078,10 +1097,24 @@ function jumpAndClose(no) {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   }
   document.addEventListener('fullscreenchange', () => {
-    if (!isFullscreen()) reportViolation('Keluar Fullscreen', 'fullscreenchange');
+    if (!isFullscreen()) {
+      if (fullscreenExited === false) {
+        fullscreenExited = true;
+        toast('Kamu keluar dari fullscreen. Kembali ke fullscreen agar tidak tercatat pelanggaran.');
+      } else {
+        reportViolation('Keluar Fullscreen', 'fullscreenchange');
+      }
+    }
   });
   document.addEventListener('webkitfullscreenchange', () => {
-    if (!isFullscreen()) reportViolation('Keluar Fullscreen', 'webkitfullscreenchange');
+    if (!isFullscreen()) {
+      if (fullscreenExited === false) {
+        fullscreenExited = true;
+        toast('Kamu keluar dari fullscreen. Kembali ke fullscreen agar tidak tercatat pelanggaran.');
+      } else {
+        reportViolation('Keluar Fullscreen', 'webkitfullscreenchange');
+      }
+    }
   });
 
   document.addEventListener('visibilitychange', () => {

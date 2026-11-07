@@ -567,6 +567,27 @@ async function initializeSocket(server, { redisClient = null, sessionMiddleware 
       }
     });
 
+    socket.on('exam:heartbeat', async (data = {}) => {
+      try {
+        const user = socket.user;
+        if (!user || normalizeRole(user.role) !== 'STUDENT') return;
+        const attemptId = Number(data.attemptId);
+        if (!Number.isInteger(attemptId) || attemptId <= 0) return;
+        // Verifikasi attempt milik siswa ini
+        const [[attempt]] = await pool.query(
+          `SELECT id, status FROM attempts WHERE id=:aid AND student_id=:sid LIMIT 1;`,
+          { aid: attemptId, sid: user.id }
+        );
+        if (!attempt || attempt.status !== 'IN_PROGRESS') return;
+        await pool.query(
+          `UPDATE attempts SET last_heartbeat_at=NOW() WHERE id=:aid;`,
+          { aid: attemptId }
+        );
+      } catch (error) {
+        console.error('Error exam:heartbeat:', error.message);
+      }
+    });
+
     socket.on('disconnecting', async () => {
       try {
         const liveClassIds = Array.from(socket.data.liveClassIds || []);

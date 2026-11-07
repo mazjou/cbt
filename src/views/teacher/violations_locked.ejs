@@ -49,7 +49,7 @@
             <th class="text-left py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Ujian</th>
             <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Pelanggaran</th>
             <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Terkunci Sejak</th>
-            <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Dibuka</th>
+            <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Sudah Dibuka (unlock_count)</th>
             <th class="text-center py-3 px-4 text-xs font-semibold text-slate-500 uppercase">Aksi</th>
           </tr>
         </thead>
@@ -67,15 +67,19 @@
             <td class="py-3 px-4 text-slate-600"><%= row.class_name || '-' %></td>
             <td class="py-3 px-4 text-slate-700 max-w-xs truncate" title="<%= row.exam_title %>"><%= row.exam_title %></td>
             <td class="py-3 px-4 text-center">
-              <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-700 font-bold text-sm">
+              <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-700 font-bold text-sm" title="Total semua pelanggaran">
                 <%= row.violation_count %>
               </span>
+              <div class="text-xs text-slate-400 mt-0.5">total</div>
             </td>
             <td class="py-3 px-4 text-center text-xs text-slate-500 whitespace-nowrap">
               <%= row.locked_at ? new Date(row.locked_at).toLocaleString('id-ID') : '-' %>
             </td>
             <td class="py-3 px-4 text-center text-xs text-slate-500">
-              <% if (row.unlock_count > 0) { %>
+              <% if (row.unlock_count >= 2) { %>
+                <span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold"><%= row.unlock_count %>x</span>
+                <span class="ml-1 px-2 py-0.5 rounded-full bg-red-500 text-white text-xs font-bold">⚠️ Berulang</span>
+              <% } else if (row.unlock_count === 1) { %>
                 <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold"><%= row.unlock_count %>x</span>
               <% } else { %>
                 <span class="text-slate-400">-</span>

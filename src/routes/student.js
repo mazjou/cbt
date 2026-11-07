@@ -868,6 +868,11 @@ router.post('/attempts/:id/violation', async (req, res) => {
     return res.json({ ok: true, logged: false, locked: true, needToken: true });
   }
 
+  // Guard: hanya catat pelanggaran jika attempt masih IN_PROGRESS
+  if (attempt.status !== 'IN_PROGRESS') {
+    return res.json({ ok: false, message: 'Attempt tidak aktif' });
+  }
+
   // Catat pelanggaran
   try {
     await pool.query(
@@ -921,28 +926,36 @@ router.get('/attempts/:id/lock-status', async (req, res) => {
   return res.json({ ok: true, locked: attempt.is_locked === true, status: attempt.status });
 });
 
-// Siswa submit token unlock
-router.post('/attempts/:id/unlock', async (req, res) => {
+// Siswa submit token unlock (tidak lagi digunakan — guru membuka kunci langsung dari dashboard)
+router.post('/attempts/:id/unlock', (req, res) => {
+  return res.status(410).json({ ok: false, message: 'Endpoint ini tidak lagi digunakan. Guru membuka kunci langsung dari dashboard.' });
+});
+
+// Heartbeat: siswa masih aktif mengerjakan ujian (update last_heartbeat_at)
+router.post('/attempts/:id/heartbeat', async (req, res) => {
   const user = req.session.user;
   const attemptId = req.params.id;
   if (!/^\d+$/.test(String(attemptId))) return res.status(404).json({ ok: false });
-  const { token } = req.body || {};
-  if (!token) return res.json({ ok: false, message: 'Token kosong.' });
-  const [[attempt]] = await pool.query(
-    `SELECT id, status, is_locked, unlock_token FROM attempts
-     WHERE id=:aid AND student_id=:sid LIMIT 1;`,
-    { aid: attemptId, sid: user.id }
-  );
-  if (!attempt) return res.status(404).json({ ok: false });
-  if (!attempt.is_locked) return res.json({ ok: true, message: 'Tidak terkunci.' });
-  if (String(attempt.unlock_token || '').toUpperCase() !== String(token || '').toUpperCase()) {
-    return res.json({ ok: false, message: 'Token salah. Minta token ke guru/admin.' });
+  try {
+    // Pastikan kolom last_heartbeat_at ada
+    await pool.query(
+      `ALTER TABLE attempts ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMP WITH TIME ZONE;`
+    );
+    const [[attempt]] = await pool.query(
+      `SELECT id, status FROM attempts WHERE id=:aid AND student_id=:sid LIMIT 1;`,
+      { aid: attemptId, sid: user.id }
+    );
+    if (!attempt) return res.status(404).json({ ok: false });
+    if (attempt.status !== 'IN_PROGRESS') return res.json({ ok: false, message: 'Attempt tidak aktif' });
+    await pool.query(
+      `UPDATE attempts SET last_heartbeat_at=NOW() WHERE id=:aid;`,
+      { aid: attemptId }
+    );
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('[HEARTBEAT]', e.message);
+    return res.status(500).json({ ok: false });
   }
-  await pool.query(
-    `UPDATE attempts SET is_locked=false, unlock_token=null, unlock_count=unlock_count+1 WHERE id=:aid;`,
-    { aid: attemptId }
-  );
-  return res.json({ ok: true, message: 'Kunci dibuka. Silakan lanjutkan ujian.' });
 });
 
 router.post('/attempts/:id/submit', async (req, res) => {
