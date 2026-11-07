@@ -6,6 +6,27 @@ const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 const router = express.Router();
 router.use(requireRole('STUDENT'));
 
+// ── Rate limiter sederhana berbasis memory ────────────────────────────────────
+const submitRateMap  = new Map(); // key: userId, value: { count, resetAt }
+const autosaveRateMap = new Map();
+function checkRateLimit(map, userId, maxCount, windowMs) {
+  const now = Date.now();
+  const entry = map.get(userId);
+  if (!entry || now > entry.resetAt) {
+    map.set(userId, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= maxCount) return false;
+  entry.count++;
+  return true;
+}
+// Bersihkan map setiap 30 menit agar tidak bocor memori
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of submitRateMap)  { if (now > v.resetAt) submitRateMap.delete(k); }
+  for (const [k, v] of autosaveRateMap){ if (now > v.resetAt) autosaveRateMap.delete(k); }
+}, 30 * 60 * 1000);
+
 // ── Helper: ambil counts materi/tugas/ujian/live-class untuk badge navigasi ──
 async function getStudentCounts(classId) {
   try {
@@ -781,13 +802,18 @@ router.get('/attempts/:id', async (req, res) => {
     };
   });
 
-  res.render('student/attempt_take', { title: 'Mengerjakan Ujian', attempt, questions });
+  res.render('student/attempt_take', { title: 'Mengerjakan Ujian', attempt, questions, user });
 });
 
 router.post('/attempts/:id/answer', async (req, res) => {
   const user = req.session.user;
   const attemptId = req.params.id;
   const { question_id, option_id, option_ids } = req.body; // option_ids untuk COMPLEX
+
+  // Rate limit: maks 120 request per menit per user
+  if (!checkRateLimit(autosaveRateMap, user.id, 120, 60 * 1000)) {
+    return res.status(429).json({ ok: false, message: 'Terlalu banyak permintaan. Coba lagi sebentar.' });
+  }
 
   // 1 query: validasi attempt + ambil tipe soal sekaligus
   const [[attemptQ]] = await pool.query(
@@ -966,13 +992,55 @@ router.post('/attempts/:id/submit', async (req, res) => {
 
   console.log(`📥 Submission received for attempt ${attemptId}, retry: ${retryCount}`);
 
+  // Rate limit: maks 5 request per 10 menit per user
+  if (!checkRateLimit(submitRateMap, user.id, 5, 10 * 60 * 1000)) {
+    return res.status(429).json({ ok: false, message: 'Terlalu banyak permintaan submit. Coba lagi nanti.' });
+  }
+
   const [[attempt]] = await pool.query(
-    `SELECT a.id, a.status, a.exam_id, a.submission_status
+    `SELECT a.id, a.status, a.exam_id, a.submission_status,
+            e.duration_minutes, e.end_at
      FROM attempts a
+     JOIN exams e ON e.id = a.exam_id
      WHERE a.id=:aid AND a.student_id=:sid
      LIMIT 1;`,
     { aid: attemptId, sid: user.id }
   );
+  
+  if (!attempt) {
+    req.flash('error', 'Attempt tidak ditemukan.');
+    return res.redirect('/student/exams');
+  }
+
+  // ── Validasi waktu server-side ────────────────────────────────────────────
+  const isAutoSubmit = req.body.auto_submit === true || req.body.auto_submit === 'true';
+  const hasAutoHeader = req.headers['x-auto-submit'] === '1';
+  if (!(isAutoSubmit && hasAutoHeader)) {
+    // Bukan auto-submit — validasi waktu
+    const [[timeCheck]] = await pool.query(
+      `SELECT EXTRACT(EPOCH FROM (NOW() - a.started_at))/60 AS elapsed_minutes
+       FROM attempts a
+       WHERE a.id=:aid LIMIT 1;`,
+      { aid: attemptId }
+    );
+    const elapsedMinutes = parseFloat(timeCheck?.elapsed_minutes || 0);
+    const durationMinutes = parseFloat(attempt.duration_minutes || 0);
+
+    if (durationMinutes > 0 && elapsedMinutes > durationMinutes + 5) {
+      return res.status(400).json({ ok: false, message: 'Waktu ujian sudah habis.' });
+    }
+
+    if (attempt.end_at) {
+      const [[endCheck]] = await pool.query(
+        `SELECT (NOW() > :end_at::timestamptz + interval '5 minutes') AS expired`,
+        { end_at: attempt.end_at }
+      );
+      if (endCheck?.expired) {
+        return res.status(400).json({ ok: false, message: 'Waktu ujian sudah habis.' });
+      }
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
   
   if (!attempt) {
     req.flash('error', 'Attempt tidak ditemukan.');

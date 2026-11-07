@@ -1,5 +1,25 @@
 <% const totalQ = questions.length; %>
 
+<!-- Watermark identitas siswa -->
+<div id="studentWatermark" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20;"></div>
+<script>
+(function(){
+  var name = "<%= user.full_name %>";
+  var uname = "<%= user.username.split('@')[0] %>";
+  var label = name + ' | ' + uname;
+  var encoded = encodeURIComponent(label);
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">'
+    + '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle"'
+    + ' transform="rotate(-35,200,150)" font-size="18" font-family="sans-serif"'
+    + ' fill="#555" opacity="0.05">' + label + '</text></svg>';
+  var b64 = btoa(unescape(encodeURIComponent(svg)));
+  document.getElementById('studentWatermark').style.backgroundImage =
+    'url("data:image/svg+xml;base64,' + b64 + '")';
+  document.getElementById('studentWatermark').style.backgroundRepeat = 'repeat';
+  document.getElementById('studentWatermark').style.backgroundSize = '400px 300px';
+})();
+</script>
+
 <!-- ══════════════════════════════════════════════════════════
      FLOATING BAR STICKY — Timer + Daftar Soal (selalu terlihat)
      ══════════════════════════════════════════════════════════ -->
@@ -548,7 +568,7 @@ function jumpAndClose(no) {
       
       // Use retry mechanism for auto-submit
       setTimeout(() => {
-        submitWithRetry();
+        submitWithRetry(3, true); // isAutoSubmit = true → bypass validasi waktu server
       }, 1500);
     }
   }
@@ -800,7 +820,7 @@ function jumpAndClose(no) {
   // ===== SUBMISSION WITH RETRY MECHANISM =====
   let isSubmitting = false;
   
-  async function submitWithRetry(maxRetries = 3) {
+  async function submitWithRetry(maxRetries = 3, isAutoSubmit = false) {
     if (isSubmitting) {
       console.log('⏳ Submission already in progress');
       return;
@@ -818,14 +838,19 @@ function jumpAndClose(no) {
       try {
         console.log(`🔄 Submission attempt ${retryCount + 1}/${maxRetries}`);
         
+        const headers = {
+          'Content-Type': 'application/json',
+          'X-Retry-Count': retryCount.toString()
+        };
+        // Tandai auto-submit agar server bypass validasi waktu
+        if (isAutoSubmit) headers['X-Auto-Submit'] = '1';
+
         const response = await fetch('/student/attempts/<%= attempt.id %>/submit', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Retry-Count': retryCount.toString()
-          },
+          headers,
           body: JSON.stringify({
-            backup_data: loadBackupFromLocalStorage()
+            backup_data: loadBackupFromLocalStorage(),
+            ...(isAutoSubmit ? { auto_submit: true } : {})
           })
         });
         
