@@ -275,7 +275,7 @@ function jumpAndClose(no) {
     <div class="text-xs text-slate-400">Jawaban kamu tersimpan dan tidak hilang.</div>
   </div>
 </div>
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div id="fsBannerWrap" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <div class="flex items-start gap-3">
       <span class="text-3xl">🔒</span>
       <div>
@@ -1261,9 +1261,23 @@ function jumpAndClose(no) {
   // Fullscreen
   // ── Fullscreen — desktop & mobile ────────────────────────────────────────
   const fsBtn = document.getElementById('btnFullscreen');
+  const fsBannerWrap = document.getElementById('fsBannerWrap');
+  const antiCheatBar = document.getElementById('antiCheatBar');
   const fsOverlay = document.getElementById('fsOverlay');
   const btnStartFs = document.getElementById('btnStartFullscreen');
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
+
+  // Sembunyikan/tampilkan banner fullscreen sesuai status layar
+  function updateFsBanner() {
+    if (!fsBannerWrap) return;
+    if (isFullscreen()) {
+      // Fullscreen aktif — sembunyikan seluruh antiCheatBar
+      if (antiCheatBar) antiCheatBar.style.display = 'none';
+    } else {
+      // Keluar fullscreen — tampilkan kembali banner
+      if (antiCheatBar) antiCheatBar.style.display = '';
+    }
+  }
 
   async function requestFullscreen() {
     try {
@@ -1292,7 +1306,15 @@ function jumpAndClose(no) {
       fsOverlay.style.transition = 'opacity 0.3s';
       setTimeout(() => { fsOverlay.style.display = 'none'; }, 300);
     }
-    requestFullscreen();
+    requestFullscreen().then(() => {
+      // Sembunyikan banner setelah fullscreen berhasil
+      setTimeout(updateFsBanner, 500);
+    }).catch(() => {});
+    // Untuk mobile yang tidak support fullscreen API, sembunyikan banner langsung
+    if (isMobile) {
+      setTimeout(updateFsBanner, 800);
+      if (antiCheatBar) antiCheatBar.style.display = 'none';
+    }
     // Scroll ke atas agar soal pertama terlihat
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -1317,6 +1339,7 @@ function jumpAndClose(no) {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   }
   document.addEventListener('fullscreenchange', () => {
+    updateFsBanner(); // sembunyikan/tampilkan banner sesuai status fullscreen
     if (!isFullscreen()) {
       if (fullscreenExited === false) {
         fullscreenExited = true;
@@ -1327,6 +1350,7 @@ function jumpAndClose(no) {
     }
   });
   document.addEventListener('webkitfullscreenchange', () => {
+    updateFsBanner(); // sembunyikan/tampilkan banner sesuai status fullscreen
     if (!isFullscreen()) {
       if (fullscreenExited === false) {
         fullscreenExited = true;
