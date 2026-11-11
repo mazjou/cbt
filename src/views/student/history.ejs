@@ -31,9 +31,19 @@
           <td class="py-3 text-purple-900"><%= r.exam_title %></td>
           <td class="py-3 text-purple-800"><%= r.subject_name %></td>
           <td class="py-3 text-purple-800"><%= r.status %></td>
-          <td class="py-3 text-right font-semibold text-purple-900"><%= r.score %></td>
+          <td class="py-3 text-right font-semibold text-purple-900">
+            <% if (r.show_score_to_student) { %>
+              <%= r.score %>
+            <% } else { %>
+              <span class="text-xs text-slate-400 italic">Belum dirilis</span>
+            <% } %>
+          </td>
           <td class="py-3 text-right">
-            <a href="/student/attempts/<%= r.id %>/result" class="px-3 py-2 rounded-lg border border-purple-300 bg-white hover:bg-purple-50 text-purple-800 font-medium transition-colors">Detail</a>
+            <% if (r.show_score_to_student) { %>
+              <a href="/student/attempts/<%= r.id %>/result" class="px-3 py-2 rounded-lg border border-purple-300 bg-white hover:bg-purple-50 text-purple-800 font-medium transition-colors">Detail</a>
+            <% } else { %>
+              <span class="px-3 py-2 text-xs text-slate-400 italic">—</span>
+            <% } %>
           </td>
         </tr>
       <% }) %>

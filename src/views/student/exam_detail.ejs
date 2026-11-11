@@ -114,7 +114,14 @@
         ⚠️ Anda telah mencapai batas maksimal percobaan (<%= exam.max_attempts %>x)
       </p>
 
-      <% if (attemptResults && attemptResults.length > 0) { %>
+      <% if (!exam.show_score_to_student) { %>
+        <!-- Nilai belum dirilis guru -->
+        <div class="p-5 rounded-xl bg-blue-50 border-2 border-blue-200 text-center">
+          <div class="text-4xl mb-3">⏳</div>
+          <div class="text-base font-semibold text-blue-800 mb-1">Nilai Belum Dirilis</div>
+          <div class="text-sm text-blue-600">Guru akan mengumumkan nilai setelah ujian selesai diperiksa.</div>
+        </div>
+      <% } else if (attemptResults && attemptResults.length > 0) { %>
         <div class="space-y-3">
           <% attemptResults.forEach((attempt, index) => { %>
             <div class="p-4 rounded-xl bg-white/70 border-2 <%= attempt.status === 'Lulus' ? 'border-green-300' : 'border-red-300' %>">

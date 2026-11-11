@@ -428,9 +428,9 @@ router.get('/exams/:id', async (req, res) => {
     }
   }
 
-  // Fetch attempt results if max attempts reached
+  // Fetch attempt results — hanya jika max attempts tercapai DAN guru izinkan tampil nilai
   let attemptResults = [];
-  if (exam.attempts_count >= exam.max_attempts) {
+  if (exam.attempts_count >= exam.max_attempts && exam.show_score_to_student) {
     attemptResults = await pool.query(
       `SELECT id, score, finished_at, 
               CASE WHEN score >= :pass_score THEN 'Lulus' ELSE 'Tidak Lulus' END AS status
@@ -1215,7 +1215,8 @@ router.get('/history', async (req, res) => {
   const user = req.session.user;
   const [rows] = await pool.query(
     `SELECT a.id, a.score, a.status, a.started_at, a.finished_at,
-            e.title AS exam_title, s.name AS subject_name
+            e.title AS exam_title, e.show_score_to_student,
+            s.name AS subject_name
      FROM attempts a
      JOIN exams e ON e.id=a.exam_id
      JOIN subjects s ON s.id=e.subject_id
