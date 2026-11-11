@@ -183,7 +183,7 @@ router.post('/:id/push', requireTeacherOrAdmin, async (req, res) => {
   const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || req.headers.accept?.includes('application/json');
   try {
     const [[notif]] = await pool.query(
-      `SELECT id, title, sender_id, target_type, target_id FROM notifications WHERE id = :id`,
+      `SELECT id, title, sender_id FROM notifications WHERE id = :id`,
       { id: req.params.id }
     );
     if (!notif) {
@@ -197,10 +197,13 @@ router.post('/:id/push', requireTeacherOrAdmin, async (req, res) => {
       return res.redirect('/notifications');
     }
 
-    // Pastikan notifikasi aktif dan set pushed_at = NOW() agar browser siswa reset localStorage
+    // Tambahkan kolom push_count jika belum ada (safe)
+    await pool.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS push_count INT NOT NULL DEFAULT 0`).catch(()=>{});
+
+    // Increment push_count + aktifkan + update pushed_at
     await pool.query(
-      `UPDATE notifications SET is_active = true,
-       pushed_at = NOW()
+      `UPDATE notifications SET is_active = true, pushed_at = NOW(),
+       push_count = COALESCE(push_count, 0) + 1
        WHERE id = :id`,
       { id: req.params.id }
     );
@@ -212,10 +215,10 @@ router.post('/:id/push', requireTeacherOrAdmin, async (req, res) => {
     );
     const count = deleted?.affectedRows || 0;
 
-    if (isAjax) return res.json({ ok: true, message: `Notifikasi dikirim ulang. ${count} catatan baca dihapus.` });
+    if (isAjax) return res.json({ ok: true, message: `Notifikasi dikirim ulang ke semua siswa.` });
     req.flash('success', `✅ Notifikasi "${notif.title}" berhasil di-push ulang ke semua siswa.`);
   } catch (error) {
-    console.error(error);
+    console.error('[PUSH]', error);
     if (isAjax) return res.status(500).json({ ok: false, message: 'Gagal push: ' + error.message });
     req.flash('error', 'Gagal push notifikasi: ' + error.message);
   }
@@ -259,7 +262,7 @@ router.get('/active', async (req, res) => {
     const classId = studentData?.class_id;
     const [notifications] = await pool.query(
       `SELECT n.id, n.title, n.message, n.type, n.created_at,
-              COALESCE(n.pushed_at, n.created_at) AS pushed_at
+              COALESCE(n.push_count, 0) AS push_count
        FROM notifications n
        WHERE n.is_active = true
          AND (n.expires_at IS NULL OR n.expires_at > NOW())

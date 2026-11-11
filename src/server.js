@@ -568,9 +568,10 @@ async function bootstrap() {
     const { initializeSocket } = require('./socket');
     await initializeSocket(server, { redisClient, sessionMiddleware });
 
-    // ── Migration ringan: tambah kolom pushed_at di notifications jika belum ada
+    // ── Migration ringan: tambah kolom pushed_at dan push_count di notifications jika belum ada
     try {
       await pool.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS pushed_at TIMESTAMPTZ`);
+      await pool.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS push_count INT NOT NULL DEFAULT 0`);
     } catch(_) {}
 
     server.listen(PORT, () => {

@@ -120,7 +120,7 @@
     <!-- Modal Notification System (Peringatan dari Guru/Admin) -->
     <script>
       (function() {
-        // Key localStorage: simpan map { notifId: pushed_at } yang sudah ditutup siswa
+        // Key localStorage: simpan map { notifId: push_count } yang sudah ditutup siswa
         const storageKey = 'closedNotifs_v2';
         let closedMap = {};
         try {
@@ -137,11 +137,11 @@
             const data = await response.json();
             if (data.notifications && data.notifications.length > 0) {
               for (const notif of data.notifications) {
-                const pushedAt = notif.pushed_at || notif.created_at || '';
-                const closedAt = closedMap[notif.id];
-                // Tampilkan jika: belum pernah ditutup, ATAU guru sudah push ulang setelah siswa tutup
-                if (!closedAt || closedAt !== pushedAt) {
-                  showModalNotification(notif, pushedAt);
+                const pushCount = notif.push_count || 0;
+                const closedCount = closedMap[notif.id];
+                // Tampilkan jika: belum pernah ditutup, ATAU guru push ulang (push_count bertambah)
+                if (closedCount === undefined || closedCount < pushCount) {
+                  showModalNotification(notif, pushCount);
                   break; // tampilkan satu per satu
                 }
               }
@@ -166,7 +166,7 @@
           const color = colors[notif.type] || colors.GENERAL;
 
           const modal = document.createElement('div');
-        function showModalNotification(notif, pushedAt) {
+        function showModalNotification(notif, pushCount) {
           if (document.getElementById('modalNotification_' + notif.id)) return;
           const colors = {
             info: { border:'border-blue-200', bg:'from-blue-50 to-cyan-50', text:'text-blue-900', icon:'ℹ️' },
@@ -181,7 +181,7 @@
           const color = colors[notif.type] || colors.GENERAL;
           const modal = document.createElement('div');
           modal.id = 'modalNotification_' + notif.id;
-          modal.setAttribute('data-pushed-at', pushedAt);
+          modal.setAttribute('data-push-count', pushCount);
           modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn';
           modal.innerHTML = `
             <div class="rounded-2xl border-2 ${color.border} bg-gradient-to-br ${color.bg} p-6 shadow-2xl max-w-md mx-4 animate-scaleIn">
@@ -190,7 +190,7 @@
                   <span class="text-4xl">${color.icon}</span>
                   <h2 class="text-xl font-bold ${color.text}">${escapeHtml(notif.title)}</h2>
                 </div>
-                <button onclick="closeModalNotification(${notif.id},'${pushedAt}')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <button onclick="closeModalNotification(${notif.id},${pushCount})" class="text-slate-400 hover:text-slate-600 transition-colors">
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -202,7 +202,7 @@
               <div class="flex items-center justify-between text-xs text-slate-600 mb-4">
                 <span>📅 ${new Date(notif.created_at).toLocaleString('id-ID')}</span>
               </div>
-              <button onclick="closeModalNotification(${notif.id},'${pushedAt}')" class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+              <button onclick="closeModalNotification(${notif.id},${pushCount})" class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
                 ✓ Mengerti
               </button>
             </div>
@@ -210,14 +210,14 @@
           document.body.appendChild(modal);
         }
 
-        window.closeModalNotification = async function(notifId, pushedAt) {
+        window.closeModalNotification = async function(notifId, pushCount) {
           const modal = document.getElementById('modalNotification_' + notifId);
           if (modal) {
             modal.classList.add('animate-fadeOut');
             setTimeout(() => modal.remove(), 300);
           }
-          // Simpan ke localStorage: notifId → pushedAt (bukan hanya ID)
-          closedMap[notifId] = pushedAt || '';
+          // Simpan push_count saat ini ke localStorage
+          closedMap[notifId] = pushCount || 0;
           saveClosedMap();
           // Tandai sudah baca di server
           try {

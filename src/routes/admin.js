@@ -5923,12 +5923,13 @@ router.post('/notifications/:id/push', async (req, res) => {
       req.flash('error', 'Notifikasi tidak ditemukan');
       return res.redirect('/admin/notifications');
     }
-    // Aktifkan notifikasi dan set pushed_at = NOW() agar browser siswa reset localStorage
-    await pq(`UPDATE notifications SET is_active = true, pushed_at = NOW() WHERE id = $1`, [req.params.id]);
+    // Aktifkan + increment push_count agar browser siswa detect perubahan + hapus read records
+    await pq(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS push_count INT NOT NULL DEFAULT 0`).catch(()=>{});
+    await pq(`UPDATE notifications SET is_active = true, pushed_at = NOW(),
+              push_count = COALESCE(push_count, 0) + 1 WHERE id = $1`, [req.params.id]);
     // Hapus semua read records agar muncul kembali
     const [del] = await pq(`DELETE FROM notification_reads WHERE notification_id = $1`, [req.params.id]);
-    const count = del?.affectedRows || 0;
-    if (isAjax) return res.json({ ok: true, message: `Notifikasi dikirim ulang. ${count} catatan baca dihapus.` });
+    if (isAjax) return res.json({ ok: true, message: `Notifikasi dikirim ulang ke semua siswa.` });
     req.flash('success', `✅ Notifikasi "${notif.title}" berhasil di-push ulang.`);
   } catch (e) {
     console.error(e);
