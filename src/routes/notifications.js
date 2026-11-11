@@ -195,7 +195,7 @@ router.post('/:id/push', requireTeacherOrAdmin, async (req, res) => {
     }
 
     // Pastikan notifikasi aktif
-    await pool.query(`UPDATE notifications SET is_active = true, updated_at = NOW() WHERE id = :id`, { id: req.params.id });
+    await pool.query(`UPDATE notifications SET is_active = true WHERE id = :id`, { id: req.params.id });
 
     // Hapus semua read records agar muncul kembali di semua siswa
     const [deleted] = await pool.query(

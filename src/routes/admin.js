@@ -5910,6 +5910,46 @@ router.get('/notifications', async (req, res) => {
   }
 });
 
+// Push ulang notifikasi (admin)
+router.post('/notifications/:id/push', async (req, res) => {
+  const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+  try {
+    const [[notif]] = await pq(
+      `SELECT id, title, sender_id FROM notifications WHERE id = $1 LIMIT 1`,
+      [req.params.id]
+    );
+    if (!notif) {
+      if (isAjax) return res.status(404).json({ ok: false, message: 'Notifikasi tidak ditemukan' });
+      req.flash('error', 'Notifikasi tidak ditemukan');
+      return res.redirect('/admin/notifications');
+    }
+    // Aktifkan notifikasi
+    await pq(`UPDATE notifications SET is_active = true WHERE id = $1`, [req.params.id]);
+    // Hapus semua read records agar muncul kembali
+    const [del] = await pq(`DELETE FROM notification_reads WHERE notification_id = $1`, [req.params.id]);
+    const count = del?.affectedRows || 0;
+    if (isAjax) return res.json({ ok: true, message: `Notifikasi dikirim ulang. ${count} catatan baca dihapus.` });
+    req.flash('success', `✅ Notifikasi "${notif.title}" berhasil di-push ulang.`);
+  } catch (e) {
+    console.error(e);
+    if (isAjax) return res.status(500).json({ ok: false, message: 'Gagal push: ' + e.message });
+    req.flash('error', 'Gagal push: ' + e.message);
+  }
+  res.redirect('/admin/notifications');
+});
+
+// Toggle aktif/nonaktif notifikasi (admin)
+router.post('/notifications/:id/toggle', async (req, res) => {
+  try {
+    await pq(`UPDATE notifications SET is_active = NOT is_active WHERE id = $1`, [req.params.id]);
+    req.flash('success', 'Status notifikasi diubah.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal mengubah status.');
+  }
+  res.redirect('/admin/notifications');
+});
+
 // Hapus semua notifikasi dengan title+sender+tanggal yang sama (hapus duplikat sekaligus)
 router.post('/notifications/:id/delete', async (req, res) => {
   try {
