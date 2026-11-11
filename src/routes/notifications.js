@@ -25,7 +25,18 @@ router.get('/', requireTeacherOrAdmin, async (req, res) => {
     if (isAdmin) {
       [notifications] = await pool.query(
         `SELECT n.*, u.username AS sender_name,
-                (SELECT COUNT(*) FROM notification_reads nr WHERE nr.notification_id = n.id) AS read_count
+                (SELECT COUNT(*) FROM notification_reads nr WHERE nr.notification_id = n.id) AS read_count,
+                (SELECT COUNT(*) FROM users s WHERE s.role='STUDENT' AND s.is_active=true
+                   AND (n.target_type='all'
+                     OR (n.target_type='class' AND s.class_id=n.target_id)
+                     OR (n.target_type='student' AND s.id=n.target_id))
+                ) AS total_target,
+                (SELECT COUNT(*) FROM users s WHERE s.role='STUDENT' AND s.is_active=true
+                   AND (n.target_type='all'
+                     OR (n.target_type='class' AND s.class_id=n.target_id)
+                     OR (n.target_type='student' AND s.id=n.target_id))
+                   AND NOT EXISTS (SELECT 1 FROM notification_reads nr WHERE nr.notification_id=n.id AND nr.user_id=s.id)
+                ) AS unread_count
          FROM notifications n
          LEFT JOIN users u ON u.id = n.sender_id
          ORDER BY n.created_at DESC LIMIT 100`
@@ -33,7 +44,18 @@ router.get('/', requireTeacherOrAdmin, async (req, res) => {
     } else {
       [notifications] = await pool.query(
         `SELECT n.*, u.username AS sender_name,
-                (SELECT COUNT(*) FROM notification_reads nr WHERE nr.notification_id = n.id) AS read_count
+                (SELECT COUNT(*) FROM notification_reads nr WHERE nr.notification_id = n.id) AS read_count,
+                (SELECT COUNT(*) FROM users s WHERE s.role='STUDENT' AND s.is_active=true
+                   AND (n.target_type='all'
+                     OR (n.target_type='class' AND s.class_id=n.target_id)
+                     OR (n.target_type='student' AND s.id=n.target_id))
+                ) AS total_target,
+                (SELECT COUNT(*) FROM users s WHERE s.role='STUDENT' AND s.is_active=true
+                   AND (n.target_type='all'
+                     OR (n.target_type='class' AND s.class_id=n.target_id)
+                     OR (n.target_type='student' AND s.id=n.target_id))
+                   AND NOT EXISTS (SELECT 1 FROM notification_reads nr WHERE nr.notification_id=n.id AND nr.user_id=s.id)
+                ) AS unread_count
          FROM notifications n
          LEFT JOIN users u ON u.id = n.sender_id
          WHERE n.sender_id = :uid
@@ -151,6 +173,45 @@ router.post('/:id/edit', requireTeacherOrAdmin, async (req, res) => {
     req.flash('error', 'Gagal update: ' + error.message);
     res.redirect(`/notifications/${req.params.id}/edit`);
   }
+});
+
+router.post('/:id/push', requireTeacherOrAdmin, async (req, res) => {
+  const user = req.session.user;
+  const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || req.headers.accept?.includes('application/json');
+  try {
+    const [[notif]] = await pool.query(
+      `SELECT id, title, sender_id, target_type, target_id FROM notifications WHERE id = :id`,
+      { id: req.params.id }
+    );
+    if (!notif) {
+      if (isAjax) return res.status(404).json({ ok: false, message: 'Notifikasi tidak ditemukan' });
+      req.flash('error', 'Notifikasi tidak ditemukan');
+      return res.redirect('/notifications');
+    }
+    if (user.role !== 'ADMIN' && notif.sender_id !== user.id) {
+      if (isAjax) return res.status(403).json({ ok: false, message: 'Akses ditolak' });
+      req.flash('error', 'Akses ditolak');
+      return res.redirect('/notifications');
+    }
+
+    // Pastikan notifikasi aktif
+    await pool.query(`UPDATE notifications SET is_active = true, updated_at = NOW() WHERE id = :id`, { id: req.params.id });
+
+    // Hapus semua read records agar muncul kembali di semua siswa
+    const [deleted] = await pool.query(
+      `DELETE FROM notification_reads WHERE notification_id = :id`,
+      { id: req.params.id }
+    );
+    const count = deleted?.affectedRows || 0;
+
+    if (isAjax) return res.json({ ok: true, message: `Notifikasi dikirim ulang. ${count} catatan baca dihapus.` });
+    req.flash('success', `✅ Notifikasi "${notif.title}" berhasil di-push ulang ke semua siswa.`);
+  } catch (error) {
+    console.error(error);
+    if (isAjax) return res.status(500).json({ ok: false, message: 'Gagal push: ' + error.message });
+    req.flash('error', 'Gagal push notifikasi: ' + error.message);
+  }
+  res.redirect('/notifications');
 });
 
 router.post('/:id/toggle', requireTeacherOrAdmin, async (req, res) => {
