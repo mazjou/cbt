@@ -140,7 +140,8 @@ router.get('/:id/edit', requireTeacherOrAdmin, async (req, res) => {
        FROM users u LEFT JOIN classes c ON c.id = u.class_id
        WHERE u.role = 'STUDENT' ORDER BY c.name ASC, u.full_name ASC`
     );
-    res.render('notifications/edit', { title: 'Edit Notifikasi', notification, classes, students });
+    const returnTo = req.query.return || '';
+    res.render('notifications/edit', { title: 'Edit Notifikasi', notification, classes, students, returnTo });
   } catch (error) {
     console.error(error);
     req.flash('error', 'Gagal memuat form: ' + error.message);
@@ -150,7 +151,7 @@ router.get('/:id/edit', requireTeacherOrAdmin, async (req, res) => {
 
 router.post('/:id/edit', requireTeacherOrAdmin, async (req, res) => {
   const user = req.session.user;
-  const { title, message, type, target_type, target_id, expires_hours } = req.body;
+  const { title, message, type, target_type, target_id, expires_hours, return_to } = req.body;
   try {
     const [[notification]] = await pool.query(
       `SELECT sender_id FROM notifications WHERE id = :id`, { id: req.params.id }
@@ -170,7 +171,8 @@ router.post('/:id/edit', requireTeacherOrAdmin, async (req, res) => {
       { title, message, type: type || 'GENERAL', target_type: target_type || 'all', target_id: finalTargetId, expires_at: expiresAt, id: req.params.id }
     );
     req.flash('success', 'Notifikasi berhasil diupdate');
-    res.redirect('/notifications');
+    const redirectTo = return_to === 'admin' ? '/admin/notifications' : '/notifications';
+    res.redirect(redirectTo);
   } catch (error) {
     console.error(error);
     req.flash('error', 'Gagal update: ' + error.message);

@@ -9,6 +9,7 @@
   </div>
 
   <form method="POST" action="/notifications/<%= notification.id %>/edit" class="rounded-2xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6 shadow-lg">
+    <input type="hidden" name="return_to" value="<%= typeof returnTo !== 'undefined' ? returnTo : '' %>">
     <div class="space-y-5">
       <!-- Judul -->
       <div>

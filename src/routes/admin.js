@@ -5915,7 +5915,7 @@ router.post('/notifications/:id/push', async (req, res) => {
   const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
   try {
     const [[notif]] = await pq(
-      `SELECT id, title, sender_id FROM notifications WHERE id = $1 LIMIT 1`,
+      `SELECT id, title, message, sender_id, type FROM notifications WHERE id = $1 LIMIT 1`,
       [req.params.id]
     );
     if (!notif) {
@@ -5923,14 +5923,26 @@ router.post('/notifications/:id/push', async (req, res) => {
       req.flash('error', 'Notifikasi tidak ditemukan');
       return res.redirect('/admin/notifications');
     }
-    // Aktifkan + increment push_count agar browser siswa detect perubahan + hapus read records
     await pq(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS push_count INT NOT NULL DEFAULT 0`).catch(()=>{});
-    await pq(`UPDATE notifications SET is_active = true, pushed_at = NOW(),
-              push_count = COALESCE(push_count, 0) + 1 WHERE id = $1`, [req.params.id]);
-    // Hapus semua read records agar muncul kembali
-    const [del] = await pq(`DELETE FROM notification_reads WHERE notification_id = $1`, [req.params.id]);
+
+    // Update SEMUA baris dengan title+message+sender+type yang sama (bukan hanya MIN id)
+    // Ini penting karena admin query GROUP BY dan MIN(id) mungkin bukan ID yang dilihat siswa
+    await pq(
+      `UPDATE notifications SET is_active = true, pushed_at = NOW(),
+       push_count = COALESCE(push_count, 0) + 1
+       WHERE title = $1 AND message = $2 AND COALESCE(sender_id,0) = COALESCE($3,0) AND type = $4`,
+      [notif.title, notif.message, notif.sender_id, notif.type]
+    );
+    // Hapus SEMUA read records untuk semua baris yang ter-update
+    await pq(
+      `DELETE FROM notification_reads WHERE notification_id IN (
+         SELECT id FROM notifications WHERE title = $1 AND message = $2
+         AND COALESCE(sender_id,0) = COALESCE($3,0) AND type = $4
+       )`,
+      [notif.title, notif.message, notif.sender_id, notif.type]
+    );
     if (isAjax) return res.json({ ok: true, message: `Notifikasi dikirim ulang ke semua siswa.` });
-    req.flash('success', `✅ Notifikasi "${notif.title}" berhasil di-push ulang.`);
+    req.flash('success', `✅ Notifikasi "${notif.title}" berhasil di-push ulang ke semua siswa.`);
   } catch (e) {
     console.error(e);
     if (isAjax) return res.status(500).json({ ok: false, message: 'Gagal push: ' + e.message });
