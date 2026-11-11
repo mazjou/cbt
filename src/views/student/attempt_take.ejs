@@ -1,3 +1,4 @@
+<!-- Anti-translate meta (injected via layout head override jika tersedia, atau via JS di bawah) -->
 <% const totalQ = questions.length; %>
 
 <!-- Watermark identitas siswa -->
@@ -17,6 +18,40 @@
     'url("data:image/svg+xml;base64,' + b64 + '")';
   document.getElementById('studentWatermark').style.backgroundRepeat = 'repeat';
   document.getElementById('studentWatermark').style.backgroundSize = '400px 300px';
+})();
+</script>
+
+<script>
+// ══ BLOKIR BROWSER TRANSLATE ═══════════════════════════════════════════════
+(function() {
+  // Set atribut translate=no dan lang=id ke <html>
+  document.documentElement.setAttribute('translate', 'no');
+  if (!document.documentElement.getAttribute('lang')) {
+    document.documentElement.setAttribute('lang', 'id');
+  }
+
+  // Tambahkan meta notranslate ke <head> secara dinamis jika belum ada
+  if (!document.querySelector('meta[name="google"][content="notranslate"]')) {
+    var metaNoTranslate = document.createElement('meta');
+    metaNoTranslate.name = 'google';
+    metaNoTranslate.content = 'notranslate';
+    document.head.appendChild(metaNoTranslate);
+  }
+})();
+
+// Hide Google Translate toolbar
+(function() {
+  var style = document.createElement('style');
+  style.textContent = [
+    '.goog-te-banner-frame{display:none!important}',
+    '.goog-te-menu-frame{display:none!important}',
+    '#goog-gt-tt{display:none!important}',
+    '.goog-tooltip{display:none!important}',
+    '.goog-te-balloon-frame{display:none!important}',
+    'body{top:0!important}',
+    '.skiptranslate{display:none!important}'
+  ].join('');
+  document.head.appendChild(style);
 })();
 </script>
 
@@ -1097,6 +1132,85 @@ function jumpAndClose(no) {
       toast(`${type}. (Gagal kirim log, cek koneksi)`);
     }
   }
+
+  // ══ DETEKSI BROWSER TRANSLATE (pelanggaran) ══════════════════════════════
+  (function() {
+    var translateReported = false; // Hindari spam laporan
+
+    function handleTranslateDetected() {
+      if (translateReported) return;
+      translateReported = true;
+      // Paksa kembali ke no-translate
+      document.documentElement.setAttribute('translate', 'no');
+      // Hapus class translate dari Chrome/Edge
+      var html = document.documentElement;
+      html.className = html.className.replace(/\btranslated-\S+/g, '').trim();
+      // Laporkan sebagai pelanggaran
+      if (typeof reportViolation === 'function') {
+        reportViolation('Translate Otomatis Aktif', 'Siswa mengaktifkan browser translate (Google Translate / Edge Translate)');
+      }
+      // Reset flag setelah 10 detik agar bisa lapor lagi jika siswa coba ulang
+      setTimeout(function() { translateReported = false; }, 10000);
+    }
+
+    // Observer untuk perubahan atribut class/translate di <html>
+    var translateObserver = new MutationObserver(function(mutations) {
+      for (var i = 0; i < mutations.length; i++) {
+        var mutation = mutations[i];
+        if (mutation.type === 'attributes') {
+          var html = document.documentElement;
+          var cls = html.className || '';
+          var translateAttr = html.getAttribute('translate');
+          // Chrome/Edge translate menambahkan class 'translated-ltr' atau 'translated-rtl'
+          if (/\btranslated-/.test(cls)) {
+            handleTranslateDetected();
+            break;
+          }
+          // Jika atribut translate diubah ke 'yes'
+          if (translateAttr === 'yes') {
+            handleTranslateDetected();
+            html.setAttribute('translate', 'no');
+            break;
+          }
+        }
+        // Deteksi elemen <font> yang ditambahkan Google Translate ke DOM
+        if (mutation.type === 'childList' && mutation.addedNodes) {
+          for (var j = 0; j < mutation.addedNodes.length; j++) {
+            var node = mutation.addedNodes[j];
+            if (node.nodeName === 'FONT' || (node.nodeType === 1 && node.querySelector && node.querySelector('font[face]'))) {
+              handleTranslateDetected();
+              break;
+            }
+          }
+        }
+      }
+    });
+
+    // Observe <html> untuk perubahan atribut class/translate
+    translateObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'translate', 'lang'],
+      childList: false,
+      subtree: false
+    });
+
+    // Observe <body> untuk penambahan elemen <font> (Google Translate wrapper)
+    if (document.body) {
+      translateObserver.observe(document.body, {
+        childList: true,
+        subtree: true,
+        attributes: false
+      });
+    } else {
+      document.addEventListener('DOMContentLoaded', function() {
+        translateObserver.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: false
+        });
+      });
+    }
+  })();
 
   // Fullscreen
   const fsBtn = document.getElementById('btnFullscreen');

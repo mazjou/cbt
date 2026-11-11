@@ -159,6 +159,12 @@
       <a href="/teacher/exams/<%= exam.id %>/edit" class="px-3 py-2.5 rounded-xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-800 font-medium text-sm transition-all text-center">
         ✏️ Edit Ujian
       </a>
+      <!-- Toggle Score Visibility -->
+      <button type="button" id="scoreVisibilityBtn"
+        onclick="toggleScoreVisibility(<%= exam.id %>, <%= exam.show_score_to_student ? 'true' : 'false' %>)"
+        class="px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center <%= exam.show_score_to_student ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-800' : 'border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 text-amber-800' %>">
+        <%= exam.show_score_to_student ? '🔓 Nilai Dirilis' : '🔒 Rilis Nilai' %>
+      </button>
       <form action="/teacher/exams/<%= exam.id %>/reset-results" method="POST" onsubmit="return confirm('Reset akan menghapus SEMUA hasil ujian (nilai & jawaban) untuk ujian ini. Lanjutkan?')" class="contents col-span-2">
         <button class="px-3 py-2.5 rounded-xl border border-rose-200 bg-gradient-to-br from-rose-50 to-rose-100 hover:from-rose-100 hover:to-rose-200 text-rose-800 font-medium text-sm transition-all">
           🗑️ Reset Hasil
@@ -1019,4 +1025,33 @@ function closeStudentsModal() {
       });
     } catch(e) {}
   });
+</script>
+
+<script>
+async function toggleScoreVisibility(examId, currentShow) {
+  const btn = document.getElementById('scoreVisibilityBtn');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch(`/teacher/exams/${examId}/toggle-score-visibility`, {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    const data = await res.json();
+    if (data.ok) {
+      const show = data.show;
+      if (btn) {
+        btn.textContent = show ? '🔓 Nilai Dirilis' : '🔒 Rilis Nilai';
+        btn.className = `px-3 py-2.5 rounded-xl border text-sm font-medium transition-all text-center ${show ? 'border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 hover:from-emerald-100 hover:to-emerald-200 text-emerald-800' : 'border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 hover:from-amber-100 hover:to-amber-200 text-amber-800'}`;
+        btn.setAttribute('onclick', `toggleScoreVisibility(${examId}, ${show})`);
+      }
+      alert(show ? 'Nilai ujian sekarang TERLIHAT oleh siswa.' : 'Nilai ujian sekarang TERSEMBUNYI dari siswa.');
+    } else {
+      alert('Gagal: ' + (data.message || 'Error tidak diketahui'));
+    }
+  } catch (e) {
+    alert('Gagal mengubah status nilai: ' + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
 </script>

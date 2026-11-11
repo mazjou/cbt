@@ -949,6 +949,38 @@ router.post('/exams/:id/toggle-publish', async (req, res) => {
   res.redirect('/teacher/exams');
 });
 
+// Toggle visibilitas nilai ke siswa (AJAX)
+router.post('/exams/:id/toggle-score-visibility', async (req, res) => {
+  const user = req.session.user;
+  try {
+    const [[exam]] = await pool.query(
+      `SELECT id, show_score_to_student FROM exams WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid) LIMIT 1;`,
+      { id: req.params.id, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
+    );
+    if (!exam) return res.status(404).json({ ok: false, message: 'Ujian tidak ditemukan.' });
+
+    const newValue = !exam.show_score_to_student;
+    await pool.query(
+      `UPDATE exams SET show_score_to_student=:val WHERE id=:id AND (:isAdmin=1 OR teacher_id=:tid);`,
+      { val: newValue, id: req.params.id, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 }
+    );
+
+    // Invalidasi cache Redis agar siswa langsung merasakan perubahan
+    try {
+      const redisClient = req.app.locals.redisClient;
+      if (redisClient && redisClient.isReady) {
+        const keys = await redisClient.keys('student:exams:meta:*');
+        if (keys.length > 0) await redisClient.del(keys);
+      }
+    } catch (_) {}
+
+    return res.json({ ok: true, show: newValue });
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
 // GET Edit Exam
 router.get('/exams/:id/edit', async (req, res) => {
   const user = req.session.user;
