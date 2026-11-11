@@ -81,7 +81,8 @@ router.get('/new', requireTeacherOrAdmin, async (req, res) => {
        WHERE u.role = 'STUDENT'
        ORDER BY c.name ASC, u.full_name ASC`
     );
-    res.render('notifications/new', { title: 'Buat Notifikasi Baru', classes, students });
+    const returnTo = req.query.return || '';
+    res.render('notifications/new', { title: 'Buat Notifikasi Baru', classes, students, returnTo });
   } catch (error) {
     console.error('Error loading form:', error);
     req.flash('error', 'Gagal memuat form: ' + error.message);
@@ -91,7 +92,7 @@ router.get('/new', requireTeacherOrAdmin, async (req, res) => {
 
 router.post('/new', requireTeacherOrAdmin, async (req, res) => {
   const user = req.session.user;
-  const { title, message, type, target_type, target_id, expires_hours } = req.body;
+  const { title, message, type, target_type, target_id, expires_hours, return_to } = req.body;
   try {
     let expiresAt = null;
     if (expires_hours && Number(expires_hours) > 0) {
@@ -113,7 +114,9 @@ router.post('/new', requireTeacherOrAdmin, async (req, res) => {
       }
     );
     req.flash('success', 'Notifikasi berhasil dibuat');
-    res.redirect('/notifications');
+    // Redirect ke halaman asal (admin atau guru)
+    const redirectTo = return_to === 'admin' ? '/admin/notifications' : '/notifications';
+    res.redirect(redirectTo);
   } catch (error) {
     console.error('Error creating notification:', error);
     req.flash('error', 'Gagal membuat notifikasi: ' + error.message);
@@ -265,11 +268,7 @@ router.get('/active', async (req, res) => {
            OR (n.target_type = 'class' AND n.target_id = :class_id)
            OR (n.target_type = 'student' AND n.target_id = :uid)
          )
-         AND NOT EXISTS (
-           SELECT 1 FROM notification_reads nr
-           WHERE nr.notification_id = n.id AND nr.user_id = :uid
-         )
-       ORDER BY n.created_at DESC LIMIT 5`,
+       ORDER BY COALESCE(n.pushed_at, n.created_at) DESC LIMIT 10`,
       { class_id: classId || 0, uid: user.id }
     );
     res.json({ notifications });

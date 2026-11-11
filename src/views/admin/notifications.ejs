@@ -3,7 +3,12 @@
     <h1 class="text-2xl font-bold text-slate-900">🔔 Pantau Notifikasi Guru</h1>
     <p class="text-sm text-slate-500 mt-1">Rekap notifikasi unik yang dikirim guru. Total: <strong><%= total %></strong> notifikasi.</p>
   </div>
-  <a href="/admin" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">← Kembali</a>
+  <div class="flex gap-2">
+    <a href="/notifications/new?return=admin" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-md hover:shadow-lg transition-all text-sm">
+      ➕ Buat Notifikasi
+    </a>
+    <a href="/admin" class="px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-sm font-medium">← Kembali</a>
+  </div>
 </div>
 
 <!-- Filter -->
