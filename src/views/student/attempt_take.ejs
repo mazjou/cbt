@@ -284,15 +284,8 @@ function jumpAndClose(no) {
       background:linear-gradient(135deg,#f59e0b,#ef4444);
       color:#fff;font-size:15px;font-weight:800;
       box-shadow:0 4px 16px rgba(245,158,11,0.4);
-      margin-bottom:10px;
     ">
       🖥️ Aktifkan Layar Penuh
-    </button>
-    <button id="btnDismissFs" type="button" style="
-      width:100%;padding:10px;border-radius:12px;border:1px solid #d1d5db;cursor:pointer;
-      background:#f9fafb;color:#6b7280;font-size:13px;
-    ">
-      Lanjut tanpa layar penuh
     </button>
   </div>
 </div>
@@ -1293,8 +1286,6 @@ function jumpAndClose(no) {
   // Fullscreen
   // ── Fullscreen — desktop & mobile ────────────────────────────────────────
   const fsBtn = document.getElementById('btnFullscreen');
-  const btnDismissFs = document.getElementById('btnDismissFs');
-  const fsBannerWrap = document.getElementById('fsBannerWrap');
   const antiCheatBar = document.getElementById('antiCheatBar');
   const fsOverlay = document.getElementById('fsOverlay');
   const btnStartFs = document.getElementById('btnStartFullscreen');
@@ -1367,11 +1358,6 @@ function jumpAndClose(no) {
     if (isMobile && antiCheatBar) antiCheatBar.style.display = 'none';
   });
 
-  // Tombol "Lanjut tanpa layar penuh" — tutup popup, ujian tetap jalan
-  if (btnDismissFs) btnDismissFs.addEventListener('click', function() {
-    if (antiCheatBar) antiCheatBar.style.display = 'none';
-  });
-
   // Auto-dismiss overlay setelah 15 detik jika siswa tidak tap (edge case)
   setTimeout(() => {
     if (fsOverlay && fsOverlay.style.display !== 'none') {
@@ -1383,22 +1369,22 @@ function jumpAndClose(no) {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   }
   document.addEventListener('fullscreenchange', () => {
-    updateFsBanner(); // sembunyikan/tampilkan banner sesuai status fullscreen
+    updateFsBanner(); // sembunyikan/tampilkan popup sesuai status fullscreen
     if (!isFullscreen()) {
       if (fullscreenExited === false) {
         fullscreenExited = true;
-        toast('Kamu keluar dari fullscreen. Kembali ke fullscreen agar tidak tercatat pelanggaran.');
+        // Popup sudah muncul otomatis via updateFsBanner — tidak perlu toast lagi
       } else {
         reportViolation('Keluar Fullscreen', 'fullscreenchange');
       }
     }
   });
   document.addEventListener('webkitfullscreenchange', () => {
-    updateFsBanner(); // sembunyikan/tampilkan banner sesuai status fullscreen
+    updateFsBanner(); // sembunyikan/tampilkan popup sesuai status fullscreen
     if (!isFullscreen()) {
       if (fullscreenExited === false) {
         fullscreenExited = true;
-        toast('Kamu keluar dari fullscreen. Kembali ke fullscreen agar tidak tercatat pelanggaran.');
+        // Popup sudah muncul otomatis via updateFsBanner — tidak perlu toast lagi
       } else {
         reportViolation('Keluar Fullscreen', 'webkitfullscreenchange');
       }
