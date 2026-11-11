@@ -1028,14 +1028,24 @@ function jumpAndClose(no) {
     return e.returnValue;
   });
 
-  // Heartbeat setiap 30 detik via fetch POST
-  setInterval(function() {
-    fetch('/student/attempts/<%= attempt.id %>/heartbeat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    }).catch(function() {});
-  }, 30000);
+  // Heartbeat setiap 60 detik + jitter random 0-30 detik
+  // Jitter mencegah 1000 siswa kirim heartbeat di detik yang sama (thundering herd)
+  (function startHeartbeat() {
+    const BASE_INTERVAL = 60000;
+    const JITTER = Math.floor(Math.random() * 30000); // 0-30 detik random
+    function sendBeat() {
+      fetch('/student/attempts/<%= attempt.id %>/heartbeat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      }).catch(function() {});
+    }
+    // Delay awal dengan jitter agar tidak semua mulai bersamaan
+    setTimeout(function() {
+      sendBeat();
+      setInterval(sendBeat, BASE_INTERVAL);
+    }, JITTER);
+  })();
 
   function nowMs() { return Date.now(); }
 

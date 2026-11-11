@@ -970,26 +970,67 @@ router.post('/attempts/:id/unlock', (req, res) => {
   return res.status(410).json({ ok: false, message: 'Endpoint ini tidak lagi digunakan. Guru membuka kunci langsung dari dashboard.' });
 });
 
-// Heartbeat: siswa masih aktif mengerjakan ujian (update last_heartbeat_at)
+// Heartbeat: siswa masih aktif mengerjakan ujian
+// Optimasi untuk 1000+ siswa: pakai Redis sebagai buffer, flush ke DB setiap 2 menit
+// Ini mengurangi beban DB dari 1000 query/menit → ~500 query/2 menit (batch)
+const _heartbeatBuffer = new Set(); // buffer attemptId yang perlu di-update DB
+let _heartbeatFlushTimer = null;
+async function flushHeartbeatBuffer(app) {
+  if (_heartbeatBuffer.size === 0) return;
+  const ids = Array.from(_heartbeatBuffer);
+  _heartbeatBuffer.clear();
+  try {
+    const ph = ids.map((_,i) => `$${i+1}`).join(',');
+    await pool.query(
+      `UPDATE attempts SET last_heartbeat_at=NOW() WHERE id IN (${ph}) AND status='IN_PROGRESS'`,
+      ids
+    );
+  } catch(e) { console.error('[HEARTBEAT FLUSH]', e.message); }
+}
+
 router.post('/attempts/:id/heartbeat', async (req, res) => {
   const user = req.session.user;
   const attemptId = req.params.id;
   if (!/^\d+$/.test(String(attemptId))) return res.status(404).json({ ok: false });
   try {
-    // Pastikan kolom last_heartbeat_at ada
-    await pool.query(
-      `ALTER TABLE attempts ADD COLUMN IF NOT EXISTS last_heartbeat_at TIMESTAMP WITH TIME ZONE;`
-    );
-    const [[attempt]] = await pool.query(
-      `SELECT id, status FROM attempts WHERE id=:aid AND student_id=:sid LIMIT 1;`,
-      { aid: attemptId, sid: user.id }
-    );
-    if (!attempt) return res.status(404).json({ ok: false });
-    if (attempt.status !== 'IN_PROGRESS') return res.json({ ok: false, message: 'Attempt tidak aktif' });
-    await pool.query(
-      `UPDATE attempts SET last_heartbeat_at=NOW() WHERE id=:aid;`,
-      { aid: attemptId }
-    );
+    const redis = req.app.locals.redisClient;
+    const isRedis = redis && req.app.locals.isRedisConnected;
+
+    if (isRedis) {
+      // Redis mode: simpan heartbeat di Redis (TTL 3 menit), tidak hit DB sama sekali
+      // Key: hb:<attemptId>:<userId> — validasi kepemilikan sekaligus
+      const key = `hb:${attemptId}:${user.id}`;
+      const existing = await redis.get(key);
+      // Jika key belum ada, validasi ke DB sekali lalu set Redis
+      if (!existing) {
+        const [[attempt]] = await pool.query(
+          `SELECT id, status FROM attempts WHERE id=$1 AND student_id=$2 LIMIT 1`,
+          [attemptId, user.id]
+        );
+        if (!attempt || attempt.status !== 'IN_PROGRESS') {
+          return res.json({ ok: false });
+        }
+        await redis.set(key, '1', { EX: 180 }); // TTL 3 menit
+      } else {
+        await redis.expire(key, 180); // perpanjang TTL
+      }
+      // Buffer untuk flush DB berkala (tidak langsung update DB)
+      _heartbeatBuffer.add(Number(attemptId));
+      // Setup flush timer jika belum ada (flush setiap 2 menit)
+      if (!_heartbeatFlushTimer) {
+        _heartbeatFlushTimer = setInterval(() => flushHeartbeatBuffer(req.app), 120000);
+      }
+    } else {
+      // Fallback: langsung update DB (mode tanpa Redis)
+      const [[attempt]] = await pool.query(
+        `SELECT id, status FROM attempts WHERE id=$1 AND student_id=$2 LIMIT 1`,
+        [attemptId, user.id]
+      );
+      if (!attempt || attempt.status !== 'IN_PROGRESS') return res.json({ ok: false });
+      await pool.query(
+        `UPDATE attempts SET last_heartbeat_at=NOW() WHERE id=$1`, [attemptId]
+      );
+    }
     return res.json({ ok: true });
   } catch (e) {
     console.error('[HEARTBEAT]', e.message);
