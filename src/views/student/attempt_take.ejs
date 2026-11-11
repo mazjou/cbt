@@ -1,6 +1,42 @@
 <!-- Anti-translate meta (injected via layout head override jika tersedia, atau via JS di bawah) -->
 <% const totalQ = questions.length; %>
 
+<!-- Overlay Fullscreen — muncul saat halaman dimuat, siswa harus tap untuk masuk fullscreen -->
+<div id="fsOverlay" style="
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  background:linear-gradient(135deg,#1e3a5f 0%,#0f2027 100%);
+  z-index:9999;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:24px;box-sizing:border-box;
+">
+  <div style="text-align:center;color:#fff;max-width:360px;">
+    <div style="font-size:56px;margin-bottom:16px;">📝</div>
+    <div style="font-size:20px;font-weight:800;margin-bottom:8px;">Mode Ujian</div>
+    <div style="font-size:13px;color:#94a3b8;margin-bottom:6px;"><%= attempt.exam_title || 'Ujian' %></div>
+    <div style="font-size:13px;color:#cbd5e1;margin-bottom:28px;">
+      Ujian akan berjalan dalam mode layar penuh.<br>
+      Jangan pindah tab atau keluar dari halaman ini.
+    </div>
+    <button id="btnStartFullscreen"
+      style="
+        width:100%;padding:16px;border-radius:14px;border:none;cursor:pointer;
+        background:linear-gradient(135deg,#f59e0b,#ef4444);
+        color:#fff;font-size:17px;font-weight:800;
+        box-shadow:0 4px 20px rgba(245,158,11,0.4);
+        letter-spacing:0.3px;
+      "
+      ontouchstart="this.style.transform='scale(0.97)'"
+      ontouchend="this.style.transform='scale(1)'"
+    >
+      🚀 Mulai Ujian — Aktifkan Layar Penuh
+    </button>
+    <div style="font-size:11px;color:#64748b;margin-top:14px;">
+      Jika layar penuh tidak aktif, ujian tetap bisa dikerjakan.<br>
+      Semua aktivitas layar dipantau.
+    </div>
+  </div>
+</div>
+
 <!-- Watermark identitas siswa -->
 <div id="studentWatermark" style="position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:20;"></div>
 <script>
@@ -239,7 +275,7 @@ function jumpAndClose(no) {
     <div class="text-xs text-slate-400">Jawaban kamu tersimpan dan tidak hilang.</div>
   </div>
 </div>
-  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
     <div class="flex items-start gap-3">
       <span class="text-3xl">🔒</span>
       <div>
@@ -1223,24 +1259,59 @@ function jumpAndClose(no) {
   })();
 
   // Fullscreen
+  // ── Fullscreen — desktop & mobile ────────────────────────────────────────
   const fsBtn = document.getElementById('btnFullscreen');
+  const fsOverlay = document.getElementById('fsOverlay');
+  const btnStartFs = document.getElementById('btnStartFullscreen');
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
+
   async function requestFullscreen() {
     try {
       const el = document.documentElement;
-      if (el.requestFullscreen) await el.requestFullscreen();
-      else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+      // Android Chrome
+      if (el.requestFullscreen) {
+        await el.requestFullscreen({ navigationUI: 'hide' });
+      }
+      // iOS Safari (tidak support fullscreen API — sembunyikan address bar via scroll)
+      else if (el.webkitRequestFullscreen) {
+        el.webkitRequestFullscreen();
+      } else if (isMobile) {
+        // iOS fallback: scroll agar address bar hilang
+        window.scrollTo(0, 1);
+        setTimeout(() => window.scrollTo(0, 0), 100);
+      }
     } catch (e) {
-      toast('Browser menolak fullscreen.');
+      // Fullscreen ditolak browser — tidak tampilkan error, ujian tetap jalan
     }
   }
+
+  // Sembunyikan overlay dan aktifkan fullscreen saat tombol diklik
+  function dismissOverlayAndStart() {
+    if (fsOverlay) {
+      fsOverlay.style.opacity = '0';
+      fsOverlay.style.transition = 'opacity 0.3s';
+      setTimeout(() => { fsOverlay.style.display = 'none'; }, 300);
+    }
+    requestFullscreen();
+    // Scroll ke atas agar soal pertama terlihat
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  if (btnStartFs) btnStartFs.addEventListener('click', dismissOverlayAndStart);
+  if (btnStartFs) btnStartFs.addEventListener('touchend', function(e) {
+    e.preventDefault(); // prevent double-fire di mobile
+    dismissOverlayAndStart();
+  });
+
+  // Tombol fullscreen di banner (untuk re-enter fullscreen jika keluar)
   if (fsBtn) fsBtn.addEventListener('click', requestFullscreen);
 
-  let firstInteract = true;
-  window.addEventListener('pointerdown', () => {
-    if (!firstInteract) return;
-    firstInteract = false;
-    requestFullscreen();
-  }, { once: true });
+  // Auto-dismiss overlay setelah 15 detik jika siswa tidak tap (edge case)
+  setTimeout(() => {
+    if (fsOverlay && fsOverlay.style.display !== 'none') {
+      dismissOverlayAndStart();
+    }
+  }, 15000);
 
   function isFullscreen() {
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
