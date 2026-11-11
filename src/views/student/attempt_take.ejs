@@ -256,8 +256,53 @@ function jumpAndClose(no) {
   </div>
 </div>
 
-<!-- Anti-cheat bar -->
-<div id="antiCheatBar" class="rounded-xl border border-amber-300 bg-gradient-to-r from-amber-50 to-yellow-50 px-5 py-4 mb-6 shadow-md">
+<!-- Anti-cheat popup — muncul di tengah layar jika belum fullscreen -->
+<div id="antiCheatBar" style="
+  display:none;
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  z-index:9000;
+  background:rgba(0,0,0,0.55);
+  align-items:center;justify-content:center;
+  padding:20px;box-sizing:border-box;
+">
+  <div style="
+    background:#fff;border-radius:20px;
+    max-width:360px;width:100%;
+    padding:28px 24px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.3);
+    text-align:center;
+    animation:popIn 0.25s ease;
+  ">
+    <div style="font-size:48px;margin-bottom:12px;">🖥️</div>
+    <div style="font-size:17px;font-weight:800;color:#92400e;margin-bottom:8px;">Mode Ujian Aktif</div>
+    <div style="font-size:13px;color:#78350f;margin-bottom:20px;line-height:1.6;">
+      Aktifkan <strong>Layar Penuh</strong> untuk melanjutkan ujian.<br>
+      Pelanggaran pindah tab akan tercatat.
+    </div>
+    <button id="btnFullscreen" type="button" style="
+      width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;
+      background:linear-gradient(135deg,#f59e0b,#ef4444);
+      color:#fff;font-size:15px;font-weight:800;
+      box-shadow:0 4px 16px rgba(245,158,11,0.4);
+      margin-bottom:10px;
+    ">
+      🖥️ Aktifkan Layar Penuh
+    </button>
+    <button id="btnDismissFs" type="button" style="
+      width:100%;padding:10px;border-radius:12px;border:1px solid #d1d5db;cursor:pointer;
+      background:#f9fafb;color:#6b7280;font-size:13px;
+    ">
+      Lanjut tanpa layar penuh
+    </button>
+  </div>
+</div>
+<style>
+@keyframes popIn {
+  from { transform:scale(0.85); opacity:0; }
+  to   { transform:scale(1);    opacity:1; }
+}
+</style>
+
 
 <!-- Layar Kunci Pelanggaran -->
 <div id="lockScreen" class="hidden fixed inset-0 z-50 bg-red-900 bg-opacity-95 flex items-center justify-center p-4">
@@ -273,19 +318,6 @@ function jumpAndClose(no) {
     </div>
     <div id="unlockMsg" class="text-sm font-medium hidden mb-3"></div>
     <div class="text-xs text-slate-400">Jawaban kamu tersimpan dan tidak hilang.</div>
-  </div>
-</div>
-      <div id="fsBannerWrap" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-    <div class="flex items-start gap-3">
-      <span class="text-3xl">🔒</span>
-      <div>
-        <div class="font-bold text-amber-900">Mode Ujian Aktif</div>
-        <div class="text-sm text-amber-700">Disarankan aktifkan fullscreen dan jangan pindah tab. Pelanggaran akan tercatat.</div>
-      </div>
-    </div>
-    <button id="btnFullscreen" type="button" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold shadow-md hover:shadow-lg transition-all whitespace-nowrap">
-      🖥️ Fullscreen
-    </button>
   </div>
 </div>
 
@@ -1261,21 +1293,22 @@ function jumpAndClose(no) {
   // Fullscreen
   // ── Fullscreen — desktop & mobile ────────────────────────────────────────
   const fsBtn = document.getElementById('btnFullscreen');
+  const btnDismissFs = document.getElementById('btnDismissFs');
   const fsBannerWrap = document.getElementById('fsBannerWrap');
   const antiCheatBar = document.getElementById('antiCheatBar');
   const fsOverlay = document.getElementById('fsOverlay');
   const btnStartFs = document.getElementById('btnStartFullscreen');
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
 
-  // Sembunyikan/tampilkan banner fullscreen sesuai status layar
+  // Sembunyikan/tampilkan popup fullscreen sesuai status layar
   function updateFsBanner() {
-    if (!fsBannerWrap) return;
+    if (!antiCheatBar) return;
     if (isFullscreen()) {
-      // Fullscreen aktif — sembunyikan seluruh antiCheatBar
-      if (antiCheatBar) antiCheatBar.style.display = 'none';
+      // Fullscreen aktif — sembunyikan popup
+      antiCheatBar.style.display = 'none';
     } else {
-      // Keluar fullscreen — tampilkan kembali banner
-      if (antiCheatBar) antiCheatBar.style.display = '';
+      // Keluar fullscreen — tampilkan popup di tengah
+      antiCheatBar.style.display = 'flex';
     }
   }
 
@@ -1307,15 +1340,13 @@ function jumpAndClose(no) {
       setTimeout(() => { fsOverlay.style.display = 'none'; }, 300);
     }
     requestFullscreen().then(() => {
-      // Sembunyikan banner setelah fullscreen berhasil
       setTimeout(updateFsBanner, 500);
-    }).catch(() => {});
-    // Untuk mobile yang tidak support fullscreen API, sembunyikan banner langsung
-    if (isMobile) {
-      setTimeout(updateFsBanner, 800);
-      if (antiCheatBar) antiCheatBar.style.display = 'none';
-    }
-    // Scroll ke atas agar soal pertama terlihat
+    }).catch(() => {
+      // Fullscreen gagal — popup muncul jika bukan mobile
+      if (!isMobile) setTimeout(updateFsBanner, 500);
+    });
+    // Mobile: sembunyikan popup langsung karena tidak ada fullscreenchange event
+    if (isMobile && antiCheatBar) antiCheatBar.style.display = 'none';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -1325,8 +1356,21 @@ function jumpAndClose(no) {
     dismissOverlayAndStart();
   });
 
-  // Tombol fullscreen di banner (untuk re-enter fullscreen jika keluar)
-  if (fsBtn) fsBtn.addEventListener('click', requestFullscreen);
+  // Tombol fullscreen di popup (re-enter fullscreen)
+  if (fsBtn) fsBtn.addEventListener('click', function() {
+    requestFullscreen().then(() => setTimeout(updateFsBanner, 500)).catch(()=>{});
+    if (isMobile && antiCheatBar) antiCheatBar.style.display = 'none';
+  });
+  if (fsBtn) fsBtn.addEventListener('touchend', function(e) {
+    e.preventDefault();
+    requestFullscreen().then(() => setTimeout(updateFsBanner, 500)).catch(()=>{});
+    if (isMobile && antiCheatBar) antiCheatBar.style.display = 'none';
+  });
+
+  // Tombol "Lanjut tanpa layar penuh" — tutup popup, ujian tetap jalan
+  if (btnDismissFs) btnDismissFs.addEventListener('click', function() {
+    if (antiCheatBar) antiCheatBar.style.display = 'none';
+  });
 
   // Auto-dismiss overlay setelah 15 detik jika siswa tidak tap (edge case)
   setTimeout(() => {
