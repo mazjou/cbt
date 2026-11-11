@@ -120,47 +120,34 @@
     <!-- Modal Notification System (Peringatan dari Guru/Admin) -->
     <script>
       (function() {
-        console.log('[Notification] Script loaded for student');
-        console.log('[Notification] User role:', '<%= user.role %>');
-        console.log('[Notification] User ID:', '<%= user.id %>');
-        
-        let shownNotifications = new Set();
-        const storageKey = 'closedNotifications';
-        
-        // Load closed notifications from localStorage
+        // Key localStorage: simpan map { notifId: pushed_at } yang sudah ditutup siswa
+        const storageKey = 'closedNotifs_v2';
+        let closedMap = {};
         try {
-          const closed = localStorage.getItem(storageKey);
-          if (closed) {
-            shownNotifications = new Set(JSON.parse(closed));
-            console.log('[Notification] Loaded closed notifications:', shownNotifications.size);
-          }
-        } catch (e) {
-          console.error('[Notification] Error loading closed notifications:', e);
+          closedMap = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        } catch(e) { closedMap = {}; }
+
+        function saveClosedMap() {
+          try { localStorage.setItem(storageKey, JSON.stringify(closedMap)); } catch(e) {}
         }
 
         async function checkModalNotifications() {
-          console.log('[Notification] Checking for new notifications...');
           try {
             const response = await fetch('/notifications/active');
             const data = await response.json();
-            
-            console.log('[Notification] Response:', data);
-            
             if (data.notifications && data.notifications.length > 0) {
-              console.log('[Notification] Found', data.notifications.length, 'notifications');
-              // Show first unshown notification
               for (const notif of data.notifications) {
-                if (!shownNotifications.has(notif.id)) {
-                  console.log('[Notification] Showing notification:', notif.id);
-                  showModalNotification(notif);
-                  break; // Only show one at a time
+                const pushedAt = notif.pushed_at || notif.created_at || '';
+                const closedAt = closedMap[notif.id];
+                // Tampilkan jika: belum pernah ditutup, ATAU guru sudah push ulang setelah siswa tutup
+                if (!closedAt || closedAt !== pushedAt) {
+                  showModalNotification(notif, pushedAt);
+                  break; // tampilkan satu per satu
                 }
               }
-            } else {
-              console.log('[Notification] No new notifications');
             }
           } catch (error) {
-            console.error('[Notification] Error checking modal notifications:', error);
+            console.error('[Notification] Error:', error);
           }
         }
 
@@ -179,7 +166,22 @@
           const color = colors[notif.type] || colors.GENERAL;
 
           const modal = document.createElement('div');
+        function showModalNotification(notif, pushedAt) {
+          if (document.getElementById('modalNotification_' + notif.id)) return;
+          const colors = {
+            info: { border:'border-blue-200', bg:'from-blue-50 to-cyan-50', text:'text-blue-900', icon:'ℹ️' },
+            warning: { border:'border-orange-200', bg:'from-orange-50 to-amber-50', text:'text-orange-900', icon:'⚠️' },
+            success: { border:'border-green-200', bg:'from-green-50 to-emerald-50', text:'text-green-900', icon:'✅' },
+            error: { border:'border-red-200', bg:'from-red-50 to-rose-50', text:'text-red-900', icon:'❌' },
+            EXAM: { border:'border-purple-200', bg:'from-purple-50 to-indigo-50', text:'text-purple-900', icon:'📝' },
+            MATERIAL: { border:'border-cyan-200', bg:'from-cyan-50 to-teal-50', text:'text-cyan-900', icon:'📚' },
+            ASSIGNMENT: { border:'border-orange-200', bg:'from-orange-50 to-amber-50', text:'text-orange-900', icon:'📋' },
+            GENERAL: { border:'border-slate-200', bg:'from-slate-50 to-gray-50', text:'text-slate-900', icon:'📢' }
+          };
+          const color = colors[notif.type] || colors.GENERAL;
+          const modal = document.createElement('div');
           modal.id = 'modalNotification_' + notif.id;
+          modal.setAttribute('data-pushed-at', pushedAt);
           modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn';
           modal.innerHTML = `
             <div class="rounded-2xl border-2 ${color.border} bg-gradient-to-br ${color.bg} p-6 shadow-2xl max-w-md mx-4 animate-scaleIn">
@@ -188,54 +190,40 @@
                   <span class="text-4xl">${color.icon}</span>
                   <h2 class="text-xl font-bold ${color.text}">${escapeHtml(notif.title)}</h2>
                 </div>
-                <button onclick="closeModalNotification(${notif.id})" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <button onclick="closeModalNotification(${notif.id},'${pushedAt}')" class="text-slate-400 hover:text-slate-600 transition-colors">
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              
               <div class="bg-white/70 rounded-xl p-4 mb-4">
                 <p class="${color.text} whitespace-pre-wrap">${escapeHtml(notif.message)}</p>
               </div>
-              
               <div class="flex items-center justify-between text-xs text-slate-600 mb-4">
                 <span>📅 ${new Date(notif.created_at).toLocaleString('id-ID')}</span>
               </div>
-              
-              <button onclick="closeModalNotification(${notif.id})" class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
+              <button onclick="closeModalNotification(${notif.id},'${pushedAt}')" class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
                 ✓ Mengerti
               </button>
             </div>
           `;
-          
           document.body.appendChild(modal);
-          shownNotifications.add(notif.id);
-          saveClosedNotifications();
         }
 
-        window.closeModalNotification = async function(notifId) {
+        window.closeModalNotification = async function(notifId, pushedAt) {
           const modal = document.getElementById('modalNotification_' + notifId);
           if (modal) {
             modal.classList.add('animate-fadeOut');
             setTimeout(() => modal.remove(), 300);
           }
-          
-          // Mark as read on server
+          // Simpan ke localStorage: notifId → pushedAt (bukan hanya ID)
+          closedMap[notifId] = pushedAt || '';
+          saveClosedMap();
+          // Tandai sudah baca di server
           try {
             await fetch(`/notifications/${notifId}/read`, { method: 'POST' });
-          } catch (error) {
-            console.error('Error marking notification as read:', error);
-          }
+          } catch (error) {}
         };
-
-        function saveClosedNotifications() {
-          try {
-            localStorage.setItem(storageKey, JSON.stringify([...shownNotifications]));
-          } catch (e) {
-            console.error('Error saving closed notifications:', e);
-          }
-        }
 
         function escapeHtml(text) {
           const div = document.createElement('div');
@@ -243,10 +231,7 @@
           return div.innerHTML;
         }
 
-        // Check on page load
         checkModalNotifications();
-        
-        // Check every 60 seconds
         setInterval(checkModalNotifications, 60000);
       })();
     </script>

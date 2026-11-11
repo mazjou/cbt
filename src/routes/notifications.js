@@ -194,8 +194,13 @@ router.post('/:id/push', requireTeacherOrAdmin, async (req, res) => {
       return res.redirect('/notifications');
     }
 
-    // Pastikan notifikasi aktif
-    await pool.query(`UPDATE notifications SET is_active = true WHERE id = :id`, { id: req.params.id });
+    // Pastikan notifikasi aktif dan set pushed_at = NOW() agar browser siswa reset localStorage
+    await pool.query(
+      `UPDATE notifications SET is_active = true,
+       pushed_at = NOW()
+       WHERE id = :id`,
+      { id: req.params.id }
+    );
 
     // Hapus semua read records agar muncul kembali di semua siswa
     const [deleted] = await pool.query(
@@ -250,7 +255,8 @@ router.get('/active', async (req, res) => {
     );
     const classId = studentData?.class_id;
     const [notifications] = await pool.query(
-      `SELECT n.id, n.title, n.message, n.type, n.created_at
+      `SELECT n.id, n.title, n.message, n.type, n.created_at,
+              COALESCE(n.pushed_at, n.created_at) AS pushed_at
        FROM notifications n
        WHERE n.is_active = true
          AND (n.expires_at IS NULL OR n.expires_at > NOW())
