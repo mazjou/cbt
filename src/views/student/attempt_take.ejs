@@ -273,20 +273,8 @@ function jumpAndClose(no) {
 </div>
 
 
-<!-- Header ujian compact -->
-<div class="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 px-5 py-4 shadow-lg mb-4">
-  <div class="flex items-center gap-3">
-    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/80 backdrop-blur-sm text-xs font-semibold text-indigo-600 flex-shrink-0">
-      📝 Ujian
-    </div>
-    <div class="min-w-0">
-      <h1 class="text-xl lg:text-2xl font-bold text-indigo-900 truncate"><%= attempt.title %></h1>
-      <% if (attempt.description) { %>
-        <p class="text-sm text-indigo-700 truncate"><%= attempt.description %></p>
-      <% } %>
-    </div>
-  </div>
-</div>
+<!-- Header ujian compact — dihapus agar tidak mengganggu tampilan -->
+<%# (judul ujian sudah terlihat di floating bar dan drawer soal) %>
 
 <!-- Anti-cheat popup — muncul di tengah layar jika belum fullscreen -->
 <div id="antiCheatBar" style="
@@ -1532,7 +1520,7 @@ function jumpAndClose(no) {
 <!-- ══════════════════════════════════════════════════════════
      MODAL KONFIRMASI KUMPULKAN JAWABAN
 ══════════════════════════════════════════════════════════ -->
-<div id="submitConfirmModal" class="fixed inset-0 z-[99999] hidden items-center justify-center p-4" style="background:rgba(15,23,42,0.7);backdrop-filter:blur(6px);">
+<div id="submitConfirmModal" class="fixed inset-0 z-[99999] items-center justify-center p-4" style="display:none;background:rgba(15,23,42,0.7);backdrop-filter:blur(6px);">
   <div class="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8" id="submitModalCard"
     style="animation:popInModal 0.3s cubic-bezier(0.34,1.56,0.64,1) both;">
 
@@ -1590,7 +1578,6 @@ function jumpAndClose(no) {
   0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
   50%       { transform: scale(1.07); box-shadow: 0 0 0 12px rgba(16,185,129,0); }
 }
-#submitConfirmModal.show { display: flex !important; }
 #submitModalCard { animation: popInModal 0.3s cubic-bezier(0.34,1.56,0.64,1) both; }
 </style>
 
@@ -1620,24 +1607,26 @@ function showSubmitConfirmModal(onConfirm) {
 
   const modal = document.getElementById('submitConfirmModal');
   const card  = document.getElementById('submitModalCard');
-  modal.classList.add('show');
-  // Reset animasi
+
+  // Tampilkan modal dengan style langsung (hindari konflik Tailwind hidden)
+  modal.style.display = 'flex';
+  // Reset animasi card
   card.style.animation = 'none';
   card.offsetHeight; // reflow
   card.style.animation = '';
 
-  // Tombol SELESAI TES
+  // Tombol SELESAI UJIAN
   const confirmBtn = document.getElementById('submitModalConfirm');
   const cancelBtn  = document.getElementById('submitModalCancel');
 
   const doConfirm = () => {
-    modal.classList.remove('show');
+    modal.style.display = 'none';
     confirmBtn.removeEventListener('click', doConfirm);
     cancelBtn.removeEventListener('click', doCancel);
     onConfirm();
   };
   const doCancel = () => {
-    modal.classList.remove('show');
+    modal.style.display = 'none';
     confirmBtn.removeEventListener('click', doConfirm);
     cancelBtn.removeEventListener('click', doCancel);
   };
