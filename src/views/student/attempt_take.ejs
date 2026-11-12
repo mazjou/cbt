@@ -1084,24 +1084,32 @@ function jumpAndClose(no) {
         return;
       }
 
-      // Buka modal konfirmasi custom (ganti confirm() bawaan browser)
-      showSubmitConfirmModal(() => {
-        // Feedback visual: tombol loading
-        if (submitBtn) {
-          submitBtn.disabled = true;
-          submitBtn.textContent = '⏳ Mengirim jawaban...';
-          submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
-        }
+      // Tutup drawer daftar soal dulu agar modal tampil bersih di atas halaman ujian
+      const drawer = document.getElementById('soalDrawer');
+      if (drawer && !drawer.classList.contains('hidden')) {
+        toggleSoalDrawer();
+      }
 
-        submitWithRetry().finally(() => {
-          // Reset tombol jika gagal (sukses → redirect, tidak sampai sini)
+      // Buka modal konfirmasi — sedikit delay agar animasi drawer tutup selesai dulu
+      setTimeout(() => {
+        showSubmitConfirmModal(() => {
+          // Feedback visual: tombol loading
           if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = '✅ Kumpulkan Jawaban';
-            submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Mengirim jawaban...';
+            submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
           }
+
+          submitWithRetry().finally(() => {
+            // Reset tombol jika gagal (sukses → redirect, tidak sampai sini)
+            if (submitBtn) {
+              submitBtn.disabled = false;
+              submitBtn.textContent = '✅ Kumpulkan Jawaban';
+              submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+            }
+          });
         });
-      });
+      }, drawer && !drawer.classList.contains('hidden') ? 250 : 0);
     });
   }
 
