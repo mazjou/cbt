@@ -1266,9 +1266,31 @@ const storageAssignments = multer.diskStorage({
   }
 });
 
+// Ekstensi dan MIME type yang diizinkan (NO VIDEO — terlalu besar)
+const ALLOWED_EXTENSIONS = new Set([
+  'jpg','jpeg','png','webp','heic','gif',   // gambar
+  'pdf',                                     // PDF
+  'doc','docx','xls','xlsx','ppt','pptx',   // Office
+  'txt','zip','rar'                          // lainnya
+]);
+const BLOCKED_MIME_PREFIXES = ['video/', 'audio/'];
+
 const uploadAssignments = multer({
   storage: storageAssignments,
-  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB (turun dari 50MB)
+  fileFilter: (req, file, cb) => {
+    // Blokir video dan audio
+    const isBlockedMime = BLOCKED_MIME_PREFIXES.some(p => file.mimetype.startsWith(p));
+    if (isBlockedMime) {
+      return cb(new Error('File video/audio tidak diizinkan. Upload foto atau dokumen (PDF, Word, dll).'));
+    }
+    // Cek ekstensi
+    const ext = (file.originalname.split('.').pop() || '').toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      return cb(new Error(`Format file .${ext} tidak diizinkan. Gunakan: JPG, PNG, PDF, DOCX, dll.`));
+    }
+    cb(null, true);
+  }
 });
 
 // List assignments
@@ -1353,7 +1375,22 @@ router.get('/assignments/:id', async (req, res) => {
 });
 
 // Submit assignment
-router.post('/assignments/:id/submit', uploadAssignments.single('file'), async (req, res) => {
+router.post('/assignments/:id/submit', (req, res, next) => {
+  // Handle multer error (file terlalu besar, format tidak diizinkan)
+  uploadAssignments.single('file')(req, res, (err) => {
+    if (err) {
+      let msg = 'Gagal upload file.';
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        msg = '❌ File terlalu besar. Maksimal 15MB. Kompres file atau gunakan link Google Drive.';
+      } else if (err.message) {
+        msg = '❌ ' + err.message;
+      }
+      req.flash('error', msg);
+      return res.redirect(`/student/assignments/${req.params.id}`);
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     const user = req.session.user;
     const assignmentId = req.params.id;
