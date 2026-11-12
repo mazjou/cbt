@@ -112,7 +112,7 @@
             <button type="button" id="tab-file" onclick="switchTab('file')"
               class="flex-1 py-2.5 text-sm font-semibold bg-indigo-500 text-white">📁 Upload File</button>
             <button type="button" id="tab-link" onclick="switchTab('link')"
-              class="flex-1 py-2.5 text-sm font-semibold bg-white text-slate-600 hover:bg-slate-50">🔗 Tempel Link</button>
+              class="flex-1 py-2.5 text-sm font-semibold bg-white text-slate-600 hover:bg-slate-50">🔗 Copy Paste Link di sini</button>
           </div>
 
           <!-- Panel File -->
@@ -126,7 +126,7 @@
               <span class="text-lg flex-shrink-0">🚫</span>
               <div class="text-xs text-rose-700 leading-relaxed">
                 <span class="font-bold">Video tidak boleh di-upload langsung.</span><br>
-                Upload video ke <span class="font-semibold">Google Drive / YouTube</span> lalu tempel linknya di tab <span class="font-semibold">"Tempel Link"</span> di bawah.
+                Upload video ke <span class="font-semibold">Google Drive / YouTube</span> lalu copy paste linknya di tab <span class="font-semibold">"Copy Paste Link di sini"</span> di bawah.
               </div>
             </div>
 
@@ -252,13 +252,13 @@ async function handleFile(file){
   const blockedExts = ['mp4','mov','avi','mkv','wmv','flv','webm','m4v','3gp','mp3','wav','aac','ogg'];
   const ext = (file.name.split('.').pop() || '').toLowerCase();
   if (blockedTypes.some(t => file.type.startsWith(t)) || blockedExts.includes(ext)) {
-    alert('❌ File video/audio tidak diizinkan.\n\nUpload video ke Google Drive atau YouTube, lalu tempel linknya di tab "Tempel Link".');
+    alert('❌ File video/audio tidak diizinkan.\n\nUpload video ke Google Drive atau YouTube, lalu copy paste linknya di tab "Copy Paste Link di sini".');
     document.getElementById('fileInput').value = '';
     return;
   }
   // Blokir file > 15MB
   if (file.size > 15 * 1024 * 1024) {
-    alert('❌ File terlalu besar (maks 15MB).\n\nKompres file terlebih dahulu atau gunakan Google Drive dan tempel linknya.');
+    alert('❌ File terlalu besar (maks 15MB).\n\nKompres file terlebih dahulu atau gunakan Google Drive dan copy paste linknya.');
     document.getElementById('fileInput').value = '';
     return;
   }
