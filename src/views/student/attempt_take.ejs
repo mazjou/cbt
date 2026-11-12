@@ -1532,8 +1532,8 @@ function jumpAndClose(no) {
 <!-- ══════════════════════════════════════════════════════════
      MODAL KONFIRMASI KUMPULKAN JAWABAN
 ══════════════════════════════════════════════════════════ -->
-<div id="submitConfirmModal" class="fixed inset-0 z-[9990] hidden items-center justify-center p-4" style="background:rgba(15,23,42,0.6);backdrop-filter:blur(6px);">
-  <div class="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 animate-none" id="submitModalCard"
+<div id="submitConfirmModal" class="fixed inset-0 z-[99999] hidden items-center justify-center p-4" style="background:rgba(15,23,42,0.7);backdrop-filter:blur(6px);">
+  <div class="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8" id="submitModalCard"
     style="animation:popInModal 0.3s cubic-bezier(0.34,1.56,0.64,1) both;">
 
     <!-- Icon animasi -->
@@ -1545,7 +1545,7 @@ function jumpAndClose(no) {
     </div>
 
     <!-- Judul -->
-    <h2 class="text-2xl font-black text-slate-800 text-center mb-2">Konfirmasi Tes</h2>
+    <h2 class="text-2xl font-black text-slate-800 text-center mb-2">Konfirmasi Ujian</h2>
 
     <!-- Info soal terjawab -->
     <div id="submitModalStats" class="flex justify-center gap-6 mb-4">
@@ -1562,20 +1562,20 @@ function jumpAndClose(no) {
 
     <!-- Pesan -->
     <p class="text-sm text-slate-600 text-center leading-relaxed mb-6">
-      Terimakasih telah berpartisipasi dalam tes ini.<br>
-      Silahkan tekan tombol <span class="inline-block px-2 py-0.5 rounded bg-rose-500 text-white text-xs font-bold">SELESAI TES</span> untuk mengakhiri tes.<br>
-      Atau tekan tombol <span class="inline-block px-2 py-0.5 rounded bg-emerald-600 text-white text-xs font-bold">KEMBALI</span> untuk kembali ke halaman tes.
+      Terimakasih telah menyelesaikan ujian ini.<br>
+      Silahkan tekan tombol <span class="inline-block px-2 py-0.5 rounded bg-rose-500 text-white text-xs font-bold">SELESAI UJIAN</span> untuk mengakhiri ujian.<br>
+      Atau tekan tombol <span class="inline-block px-2 py-0.5 rounded bg-emerald-600 text-white text-xs font-bold">KEMBALI</span> untuk kembali ke halaman ujian.
     </p>
 
     <!-- Tombol aksi -->
     <div class="flex gap-3">
       <button type="button" id="submitModalCancel"
-        class="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-bold text-sm shadow-md transition-all">
+        class="flex-1 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-black text-base shadow-md transition-all tracking-wide">
         KEMBALI
       </button>
       <button type="button" id="submitModalConfirm"
-        class="flex-1 py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 active:scale-95 text-white font-bold text-sm shadow-md transition-all">
-        SELESAI TES
+        class="flex-1 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 active:scale-95 text-white font-black text-base shadow-md transition-all tracking-wide">
+        SELESAI UJIAN
       </button>
     </div>
   </div>
