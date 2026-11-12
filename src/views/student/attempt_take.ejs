@@ -1,5 +1,6 @@
 <!-- Anti-translate meta (injected via layout head override jika tersedia, atau via JS di bawah) -->
 <% const totalQ = questions.length; %>
+<% const onePerPage = attempt.one_question_per_page === true; %>
 
 <!-- Overlay Fullscreen — muncul saat halaman dimuat, siswa harus tap untuk masuk fullscreen -->
 <div id="fsOverlay" style="
@@ -106,8 +107,11 @@
     </div>
   </div>
 
-  <!-- Tengah: progress terjawab -->
+  <!-- Tengah: progress terjawab + indikator soal aktif (mode 1 per halaman) -->
   <div class="flex-1 flex items-center justify-center gap-2">
+    <% if (onePerPage) { %>
+      <span id="floatQIndicator" class="text-sm font-black text-indigo-600">Soal <span id="floatQCurrent">1</span>/<%= totalQ %></span>
+    <% } else { %>
     <div class="text-xs text-slate-500 font-medium hidden sm:block">Terjawab:</div>
     <div class="flex items-center gap-1">
       <span id="floatAnswered" class="text-sm font-black text-emerald-600">0</span>
@@ -117,6 +121,7 @@
     <div class="hidden sm:block w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
       <div id="floatProgress" class="h-full bg-gradient-to-r from-emerald-400 to-teal-500 rounded-full transition-all duration-300" style="width:0%"></div>
     </div>
+    <% } %>
   </div>
 
   <!-- Tombol Daftar Soal -->
@@ -161,13 +166,40 @@ function toggleSoalDrawer() {
   }
 }
 
+const ONE_PER_PAGE = <%= onePerPage ? 'true' : 'false' %>;
+let currentQ = 1;
+
+function showQuestion(no) {
+  if (!ONE_PER_PAGE) return;
+  // Sembunyikan semua section soal dan nav
+  document.querySelectorAll('.q-section').forEach(s => s.classList.add('hidden'));
+  document.querySelectorAll('.q-nav').forEach(n => n.classList.add('hidden'));
+  // Tampilkan soal yang dipilih
+  const sec = document.querySelector('.q-section[data-q-no="' + no + '"]');
+  const nav = document.querySelector('.q-nav[data-nav-no="' + no + '"]');
+  if (sec) sec.classList.remove('hidden');
+  if (nav) nav.classList.remove('hidden');
+  currentQ = no;
+  // Update floating bar indicator
+  const floatQCurrent = document.getElementById('floatQCurrent');
+  if (floatQCurrent) floatQCurrent.textContent = no;
+  // Scroll ke atas soal
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // Update highlight tombol drawer
+  syncDrawerButtons();
+}
+
 function jumpAndClose(no) {
   toggleSoalDrawer();
-  var target = document.getElementById('q-' + no);
-  if (target) {
-    setTimeout(function() {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 200);
+  if (ONE_PER_PAGE) {
+    setTimeout(function() { showQuestion(no); }, 200);
+  } else {
+    var target = document.getElementById('q-' + no);
+    if (target) {
+      setTimeout(function() {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 200);
+    }
   }
 }
 </script>
@@ -219,7 +251,7 @@ function jumpAndClose(no) {
       <div class="grid grid-cols-5 gap-1.5" id="drawerGrid">
         <% questions.forEach((q) => { %>
           <button type="button"
-            onclick="jumpAndClose('<%= q.no %>')"
+            onclick="jumpAndClose(<%= q.no %>)"
             data-drawer-no="<%= q.no %>"
             class="drawerBtn h-10 rounded-xl border-2 font-bold text-sm transition-all <%= q.chosen_option_id ? 'border-emerald-400 bg-emerald-100 text-emerald-700' : 'border-slate-300 bg-white text-slate-600' %>">
             <%= q.no %>
@@ -314,7 +346,7 @@ function jumpAndClose(no) {
   </div>
 </div>
 
-<div class="space-y-6">
+<div class="<%= onePerPage ? '' : 'space-y-6' %>">
     <% questions.forEach((q, idx) => { 
       const colors = [
         { border: 'border-blue-200', bg: 'from-blue-50 to-cyan-50', text: 'text-blue-900', badge: 'bg-blue-100 text-blue-700' },
@@ -326,7 +358,7 @@ function jumpAndClose(no) {
       ];
       const color = colors[idx % colors.length];
     %>
-      <section id="q-<%= q.no %>" class="rounded-2xl border-2 <%= color.border %> bg-gradient-to-br <%= color.bg %> p-6 shadow-lg scroll-mt-16">
+      <section id="q-<%= q.no %>" data-q-no="<%= q.no %>" class="q-section rounded-2xl border-2 <%= color.border %> bg-gradient-to-br <%= color.bg %> p-6 shadow-lg scroll-mt-16<%= onePerPage && idx > 0 ? ' hidden' : '' %>">
         <div class="flex items-start justify-between gap-4 mb-4">
           <div class="flex items-center gap-3">
             <div class="flex items-center justify-center w-12 h-12 rounded-xl bg-white shadow-md">
@@ -466,6 +498,34 @@ function jumpAndClose(no) {
           <% } %>
         </div>
       </section>
+
+      <% if (onePerPage) { %>
+      <!-- Navigasi Prev/Next — hanya di mode 1 soal per halaman -->
+      <div class="q-nav flex items-center justify-between gap-3 mt-4 mb-6<%= idx > 0 ? ' hidden' : '' %>" data-nav-no="<%= q.no %>">
+        <% if (idx > 0) { %>
+          <button type="button" onclick="showQuestion(<%= q.no - 1 %>)"
+            class="flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-semibold transition-all shadow-sm">
+            ← Sebelumnya
+          </button>
+        <% } else { %>
+          <div></div>
+        <% } %>
+        <span class="text-sm font-semibold text-slate-500"><%= q.no %> / <%= totalQ %></span>
+        <% if (idx < totalQ - 1) { %>
+          <button type="button" onclick="showQuestion(<%= q.no + 1 %>)"
+            class="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold transition-all shadow-md">
+            Selanjutnya →
+          </button>
+        <% } else { %>
+          <!-- Soal terakhir: tombol kumpulkan -->
+          <button type="button" onclick="document.getElementById('submitForm').dispatchEvent(new Event('submit',{cancelable:true}))"
+            class="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold transition-all shadow-md">
+            ✅ Kumpulkan
+          </button>
+        <% } %>
+      </div>
+      <% } %>
+
     <% }) %>
   </div>
 </div>
@@ -675,19 +735,25 @@ function jumpAndClose(no) {
   const navButtons = document.querySelectorAll('.navBtn');
   const sections = document.querySelectorAll('section[id^="q-"]');
   
-  // Scroll to question
+  // Scroll to question (atau show di mode onePerPage)
   navButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.getAttribute('data-jump');
-      const el = document.getElementById(id);
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const no = Number(id.replace('q-', ''));
+      if (ONE_PER_PAGE) {
+        showQuestion(no);
+      } else {
+        const el = document.getElementById(id);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       }
     });
   });
 
   // Highlight active question in navigation
   function updateActiveNav() {
+    if (ONE_PER_PAGE) return; // mode 1-soal: highlight dihandle syncDrawerButtons
     const scrollPos = window.scrollY + window.innerHeight / 3;
     
     let activeSection = null;
@@ -1413,8 +1479,12 @@ function jumpAndClose(no) {
       var hasComplex  = section.querySelector('input.complex-checkbox:checked');
       var hasCheckbox = section.querySelector('input.checkbox-answer:checked');
       var done = !!(hasRadio || tfAnswered || hasComplex || hasCheckbox);
+      var isActive = ONE_PER_PAGE && Number(no) === currentQ;
       btn.className = 'drawerBtn h-12 rounded-xl border-2 font-bold text-sm transition-all ' +
-        (done ? 'border-emerald-400 bg-emerald-100 text-emerald-700' : 'border-slate-300 bg-white text-slate-600');
+        (done
+          ? 'border-emerald-400 bg-emerald-100 text-emerald-700'
+          : 'border-slate-300 bg-white text-slate-600') +
+        (isActive ? ' ring-2 ring-indigo-400 ring-offset-1' : '');
     });
   }
 

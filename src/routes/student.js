@@ -684,7 +684,8 @@ router.get('/attempts/:id', async (req, res) => {
 
   const [[attempt]] = await pool.query(
     `SELECT a.*, e.title, e.description, e.duration_minutes, e.pass_score,
-            e.shuffle_options, e.max_violations, e.end_at AS exam_end_at
+            e.shuffle_options, e.max_violations, e.end_at AS exam_end_at,
+            e.one_question_per_page
      FROM attempts a
      JOIN exams e ON e.id=a.exam_id
      WHERE a.id=:aid AND a.student_id=:sid

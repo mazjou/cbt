@@ -128,6 +128,7 @@ CREATE TABLE IF NOT EXISTS exams (
   is_published BOOLEAN NOT NULL DEFAULT FALSE,
   show_score_to_student BOOLEAN NOT NULL DEFAULT TRUE,
   show_review_to_student BOOLEAN NOT NULL DEFAULT FALSE,
+  one_question_per_page BOOLEAN NOT NULL DEFAULT FALSE,
   max_questions INT NULL,
   max_violations INT NOT NULL DEFAULT 3,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
