@@ -1145,10 +1145,21 @@ function jumpAndClose(no) {
   let fullscreenExited = false;
 
   // Cegah siswa menutup tab/browser tanpa sengaja
+  // beforeunload hanya untuk close tab/browser — tidak bisa didesain custom (batasan browser)
   window.addEventListener('beforeunload', function(e) {
+    if (isSubmitting) return; // Tidak blok jika sedang submit
     e.preventDefault();
-    e.returnValue = 'Anda sedang mengerjakan ujian. Yakin ingin meninggalkan halaman?';
-    return e.returnValue;
+    e.returnValue = '';
+    return '';
+  });
+
+  // Cegah tombol Back browser — tampilkan modal custom kita sendiri
+  history.pushState(null, '', window.location.href);
+  window.addEventListener('popstate', function() {
+    // Push state lagi agar back tidak jalan
+    history.pushState(null, '', window.location.href);
+    // Tampilkan modal konfirmasi keluar custom
+    showLeaveConfirmModal();
   });
 
   // Heartbeat setiap 60 detik + jitter random 0-30 detik
@@ -1653,6 +1664,98 @@ function showSubmitConfirmModal(onConfirm) {
 </script>
 
 <!-- KaTeX: render rumus matematika (akar, pecahan, dll) -->
+
+<!-- ══════════════════════════════════════════════════════════
+     MODAL KONFIRMASI KELUAR / TINGGALKAN UJIAN
+══════════════════════════════════════════════════════════ -->
+<div id="leaveConfirmModal" class="fixed inset-0 z-[99999] items-center justify-center p-4"
+  style="display:none;background:rgba(15,23,42,0.75);backdrop-filter:blur(6px);">
+  <div id="leaveModalCard" class="relative bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden"
+    style="animation:popInModal 0.3s cubic-bezier(0.34,1.56,0.64,1) both;">
+
+    <!-- Strip warna atas -->
+    <div class="h-2 w-full bg-gradient-to-r from-orange-400 via-rose-500 to-red-500"></div>
+
+    <div class="p-7">
+      <!-- Icon -->
+      <div class="flex justify-center mb-4">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-100 to-rose-100 border-2 border-rose-200 flex items-center justify-center shadow-md">
+          <span style="font-size:2rem;">⚠️</span>
+        </div>
+      </div>
+
+      <!-- Judul -->
+      <h2 class="text-xl font-black text-slate-800 text-center mb-2">Tinggalkan Ujian?</h2>
+
+      <!-- Pesan -->
+      <p class="text-sm text-slate-500 text-center leading-relaxed mb-1">
+        Kamu sedang mengerjakan ujian.<br>
+        Jika meninggalkan halaman, <span class="font-semibold text-rose-600">jawaban yang belum dikumpulkan bisa hilang.</span>
+      </p>
+      <p class="text-xs text-slate-400 text-center mb-6">
+        Tekan <span class="font-semibold text-emerald-600">Lanjutkan Ujian</span> untuk kembali mengerjakan soal.
+      </p>
+
+      <!-- Tombol aksi -->
+      <div class="flex flex-col gap-3">
+        <button type="button" id="leaveCancelBtn"
+          class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-black text-base shadow-md transition-all tracking-wide">
+          ✅ Lanjutkan Ujian
+        </button>
+        <button type="button" id="leaveConfirmBtn"
+          class="w-full py-3.5 rounded-2xl border-2 border-rose-300 bg-rose-50 hover:bg-rose-100 active:scale-95 text-rose-600 font-bold text-sm transition-all tracking-wide">
+          Keluar Halaman
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let leaveDestination = null;
+
+function showLeaveConfirmModal(destination) {
+  leaveDestination = destination || null;
+  const modal = document.getElementById('leaveConfirmModal');
+  const card  = document.getElementById('leaveModalCard');
+  modal.style.display = 'flex';
+  card.style.animation = 'none';
+  card.offsetHeight;
+  card.style.animation = '';
+
+  const cancelBtn  = document.getElementById('leaveCancelBtn');
+  const confirmBtn = document.getElementById('leaveConfirmBtn');
+
+  const doStay = () => {
+    modal.style.display = 'none';
+    cancelBtn.removeEventListener('click', doStay);
+    confirmBtn.removeEventListener('click', doLeave);
+  };
+  const doLeave = () => {
+    modal.style.display = 'none';
+    cancelBtn.removeEventListener('click', doStay);
+    confirmBtn.removeEventListener('click', doLeave);
+    // Hapus beforeunload agar tidak ada popup dobel dari browser
+    window.removeEventListener('beforeunload', window._beforeUnloadHandler);
+    if (leaveDestination) {
+      window.location.href = leaveDestination;
+    } else {
+      history.go(-2); // kembali 2 step (karena kita pushState 1 kali)
+    }
+  };
+
+  cancelBtn.addEventListener('click', doStay);
+  confirmBtn.addEventListener('click', doLeave);
+
+  // Klik luar = tetap di halaman
+  modal.addEventListener('click', function outsideClick(e) {
+    if (e.target === modal) {
+      doStay();
+      modal.removeEventListener('click', outsideClick);
+    }
+  });
+}
+</script>
 <link rel="stylesheet" href="/public/lib/katex/katex.min.css">
 <script src="/public/lib/katex/katex.min.js"></script>
 <script>
