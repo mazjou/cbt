@@ -117,7 +117,19 @@
 
           <!-- Panel File -->
           <div id="panel-file">
-            <input type="file" name="file" id="fileInput" accept="*/*" class="hidden" />
+            <input type="file" name="file" id="fileInput" 
+              accept=".jpg,.jpeg,.png,.webp,.heic,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+              class="hidden" />
+
+            <!-- Banner larangan video — mencolok -->
+            <div class="mb-3 flex items-start gap-2 rounded-xl bg-rose-50 border border-rose-200 px-4 py-3">
+              <span class="text-lg flex-shrink-0">🚫</span>
+              <div class="text-xs text-rose-700 leading-relaxed">
+                <span class="font-bold">Video tidak boleh di-upload langsung.</span><br>
+                Upload video ke <span class="font-semibold">Google Drive / YouTube</span> lalu tempel linknya di tab <span class="font-semibold">"Tempel Link"</span> di bawah.
+              </div>
+            </div>
+
             <div class="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors">
               <div id="uploadArea">
                 <div class="text-4xl mb-2">☁️</div>
@@ -127,7 +139,7 @@
                   <button type="button" onclick="openCamera()"
                     class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-lg text-sm">📷 Ambil Foto</button>
                 </div>
-                <p class="mt-2 text-xs text-slate-400">Maksimal 15MB. Format: JPG, PNG, PDF, DOCX. <span class="text-rose-500 font-semibold">Video tidak diizinkan</span> — gunakan link.</p>
+                <p class="mt-2 text-xs text-slate-400">Maks <strong>15MB</strong> · JPG, PNG, PDF, DOCX, XLSX, ZIP</p>
               </div>
               <div id="previewArea" class="hidden">
                 <div class="relative inline-block">
@@ -235,6 +247,21 @@ document.getElementById('linkInput').addEventListener('input', function() {
 document.getElementById('fileInput').addEventListener('change',function(e){if(e.target.files[0])handleFile(e.target.files[0]);});
 
 async function handleFile(file){
+  // Blokir video/audio di sisi klien sebelum sampai server
+  const blockedTypes = ['video/', 'audio/'];
+  const blockedExts = ['mp4','mov','avi','mkv','wmv','flv','webm','m4v','3gp','mp3','wav','aac','ogg'];
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (blockedTypes.some(t => file.type.startsWith(t)) || blockedExts.includes(ext)) {
+    alert('❌ File video/audio tidak diizinkan.\n\nUpload video ke Google Drive atau YouTube, lalu tempel linknya di tab "Tempel Link".');
+    document.getElementById('fileInput').value = '';
+    return;
+  }
+  // Blokir file > 15MB
+  if (file.size > 15 * 1024 * 1024) {
+    alert('❌ File terlalu besar (maks 15MB).\n\nKompres file terlebih dahulu atau gunakan Google Drive dan tempel linknya.');
+    document.getElementById('fileInput').value = '';
+    return;
+  }
   if(file.type.startsWith('image/')){const c=await compress(file);capturedFile=c;showPreview(c);}
   else{capturedFile=file;document.getElementById('fileName').textContent='📄 '+file.name;document.getElementById('fileSize').textContent=fmtSize(file.size);document.getElementById('imagePreview').classList.add('hidden');document.getElementById('uploadArea').classList.add('hidden');document.getElementById('previewArea').classList.remove('hidden');}
 }
