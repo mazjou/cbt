@@ -341,27 +341,23 @@ const softDeletePegawai = async (sdmsId) => {
 // Return: 'inserted' | 'updated' | 'skipped'
 // ============================================================
 const upsertKelas = async (data) => {
-  // Log payload mentah untuk debug field wali kelas dari SDMS
-  log(`[upsertKelas] payload keys: ${Object.keys(data).join(', ')}`);
-  if (data.wali_kelas || data.wali || data.guru_wali || data.homeroom_teacher) {
-    log(`[upsertKelas] wali kelas field: ${JSON.stringify({
-      wali_kelas: data.wali_kelas,
-      wali: data.wali,
-      guru_wali: data.guru_wali,
-      homeroom_teacher: data.homeroom_teacher
-    })}`);
+  // wali_kelas_id dari SDMS adalah UUID guru — lookup ke sdms_guru untuk dapat nama & NIP
+  let waliNama = null;
+  let waliNip  = null;
+  const waliKelasId = data.wali_kelas_id || data.wali_kelas?.id || null;
+  if (waliKelasId) {
+    const guruRows = await q(
+      `SELECT nama, nip FROM sdms_guru WHERE sdms_id = $1 LIMIT 1`,
+      [waliKelasId]
+    );
+    if (guruRows.length > 0) {
+      waliNama = guruRows[0].nama || null;
+      waliNip  = guruRows[0].nip  || null;
+      log(`[upsertKelas] wali kelas resolved: ${waliNama} (${waliNip || 'no NIP'})`);
+    } else {
+      log(`[upsertKelas] wali_kelas_id ${waliKelasId} tidak ditemukan di sdms_guru`);
+    }
   }
-
-  // Ambil data wali kelas dari berbagai kemungkinan nama field SDMS
-  const waliNama = data.wali_kelas?.nama || data.wali_kelas_nama ||
-                   data.wali?.nama || data.guru_wali?.nama ||
-                   data.homeroom_teacher?.nama ||
-                   (typeof data.wali_kelas === 'string' ? data.wali_kelas : null) ||
-                   null;
-  const waliNip  = data.wali_kelas?.nip  || data.wali_kelas_nip  ||
-                   data.wali?.nip  || data.guru_wali?.nip  ||
-                   data.homeroom_teacher?.nip  ||
-                   null;
 
   const existing = await q(
     `SELECT nama, tingkat, jurusan_kode, kapasitas, ruangan FROM sdms_kelas WHERE sdms_id=$1`,
