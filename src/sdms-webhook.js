@@ -341,6 +341,28 @@ const softDeletePegawai = async (sdmsId) => {
 // Return: 'inserted' | 'updated' | 'skipped'
 // ============================================================
 const upsertKelas = async (data) => {
+  // Log payload mentah untuk debug field wali kelas dari SDMS
+  log(`[upsertKelas] payload keys: ${Object.keys(data).join(', ')}`);
+  if (data.wali_kelas || data.wali || data.guru_wali || data.homeroom_teacher) {
+    log(`[upsertKelas] wali kelas field: ${JSON.stringify({
+      wali_kelas: data.wali_kelas,
+      wali: data.wali,
+      guru_wali: data.guru_wali,
+      homeroom_teacher: data.homeroom_teacher
+    })}`);
+  }
+
+  // Ambil data wali kelas dari berbagai kemungkinan nama field SDMS
+  const waliNama = data.wali_kelas?.nama || data.wali_kelas_nama ||
+                   data.wali?.nama || data.guru_wali?.nama ||
+                   data.homeroom_teacher?.nama ||
+                   (typeof data.wali_kelas === 'string' ? data.wali_kelas : null) ||
+                   null;
+  const waliNip  = data.wali_kelas?.nip  || data.wali_kelas_nip  ||
+                   data.wali?.nip  || data.guru_wali?.nip  ||
+                   data.homeroom_teacher?.nip  ||
+                   null;
+
   const existing = await q(
     `SELECT nama, tingkat, jurusan_kode, kapasitas, ruangan FROM sdms_kelas WHERE sdms_id=$1`,
     [data.id]
@@ -356,26 +378,33 @@ const upsertKelas = async (data) => {
     if (same) { return 'skipped'; }
   }
 
+  // Pastikan kolom wali kelas ada di sdms_kelas
+  await q(`ALTER TABLE sdms_kelas ADD COLUMN IF NOT EXISTS wali_kelas_nama VARCHAR(150)`).catch(()=>{});
+  await q(`ALTER TABLE sdms_kelas ADD COLUMN IF NOT EXISTS wali_kelas_nip  VARCHAR(30)`).catch(()=>{});
+
   const rows = await q(`
     INSERT INTO sdms_kelas
-      (sdms_id, nama, tingkat, jurusan_kode, kapasitas, ruangan, is_active, synced_at)
-    VALUES ($1,$2,$3,$4,$5,$6,true,NOW())
+      (sdms_id, nama, tingkat, jurusan_kode, kapasitas, ruangan, wali_kelas_nama, wali_kelas_nip, is_active, synced_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,NOW())
     ON CONFLICT (sdms_id) DO UPDATE SET
       nama=EXCLUDED.nama, tingkat=EXCLUDED.tingkat,
       jurusan_kode=EXCLUDED.jurusan_kode,
       kapasitas=EXCLUDED.kapasitas, ruangan=EXCLUDED.ruangan,
+      wali_kelas_nama=COALESCE(EXCLUDED.wali_kelas_nama, sdms_kelas.wali_kelas_nama),
+      wali_kelas_nip=COALESCE(EXCLUDED.wali_kelas_nip, sdms_kelas.wali_kelas_nip),
       is_active=true, synced_at=NOW()
     RETURNING (xmax = 0) AS is_new
   `, [
     data.id, data.nama, data.tingkat||null,
     data.jurusan?.kode||null,
     data.kapasitas||null, data.ruangan||null,
+    waliNama, waliNip
   ]);
 
   const isNew = rows[0]?.is_new;
-  log(`Kelas ${isNew ? 'INSERT' : 'UPDATE'}: ${data.nama}`);
+  log(`Kelas ${isNew ? 'INSERT' : 'UPDATE'}: ${data.nama}${waliNama ? ' | Wali: ' + waliNama : ''}`);
 
-  // Sync ke tabel classes LMS
+  // Sync ke tabel classes LMS (termasuk wali kelas jika ada)
   if (data.nama && data.nama.trim()) {
     const kodeKelas = data.nama.trim().replace(/\s+/g, '-').toUpperCase();
     if (kodeKelas) {
@@ -384,7 +413,17 @@ const upsertKelas = async (data) => {
         VALUES ($1, $2)
         ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
       `, [kodeKelas, data.nama.trim()]);
-      log(`Classes sync: ${kodeKelas}`);
+
+      // Update wali kelas di tabel classes jika ada datanya dari SDMS
+      if (waliNama) {
+        await q(`
+          UPDATE classes SET
+            homeroom_teacher_name = $1,
+            homeroom_teacher_nip  = COALESCE($2, homeroom_teacher_nip)
+          WHERE code = $3
+        `, [waliNama, waliNip || null, kodeKelas]);
+        log(`Classes wali kelas sync: ${kodeKelas} → ${waliNama}`);
+      }
     }
   }
 
