@@ -374,6 +374,20 @@ const upsertKelas = async (data) => {
 
   const isNew = rows[0]?.is_new;
   log(`Kelas ${isNew ? 'INSERT' : 'UPDATE'}: ${data.nama}`);
+
+  // Sync ke tabel classes LMS
+  if (data.nama && data.nama.trim()) {
+    const kodeKelas = data.nama.trim().replace(/\s+/g, '-').toUpperCase();
+    if (kodeKelas) {
+      await q(`
+        INSERT INTO classes (code, name)
+        VALUES ($1, $2)
+        ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
+      `, [kodeKelas, data.nama.trim()]);
+      log(`Classes sync: ${kodeKelas}`);
+    }
+  }
+
   return isNew ? 'inserted' : 'updated';
 };
 
@@ -415,6 +429,20 @@ const upsertMapel = async (data) => {
 
   const isNew = rows[0]?.is_new;
   log(`Mapel ${isNew ? 'INSERT' : 'UPDATE'}: ${data.nama}`);
+
+  // Sync ke tabel subjects LMS
+  if (data.nama && data.nama.trim()) {
+    const kodeMapel = (data.kode || data.nama.trim().replace(/\s+/g, '-')).trim().toUpperCase();
+    if (kodeMapel) {
+      await q(`
+        INSERT INTO subjects (code, name)
+        VALUES ($1, $2)
+        ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
+      `, [kodeMapel, data.nama.trim()]);
+      log(`Subjects sync: ${kodeMapel}`);
+    }
+  }
+
   return isNew ? 'inserted' : 'updated';
 };
 
