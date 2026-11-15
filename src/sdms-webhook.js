@@ -307,7 +307,11 @@ const upsertPegawai = async (data) => {
       e.status_kepegawaian === (data.status_kepegawaian || null) &&
       e.no_hp              === (data.no_hp              || null) &&
       e.alamat             === (data.alamat             || null);
-    if (same) { return 'skipped'; }
+    if (same) {
+      // Data staging sama — tetap sync ke users agar akun TU terbuat jika belum ada
+      await syncPegawaiToUsers(data);
+      return 'skipped';
+    }
   }
 
   const rows = await q(`
