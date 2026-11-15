@@ -340,18 +340,20 @@ const upsertPegawai = async (data) => {
 
 const softDeletePegawai = async (sdmsId) => {
   await q(`UPDATE sdms_pegawai SET is_active=false, synced_at=NOW() WHERE sdms_id=$1`, [sdmsId]);
-  // Nonaktifkan akun TU yang terkait (username = NIP) agar pegawai yang dihapus
-  // dari SDMS tidak bisa login lagi dengan password default.
+  // Nonaktifkan akun TU yang terkait (username = NIP atau nama.lowercase)
   try {
-    const rows = await q(`SELECT nip FROM sdms_pegawai WHERE sdms_id=$1`, [sdmsId]);
-    const nip = rows[0]?.nip;
-    if (nip) {
+    const rows = await q(`SELECT nip, nama FROM sdms_pegawai WHERE sdms_id=$1`, [sdmsId]);
+    const nip  = rows[0]?.nip;
+    const nama = rows[0]?.nama;
+    // username bisa berupa NIP atau derived dari nama
+    const usernameToDeactivate = nip || (nama ? nama.toLowerCase().replace(/[^a-z0-9\s]/g,'').trim().replace(/\s+/g,'.') : null);
+    if (usernameToDeactivate) {
       const deactivated = await q(
         `UPDATE users SET is_active=false, updated_at=NOW()
-         WHERE username=$1 AND role='TATA_USAHA' RETURNING username`,
-        [nip]
+         WHERE (username=$1 OR username LIKE $2) AND role='TATA_USAHA' RETURNING username`,
+        [usernameToDeactivate, usernameToDeactivate + '.%']
       );
-      if (deactivated.length > 0) log(`Akun TU dinonaktifkan: ${deactivated[0].username}`);
+      if (deactivated.length > 0) log(`Akun TU dinonaktifkan: ${deactivated.map(r=>r.username).join(', ')}`);
     }
   } catch (e) { warn(`Gagal nonaktifkan akun TU pegawai ${sdmsId}: ${e.message}`); }
 };
@@ -388,12 +390,26 @@ const getUsersJabatanCols = async () => {
 };
 
 const syncPegawaiToUsers = async (data) => {
-  const nip = String(data.nip || '').trim();
-  if (!nip) return; // tanpa NIP → tidak buat akun
+  const nip  = String(data.nip  || '').trim();
   const nama = String(data.nama || '').trim();
   if (!nama) return;
 
-  const username     = nip;
+  // Username: pakai NIP jika ada, fallback ke nama.lowercase.titik (unik via sdms_id)
+  // Contoh: "FEBRIANA EKA WULANDARI" → "febriana.eka.wulandari"
+  // Jika nama collision, tambahkan suffix dari sdms_id pendek
+  let username = nip || nama.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')   // hapus karakter non-alfanumerik
+    .trim()
+    .replace(/\s+/g, '.');          // spasi → titik
+
+  // Cek collision username — jika dipakai role lain, tambah suffix sdms_id pendek
+  if (!nip && data.id) {
+    const colCheck = await q(`SELECT role FROM users WHERE username=$1 LIMIT 1`, [username]);
+    if (colCheck.length > 0 && colCheck[0].role !== 'TATA_USAHA') {
+      username = username + '.' + String(data.id).substring(0, 6);
+    }
+  }
+
   const fullName     = nama;
   const DEFAULT_PWD  = 'smkn1kras';
   const status       = String(data.status_kepegawaian || '').toLowerCase().trim();
