@@ -696,6 +696,22 @@ const handleBulkSync = async (payload) => {
   for (const m of mapel)   await runUpsert(upsertMapel,   m, 'mapel');
   for (const p of pegawai) await runUpsert(upsertPegawai, p, 'pegawai');
 
+  // ── Force sync pegawai → users (menangani kasus skip saat data staging tidak berubah) ──
+  // Ini memastikan akun TU selalu dibuat/diupdate bahkan jika pegawai di-skip
+  if (pegawai.length > 0) {
+    try {
+      let tuInserted = 0, tuUpdated = 0;
+      for (const p of pegawai) {
+        const result = await syncPegawaiToUsers(p);
+        if (result === 'inserted') tuInserted++;
+        else if (result === 'updated') tuUpdated++;
+      }
+      if (tuInserted > 0 || tuUpdated > 0) {
+        log(`Sync TU users — insert:${tuInserted} update:${tuUpdated}`);
+      }
+    } catch(e) { warn(`Gagal force sync pegawai ke users: ${e.message}`); }
+  }
+
   // ── Soft-delete siswa yang tidak ada di bulk sync (sudah dihapus dari SDMS) ──
   // Jika SDMS mengirim data siswa (array tidak kosong), berarti ini data lengkap
   // Siswa yang tidak ada di daftar ini dianggap sudah tidak aktif
