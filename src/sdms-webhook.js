@@ -331,11 +331,94 @@ const upsertPegawai = async (data) => {
 
   const isNew = rows[0]?.is_new;
   log(`Pegawai ${isNew ? 'INSERT' : 'UPDATE'}: ${data.nama}`);
+
+  // Sync pegawai ke tabel users (role TATA_USAHA)
+  await syncPegawaiToUsers(data);
+
   return isNew ? 'inserted' : 'updated';
 };
 
 const softDeletePegawai = async (sdmsId) => {
   await q(`UPDATE sdms_pegawai SET is_active=false, synced_at=NOW() WHERE sdms_id=$1`, [sdmsId]);
+};
+
+// ============================================================
+// SYNC PEGAWAI → USERS (role TATA_USAHA)
+//
+// - username = nip (NIP wajib; jika kosong → skip, tidak buat akun)
+// - role = 'TATA_USAHA'
+// - password default = 'smkn1kras' (di-hash bcrypt) — hanya saat buat akun baru
+// - full_name = nama
+// - is_active = true jika status_kepegawaian aktif, false jika tidak
+// - jabatan & unit_kerja disimpan jika kolomnya ada di tabel users
+// ============================================================
+let _usersJabatanCols = null; // cache hasil cek kolom
+
+const getUsersJabatanCols = async () => {
+  if (_usersJabatanCols !== null) return _usersJabatanCols;
+  const result = { jabatan: false, unit_kerja: false };
+  try {
+    const cols = await q(
+      `SELECT column_name FROM information_schema.columns
+       WHERE table_name='users' AND column_name IN ('jabatan','unit_kerja')`
+    );
+    for (const row of cols) {
+      if (row.column_name === 'jabatan')    result.jabatan    = true;
+      if (row.column_name === 'unit_kerja') result.unit_kerja = true;
+    }
+  } catch (e) {
+    warn(`Gagal cek kolom jabatan/unit_kerja di users: ${e.message}`);
+  }
+  _usersJabatanCols = result;
+  return result;
+};
+
+const syncPegawaiToUsers = async (data) => {
+  const nip = String(data.nip || '').trim();
+  if (!nip) return; // tanpa NIP → tidak buat akun
+  const nama = String(data.nama || '').trim();
+  if (!nama) return;
+
+  const username     = nip;
+  const fullName     = nama;
+  const DEFAULT_PWD  = 'smkn1kras';
+  const status       = String(data.status_kepegawaian || '').toLowerCase().trim();
+  const isActive     = !['tidak aktif','non aktif','nonaktif','pensiun','pensi','keluar','berhenti'].includes(status);
+  const jabatan      = data.jabatan    || null;
+  const unitKerja    = data.unit_kerja || null;
+
+  const cols = await getUsersJabatanCols();
+
+  try {
+    const existing = await q(`SELECT id FROM users WHERE username = $1 LIMIT 1`, [username]);
+
+    if (existing.length > 0) {
+      // Update — jangan ubah role & password
+      const sets = [];
+      const vals = [];
+      const push = (frag, val) => { vals.push(val); sets.push(frag.replace('#', `$${vals.length}`)); };
+      push('full_name = #', fullName);
+      push('is_active = #', isActive);
+      if (cols.jabatan)    push('jabatan = COALESCE(#, jabatan)',     jabatan);
+      if (cols.unit_kerja) push('unit_kerja = COALESCE(#, unit_kerja)', unitKerja);
+      vals.push(username);
+      await q(`UPDATE users SET ${sets.join(', ')}, updated_at = NOW() WHERE username = $${vals.length}`, vals);
+      log(`Sync users pegawai (update): ${username} - ${nama}`);
+    } else {
+      // Buat akun baru — role TATA_USAHA, password default
+      const bcrypt = require('bcryptjs');
+      const defaultHash = await bcrypt.hash(DEFAULT_PWD, 10);
+      const colsList = ['username', 'full_name', 'role', 'password_hash', 'plain_password', 'is_active'];
+      const vals = [username, fullName, 'TATA_USAHA', defaultHash, DEFAULT_PWD, isActive];
+      if (cols.jabatan)    { colsList.push('jabatan');    vals.push(jabatan); }
+      if (cols.unit_kerja) { colsList.push('unit_kerja'); vals.push(unitKerja); }
+      const placeholders = vals.map((_, idx) => `$${idx + 1}`).join(', ');
+      await q(`INSERT INTO users (${colsList.join(', ')}, created_at) VALUES (${placeholders}, NOW())`, vals);
+      log(`Sync users pegawai (insert): ${username} - ${nama} [TATA_USAHA]`);
+    }
+  } catch (e) {
+    warn(`Sync users pegawai ${username}: ${e.message}`);
+  }
 };
 
 const softDeleteKelas = async (sdmsId) => {

@@ -25,6 +25,7 @@ const adminRoutes        = require('./routes/admin');
 const teacherRoutes      = require('./routes/teacher');
 const studentRoutes      = require('./routes/student');
 const principalRoutes    = require('./routes/principal');
+const tataUsahaRoutes    = require('./routes/tata-usaha');
 const notificationRoutes = require('./routes/notifications');
 const liveClassesRoutes  = require('./routes/live-classes');
 const quizApiRoutes      = require('./routes/quiz-api');
@@ -426,6 +427,7 @@ function registerRoutes() {
 
   app.use('/student',   studentRoutes);
   app.use('/principal', principalRoutes);
+  app.use('/tata-usaha', tataUsahaRoutes);
   app.use(liveClassesRoutes);
   app.use(quizApiRoutes);
 

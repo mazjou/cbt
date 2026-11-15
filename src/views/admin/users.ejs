@@ -221,6 +221,7 @@
         <option value="TEACHER" <%= filters.role === 'TEACHER' ? 'selected' : '' %>>Guru</option>
         <option value="PRINCIPAL" <%= filters.role === 'PRINCIPAL' ? 'selected' : '' %>>Kepala Sekolah</option>
         <option value="ADMIN" <%= filters.role === 'ADMIN' ? 'selected' : '' %>>Admin</option>
+        <option value="TATA_USAHA" <%= filters.role === 'TATA_USAHA' ? 'selected' : '' %>>Tata Usaha</option>
       </select>
       
       <select name="class" onchange="autoSubmitWithLimit(this)" class="rounded-xl bg-white border border-teal-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm">
@@ -431,6 +432,7 @@
           <option value="TEACHER">Guru</option>
           <option value="PRINCIPAL">Kepala Sekolah</option>
           <option value="ADMIN">Admin</option>
+          <option value="TATA_USAHA">Tata Usaha</option>
         </select>
       </div>
       <div>
@@ -561,6 +563,7 @@
             <option value="TEACHER">Guru</option>
             <option value="PRINCIPAL">Kepala Sekolah</option>
             <option value="ADMIN">Admin</option>
+            <option value="TATA_USAHA">Tata Usaha</option>
           </select>
         </div>
         <div>
@@ -644,6 +647,7 @@
             <option value="STUDENT">Siswa</option>
             <option value="TEACHER">Guru</option>
             <option value="PRINCIPAL">Kepala Sekolah</option>
+            <option value="TATA_USAHA">Tata Usaha</option>
           </select>
         </div>
 
@@ -1013,7 +1017,8 @@
   const ROLE_CONFIRM_MAP = {
     STUDENT:   'HAPUS SISWA',
     TEACHER:   'HAPUS GURU',
-    PRINCIPAL: 'HAPUS KEPSEK'
+    PRINCIPAL: 'HAPUS KEPSEK',
+    TATA_USAHA: 'HAPUS TATA USAHA'
   };
 
   function openDeleteByRoleModal() {

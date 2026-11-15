@@ -2406,7 +2406,7 @@ router.post('/users/bulk-delete', async (req, res) => {
 // ===== HAPUS SEMUA PENGGUNA BERDASARKAN ROLE =====
 router.post('/users/delete-by-role', async (req, res) => {
   const { role, confirm_text } = req.body;
-  const VALID_ROLES = ['STUDENT', 'TEACHER', 'PRINCIPAL'];
+  const VALID_ROLES = ['STUDENT', 'TEACHER', 'PRINCIPAL', 'TATA_USAHA'];
 
   if (!role || !VALID_ROLES.includes(role)) {
     req.flash('error', 'Role tidak valid.');
@@ -2414,7 +2414,7 @@ router.post('/users/delete-by-role', async (req, res) => {
   }
 
   // Konfirmasi teks wajib sesuai
-  const roleLabel = { STUDENT: 'HAPUS SISWA', TEACHER: 'HAPUS GURU', PRINCIPAL: 'HAPUS KEPSEK' };
+  const roleLabel = { STUDENT: 'HAPUS SISWA', TEACHER: 'HAPUS GURU', PRINCIPAL: 'HAPUS KEPSEK', TATA_USAHA: 'HAPUS TATA USAHA' };
   if (!confirm_text || confirm_text.trim() !== roleLabel[role]) {
     req.flash('error', 'Teks konfirmasi tidak sesuai. Hapus dibatalkan.');
     return res.redirect('/admin/users');

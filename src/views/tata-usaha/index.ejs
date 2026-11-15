@@ -1,0 +1,59 @@
+<div class="flex items-start justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-semibold tracking-tight">Dashboard Tata Usaha</h1>
+    <p class="mt-1 text-slate-600">Selamat datang, <span class="font-medium text-indigo-700"><%= user.full_name %></span>.</p>
+  </div>
+  <a href="/tata-usaha" class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all text-sm font-medium shadow-md">
+    Beranda
+  </a>
+</div>
+
+<div class="mt-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 p-5 shadow-soft">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      </div>
+      <div>
+        <div class="text-xs text-blue-700 font-medium">Siswa Aktif</div>
+        <div class="text-2xl font-semibold text-blue-900"><%= summary.siswa %></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100 p-5 shadow-soft">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+        <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+      </div>
+      <div>
+        <div class="text-xs text-amber-700 font-medium">Jumlah Kelas</div>
+        <div class="text-2xl font-semibold text-amber-900"><%= summary.kelas %></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-purple-100 p-5 shadow-soft">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      </div>
+      <div>
+        <div class="text-xs text-purple-700 font-medium">Jumlah Guru</div>
+        <div class="text-2xl font-semibold text-purple-900"><%= summary.guru %></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-emerald-100 p-5 shadow-soft">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+        <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-2a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      </div>
+      <div>
+        <div class="text-xs text-emerald-700 font-medium">Pegawai TU</div>
+        <div class="text-2xl font-semibold text-emerald-900"><%= summary.pegawai_tu %></div>
+      </div>
+    </div>
+  </div>
+</div>
