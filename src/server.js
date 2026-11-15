@@ -570,6 +570,14 @@ async function bootstrap() {
     const { initializeSocket } = require('./socket');
     await initializeSocket(server, { redisClient, sessionMiddleware });
 
+    // ── Migration: tambah nilai enum user_role baru jika belum ada
+    try {
+      await pool.query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'TATA_USAHA'`);
+    } catch(_) {}
+    try {
+      await pool.query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'ADMIN'`);
+    } catch(_) {}
+
     // ── Migration ringan: tambah kolom pushed_at dan push_count di notifications jika belum ada
     try {
       await pool.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS pushed_at TIMESTAMPTZ`);
