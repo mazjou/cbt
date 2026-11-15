@@ -465,10 +465,11 @@ const upsertKelas = async (data) => {
   if (data.nama && data.nama.trim()) {
     const kodeKelas = data.nama.trim().replace(/\s+/g, '-').toUpperCase();
     if (kodeKelas) {
+      await q(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS sdms_synced BOOLEAN DEFAULT false`).catch(()=>{});
       await q(`
-        INSERT INTO classes (code, name)
-        VALUES ($1, $2)
-        ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
+        INSERT INTO classes (code, name, sdms_synced)
+        VALUES ($1, $2, true)
+        ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, sdms_synced = true
       `, [kodeKelas, data.nama.trim()]);
 
       // Update wali kelas di tabel classes jika ada datanya dari SDMS
@@ -530,10 +531,11 @@ const upsertMapel = async (data) => {
   if (data.nama && data.nama.trim()) {
     const kodeMapel = (data.kode || data.nama.trim().replace(/\s+/g, '-')).trim().toUpperCase();
     if (kodeMapel) {
+      await q(`ALTER TABLE subjects ADD COLUMN IF NOT EXISTS sdms_synced BOOLEAN DEFAULT false`).catch(()=>{});
       await q(`
-        INSERT INTO subjects (code, name)
-        VALUES ($1, $2)
-        ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name
+        INSERT INTO subjects (code, name, sdms_synced)
+        VALUES ($1, $2, true)
+        ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name, sdms_synced = true
       `, [kodeMapel, data.nama.trim()]);
       log(`Subjects sync: ${kodeMapel}`);
     }
@@ -611,11 +613,12 @@ const handleBulkSync = async (payload) => {
       }
 
       // Hapus dari classes LMS jika kodenya tidak ada di daftar SDMS aktif
-      // (menangani kasus sdms_kelas sudah is_active=false dari sync sebelumnya tapi classes belum terhapus)
+      // HANYA hapus yang sdms_synced=true (berasal dari SDMS), bukan yang dibuat manual di LMS
       const namaListAktif = kelas.map(k => k.nama?.trim().replace(/\s+/g, '-').toUpperCase()).filter(Boolean);
       const phNama = namaListAktif.map((_, i) => `$${i + 1}`).join(',');
+      await q(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS sdms_synced BOOLEAN DEFAULT false`).catch(()=>{});
       const orphanKelas = await q(
-        `SELECT id, code, name FROM classes WHERE code NOT IN (${phNama})`,
+        `SELECT id, code, name FROM classes WHERE code NOT IN (${phNama}) AND sdms_synced = true`,
         namaListAktif
       );
       for (const cls of orphanKelas) {
@@ -625,6 +628,10 @@ const handleBulkSync = async (payload) => {
         if (total === 0) {
           await q(`DELETE FROM classes WHERE id=$1`, [cls.id]);
           log(`Classes ${cls.code} dihapus dari LMS (tidak ada di SDMS, tidak ada data terkait)`);
+        } else {
+          await q(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS sdms_active BOOLEAN DEFAULT true`).catch(()=>{});
+          await q(`UPDATE classes SET sdms_active=false WHERE id=$1`, [cls.id]);
+          log(`Classes ${cls.code} ditandai nonaktif dari SDMS (masih ada ${total} data terkait)`);
         }
       }
     } catch(e) { warn(`Gagal deactivate kelas tidak ada di sync: ${e.message}`); }
@@ -650,10 +657,12 @@ const handleBulkSync = async (payload) => {
       }
 
       // Hapus dari subjects LMS jika kodenya tidak ada di daftar SDMS aktif
+      // HANYA hapus yang sdms_synced=true (berasal dari SDMS), bukan yang dibuat manual di LMS
       const kodeListAktif = mapel.map(m => (m.kode || m.nama?.trim().replace(/\s+/g, '-') || '').toUpperCase()).filter(Boolean);
       const phKode = kodeListAktif.map((_, i) => `$${i + 1}`).join(',');
+      await q(`ALTER TABLE subjects ADD COLUMN IF NOT EXISTS sdms_synced BOOLEAN DEFAULT false`).catch(()=>{});
       const orphanMapel = await q(
-        `SELECT id, code, name FROM subjects WHERE code NOT IN (${phKode})`,
+        `SELECT id, code, name FROM subjects WHERE code NOT IN (${phKode}) AND sdms_synced = true`,
         kodeListAktif
       );
       for (const subj of orphanMapel) {
@@ -663,6 +672,10 @@ const handleBulkSync = async (payload) => {
         if (total === 0) {
           await q(`DELETE FROM subjects WHERE id=$1`, [subj.id]);
           log(`Subjects ${subj.code} dihapus dari LMS (tidak ada di SDMS, tidak ada data terkait)`);
+        } else {
+          await q(`ALTER TABLE subjects ADD COLUMN IF NOT EXISTS sdms_active BOOLEAN DEFAULT true`).catch(()=>{});
+          await q(`UPDATE subjects SET sdms_active=false WHERE id=$1`, [subj.id]);
+          log(`Subjects ${subj.code} ditandai nonaktif dari SDMS (masih ada ${total} data terkait)`);
         }
       }
     } catch(e) { warn(`Gagal deactivate mapel tidak ada di sync: ${e.message}`); }
