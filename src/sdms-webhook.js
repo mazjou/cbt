@@ -340,6 +340,20 @@ const upsertPegawai = async (data) => {
 
 const softDeletePegawai = async (sdmsId) => {
   await q(`UPDATE sdms_pegawai SET is_active=false, synced_at=NOW() WHERE sdms_id=$1`, [sdmsId]);
+  // Nonaktifkan akun TU yang terkait (username = NIP) agar pegawai yang dihapus
+  // dari SDMS tidak bisa login lagi dengan password default.
+  try {
+    const rows = await q(`SELECT nip FROM sdms_pegawai WHERE sdms_id=$1`, [sdmsId]);
+    const nip = rows[0]?.nip;
+    if (nip) {
+      const deactivated = await q(
+        `UPDATE users SET is_active=false, updated_at=NOW()
+         WHERE username=$1 AND role='TATA_USAHA' RETURNING username`,
+        [nip]
+      );
+      if (deactivated.length > 0) log(`Akun TU dinonaktifkan: ${deactivated[0].username}`);
+    }
+  } catch (e) { warn(`Gagal nonaktifkan akun TU pegawai ${sdmsId}: ${e.message}`); }
 };
 
 // ============================================================
@@ -390,9 +404,16 @@ const syncPegawaiToUsers = async (data) => {
   const cols = await getUsersJabatanCols();
 
   try {
-    const existing = await q(`SELECT id FROM users WHERE username = $1 LIMIT 1`, [username]);
+    const existing = await q(`SELECT id, role FROM users WHERE username = $1 LIMIT 1`, [username]);
 
     if (existing.length > 0) {
+      // Hanya sentuh akun role TATA_USAHA. NIP unik per orang, bukan per role;
+      // bila username (NIP) sudah dipakai role lain (mis. TEACHER), skip agar
+      // tidak menimpa metadata akunnya & tidak membuat akun TU duplikat.
+      if (existing[0].role !== 'TATA_USAHA') {
+        log(`Skip sync users pegawai (username ${username} dipakai role ${existing[0].role})`);
+        return;
+      }
       // Update — jangan ubah role & password
       const sets = [];
       const vals = [];
