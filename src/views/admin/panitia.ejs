@@ -33,13 +33,28 @@
     <h2 class="text-lg font-semibold text-indigo-900 mb-4">➕ Tambah Panitia</h2>    <% if (guruBelum && guruBelum.length > 0) { %>
     <form action="/admin/panitia" method="POST" class="space-y-3">
       <div>
-        <label class="text-sm font-medium text-indigo-800 block mb-1">Pilih Guru</label>
+        <label class="text-sm font-medium text-indigo-800 block mb-1">Pilih Guru / Pegawai TU</label>
         <select name="user_id" required
           class="w-full rounded-xl bg-white border border-indigo-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm">
-          <option value="">-- Pilih Guru --</option>
-          <% guruBelum.forEach(g => { %>
-            <option value="<%= g.id %>"><%= g.full_name %></option>
-          <% }) %>
+          <option value="">-- Pilih Guru / Pegawai TU --</option>
+          <%
+            const guruList  = guruBelum.filter(g => g.role === 'TEACHER');
+            const tuList    = guruBelum.filter(g => g.role === 'TATA_USAHA');
+          %>
+          <% if (guruList.length > 0) { %>
+            <optgroup label="── Guru ──">
+              <% guruList.forEach(g => { %>
+                <option value="<%= g.id %>"><%= g.full_name %></option>
+              <% }) %>
+            </optgroup>
+          <% } %>
+          <% if (tuList.length > 0) { %>
+            <optgroup label="── Pegawai Tata Usaha ──">
+              <% tuList.forEach(g => { %>
+                <option value="<%= g.id %>"><%= g.full_name %></option>
+              <% }) %>
+            </optgroup>
+          <% } %>
         </select>
       </div>
       <div>

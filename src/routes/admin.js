@@ -6029,11 +6029,11 @@ router.get('/panitia', async (req, res) => {
 
     // Daftar guru yang belum jadi panitia (untuk dropdown tambah)
     const [guruBelum] = await pq(`
-      SELECT u.id, u.full_name, u.username
+      SELECT u.id, u.full_name, u.username, u.role
       FROM users u
-      WHERE u.role = 'TEACHER' AND u.is_active = true
+      WHERE u.role IN ('TEACHER', 'TATA_USAHA') AND u.is_active = true
         AND u.id NOT IN (SELECT user_id FROM panitia_ujian)
-      ORDER BY u.full_name ASC
+      ORDER BY u.role ASC, u.full_name ASC
     `);
 
     res.render('admin/panitia', {
