@@ -339,59 +339,61 @@ const softDeletePegawai = async (sdmsId) => {
 };
 
 const softDeleteKelas = async (sdmsId) => {
-  // Nonaktifkan di staging
   const rows = await q(`UPDATE sdms_kelas SET is_active=false, synced_at=NOW() WHERE sdms_id=$1 RETURNING nama`, [sdmsId]);
   const nama = rows[0]?.nama;
   log(`Kelas deleted: ${nama || sdmsId}`);
 
   if (nama) {
     const kode = nama.trim().replace(/\s+/g, '-').toUpperCase();
-    // Cek apakah kelas masih dipakai di ujian/tugas/siswa
-    const [[inUse]] = await q(`
-      SELECT (
-        (SELECT COUNT(*) FROM exams WHERE class_id = (SELECT id FROM classes WHERE code=$1)) +
-        (SELECT COUNT(*) FROM assignments WHERE class_id = (SELECT id FROM classes WHERE code=$1)) +
-        (SELECT COUNT(*) FROM users WHERE class_id = (SELECT id FROM classes WHERE code=$1) AND role='STUDENT')
-      ) AS total
-    `, [kode, kode, kode]);
-    if (Number(inUse?.total) === 0) {
-      // Aman dihapus
-      await q(`DELETE FROM classes WHERE code = $1`, [kode]);
-      log(`Classes ${kode} dihapus dari LMS (tidak ada data terkait)`);
-    } else {
-      // Masih ada data terkait — tandai saja agar admin tahu
-      await q(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS sdms_active BOOLEAN DEFAULT true`).catch(()=>{});
-      await q(`UPDATE classes SET sdms_active = false WHERE code = $1`, [kode]);
-      log(`Classes ${kode} ditandai nonaktif dari SDMS (masih ada ${inUse.total} data terkait)`);
-    }
+    try {
+      // Ambil id kelas dulu
+      const kelasRows = await q(`SELECT id FROM classes WHERE code=$1 LIMIT 1`, [kode]);
+      const kelasId = kelasRows[0]?.id;
+      if (!kelasId) { log(`Classes ${kode} tidak ditemukan, skip`); return; }
+
+      // Cek apakah kelas masih dipakai
+      const cntExams       = await q(`SELECT COUNT(*) AS c FROM exams WHERE class_id=$1`, [kelasId]);
+      const cntAssignments = await q(`SELECT COUNT(*) AS c FROM assignment_classes WHERE class_id=$1`, [kelasId]);
+      const cntSiswa       = await q(`SELECT COUNT(*) AS c FROM users WHERE class_id=$1 AND role='STUDENT'`, [kelasId]);
+      const total = Number(cntExams[0]?.c||0) + Number(cntAssignments[0]?.c||0) + Number(cntSiswa[0]?.c||0);
+
+      if (total === 0) {
+        await q(`DELETE FROM classes WHERE id=$1`, [kelasId]);
+        log(`Classes ${kode} dihapus dari LMS (tidak ada data terkait)`);
+      } else {
+        await q(`ALTER TABLE classes ADD COLUMN IF NOT EXISTS sdms_active BOOLEAN DEFAULT true`).catch(()=>{});
+        await q(`UPDATE classes SET sdms_active=false WHERE id=$1`, [kelasId]);
+        log(`Classes ${kode} ditandai nonaktif dari SDMS (masih ada ${total} data terkait)`);
+      }
+    } catch(e) { warn(`softDeleteKelas ${kode}: ${e.message}`); }
   }
 };
 
 const softDeleteMapel = async (sdmsId) => {
-  // Nonaktifkan di staging
   const rows = await q(`UPDATE sdms_mapel SET is_active=false, synced_at=NOW() WHERE sdms_id=$1 RETURNING kode, nama`, [sdmsId]);
   const { kode, nama } = rows[0] || {};
   log(`Mapel deleted: ${nama || sdmsId}`);
 
   if (kode || nama) {
     const kodeSubject = (kode || nama.trim().replace(/\s+/g, '-')).toUpperCase();
-    // Cek apakah mapel masih dipakai di ujian/tugas
-    const [[inUse]] = await q(`
-      SELECT (
-        (SELECT COUNT(*) FROM exams WHERE subject_id = (SELECT id FROM subjects WHERE code=$1)) +
-        (SELECT COUNT(*) FROM assignments WHERE subject_id = (SELECT id FROM subjects WHERE code=$1))
-      ) AS total
-    `, [kodeSubject, kodeSubject]);
-    if (Number(inUse?.total) === 0) {
-      // Aman dihapus
-      await q(`DELETE FROM subjects WHERE code = $1`, [kodeSubject]);
-      log(`Subjects ${kodeSubject} dihapus dari LMS (tidak ada data terkait)`);
-    } else {
-      // Masih ada data terkait — tandai saja
-      await q(`ALTER TABLE subjects ADD COLUMN IF NOT EXISTS sdms_active BOOLEAN DEFAULT true`).catch(()=>{});
-      await q(`UPDATE subjects SET sdms_active = false WHERE code = $1`, [kodeSubject]);
-      log(`Subjects ${kodeSubject} ditandai nonaktif dari SDMS (masih ada ${inUse.total} data terkait)`);
-    }
+    try {
+      const subjRows = await q(`SELECT id FROM subjects WHERE code=$1 LIMIT 1`, [kodeSubject]);
+      const subjId = subjRows[0]?.id;
+      if (!subjId) { log(`Subjects ${kodeSubject} tidak ditemukan, skip`); return; }
+
+      const cntExams       = await q(`SELECT COUNT(*) AS c FROM exams WHERE subject_id=$1`, [subjId]);
+      const cntAssignments = await q(`SELECT COUNT(*) AS c FROM assignments WHERE subject_id=$1`, [subjId]);
+      const total = Number(cntExams[0]?.c||0) + Number(cntAssignments[0]?.c||0);
+
+      if (total === 0) {
+        await q(`DELETE FROM subjects WHERE id=$1`, [subjId]);
+        log(`Subjects ${kodeSubject} dihapus dari LMS (tidak ada data terkait)`);
+      } else {
+        await q(`ALTER TABLE subjects ADD COLUMN IF NOT EXISTS sdms_active BOOLEAN DEFAULT true`).catch(()=>{});
+        await q(`UPDATE subjects SET sdms_active=false WHERE id=$1`, [subjId]);
+        log(`Subjects ${kodeSubject} ditandai nonaktif dari SDMS (masih ada ${total} data terkait)`);
+      }
+    } catch(e) { warn(`softDeleteMapel ${kodeSubject}: ${e.message}`); }
   }
 };
 
