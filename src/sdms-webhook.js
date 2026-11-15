@@ -596,6 +596,7 @@ const handleBulkSync = async (payload) => {
     try {
       const sdmsKelasIds = kelas.map(k => k.id).filter(Boolean);
       const ph = sdmsKelasIds.map((_, i) => `$${i + 1}`).join(',');
+      // Soft-delete di staging
       const deactivated = await q(
         `UPDATE sdms_kelas SET is_active = false, synced_at = NOW()
          WHERE sdms_id NOT IN (${ph}) AND is_active = true
@@ -608,6 +609,24 @@ const handleBulkSync = async (payload) => {
           await softDeleteKelas(row.sdms_id);
         }
       }
+
+      // Hapus dari classes LMS jika kodenya tidak ada di daftar SDMS aktif
+      // (menangani kasus sdms_kelas sudah is_active=false dari sync sebelumnya tapi classes belum terhapus)
+      const namaListAktif = kelas.map(k => k.nama?.trim().replace(/\s+/g, '-').toUpperCase()).filter(Boolean);
+      const phNama = namaListAktif.map((_, i) => `$${i + 1}`).join(',');
+      const orphanKelas = await q(
+        `SELECT id, code, name FROM classes WHERE code NOT IN (${phNama})`,
+        namaListAktif
+      );
+      for (const cls of orphanKelas) {
+        const cntExams = await q(`SELECT COUNT(*) AS c FROM exams WHERE class_id=$1`, [cls.id]);
+        const cntUsers = await q(`SELECT COUNT(*) AS c FROM users WHERE class_id=$1 AND role='STUDENT'`, [cls.id]);
+        const total = Number(cntExams[0]?.c||0) + Number(cntUsers[0]?.c||0);
+        if (total === 0) {
+          await q(`DELETE FROM classes WHERE id=$1`, [cls.id]);
+          log(`Classes ${cls.code} dihapus dari LMS (tidak ada di SDMS, tidak ada data terkait)`);
+        }
+      }
     } catch(e) { warn(`Gagal deactivate kelas tidak ada di sync: ${e.message}`); }
   }
 
@@ -616,6 +635,7 @@ const handleBulkSync = async (payload) => {
     try {
       const sdmsMapelIds = mapel.map(m => m.id).filter(Boolean);
       const ph = sdmsMapelIds.map((_, i) => `$${i + 1}`).join(',');
+      // Soft-delete di staging
       const deactivated = await q(
         `UPDATE sdms_mapel SET is_active = false, synced_at = NOW()
          WHERE sdms_id NOT IN (${ph}) AND is_active = true
@@ -626,6 +646,23 @@ const handleBulkSync = async (payload) => {
         log(`Soft-delete ${deactivated.length} mapel tidak ada di bulk sync: ${deactivated.map(r=>r.nama).join(', ')}`);
         for (const row of deactivated) {
           await softDeleteMapel(row.sdms_id);
+        }
+      }
+
+      // Hapus dari subjects LMS jika kodenya tidak ada di daftar SDMS aktif
+      const kodeListAktif = mapel.map(m => (m.kode || m.nama?.trim().replace(/\s+/g, '-') || '').toUpperCase()).filter(Boolean);
+      const phKode = kodeListAktif.map((_, i) => `$${i + 1}`).join(',');
+      const orphanMapel = await q(
+        `SELECT id, code, name FROM subjects WHERE code NOT IN (${phKode})`,
+        kodeListAktif
+      );
+      for (const subj of orphanMapel) {
+        const cntExams       = await q(`SELECT COUNT(*) AS c FROM exams WHERE subject_id=$1`, [subj.id]);
+        const cntAssignments = await q(`SELECT COUNT(*) AS c FROM assignments WHERE subject_id=$1`, [subj.id]);
+        const total = Number(cntExams[0]?.c||0) + Number(cntAssignments[0]?.c||0);
+        if (total === 0) {
+          await q(`DELETE FROM subjects WHERE id=$1`, [subj.id]);
+          log(`Subjects ${subj.code} dihapus dari LMS (tidak ada di SDMS, tidak ada data terkait)`);
         }
       }
     } catch(e) { warn(`Gagal deactivate mapel tidak ada di sync: ${e.message}`); }
