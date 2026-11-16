@@ -1647,6 +1647,13 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
     const html = result.value || '';
     const $ = cheerio.load(html);
 
+    // DEBUG: log HTML hasil konversi untuk diagnosa gambar
+    console.log('[WORD-IMPORT-DEBUG] imgCounter:', imgCounter, 'imageMap keys:', Object.keys(imageMap));
+    console.log('[WORD-IMPORT-DEBUG] HTML length:', html.length);
+    // Log semua img tag yang ada di HTML
+    const imgMatches = html.match(/<img[^>]+>/g) || [];
+    console.log('[WORD-IMPORT-DEBUG] img tags in HTML:', imgMatches.length, imgMatches.map(t => t.substring(0, 100)));
+
     // Kumpulkan blok: { text, imgs[] }
     const blocks = [];
     $('body').children().each((_, el) => {
@@ -1660,6 +1667,9 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
       if ($el.is('img')) { const src = $el.attr('src'); if (src) imgs.push(src); }
       if (text || imgs.length) blocks.push({ text, imgs });
     });
+
+    // DEBUG: log semua blok
+    console.log('[WORD-IMPORT-DEBUG] blocks:', JSON.stringify(blocks.map(b => ({ text: b.text.substring(0,50), imgCount: b.imgs.length }))));
 
     // ── Parser ──────────────────────────────────────────────────────────────
     // Format yang didukung:
