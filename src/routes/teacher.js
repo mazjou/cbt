@@ -1467,55 +1467,28 @@ router.post('/exams/:id/questions', upload.any(), async (req, res) => {
 
 // ── Download Template Import Soal Word (.docx) ────────────────────────────
 router.get('/exams/:id/import/template-word', async (req, res) => {
+  const path = require('path');
+  const staticFile = path.join(__dirname, '../public/templates/import_template_word.docx');
   try {
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType } = require('docx');
-
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = require('docx');
     const doc = new Document({
       sections: [{
-        properties: {},
         children: [
-          // Judul
-          new Paragraph({
-            heading: HeadingLevel.HEADING_1,
-            alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: 'TEMPLATE IMPORT SOAL - MICROSOFT WORD', bold: true, size: 28 })]
-          }),
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: 'LMS SMKN 1 Kras — Format Soal Pilihan Ganda', size: 22, color: '555555' })]
-          }),
+          new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'TEMPLATE IMPORT SOAL - MICROSOFT WORD', bold: true, size: 28 })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'LMS CBT — Format Soal Pilihan Ganda', size: 22, color: '555555' })] }),
           new Paragraph({ children: [new TextRun('')] }),
-
-          // Panduan singkat
           new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: 'ATURAN FORMAT:', bold: true, size: 24 })] }),
-          ...[
-            '1. Nomor soal: awali dengan angka + titik/kurung, contoh: "1." atau "1)"',
-            '2. Opsi jawaban: awali dengan huruf A-E + titik/kurung, contoh: "A." atau "A)"',
-            '3. Kunci jawaban: tulis "KUNCI: B" (huruf kapital)',
-            '4. Poin soal: tulis "NILAI: 2" (opsional, default = 1)',
-            '5. Multi jawaban (CHECKBOX): "KUNCI: A,C,D" dan tambah baris "TIPE: CHECKBOX"',
-            '6. Gambar soal: sisipkan gambar (Insert > Picture) tepat setelah nomor soal',
-            '7. Gambar opsi: sisipkan gambar tepat setelah huruf opsi',
-          ].map(t => new Paragraph({
-            children: [new TextRun({ text: t, size: 20 })],
-            indent: { left: 400 }
-          })),
+          new Paragraph({ children: [new TextRun({ text: '1. Nomor soal: awali dengan angka + titik/kurung, contoh: "1." atau "1)"', size: 20 })], indent: { left: 400 } }),
+          new Paragraph({ children: [new TextRun({ text: '2. Opsi jawaban: awali dengan huruf A-E + titik/kurung, contoh: "A." atau "A)"', size: 20 })], indent: { left: 400 } }),
+          new Paragraph({ children: [new TextRun({ text: '3. Kunci jawaban: tulis "KUNCI: B" (huruf kapital)', size: 20 })], indent: { left: 400 } }),
+          new Paragraph({ children: [new TextRun({ text: '4. Poin soal: tulis "NILAI: 2" (opsional, default = 1)', size: 20 })], indent: { left: 400 } }),
+          new Paragraph({ children: [new TextRun({ text: '5. Multi jawaban: "KUNCI: A,C,D" dan tambah baris "TIPE: CHECKBOX"', size: 20 })], indent: { left: 400 } }),
+          new Paragraph({ children: [new TextRun({ text: '6. Gambar soal: sisipkan (Insert > Picture) tepat setelah nomor soal', size: 20 })], indent: { left: 400 } }),
           new Paragraph({ children: [new TextRun('')] }),
-
-          // Garis pemisah
-          new Paragraph({
-            children: [new TextRun({ text: '═'.repeat(60), color: '888888', size: 18 })]
-          }),
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: 'CONTOH SOAL — HAPUS BAGIAN INI DAN GANTI DENGAN SOAL ANDA', bold: true, color: 'CC0000', size: 20 })]
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: '═'.repeat(60), color: '888888', size: 18 })]
-          }),
+          new Paragraph({ children: [new TextRun({ text: '================================================', color: '888888', size: 18 })] }),
+          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'CONTOH SOAL (HAPUS DAN GANTI DENGAN SOAL ANDA)', bold: true, color: 'CC0000', size: 20 })] }),
+          new Paragraph({ children: [new TextRun({ text: '================================================', color: '888888', size: 18 })] }),
           new Paragraph({ children: [new TextRun('')] }),
-
-          // Soal 1 MCQ
           new Paragraph({ children: [new TextRun({ text: '1. Ibu kota negara Indonesia adalah?', bold: true, size: 22 })] }),
           new Paragraph({ children: [new TextRun({ text: 'A. Surabaya', size: 22 })], indent: { left: 400 } }),
           new Paragraph({ children: [new TextRun({ text: 'B. Bandung', size: 22 })], indent: { left: 400 } }),
@@ -1525,10 +1498,8 @@ router.get('/exams/:id/import/template-word', async (req, res) => {
           new Paragraph({ children: [new TextRun({ text: 'KUNCI: C', bold: true, color: '007700', size: 22 })] }),
           new Paragraph({ children: [new TextRun({ text: 'NILAI: 1', size: 22, color: '555555' })] }),
           new Paragraph({ children: [new TextRun('')] }),
-
-          // Soal 2 MCQ dengan gambar
           new Paragraph({ children: [new TextRun({ text: '2. Perhatikan gambar berikut ini!', bold: true, size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: '[SISIPKAN GAMBAR DI SINI: Insert → Picture]', italics: true, color: '0000AA', size: 20 })] }),
+          new Paragraph({ children: [new TextRun({ text: '[SISIPKAN GAMBAR DI SINI: Insert > Picture]', italics: true, color: '0000AA', size: 20 })] }),
           new Paragraph({ children: [new TextRun({ text: 'A. Pilihan A', size: 22 })], indent: { left: 400 } }),
           new Paragraph({ children: [new TextRun({ text: 'B. Pilihan B', size: 22 })], indent: { left: 400 } }),
           new Paragraph({ children: [new TextRun({ text: 'C. Pilihan C', size: 22 })], indent: { left: 400 } }),
@@ -1537,8 +1508,6 @@ router.get('/exams/:id/import/template-word', async (req, res) => {
           new Paragraph({ children: [new TextRun({ text: 'KUNCI: A', bold: true, color: '007700', size: 22 })] }),
           new Paragraph({ children: [new TextRun({ text: 'NILAI: 2', size: 22, color: '555555' })] }),
           new Paragraph({ children: [new TextRun('')] }),
-
-          // Soal 3 CHECKBOX
           new Paragraph({ children: [new TextRun({ text: '3. Manakah yang termasuk bilangan prima? (pilih semua yang benar)', bold: true, size: 22 })] }),
           new Paragraph({ children: [new TextRun({ text: 'A. 2', size: 22 })], indent: { left: 400 } }),
           new Paragraph({ children: [new TextRun({ text: 'B. 4', size: 22 })], indent: { left: 400 } }),
@@ -1549,28 +1518,21 @@ router.get('/exams/:id/import/template-word', async (req, res) => {
           new Paragraph({ children: [new TextRun({ text: 'TIPE: CHECKBOX', bold: true, color: '0055AA', size: 22 })] }),
           new Paragraph({ children: [new TextRun({ text: 'NILAI: 4', size: 22, color: '555555' })] }),
           new Paragraph({ children: [new TextRun('')] }),
-
-          // Garis akhir
-          new Paragraph({
-            children: [new TextRun({ text: '═'.repeat(60), color: '888888', size: 18 })]
-          }),
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: 'Lanjutkan mengetik soal di bawah baris ini sesuai format di atas', italics: true, color: '888888', size: 18 })]
-          }),
-          new Paragraph({ children: [new TextRun('')] }),
-          new Paragraph({ children: [new TextRun('')] }),
         ]
       }]
     });
-
     const buffer = await Packer.toBuffer(doc);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', 'attachment; filename="template_import_soal.docx"');
-    res.send(buffer);
+    return res.send(buffer);
   } catch (e) {
-    console.error('Template Word error:', e);
-    // Fallback: kirim file txt yang sudah ada
+    // Fallback: serve file .docx statis yang sudah di-generate
+    const fs = require('fs');
+    if (fs.existsSync(staticFile)) {
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      res.setHeader('Content-Disposition', 'attachment; filename="template_import_soal.docx"');
+      return res.sendFile(staticFile);
+    }
     res.download(require('path').join(__dirname, '../public/templates/import_template_word.txt'), 'template_import_soal.txt');
   }
 });
