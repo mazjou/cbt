@@ -276,6 +276,39 @@ function jumpAndClose(no) {
 <!-- Header ujian compact — dihapus agar tidak mengganggu tampilan -->
 <%# (judul ujian sudah terlihat di floating bar dan drawer soal) %>
 
+<!-- Overlay peringatan browser non-Chrome -->
+<div id="browserWarningOverlay" style="display:none;
+  position:fixed;top:0;left:0;width:100%;height:100%;
+  z-index:9998;background:rgba(153,27,27,0.97);
+  align-items:center;justify-content:center;padding:24px;box-sizing:border-box;">
+  <div style="background:#fff;border-radius:20px;max-width:380px;width:100%;
+    padding:28px 24px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.4);">
+    <div style="font-size:48px;margin-bottom:12px;">⚠️</div>
+    <div style="font-size:17px;font-weight:800;color:#dc2626;margin-bottom:8px;">Browser Tidak Didukung</div>
+    <div style="font-size:13px;color:#374151;margin-bottom:6px;line-height:1.6;">
+      Anda menggunakan <strong id="browserNameOverlay"></strong>.<br>
+      Fitur keamanan ujian <strong>tidak bekerja optimal</strong> di browser ini.<br>
+      Layar penuh dan anti-cheat mungkin tidak berfungsi.
+    </div>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:20px;">
+      Disarankan menggunakan <strong>Google Chrome</strong>.
+    </div>
+    <button id="btnOpenChrome" type="button" onclick="openInChrome()" style="
+      width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;
+      background:linear-gradient(135deg,#4285f4,#1a73e8);
+      color:#fff;font-size:15px;font-weight:800;margin-bottom:10px;
+      box-shadow:0 4px 16px rgba(66,133,244,0.4);">
+      🌐 Buka di Google Chrome
+    </button>
+    <button id="btnContinueBrowser" type="button" onclick="continueWithCurrentBrowser()" style="
+      width:100%;padding:10px;border-radius:12px;
+      border:1px solid #d1d5db;cursor:pointer;
+      background:#f9fafb;color:#6b7280;font-size:13px;">
+      Lanjut dengan <span id="browserNameBtn"></span>
+    </button>
+  </div>
+</div>
+
 <!-- Anti-cheat popup — muncul di tengah layar jika belum fullscreen -->
 <div id="antiCheatBar" style="
   display:none;
@@ -1132,6 +1165,24 @@ function jumpAndClose(no) {
     });
   });
 
+  function detectBrowser() {
+    var ua = navigator.userAgent;
+    if (/Edg\//.test(ua))          return 'Microsoft Edge';
+    if (/OPR\/|Opera/.test(ua))    return 'Opera';
+    if (/SamsungBrowser/.test(ua)) return 'Samsung Browser';
+    if (/MiuiBrowser/.test(ua))    return 'Xiaomi Browser';
+    if (/UCBrowser/.test(ua))      return 'UC Browser';
+    if (/Firefox/.test(ua))        return 'Firefox';
+    if (/CriOS/.test(ua))          return 'Chrome iOS';
+    if (/Chrome\//.test(ua))       return 'Chrome';
+    if (/Safari\//.test(ua))       return 'Safari';
+    return 'Browser Lain';
+  }
+  function isChromeLike() {
+    var b = detectBrowser();
+    return b === 'Chrome' || b === 'Chrome iOS';
+  }
+
   // Anti-cheat — gunakan max_violations dari ujian, bukan ENV
   const anti = {
     attemptId: <%= attempt.id %>,
@@ -1140,6 +1191,38 @@ function jumpAndClose(no) {
     localCount: 0,
     locked: false
   };
+
+  // ── Deteksi browser & overlay peringatan ─────────────────────────────
+  var _browserWarningDismissed = false;
+  var _currentBrowser = detectBrowser();
+  var _isChrome = isChromeLike();
+
+  function openInChrome() {
+    window.open(window.location.href, '_blank');
+  }
+
+  function continueWithCurrentBrowser() {
+    _browserWarningDismissed = true;
+    var overlay = document.getElementById('browserWarningOverlay');
+    if (overlay) overlay.style.display = 'none';
+    reportViolation('Browser Tidak Direkomendasikan: ' + _currentBrowser, 'browser-warning');
+    dismissOverlayAndStart();
+  }
+
+  // Tampilkan overlay browser jika bukan Chrome
+  (function initBrowserCheck() {
+    if (!_isChrome) {
+      var overlay = document.getElementById('browserWarningOverlay');
+      var nameEl  = document.getElementById('browserNameOverlay');
+      var nameBtn = document.getElementById('browserNameBtn');
+      if (overlay) overlay.style.display = 'flex';
+      if (nameEl)  nameEl.textContent  = _currentBrowser;
+      if (nameBtn) nameBtn.textContent = _currentBrowser;
+      // Sembunyikan fsOverlay dulu sampai user dismiss browser warning
+      var fsOverlay = document.getElementById('fsOverlay');
+      if (fsOverlay) fsOverlay.style.display = 'none';
+    }
+  })();
 
   // Grace period: pertama kali keluar fullscreen tidak langsung dicatat pelanggaran
   let fullscreenExited = false;
@@ -1373,6 +1456,11 @@ function jumpAndClose(no) {
     if (!antiCheatBar) return;
     // iOS: selalu anggap fullscreen OK (Fullscreen API tidak didukung)
     if (isIOS) {
+      antiCheatBar.style.display = 'none';
+      return;
+    }
+    // Jika browser non-Chrome dan user sudah dismiss warning → jangan tampilkan popup fullscreen lagi
+    if (_browserWarningDismissed && !_isChrome) {
       antiCheatBar.style.display = 'none';
       return;
     }

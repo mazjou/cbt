@@ -1,3 +1,56 @@
+<script>
+function detectBrowser() {
+  var ua = navigator.userAgent;
+  if (/Edg\//.test(ua))          return 'Microsoft Edge';
+  if (/OPR\/|Opera/.test(ua))    return 'Opera';
+  if (/SamsungBrowser/.test(ua)) return 'Samsung Browser';
+  if (/MiuiBrowser/.test(ua))    return 'Xiaomi Browser';
+  if (/UCBrowser/.test(ua))      return 'UC Browser';
+  if (/Firefox/.test(ua))        return 'Firefox';
+  if (/CriOS/.test(ua))          return 'Chrome iOS';
+  if (/Chrome\//.test(ua))       return 'Chrome';
+  if (/Safari\//.test(ua))       return 'Safari';
+  return 'Browser Tidak Dikenal';
+}
+function isChromeLike() {
+  var b = detectBrowser();
+  return b === 'Chrome' || b === 'Chrome iOS';
+}
+</script>
+
+<!-- Banner peringatan browser — hanya muncul jika bukan Chrome -->
+<div id="browserWarningBanner" style="display:none;
+  background:linear-gradient(135deg,#dc2626,#991b1b);
+  color:#fff; padding:16px 20px; border-radius:16px;
+  margin-bottom:16px; box-shadow:0 4px 20px rgba(220,38,38,0.4);">
+  <div style="display:flex;align-items:flex-start;gap:12px;">
+    <div style="font-size:28px;flex-shrink:0;">⚠️</div>
+    <div style="flex:1;">
+      <div style="font-weight:800;font-size:15px;margin-bottom:4px;">Browser Tidak Direkomendasikan untuk Ujian!</div>
+      <div style="font-size:13px;opacity:0.9;margin-bottom:10px;">
+        Anda menggunakan <strong id="browserNameBanner"></strong>. Browser ini tidak mendukung fitur keamanan ujian (layar penuh, anti-cheat) secara optimal.
+        Gunakan <strong>Google Chrome</strong> untuk ujian yang lancar dan menghindari masalah.
+      </div>
+      <a href="https://www.google.com/chrome/" target="_blank"
+        style="display:inline-block;background:#fff;color:#dc2626;font-weight:700;
+        font-size:13px;padding:8px 16px;border-radius:10px;text-decoration:none;">
+        🌐 Download / Buka Google Chrome
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  if (!isChromeLike()) {
+    var banner = document.getElementById('browserWarningBanner');
+    var nameEl = document.getElementById('browserNameBanner');
+    if (banner) banner.style.display = 'block';
+    if (nameEl) nameEl.textContent = detectBrowser();
+  }
+})();
+</script>
+
 <div class="flex items-center justify-between gap-4">
   <div>
     <div class="text-sm text-slate-500">Ujian</div>
