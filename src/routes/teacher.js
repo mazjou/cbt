@@ -1632,15 +1632,32 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
       { path: file.path },
       {
         convertImage: mammoth.images.imgElement(async (image) => {
-          const ct = String(image.contentType || 'image/png');
-          console.log('[WORD-IMPORT-DEBUG] convertImage called! contentType:', ct);
-          const ext = (ct.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
-          const fname = `${Date.now()}_${nanoid(10)}.${ext}`;
-          const buf = await image.read('buffer');
-          fs.writeFileSync(path.join(uploadDir, fname), buf);
-          const src = `/public/uploads/questions/${fname}`;
-          imageMap[imgCounter++] = src;
-          return { src, 'data-img-idx': String(imgCounter - 1) };
+          try {
+            const ct = String(image.contentType || 'image/png');
+            console.log('[WORD-IMPORT-DEBUG] convertImage called! contentType:', ct);
+            const ext = (ct.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
+            const fname = `${Date.now()}_${nanoid(10)}.${ext}`;
+            // Coba berbagai cara baca gambar sesuai versi mammoth
+            let buf;
+            try {
+              buf = await image.read('base64').then(b64 => Buffer.from(b64, 'base64'));
+            } catch(_) {
+              try { buf = await image.read(); } catch(__) {
+                try { buf = await image.readAsBase64().then(b64 => Buffer.from(b64, 'base64')); } catch(___) {
+                  console.log('[WORD-IMPORT-DEBUG] Semua cara baca gambar gagal');
+                  return { src: '' };
+                }
+              }
+            }
+            fs.writeFileSync(path.join(uploadDir, fname), buf);
+            const src = `/public/uploads/questions/${fname}`;
+            imageMap[imgCounter++] = src;
+            console.log('[WORD-IMPORT-DEBUG] gambar disimpan:', src);
+            return { src, 'data-img-idx': String(imgCounter - 1) };
+          } catch(imgErr) {
+            console.error('[WORD-IMPORT-DEBUG] convertImage error:', imgErr.message);
+            return { src: '' };
+          }
         })
       }
     );
