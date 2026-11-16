@@ -1757,12 +1757,21 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
         if (!A || !B) reasons.push('Opsi A dan B wajib untuk TRUE_FALSE');
         if (!correctLabels.length || !['A','B'].includes(correctLabels[0])) reasons.push('KUNCI harus A atau B untuk TRUE_FALSE');
       } else if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
-        if (!A || !B) reasons.push('Minimal opsi A dan B wajib untuk COMPLEX/CHECKBOX');
+        const imgO = q.option_images || {};
+        const hasA = A || imgO.A;
+        const hasB = B || imgO.B;
+        if (!hasA || !hasB) reasons.push('Minimal opsi A dan B wajib untuk COMPLEX/CHECKBOX');
         if (!correctLabels.length) reasons.push('KUNCI wajib diisi (pisah koma, contoh: A,C,D)');
         if (!correctLabels.every(l => ['A','B','C','D','E'].includes(l))) reasons.push('KUNCI hanya boleh huruf A-E');
       } else {
-        // MCQ
-        if (!A || !B || !C || !D || !E) reasons.push('Opsi A–E wajib terisi untuk MCQ (boleh gambar saja jika ada)');
+        // MCQ — opsi valid jika punya teks ATAU gambar
+        const imgO = q.option_images || {};
+        const hasA = A || imgO.A;
+        const hasB = B || imgO.B;
+        const hasC = C || imgO.C;
+        const hasD = D || imgO.D;
+        const hasE = E || imgO.E;
+        if (!hasA || !hasB || !hasC || !hasD || !hasE) reasons.push('Opsi A–E wajib terisi untuk MCQ (boleh gambar saja jika ada)');
         if (!correctLabels.length || !['A','B','C','D','E'].includes(correctLabels[0])) reasons.push('KUNCI harus A/B/C/D/E');
       }
 
