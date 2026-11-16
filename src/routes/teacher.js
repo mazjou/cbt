@@ -1662,20 +1662,14 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
       }
     );
 
-    // Log warnings dari mammoth (penting untuk debug gambar tidak terbaca)
+    // Log warnings dari mammoth jika ada error
     if (result.messages && result.messages.length) {
-      console.log('[WORD-IMPORT-DEBUG] mammoth warnings:', JSON.stringify(result.messages.map(m => ({ type: m.type, message: m.message }))));
+      const errors = result.messages.filter(m => m.type === 'error');
+      if (errors.length) console.warn('[WORD-IMPORT] mammoth errors:', errors.map(m => m.message).join('; '));
     }
 
     const html = result.value || '';
     const $ = cheerio.load(html);
-
-    // DEBUG: log HTML hasil konversi untuk diagnosa gambar
-    console.log('[WORD-IMPORT-DEBUG] imgCounter:', imgCounter, 'imageMap keys:', Object.keys(imageMap));
-    console.log('[WORD-IMPORT-DEBUG] HTML length:', html.length);
-    // Log semua img tag yang ada di HTML
-    const imgMatches = html.match(/<img[^>]+>/g) || [];
-    console.log('[WORD-IMPORT-DEBUG] img tags in HTML:', imgMatches.length, imgMatches.map(t => t.substring(0, 100)));
 
     // Kumpulkan blok: { text, imgs[] }
     const blocks = [];
@@ -1690,9 +1684,6 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
       if ($el.is('img')) { const src = $el.attr('src'); if (src) imgs.push(src); }
       if (text || imgs.length) blocks.push({ text, imgs });
     });
-
-    // DEBUG: log semua blok
-    console.log('[WORD-IMPORT-DEBUG] blocks:', JSON.stringify(blocks.map(b => ({ text: b.text.substring(0,50), imgCount: b.imgs.length }))));
 
     // ── Parser ──────────────────────────────────────────────────────────────
     // Format yang didukung:
@@ -1731,11 +1722,11 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
       // Blok hanya berisi gambar (teks kosong) → assign ke konteks terakhir
       if (!t && imgs.length) {
         if (cur) {
-          if (lastLabel && !cur.option_images[lastLabel] && !cur.options[lastLabel]) {
-            // Gambar setelah opsi yang belum punya teks → gambar opsi tersebut
+          if (lastLabel && !cur.option_images[lastLabel]) {
+            // Gambar setelah opsi (teks ada atau tidak) → gambar opsi tersebut
             cur.option_images[lastLabel] = imgs[0];
           } else if (!cur.question_image) {
-            // Semua kasus lain (termasuk gambar setelah opsi berteks) → gambar soal
+            // Tidak ada konteks opsi → gambar soal
             cur.question_image = imgs[0];
           }
         }
