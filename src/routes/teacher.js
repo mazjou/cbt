@@ -1633,6 +1633,7 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
       {
         convertImage: mammoth.images.imgElement(async (image) => {
           const ct = String(image.contentType || 'image/png');
+          console.log('[WORD-IMPORT-DEBUG] convertImage called! contentType:', ct);
           const ext = (ct.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
           const fname = `${Date.now()}_${nanoid(10)}.${ext}`;
           const buf = await image.read('buffer');
@@ -1643,6 +1644,11 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
         })
       }
     );
+
+    // Log warnings dari mammoth (penting untuk debug gambar tidak terbaca)
+    if (result.messages && result.messages.length) {
+      console.log('[WORD-IMPORT-DEBUG] mammoth warnings:', JSON.stringify(result.messages.map(m => ({ type: m.type, message: m.message }))));
+    }
 
     const html = result.value || '';
     const $ = cheerio.load(html);
