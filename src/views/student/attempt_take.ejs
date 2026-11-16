@@ -1364,14 +1364,21 @@ function jumpAndClose(no) {
   const btnStartFs = document.getElementById('btnStartFullscreen');
   const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
 
+  // iOS (iPhone/iPad) tidak mendukung Fullscreen API sama sekali — bypass fullscreen
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   // Sembunyikan/tampilkan popup fullscreen sesuai status layar
   function updateFsBanner() {
     if (!antiCheatBar) return;
+    // iOS: selalu anggap fullscreen OK (Fullscreen API tidak didukung)
+    if (isIOS) {
+      antiCheatBar.style.display = 'none';
+      return;
+    }
     if (isFullscreen()) {
-      // Fullscreen aktif — sembunyikan popup
       antiCheatBar.style.display = 'none';
     } else {
-      // Keluar fullscreen — tampilkan popup di tengah
       antiCheatBar.style.display = 'flex';
     }
   }
@@ -1379,20 +1386,22 @@ function jumpAndClose(no) {
   async function requestFullscreen() {
     try {
       const el = document.documentElement;
-      // Android Chrome
+      if (isIOS) {
+        // iOS tidak support Fullscreen API — cukup scroll untuk sembunyikan address bar
+        window.scrollTo(0, 1);
+        setTimeout(() => window.scrollTo(0, 0), 100);
+        return;
+      }
       if (el.requestFullscreen) {
         await el.requestFullscreen({ navigationUI: 'hide' });
-      }
-      // iOS Safari (tidak support fullscreen API — sembunyikan address bar via scroll)
-      else if (el.webkitRequestFullscreen) {
+      } else if (el.webkitRequestFullscreen) {
         el.webkitRequestFullscreen();
       } else if (isMobile) {
-        // iOS fallback: scroll agar address bar hilang
         window.scrollTo(0, 1);
         setTimeout(() => window.scrollTo(0, 0), 100);
       }
     } catch (e) {
-      // Fullscreen ditolak browser — tidak tampilkan error, ujian tetap jalan
+      // Fullscreen ditolak browser — ujian tetap jalan
     }
   }
 
@@ -1406,32 +1415,31 @@ function jumpAndClose(no) {
     requestFullscreen().then(() => {
       setTimeout(updateFsBanner, 500);
     }).catch(() => {
-      // Fullscreen gagal — popup muncul jika bukan mobile
       if (!isMobile) setTimeout(updateFsBanner, 500);
     });
-    // Mobile: sembunyikan popup langsung karena tidak ada fullscreenchange event
-    if (isMobile && antiCheatBar) antiCheatBar.style.display = 'none';
+    // Mobile & iOS: sembunyikan popup langsung
+    if ((isMobile || isIOS) && antiCheatBar) antiCheatBar.style.display = 'none';
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   if (btnStartFs) btnStartFs.addEventListener('click', dismissOverlayAndStart);
   if (btnStartFs) btnStartFs.addEventListener('touchend', function(e) {
-    e.preventDefault(); // prevent double-fire di mobile
+    e.preventDefault();
     dismissOverlayAndStart();
   });
 
   // Tombol fullscreen di popup (re-enter fullscreen)
   if (fsBtn) fsBtn.addEventListener('click', function() {
     requestFullscreen().then(() => setTimeout(updateFsBanner, 500)).catch(()=>{});
-    if (isMobile && antiCheatBar) antiCheatBar.style.display = 'none';
+    if ((isMobile || isIOS) && antiCheatBar) antiCheatBar.style.display = 'none';
   });
   if (fsBtn) fsBtn.addEventListener('touchend', function(e) {
     e.preventDefault();
     requestFullscreen().then(() => setTimeout(updateFsBanner, 500)).catch(()=>{});
-    if (isMobile && antiCheatBar) antiCheatBar.style.display = 'none';
+    if ((isMobile || isIOS) && antiCheatBar) antiCheatBar.style.display = 'none';
   });
 
-  // Auto-dismiss overlay setelah 15 detik jika siswa tidak tap (edge case)
+  // Auto-dismiss overlay setelah 15 detik (edge case)
   setTimeout(() => {
     if (fsOverlay && fsOverlay.style.display !== 'none') {
       dismissOverlayAndStart();
@@ -1439,25 +1447,28 @@ function jumpAndClose(no) {
   }, 15000);
 
   function isFullscreen() {
+    // iOS selalu return true karena tidak support Fullscreen API
+    if (isIOS) return true;
     return !!(document.fullscreenElement || document.webkitFullscreenElement);
   }
+
   document.addEventListener('fullscreenchange', () => {
-    updateFsBanner(); // sembunyikan/tampilkan popup sesuai status fullscreen
+    if (isIOS) return; // iOS tidak trigger event ini
+    updateFsBanner();
     if (!isFullscreen()) {
       if (fullscreenExited === false) {
         fullscreenExited = true;
-        // Popup sudah muncul otomatis via updateFsBanner — tidak perlu toast lagi
       } else {
         reportViolation('Keluar Fullscreen', 'fullscreenchange');
       }
     }
   });
   document.addEventListener('webkitfullscreenchange', () => {
-    updateFsBanner(); // sembunyikan/tampilkan popup sesuai status fullscreen
+    if (isIOS) return; // iOS tidak trigger event ini dengan benar
+    updateFsBanner();
     if (!isFullscreen()) {
       if (fullscreenExited === false) {
         fullscreenExited = true;
-        // Popup sudah muncul otomatis via updateFsBanner — tidak perlu toast lagi
       } else {
         reportViolation('Keluar Fullscreen', 'webkitfullscreenchange');
       }
