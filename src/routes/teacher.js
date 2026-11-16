@@ -1698,11 +1698,11 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
       // Blok hanya berisi gambar (teks kosong) → assign ke konteks terakhir
       if (!t && imgs.length) {
         if (cur) {
-          if (lastLabel && !cur.option_images[lastLabel]) {
-            // Gambar setelah opsi → gambar opsi tersebut
+          if (lastLabel && !cur.option_images[lastLabel] && !cur.options[lastLabel]) {
+            // Gambar setelah opsi yang belum punya teks → gambar opsi tersebut
             cur.option_images[lastLabel] = imgs[0];
           } else if (!cur.question_image) {
-            // Gambar setelah nomor soal → gambar soal
+            // Semua kasus lain (termasuk gambar setelah opsi berteks) → gambar soal
             cur.question_image = imgs[0];
           }
         }
@@ -1755,8 +1755,9 @@ router.post('/exams/:id/questions/import-word', uploadDocx.single('docx'), async
         continue;
       }
 
-      // Gambar inline di baris soal (bukan opsi)
-      if (imgs.length && !cur.question_image && !lastLabel) cur.question_image = imgs[0];
+      // Gambar inline di baris soal (bukan opsi) — hapus syarat !lastLabel
+      // agar gambar soal ter-assign meski opsi sudah ter-parse
+      if (imgs.length && !cur.question_image) cur.question_image = imgs[0];
 
       // Lanjutan teks soal
       if (!lastLabel) {
