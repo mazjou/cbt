@@ -1469,73 +1469,17 @@ router.post('/exams/:id/questions', upload.any(), async (req, res) => {
 router.get('/exams/:id/import/template-word', async (req, res) => {
   const path = require('path');
   const staticFile = path.join(__dirname, '../public/templates/import_template_word.docx');
-  try {
-    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = require('docx');
-    const doc = new Document({
-      sections: [{
-        children: [
-          new Paragraph({ heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'TEMPLATE IMPORT SOAL - MICROSOFT WORD', bold: true, size: 28 })] }),
-          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'LMS CBT — Format Soal Pilihan Ganda', size: 22, color: '555555' })] }),
-          new Paragraph({ children: [new TextRun('')] }),
-          new Paragraph({ children: [new TextRun({ text: 'ATURAN FORMAT:', bold: true, size: 24, color: '1a56db' })] }),
-          new Paragraph({ children: [new TextRun({ text: '- Nomor soal: awali dengan angka + titik/kurung, contoh: "1." atau "1)"', size: 20 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: '- Opsi jawaban: awali dengan huruf A-E + titik/kurung, contoh: "A." atau "A)"', size: 20 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: '- Kunci jawaban: tulis "KUNCI: B" (huruf kapital)', size: 20 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: '- Poin soal: tulis "NILAI: 2" (opsional, default = 1)', size: 20 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: '- Multi jawaban: "KUNCI: A,C,D" dan tambah baris "TIPE: CHECKBOX"', size: 20 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: '- Gambar soal: sisipkan (Insert > Picture) tepat setelah nomor soal', size: 20 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun('')] }),
-          new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '>>> HAPUS SEMUA TEKS DI ATAS GARIS INI SEBELUM UPLOAD <<<', bold: true, color: 'CC0000', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: '================================================================', color: '888888', size: 18 })] }),
-          new Paragraph({ children: [new TextRun('')] }),
-          new Paragraph({ children: [new TextRun({ text: '1. Ibu kota negara Indonesia adalah?', bold: true, size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'A. Surabaya', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'B. Bandung', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'C. Jakarta', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'D. Yogyakarta', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'E. Medan', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'KUNCI: C', bold: true, color: '007700', size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'NILAI: 1', size: 22, color: '555555' })] }),
-          new Paragraph({ children: [new TextRun('')] }),
-          new Paragraph({ children: [new TextRun({ text: '2. Perhatikan gambar berikut ini!', bold: true, size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: '[SISIPKAN GAMBAR DI SINI: Insert > Picture]', italics: true, color: '0000AA', size: 20 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'A. Pilihan A', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'B. Pilihan B', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'C. Pilihan C', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'D. Pilihan D', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'E. Pilihan E', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'KUNCI: A', bold: true, color: '007700', size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'NILAI: 2', size: 22, color: '555555' })] }),
-          new Paragraph({ children: [new TextRun('')] }),
-          new Paragraph({ children: [new TextRun({ text: '3. Manakah yang termasuk bilangan prima? (pilih semua yang benar)', bold: true, size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'A. 2', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'B. 4', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'C. 5', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'D. 7', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'E. 9', size: 22 })], indent: { left: 400 } }),
-          new Paragraph({ children: [new TextRun({ text: 'KUNCI: A,C,D', bold: true, color: '007700', size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'TIPE: CHECKBOX', bold: true, color: '0055AA', size: 22 })] }),
-          new Paragraph({ children: [new TextRun({ text: 'NILAI: 4', size: 22, color: '555555' })] }),
-          new Paragraph({ children: [new TextRun('')] }),
-        ]
-      }]
-    });
-    const buffer = await Packer.toBuffer(doc);
+  const fs = require('fs');
+  // Serve file statis langsung — lebih reliable daripada generate dinamis
+  if (fs.existsSync(staticFile)) {
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', 'attachment; filename="template_import_soal.docx"');
-    return res.send(buffer);
-  } catch (e) {
-    // Fallback: serve file .docx statis yang sudah di-generate
-    const fs = require('fs');
-    if (fs.existsSync(staticFile)) {
-      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-      res.setHeader('Content-Disposition', 'attachment; filename="template_import_soal.docx"');
-      return res.sendFile(staticFile);
-    }
-    res.download(require('path').join(__dirname, '../public/templates/import_template_word.txt'), 'template_import_soal.txt');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.sendFile(staticFile);
   }
+  // Fallback ke txt jika file docx tidak ada
+  res.download(path.join(__dirname, '../public/templates/import_template_word.txt'), 'template_import_soal.txt');
 });
-
 // ── Download Template Import Soal Ujian ────────────────────────────────────
 router.get('/exams/:id/import/template', async (req, res) => {
   const XLSX = require('xlsx');
