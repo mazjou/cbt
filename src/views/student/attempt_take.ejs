@@ -1258,6 +1258,34 @@ function jumpAndClose(no) {
     }, JITTER);
   })();
 
+  // ── Idle Detection: deteksi tidak ada interaksi (kemungkinan pakai floating app) ──
+  let _lastInteraction = Date.now();
+  const IDLE_THRESHOLD = 3 * 60 * 1000; // 3 menit
+  const IDLE_EVENTS = ['click', 'touchstart', 'keydown', 'scroll', 'mousemove'];
+  IDLE_EVENTS.forEach(ev => {
+    document.addEventListener(ev, function() { _lastInteraction = Date.now(); }, { passive: true });
+  });
+  setInterval(function() {
+    if (anti.locked) return; // sudah terkunci, skip
+    const idle = Date.now() - _lastInteraction;
+    if (idle >= IDLE_THRESHOLD) {
+      reportViolation('Tidak Ada Aktivitas ' + Math.floor(idle/60000) + ' Menit', 'idle_detection');
+      _lastInteraction = Date.now(); // reset agar tidak spam
+    }
+  }, 60000); // cek setiap 1 menit
+
+  // ── Polling Fullscreen: beberapa floating app keluar fullscreen tanpa trigger event ──
+  // Hanya aktif di mobile (target utama floating app Android)
+  if (isMobile) {
+    setInterval(function() {
+      if (anti.locked) return;
+      if (!isFullscreen() && !_browserWarningDismissed) {
+        // Muncul popup fullscreen kembali
+        updateFsBanner();
+      }
+    }, 10000); // cek setiap 10 detik
+  }
+
   function nowMs() { return Date.now(); }
 
   function toast(msg) {

@@ -51,6 +51,28 @@ function isChromeLike() {
 })();
 </script>
 
+<!-- Checklist persiapan mobile — hanya tampil di Android/mobile -->
+<div id="mobileChecklist" style="display:none; background:linear-gradient(135deg,#fef3c7,#fde68a); border:2px solid #f59e0b; border-radius:16px; padding:16px; margin-bottom:16px;">
+  <div style="font-weight:800; color:#92400e; font-size:15px; margin-bottom:10px;">📋 Persiapan Ujian di HP Android</div>
+  <div style="font-size:13px; color:#78350f; line-height:1.7;">
+    Sebelum memulai ujian, pastikan:<br>
+    <strong>1.</strong> Nonaktifkan aplikasi floating/overlay<br>
+    &nbsp;&nbsp;&nbsp;→ Pengaturan → Aplikasi → Tampil di atas aplikasi lain<br>
+    <strong>2.</strong> Tutup split screen / multi-window<br>
+    <strong>3.</strong> Nonaktifkan screen mirroring / cast<br>
+    <strong>4.</strong> Gunakan Google Chrome untuk ujian
+  </div>
+</div>
+<script>
+(function() {
+  var ua = navigator.userAgent;
+  if (/Android/i.test(ua) || (navigator.maxTouchPoints > 1 && !/iPhone|iPad/i.test(ua))) {
+    var el = document.getElementById('mobileChecklist');
+    if (el) el.style.display = 'block';
+  }
+})();
+<\/script>
+
 <div class="flex items-center justify-between gap-4">
   <div>
     <div class="text-sm text-slate-500">Ujian</div>
