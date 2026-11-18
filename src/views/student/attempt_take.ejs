@@ -1,4 +1,4 @@
-<!-- Anti-translate meta (injected via layout head override jika tersedia, atau via JS di bawah) -->
+﻿<!-- Anti-translate meta (injected via layout head override jika tersedia, atau via JS di bawah) -->
 <% const totalQ = questions.length; %>
 <% const onePerPage = attempt.one_question_per_page === true; %>
 
@@ -716,7 +716,7 @@ function jumpAndClose(no) {
           btn.style.background = '';
           btn.style.cursor = '';
           btn.style.opacity = '';
-          btn.textContent = '✅ Kumpulkan Jawaban';
+          btn.textContent = 'Kumpulkan Jawaban';
         }
         if (!submitUnlockToastShown) {
           submitUnlockToastShown = true;
@@ -974,7 +974,7 @@ function jumpAndClose(no) {
       if (existing) existing.remove();
       const span = document.createElement('span');
       span.className = 'tf-status text-sm font-semibold ' + (isBenar ? 'text-emerald-600' : 'text-rose-600');
-      span.textContent = isBenar ? '✅ Terpilih: Benar' : '❌ Terpilih: Salah';
+      span.textContent = isBenar ? 'Terpilih: Benar' : 'Terpilih: Salah';
       sel.parentElement.appendChild(span);
 
       updateAnswered();
@@ -1168,7 +1168,7 @@ function jumpAndClose(no) {
           // Feedback visual: tombol loading
           if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Mengirim jawaban...';
+            submitBtn.textContent = 'Mengirim jawaban...';
             submitBtn.classList.add('opacity-75', 'cursor-not-allowed');
           }
 
@@ -1176,7 +1176,7 @@ function jumpAndClose(no) {
             // Reset tombol jika gagal (sukses → redirect, tidak sampai sini)
             if (submitBtn) {
               submitBtn.disabled = false;
-              submitBtn.textContent = '✅ Kumpulkan Jawaban';
+              submitbtn.textContent = 'Kumpulkan Jawaban';
               submitBtn.classList.remove('opacity-75', 'cursor-not-allowed');
             }
           });
@@ -1341,7 +1341,7 @@ function jumpAndClose(no) {
       box.className = 'fixed bottom-4 right-4 z-50 max-w-md rounded-xl border-2 border-rose-300 bg-gradient-to-r from-rose-50 to-pink-50 shadow-2xl px-5 py-4 text-sm font-semibold text-rose-900';
       document.body.appendChild(box);
     }
-    box.textContent = '⚠️ ' + msg;
+    box.textContent = '[!] ' + msg;
     box.style.opacity = '1';
     clearTimeout(box._t);
     box._t = setTimeout(() => { box.style.opacity = '0'; }, 3000);
@@ -1383,7 +1383,7 @@ function jumpAndClose(no) {
           anti.locked = false;
           const msg = document.getElementById('unlockMsg');
           if (msg) {
-            msg.textContent = '✅ Guru telah menyetujui. Silakan lanjutkan ujian!';
+            msg.textContent = 'Guru telah menyetujui. Silakan lanjutkan ujian!';
             msg.className = 'text-sm font-medium text-green-600';
             msg.classList.remove('hidden');
           }
