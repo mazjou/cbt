@@ -154,14 +154,14 @@
         function showModalNotification(notif, pushCount) {
           if (document.getElementById('modalNotification_' + notif.id)) return;
           const colors = {
-            info: { border:'border-blue-200', bg:'from-blue-50 to-cyan-50', text:'text-blue-900', icon:'ℹ️' },
-            warning: { border:'border-orange-200', bg:'from-orange-50 to-amber-50', text:'text-orange-900', icon:'⚠️' },
-            success: { border:'border-green-200', bg:'from-green-50 to-emerald-50', text:'text-green-900', icon:'✅' },
-            error: { border:'border-red-200', bg:'from-red-50 to-rose-50', text:'text-red-900', icon:'❌' },
-            EXAM: { border:'border-purple-200', bg:'from-purple-50 to-indigo-50', text:'text-purple-900', icon:'📝' },
-            MATERIAL: { border:'border-cyan-200', bg:'from-cyan-50 to-teal-50', text:'text-cyan-900', icon:'📚' },
-            ASSIGNMENT: { border:'border-orange-200', bg:'from-orange-50 to-amber-50', text:'text-orange-900', icon:'📋' },
-            GENERAL: { border:'border-slate-200', bg:'from-slate-50 to-gray-50', text:'text-slate-900', icon:'📢' }
+            info: { border:'border-blue-200', bg:'from-blue-50 to-cyan-50', text:'text-blue-900', icon:'[i]' },
+            warning: { border:'border-orange-200', bg:'from-orange-50 to-amber-50', text:'text-orange-900', icon:'[!]' },
+            success: { border:'border-green-200', bg:'from-green-50 to-emerald-50', text:'text-green-900', icon:'[ok]' },
+            error: { border:'border-red-200', bg:'from-red-50 to-rose-50', text:'text-red-900', icon:'[x]' },
+            EXAM: { border:'border-purple-200', bg:'from-purple-50 to-indigo-50', text:'text-purple-900', icon:'[Ujian]' },
+            MATERIAL: { border:'border-cyan-200', bg:'from-cyan-50 to-teal-50', text:'text-cyan-900', icon:'[Materi]' },
+            ASSIGNMENT: { border:'border-orange-200', bg:'from-orange-50 to-amber-50', text:'text-orange-900', icon:'[Tugas]' },
+            GENERAL: { border:'border-slate-200', bg:'from-slate-50 to-gray-50', text:'text-slate-900', icon:'[Info]' }
           };
           const color = colors[notif.type] || colors.GENERAL;
           const modal = document.createElement('div');
@@ -185,10 +185,10 @@
                 <p class="${color.text} whitespace-pre-wrap">${escapeHtml(notif.message)}</p>
               </div>
               <div class="flex items-center justify-between text-xs text-slate-600 mb-4">
-                <span>📅 ${new Date(notif.created_at).toLocaleString('id-ID')}</span>
+                <span>${new Date(notif.created_at).toLocaleString('id-ID')}</span>
               </div>
               <button onclick="closeModalNotification(${notif.id},${pushCount})" class="w-full px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-105">
-                ✓ Mengerti
+                Mengerti
               </button>
             </div>
           `;
