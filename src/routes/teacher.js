@@ -845,15 +845,15 @@ router.post('/exams', async (req, res) => {
     start_at, end_at, duration_minutes, pass_score, max_attempts,
     shuffle_questions, shuffle_options, access_code,
     show_score_to_student, show_review_to_student, max_questions, max_violations,
-    one_question_per_page
+    one_question_per_page, submit_unlock_before
   } = req.body;
 
   try {
     const [result] = await pool.query(
       `INSERT INTO exams
-        (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published, max_questions, max_violations, one_question_per_page)
+        (subject_id, teacher_id, title, description, class_id, start_at, end_at, duration_minutes, pass_score, max_attempts, shuffle_questions, shuffle_options, access_code, show_score_to_student, show_review_to_student, is_published, max_questions, max_violations, one_question_per_page, submit_unlock_before)
        VALUES
-        (:subject_id,:teacher_id,:title,:description,NULL,:start_at,:end_at,:duration_minutes,:pass_score,:max_attempts,:shuffle_questions,:shuffle_options,:access_code,:show_score_to_student,:show_review_to_student,:is_published,:max_questions,:max_violations,:one_question_per_page);`,
+        (:subject_id,:teacher_id,:title,:description,NULL,:start_at,:end_at,:duration_minutes,:pass_score,:max_attempts,:shuffle_questions,:shuffle_options,:access_code,:show_score_to_student,:show_review_to_student,:is_published,:max_questions,:max_violations,:one_question_per_page,:submit_unlock_before);`,
       {
         subject_id, teacher_id: user.id, title,
         description: description || null,
@@ -873,7 +873,8 @@ router.post('/exams', async (req, res) => {
           : false,
         max_questions: max_questions ? Number(max_questions) : null,
         max_violations: req.body.anticheat_enabled ? Math.max(1, Number(max_violations) || 3) : 0,
-        one_question_per_page: one_question_per_page ? true : false
+        one_question_per_page: one_question_per_page ? true : false,
+        submit_unlock_before: Math.min(60, Math.max(0, parseInt(submit_unlock_before) || 0))
       }
     );
 
@@ -1055,7 +1056,7 @@ router.put('/exams/:id', async (req, res) => {
     start_at, end_at, duration_minutes, pass_score, max_attempts,
     shuffle_questions, shuffle_options, access_code,
     show_score_to_student, show_review_to_student, max_questions, max_violations,
-    one_question_per_page
+    one_question_per_page, submit_unlock_before
   } = req.body;
 
   try {
@@ -1074,6 +1075,7 @@ router.put('/exams/:id', async (req, res) => {
         access_code=:access_code, show_score_to_student=:show_score_to_student,
         show_review_to_student=:show_review_to_student, max_questions=:max_questions,
         max_violations=:max_violations, one_question_per_page=:one_question_per_page,
+        submit_unlock_before=:submit_unlock_before,
         is_published = is_published
        WHERE id=:id;`,
       {
@@ -1090,7 +1092,8 @@ router.put('/exams/:id', async (req, res) => {
         show_review_to_student: show_review_to_student ? true : false,
         max_questions: max_questions ? Number(max_questions) : null,
         max_violations: req.body.anticheat_enabled ? Math.max(1, Number(max_violations) || 3) : 0,
-        one_question_per_page: one_question_per_page ? true : false
+        one_question_per_page: one_question_per_page ? true : false,
+        submit_unlock_before: Math.min(60, Math.max(0, parseInt(submit_unlock_before) || 0))
       }
     );
 

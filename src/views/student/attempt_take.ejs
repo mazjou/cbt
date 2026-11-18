@@ -264,8 +264,10 @@ function jumpAndClose(no) {
     <div class="px-4 py-3 border-t border-slate-100 bg-white flex-shrink-0">
       <form id="submitForm" action="/student/attempts/<%= attempt.id %>/submit" method="POST">
         <button type="submit" id="submitBtn"
-          class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-bold py-3 shadow-lg transition-all text-base">
-          ✅ Kumpulkan Jawaban
+          <%= (attempt.submit_unlock_before > 0) ? 'disabled' : '' %>
+          class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-bold py-3 shadow-lg transition-all text-base"
+          style="<%= (attempt.submit_unlock_before > 0) ? 'background: linear-gradient(to right, #94a3b8, #64748b); cursor: not-allowed; opacity: 0.6;' : '' %>">
+          <%= (attempt.submit_unlock_before > 0) ? '🔒 Kirim Jawaban (Belum Aktif)' : '✅ Kumpulkan Jawaban' %>
         </button>
       </form>
     </div>
@@ -647,6 +649,13 @@ function jumpAndClose(no) {
   // started_at tersimpan sebagai waktu lokal (WIB), parse dengan hati-hati
   const startedAtRaw = '<%= attempt.started_at instanceof Date ? attempt.started_at.toISOString() : String(attempt.started_at).replace(" ", "T") %>';
   const durationMinutes = Number('<%= attempt.duration_minutes %>');
+  const submitUnlockBefore = Number('<%= attempt.submit_unlock_before || 0 %>');
+  // unlockAfterMs = waktu dari mulai ujian sampai tombol submit aktif
+  const unlockAfterMs = submitUnlockBefore > 0
+    ? (durationMinutes - submitUnlockBefore) * 60 * 1000
+    : 0;
+  let submitUnlocked = submitUnlockBefore === 0; // jika 0, langsung aktif
+  let submitUnlockToastShown = false;
 
   // Jika exam punya end_at (batas waktu absolut), gunakan yang lebih kecil
   <% const examEndAt = attempt.exam_end_at ? `new Date('${attempt.exam_end_at instanceof Date ? attempt.exam_end_at.toISOString() : String(attempt.exam_end_at).replace(" ", "T")}')` : 'null'; %>
@@ -692,6 +701,34 @@ function jumpAndClose(no) {
     timerEl.textContent = timeStr;
     // Sync ke floating bar & drawer
     const tf = document.getElementById('timerFloat');
+
+    // Submit lock: aktifkan tombol submit setelah unlockAfterMs berlalu
+    if (submitUnlockBefore > 0 && !submitUnlocked) {
+      const elapsed = durationMinutes * 60 * 1000 - remain; // ms yang sudah berlalu
+      if (elapsed >= unlockAfterMs) {
+        submitUnlocked = true;
+        const btn = document.getElementById('submitBtn');
+        if (btn) {
+          btn.disabled = false;
+          btn.style.background = '';
+          btn.style.cursor = '';
+          btn.style.opacity = '';
+          btn.textContent = '✅ Kumpulkan Jawaban';
+        }
+        if (!submitUnlockToastShown) {
+          submitUnlockToastShown = true;
+          toast('🔓 Tombol Kirim ujian sudah aktif!');
+        }
+      } else {
+        // Tampilkan countdown di tombol submit
+        const msLeft = unlockAfterMs - elapsed;
+        const minsLeft = Math.ceil(msLeft / 60000);
+        const btn = document.getElementById('submitBtn');
+        if (btn && !submitUnlocked) {
+          btn.textContent = `🔒 Kirim aktif ${minsLeft} menit lagi`;
+        }
+      }
+    }
     const td = document.getElementById('timerDrawer');
     if (tf) tf.textContent = timeStr;
     if (td) td.textContent = timeStr;

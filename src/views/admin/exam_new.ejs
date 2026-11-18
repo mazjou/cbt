@@ -170,6 +170,14 @@
         <label class="block text-sm font-semibold text-purple-800 mb-2">Durasi (menit)</label>
         <input type="number" name="duration_minutes" value="60" min="1" max="300" class="w-full rounded-xl border-2 border-purple-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500" />
       </div>
+
+      <div>
+        <label class="block text-sm font-semibold text-orange-800 mb-2">🔓 Aktifkan Kirim N menit sebelum habis</label>
+        <input type="number" name="submit_unlock_before" min="0" max="60" value="0"
+          class="w-full rounded-xl border-2 border-orange-200 bg-white px-4 py-3 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          placeholder="0 = selalu aktif" />
+        <p class="mt-1 text-xs text-orange-600">Contoh: isi 10 agar tombol Kirim aktif 10 menit sebelum waktu habis. Isi 0 untuk selalu aktif.</p>
+      </div>
       
       <div>
         <label class="block text-sm font-semibold text-purple-800 mb-2">Nilai Lulus</label>

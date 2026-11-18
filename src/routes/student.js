@@ -685,7 +685,7 @@ router.get('/attempts/:id', async (req, res) => {
   const [[attempt]] = await pool.query(
     `SELECT a.*, e.title, e.description, e.duration_minutes, e.pass_score,
             e.shuffle_options, e.max_violations, e.end_at AS exam_end_at,
-            e.one_question_per_page
+            e.one_question_per_page, e.submit_unlock_before
      FROM attempts a
      JOIN exams e ON e.id=a.exam_id
      WHERE a.id=:aid AND a.student_id=:sid
@@ -1054,7 +1054,7 @@ router.post('/attempts/:id/submit', async (req, res) => {
 
   const [[attempt]] = await pool.query(
     `SELECT a.id, a.status, a.exam_id, a.submission_status,
-            e.duration_minutes, e.end_at
+            e.duration_minutes, e.end_at, e.submit_unlock_before
      FROM attempts a
      JOIN exams e ON e.id = a.exam_id
      WHERE a.id=:aid AND a.student_id=:sid
@@ -1094,14 +1094,26 @@ router.post('/attempts/:id/submit', async (req, res) => {
         return res.status(400).json({ ok: false, message: 'Waktu ujian sudah habis.' });
       }
     }
+
+    // Validasi submit_unlock_before
+    const submitUnlockBefore = parseInt(attempt.submit_unlock_before || 0);
+    if (submitUnlockBefore > 0) {
+      const [[timeCheckUnlock]] = await pool.query(
+        `SELECT EXTRACT(EPOCH FROM (NOW() - a.started_at))/60 AS elapsed_minutes
+         FROM attempts a
+         WHERE a.id=:aid LIMIT 1;`,
+        { aid: attemptId }
+      );
+      const elapsedForUnlock = parseFloat(timeCheckUnlock?.elapsed_minutes || 0);
+      const durationForUnlock = parseFloat(attempt.duration_minutes || 0);
+      const unlockAfterMinutes = durationForUnlock - submitUnlockBefore;
+      if (elapsedForUnlock < unlockAfterMinutes - 0.5) {
+        return res.status(400).json({ ok: false, message: `Belum waktunya mengumpulkan ujian. Tombol Kirim baru aktif ${submitUnlockBefore} menit sebelum waktu habis.` });
+      }
+    }
   }
   // ─────────────────────────────────────────────────────────────────────────
   
-  if (!attempt) {
-    req.flash('error', 'Attempt tidak ditemukan.');
-    return res.redirect('/student/exams');
-  }
-
   // If already submitted, just redirect to result
   if (attempt.submission_status === 'SUBMITTED') {
     console.log(`✅ Attempt ${attemptId} already submitted`);

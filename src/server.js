@@ -584,6 +584,11 @@ async function bootstrap() {
       await pool.query(`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS push_count INT NOT NULL DEFAULT 0`);
     } catch(_) {}
 
+    // ── Migration: tambah kolom submit_unlock_before di exams
+    try {
+      await pool.query(`ALTER TABLE exams ADD COLUMN IF NOT EXISTS submit_unlock_before INT NOT NULL DEFAULT 0`);
+    } catch(_) {}
+
     server.listen(PORT, () => {
       console.log(`✅ ${APP_NAME} listening on ${PORT}`);
       console.log(`📡 APP_IP: ${APP_IP}`);

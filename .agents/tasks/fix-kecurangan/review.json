@@ -1,0 +1,15 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "id": "F1",
+      "fix": "Fix 1 — Validasi waktu server-side (bypass auto-submit)",
+      "file": "src/views/student/attempt_take.ejs",
+      "location": "fungsi submitWithRetry() — fetch call di dalam while loop (~baris 839-851)",
+      "description": "Fungsi submitWithRetry() tidak pernah mengirimkan field `auto_submit: true` di body maupun header `X-Auto-Submit: 1`. Saat timer habis (tick() memanggil submitWithRetry()), server menerima request tanpa marker auto-submit, sehingga isAutoSubmit dan hasAutoHeader keduanya false dan validasi waktu dijalankan. Karena elapsed sudah melebihi duration + 5 menit, server mengembalikan HTTP 400 dengan pesan 'Waktu ujian sudah habis.' dan jawaban tidak dikumpulkan ke DB.",
+      "consequence": "Semua auto-submit saat waktu habis gagal dengan status 400; siswa kehilangan jawaban meski timer berjalan normal.",
+      "correction": "Tambahkan parameter isAuto ke submitWithRetry(isAuto = false). Saat dipanggil dari tick() (auto-submit), teruskan isAuto = true. Di dalam fetch, jika isAuto, sertakan header 'X-Auto-Submit': '1' dan tambahkan auto_submit: true ke body JSON. Panggilan manual (dari form submit) tidak perlu mengisi field tersebut."
+    }
+  ],
+  "reviewDoc": "d:/WEBSITE/cbt/.agents/tasks/fix-kecurangan/review.md"
+}

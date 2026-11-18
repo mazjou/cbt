@@ -199,6 +199,17 @@
         </label>
         <input name="duration_minutes" type="number" min="1" value="60" class="w-full rounded-xl bg-white border-2 border-orange-200 px-4 py-3 focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all group-hover:border-orange-300" />
       </div>
+
+      <div class="group">
+        <label class="flex items-center gap-2 text-sm font-semibold text-orange-800 mb-2">
+          <span class="text-xl">🔓</span>
+          <span>Aktifkan Kirim N menit sebelum habis</span>
+        </label>
+        <input name="submit_unlock_before" type="number" min="0" max="60" value="0"
+          class="w-full rounded-xl bg-white border-2 border-orange-200 px-4 py-3 focus:border-orange-500 focus:ring-4 focus:ring-orange-200 transition-all group-hover:border-orange-300"
+          placeholder="0 = selalu aktif" />
+        <p class="mt-1 text-xs text-orange-600">Contoh: isi 10 agar tombol Kirim aktif 10 menit sebelum waktu habis. Isi 0 untuk selalu aktif.</p>
+      </div>
       
       <div class="group">
         <label class="flex items-center gap-2 text-sm font-semibold text-orange-800 mb-2">

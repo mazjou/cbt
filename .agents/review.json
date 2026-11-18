@@ -1,0 +1,16 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "id": "B1",
+      "file": "src/views/teacher/exam_new.ejs",
+      "line": 299,
+      "severity": "blocker",
+      "summary": "New exam creation still defaults show_score_to_student to checked (visible), violating the 'default tersembunyi' requirement.",
+      "evidence": "<input type=\"checkbox\" name=\"show_score_to_student\" checked …> — the 'checked' attribute means every new exam is created with score visible to students. The route stores the value as: show_score_to_student ? true : false, so unchecked = false = hidden is what is needed.",
+      "consequence": "Every new exam will show scores to students immediately upon submission. The teacher must manually toggle it hidden after creation, which is not the approved default behavior.",
+      "correction": "Remove the 'checked' attribute from the show_score_to_student checkbox in exam_new.ejs and update the tip text to state that scores are hidden by default."
+    }
+  ],
+  "reviewDoc": "d:\\WEBSITE\\cbt\\.agents\\review.md"
+}
