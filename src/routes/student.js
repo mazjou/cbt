@@ -1095,19 +1095,11 @@ router.post('/attempts/:id/submit', async (req, res) => {
       }
     }
 
-    // Validasi submit_unlock_before
+    // Validasi submit_unlock_before — gunakan elapsedMinutes yang sudah dihitung di atas
     const submitUnlockBefore = parseInt(attempt.submit_unlock_before || 0);
     if (submitUnlockBefore > 0) {
-      const [[timeCheckUnlock]] = await pool.query(
-        `SELECT EXTRACT(EPOCH FROM (NOW() - a.started_at))/60 AS elapsed_minutes
-         FROM attempts a
-         WHERE a.id=:aid LIMIT 1;`,
-        { aid: attemptId }
-      );
-      const elapsedForUnlock = parseFloat(timeCheckUnlock?.elapsed_minutes || 0);
-      const durationForUnlock = parseFloat(attempt.duration_minutes || 0);
-      const unlockAfterMinutes = durationForUnlock - submitUnlockBefore;
-      if (elapsedForUnlock < unlockAfterMinutes - 0.5) {
+      const unlockAfterMinutes = durationMinutes - submitUnlockBefore;
+      if (elapsedMinutes < unlockAfterMinutes - 0.5) {
         return res.status(400).json({ ok: false, message: `Belum waktunya mengumpulkan ujian. Tombol Kirim baru aktif ${submitUnlockBefore} menit sebelum waktu habis.` });
       }
     }

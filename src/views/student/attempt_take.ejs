@@ -704,7 +704,9 @@ function jumpAndClose(no) {
 
     // Submit lock: aktifkan tombol submit setelah unlockAfterMs berlalu
     if (submitUnlockBefore > 0 && !submitUnlocked) {
-      const elapsed = durationMinutes * 60 * 1000 - remain; // ms yang sudah berlalu
+      // F1 fix: hitung elapsed dari startedAt, bukan dari sisa timer
+      // (sisa timer bisa berbeda jika exam_end_at lebih pendek dari durasi penuh)
+      const elapsed = new Date().getTime() - startedAt.getTime();
       if (elapsed >= unlockAfterMs) {
         submitUnlocked = true;
         const btn = document.getElementById('submitBtn');
@@ -720,12 +722,17 @@ function jumpAndClose(no) {
           toast('🔓 Tombol Kirim ujian sudah aktif!');
         }
       } else {
-        // Tampilkan countdown di tombol submit
+        // F3 fix: tampilkan menit DAN detik agar lebih informatif
         const msLeft = unlockAfterMs - elapsed;
-        const minsLeft = Math.ceil(msLeft / 60000);
         const btn = document.getElementById('submitBtn');
         if (btn && !submitUnlocked) {
-          btn.textContent = `🔒 Kirim aktif ${minsLeft} menit lagi`;
+          if (msLeft >= 60000) {
+            const minsLeft = Math.ceil(msLeft / 60000);
+            btn.textContent = `🔒 Kirim aktif ${minsLeft} menit lagi`;
+          } else {
+            const secsLeft = Math.ceil(msLeft / 1000);
+            btn.textContent = `🔒 Kirim aktif ${secsLeft} detik lagi`;
+          }
         }
       }
     }
