@@ -263,11 +263,12 @@ function jumpAndClose(no) {
     <!-- Tombol kumpulkan — selalu terlihat di bawah -->
     <div class="px-4 py-3 border-t border-slate-100 bg-white flex-shrink-0">
       <form id="submitForm" action="/student/attempts/<%= attempt.id %>/submit" method="POST">
+        <% const submitLocked = (attempt.submit_unlock_before > 0); %>
         <button type="submit" id="submitBtn"
-          <%= (attempt.submit_unlock_before > 0) ? 'disabled' : '' %>
+          <%= submitLocked ? 'disabled' : '' %>
           class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 active:scale-95 text-white font-bold py-3 shadow-lg transition-all text-base"
-          style="<%= (attempt.submit_unlock_before > 0) ? 'background: linear-gradient(to right, #94a3b8, #64748b); cursor: not-allowed; opacity: 0.6;' : '' %>">
-          <%= (attempt.submit_unlock_before > 0) ? '🔒 Kirim Jawaban (Belum Aktif)' : '✅ Kumpulkan Jawaban' %>
+          style="<%= submitLocked ? 'background:linear-gradient(to right,#94a3b8,#64748b);cursor:not-allowed;opacity:0.6;' : '' %>">
+          <%= submitLocked ? 'Kirim Jawaban (Belum Aktif)' : 'Kumpulkan Jawaban' %>
         </button>
       </form>
     </div>
@@ -719,7 +720,7 @@ function jumpAndClose(no) {
         }
         if (!submitUnlockToastShown) {
           submitUnlockToastShown = true;
-          toast('🔓 Tombol Kirim ujian sudah aktif!');
+          toast('Tombol Kirim ujian sudah aktif!');
         }
       } else {
         // F3 fix: tampilkan menit DAN detik agar lebih informatif
@@ -728,10 +729,10 @@ function jumpAndClose(no) {
         if (btn && !submitUnlocked) {
           if (msLeft >= 60000) {
             const minsLeft = Math.ceil(msLeft / 60000);
-            btn.textContent = `🔒 Kirim aktif ${minsLeft} menit lagi`;
+            btn.textContent = 'Kirim aktif ' + minsLeft + ' menit lagi';
           } else {
             const secsLeft = Math.ceil(msLeft / 1000);
-            btn.textContent = `🔒 Kirim aktif ${secsLeft} detik lagi`;
+            btn.textContent = 'Kirim aktif ' + secsLeft + ' detik lagi';
           }
         }
       }
