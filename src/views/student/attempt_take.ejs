@@ -616,7 +616,7 @@ function jumpAndClose(no) {
     try {
       localStorage.setItem(BACKUP_KEY, JSON.stringify(backup));
     } catch (e) {
-      console.error('❌ Failed to save backup:', e);
+      console.error('Failed to save backup:', e);
     }
   }
   
@@ -626,11 +626,11 @@ function jumpAndClose(no) {
       const backupStr = localStorage.getItem(BACKUP_KEY);
       if (backupStr) {
         const backup = JSON.parse(backupStr);
-        console.log('📦 Found backup in LocalStorage:', backup.answers.length, 'answers');
+        console.log('Found backup in LocalStorage:', backup.answers.length, 'answers');
         return backup;
       }
     } catch (e) {
-      console.error('❌ Failed to load backup:', e);
+      console.error('Failed to load backup:', e);
     }
     return null;
   }
@@ -640,9 +640,9 @@ function jumpAndClose(no) {
     try {
       localStorage.removeItem(BACKUP_KEY);
       localStorage.removeItem(SUBMISSION_RETRY_KEY);
-      console.log('🗑️ Backup cleared from LocalStorage');
+      console.log('Backup cleared from LocalStorage');
     } catch (e) {
-      console.error('❌ Failed to clear backup:', e);
+      console.error('Failed to clear backup:', e);
     }
   }
   
@@ -751,12 +751,12 @@ function jumpAndClose(no) {
     
     // Warning saat 5 menit tersisa
     if (remain <= 300000 && remain > 299000) {
-      toast('⏰ Perhatian! Waktu tersisa 5 menit!');
+      toast('Perhatian! Waktu tersisa 5 menit!');
     }
     
     // Warning saat 1 menit tersisa
     if (remain <= 60000 && remain > 59000) {
-      toast('⚠️ Waktu tersisa 1 menit! Segera selesaikan!');
+      toast('Waktu tersisa 1 menit! Segera selesaikan!');
       timerEl.classList.add('animate-pulse');
     }
     
@@ -950,7 +950,7 @@ function jumpAndClose(no) {
         });
       } catch (e) {
         console.error('Autosave failed:', e);
-        toast('⚠️ Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
+        toast('Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
       }
     });
   });
@@ -987,7 +987,7 @@ function jumpAndClose(no) {
         });
       } catch (e) {
         console.error('Autosave TF failed:', e);
-        toast('⚠️ Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
+        toast('Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
       }
     });
   });
@@ -1011,7 +1011,7 @@ function jumpAndClose(no) {
         });
       } catch (e) {
         console.error('Autosave COMPLEX failed:', e);
-        toast('⚠️ Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
+        toast('Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
       }
     });
   });
@@ -1034,7 +1034,7 @@ function jumpAndClose(no) {
         });
       } catch (e) {
         console.error('Autosave CHECKBOX failed:', e);
-        toast('⚠️ Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
+        toast('Koneksi terputus. Jawaban tersimpan di perangkat Anda.');
       }
     });
   });
@@ -1044,7 +1044,7 @@ function jumpAndClose(no) {
   
   async function submitWithRetry(maxRetries = 3, isAutoSubmit = false) {
     if (isSubmitting) {
-      console.log('⏳ Submission already in progress');
+      console.log('Submission already in progress');
       return;
     }
     
@@ -1058,7 +1058,7 @@ function jumpAndClose(no) {
     
     while (retryCount < maxRetries) {
       try {
-        console.log(`🔄 Submission attempt ${retryCount + 1}/${maxRetries}`);
+        console.log(`Submission attempt ${retryCount + 1}/${maxRetries}`);
         
         const headers = {
           'Content-Type': 'application/json',
@@ -1077,7 +1077,7 @@ function jumpAndClose(no) {
         });
         
         if (response.ok || response.status === 302) {
-          console.log('✅ Submission successful!');
+      console.log('Submission successful!');
           clearBackup();
           
           // Redirect to result page
@@ -1092,12 +1092,12 @@ function jumpAndClose(no) {
         lastError = error;
         retryCount++;
         
-        console.error(`❌ Submission attempt ${retryCount} failed:`, error);
+        console.error(`Submission attempt ${retryCount} failed:`, error);
         
         if (retryCount < maxRetries) {
           // Exponential backoff: 1s, 2s, 4s
           const delay = Math.pow(2, retryCount - 1) * 1000;
-          console.log(`⏳ Retrying in ${delay}ms...`);
+          console.log(`Retrying in ${delay}ms...`);
           
           toast(`Gagal submit, mencoba lagi... (${retryCount}/${maxRetries})`);
           
@@ -1107,7 +1107,7 @@ function jumpAndClose(no) {
     }
     
     // All retries failed
-    console.error('❌ All submission attempts failed');
+    console.error('All submission attempts failed');
     isSubmitting = false;
     
     // Show error message with recovery instructions
@@ -1152,7 +1152,7 @@ function jumpAndClose(no) {
 
       // Jika sudah dalam proses submit, tampilkan info bukan diam
       if (isSubmitting) {
-        toast('⏳ Sedang mengirim jawaban, harap tunggu...');
+        toast('Sedang mengirim jawaban, harap tunggu...');
         return;
       }
 
