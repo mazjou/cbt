@@ -1231,6 +1231,11 @@ function jumpAndClose(no) {
     locked: false
   };
 
+  // ── Deteksi device (mobile/iOS) — dideklarasikan di awal agar tersedia di semua fungsi ──
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   // ── Deteksi browser & overlay peringatan ─────────────────────────────
   var _browserWarningDismissed = false;
   var _currentBrowser = detectBrowser();
@@ -1512,11 +1517,7 @@ function jumpAndClose(no) {
   const antiCheatBar = document.getElementById('antiCheatBar');
   const fsOverlay = document.getElementById('fsOverlay');
   const btnStartFs = document.getElementById('btnStartFullscreen');
-  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints > 1;
-
-  // iOS (iPhone/iPad) tidak mendukung Fullscreen API sama sekali — bypass fullscreen
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  // isMobile dan isIOS sudah dideklarasikan di atas
 
   // Sembunyikan/tampilkan popup fullscreen sesuai status layar
   function updateFsBanner() {
@@ -1665,8 +1666,8 @@ function jumpAndClose(no) {
     e.preventDefault();
     // Di HP/mobile, contextmenu bisa muncul dari long press (bukan kecurangan)
     // Hanya laporkan di desktop (bukan touchscreen)
-    const isMobile = navigator.maxTouchPoints > 0 || /Android|iPhone|iPad/i.test(navigator.userAgent);
-    if (!isMobile) {
+    const isMobileCtx = navigator.maxTouchPoints > 0 || /Android|iPhone|iPad/i.test(navigator.userAgent);
+    if (!isMobileCtx) {
       reportViolation('Klik Kanan', 'contextmenu');
     }
   });
