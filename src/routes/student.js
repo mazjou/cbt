@@ -441,7 +441,20 @@ router.get('/exams/:id', async (req, res) => {
     );
   }
   
-  res.render('student/exam_detail', { title: exam.title, exam, attemptResults: attemptResults[0] || [] });
+  res.render('student/exam_detail', {
+    title: exam.title,
+    exam,
+    attemptResults: attemptResults[0] || [],
+    user,
+    flash: {
+      error: req.flash('error'),
+      success: req.flash('success'),
+      info: req.flash('info')
+    },
+    canStart: exam.attempts_count < exam.max_attempts,
+    hasActiveAttempt: null,
+    totalAttempts: exam.attempts_count || 0
+  });
 });
 
 router.post('/exams/:id/start', async (req, res) => {
