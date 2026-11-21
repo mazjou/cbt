@@ -1048,14 +1048,13 @@ router.post('/api/add-to-exam/:examId', async (req, res) => {
 
 // ===== TEMPLATE WORD BANK SOAL =====
 router.get('/import/template-word', (req, res) => {
-  const staticFile = path.join(__dirname, '../public/templates/import_template_word.docx');
-  if (fs.existsSync(staticFile)) {
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', 'attachment; filename="template_import_soal_bank.docx"');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    return res.sendFile(staticFile);
-  }
-  res.download(path.join(__dirname, '../public/templates/import_template_word.txt'), 'template_import_soal_bank.txt');
+  const staticFile = path.join(__dirname, '../public/templates/import_template_bank_word.docx');
+  const fallback   = path.join(__dirname, '../public/templates/import_template_word.docx');
+  const target = fs.existsSync(staticFile) ? staticFile : fallback;
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+  res.setHeader('Content-Disposition', 'attachment; filename="template_import_bank_soal.docx"');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  return res.sendFile(target);
 });
 
 // ===== IMPORT WORD BANK SOAL =====
@@ -1118,6 +1117,7 @@ router.post('/import/preview-word', uploadImport.single('file'), async (req, res
         question_image: imgs[0] || null,
         points: 1, correct: null, correctLabels: [], correctMap: null,
         question_type: 'MCQ',
+        subject_name: null, class_level: null, chapter: null, difficulty: 'MEDIUM',
         options: { A: '', B: '', C: '', D: '', E: '' },
         option_images: { A: null, B: null, C: null, D: null, E: null }
       };
@@ -1163,6 +1163,15 @@ router.post('/import/preview-word', uploadImport.single('file'), async (req, res
       if (mType) { cur.question_type = mType[1].toUpperCase(); lastLabel = null; continue; }
       const mPts = t.match(/^\s*(NILAI|POIN)\s*[:=]\s*(\d+(?:\.\d+)?)\s*$/i);
       if (mPts) { cur.points = Number(mPts[2]) || 1; lastLabel = null; continue; }
+      // Field metadata bank soal
+      const mMapel = t.match(/^\s*MAPEL\s*[:=]\s*(.+)$/i);
+      if (mMapel && cur) { cur.subject_name = mMapel[1].trim(); lastLabel = null; continue; }
+      const mKelas = t.match(/^\s*KELAS\s*[:=]\s*(.+)$/i);
+      if (mKelas && cur) { cur.class_level = mKelas[1].trim().toUpperCase(); lastLabel = null; continue; }
+      const mBab = t.match(/^\s*BAB\s*[:=]\s*(.+)$/i);
+      if (mBab && cur) { cur.chapter = mBab[1].trim(); lastLabel = null; continue; }
+      const mKesulitan = t.match(/^\s*KESULITAN\s*[:=]\s*(EASY|MEDIUM|HARD)\s*$/i);
+      if (mKesulitan && cur) { cur.difficulty = mKesulitan[1].trim().toUpperCase(); lastLabel = null; continue; }
       if (imgs.length && !cur.question_image) cur.question_image = imgs[0];
       if (!lastLabel) cur.question_text = (cur.question_text ? cur.question_text + '\n' : '') + t;
       else cur.options[lastLabel] = (cur.options[lastLabel] ? cur.options[lastLabel] + ' ' : '') + t;
@@ -1205,6 +1214,10 @@ router.post('/import/preview-word', uploadImport.single('file'), async (req, res
         correctLabels: q.correctLabels || [],
         correctMap: q.correctMap || null,
         question_type: qtype,
+        subject_name: q.subject_name || null,
+        class_level: q.class_level || null,
+        chapter: q.chapter || null,
+        difficulty: q.difficulty || 'MEDIUM',
         options: { A: String(q.options.A||''), B: String(q.options.B||''), C: String(q.options.C||''), D: String(q.options.D||''), E: String(q.options.E||'') },
         option_images: q.option_images
       };
@@ -1247,16 +1260,31 @@ router.post('/import/commit-word', async (req, res) => {
   }
 
   const conn = await pool.getConnection();
+  const [subjectsRes] = await pool.query('SELECT id, code, name FROM subjects ORDER BY name ASC');
+  const subjects = subjectsRes || [];
   let inserted = 0;
   try {
     await conn.beginTransaction();
     for (const r of items) {
       const qtype = r.question_type || 'MCQ';
-      const subjectId = default_subject_id ? parseInt(default_subject_id) : null;
+      const subjectId = (() => {
+        // Coba match subject dari nama yang ada di soal
+        if (r.subject_name) {
+          const found = (subjects || []).find(s =>
+            s.name.toLowerCase() === r.subject_name.toLowerCase() ||
+            s.code.toLowerCase() === r.subject_name.toLowerCase()
+          );
+          if (found) return found.id;
+        }
+        return default_subject_id ? parseInt(default_subject_id) : null;
+      })();
+      const classLevel = r.class_level || null;
+      const chapter = r.chapter || null;
+      const difficulty = r.difficulty || 'MEDIUM';
       const [qRes] = await conn.query(
-        `INSERT INTO question_bank (teacher_id, subject_id, question_text, question_image, points, difficulty, question_type)
-         VALUES ($1,$2,$3,$4,$5,'MEDIUM',$6) RETURNING id`,
-        [user.id, subjectId, r.question_text, r.question_image || null, r.points || 1, qtype]
+        `INSERT INTO question_bank (teacher_id, subject_id, question_text, question_image, points, difficulty, question_type, class_level, chapter)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+        [user.id, subjectId, r.question_text, r.question_image || null, r.points || 1, difficulty, qtype, classLevel, chapter]
       );
       const qid = qRes[0]?.id;
       if (!qid) continue;
