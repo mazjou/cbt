@@ -293,16 +293,18 @@ $sn(document).ready(function () {
         return false;
       }
     }
-    // Validasi MULTI_TF harus ada minimal 2 kunci
+    // Validasi MULTI_TF harus ada minimal 2 kunci (hanya hitung yang punya teks pernyataan)
     if (qtype === 'MULTI_TF') {
       var keyCount = 0;
       ['A','B','C','D','E'].forEach(function(lbl) {
+        var stmtText = document.querySelector('textarea[name=' + lbl + ']');
+        var hasText = stmtText && stmtText.value.trim().length > 0;
         var checked = document.querySelector('input[name=correct_' + lbl + ']:checked');
-        if (checked) keyCount++;
+        if (hasText && checked) keyCount++;
       });
       if (keyCount < 2) {
         e.preventDefault();
-        alert('MULTI_TF: pilih Benar/Salah minimal untuk 2 pernyataan!');
+        alert('MULTI_TF: pilih Benar/Salah minimal untuk 2 pernyataan yang terisi!');
         return false;
       }
     }

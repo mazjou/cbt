@@ -350,11 +350,13 @@ $sn(document).ready(function () {
     if (qtype === 'MULTI_TF') {
       var keyCount = 0;
       ['A','B','C','D','E'].forEach(function(lbl) {
-        if (document.querySelector('input[name=correct_' + lbl + ']:checked')) keyCount++;
+        var stmtText = document.querySelector('textarea[name=' + lbl + ']');
+        var hasText = stmtText && stmtText.value.trim().length > 0;
+        if (hasText && document.querySelector('input[name=correct_' + lbl + ']:checked')) keyCount++;
       });
       if (keyCount < 2) {
         e.preventDefault();
-        alert('MULTI_TF: pilih Benar/Salah minimal untuk 2 pernyataan!');
+        alert('MULTI_TF: pilih Benar/Salah minimal untuk 2 pernyataan yang terisi!');
         return false;
       }
     }

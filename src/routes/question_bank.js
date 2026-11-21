@@ -138,8 +138,7 @@ router.get('/export', async (req, res) => {
       const correctEntries = Object.entries(opts).filter(([, v]) => v.correct);
       let correctStr;
       if (qtype === 'MULTI_TF') {
-        correctStr = correctEntries.map(([lbl, v]) => lbl + ':' + (v.correct ? 'B' : 'S')).join(',');
-        // Also add non-correct entries that have text (they are statements with is_correct=false → S)
+        // Tulis semua pernyataan yang ada teks dengan status B atau S
         const allLabels = Object.keys(opts).sort();
         correctStr = allLabels.filter(lbl => opts[lbl]).map(lbl => lbl + ':' + (opts[lbl].correct ? 'B' : 'S')).join(',');
       } else {
@@ -205,7 +204,7 @@ router.get('/export', async (req, res) => {
       [''],['Catatan:'],
       ['- Lihat sheet "Daftar Gambar" untuk download gambar'],
       ['- Upload gambar via menu "Upload Gambar Bank Soal" setelah import'],
-      ['- MULTI_TF: kunci format A:B,B:S,C:B — B=Benar S=Salah'],
+      ['- MULTI_TF: kunci format A:B,B:S,C:B -- B=Benar S=Salah'],
     ];
     const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
     wsPanduan['!cols'] = [{wch:15},{wch:70}];
@@ -280,7 +279,7 @@ router.get('/import/template', async (req, res) => {
         A: '2', B: '4', C: '5', D: '7', E: '9',
         difficulty: 'MEDIUM', subject: firstSubject, chapter: 'Bab 2', tags: 'matematika,prima' },
       // Contoh 3: TRUE_FALSE (A=Benar, B=Salah)
-      { question_text: 'Contoh TRUE_FALSE: Air mendidih pada 100°C pada tekanan normal.',
+      { question_text: 'Contoh TRUE_FALSE: Air mendidih pada 100 derajat Celcius pada tekanan normal.',
         image: '', points: 2, correct: 'A', question_type: 'TRUE_FALSE',
         A: 'Benar', B: 'Salah', C: '', D: '', E: '',
         difficulty: 'EASY', subject: firstSubject, chapter: 'Bab 1', tags: 'IPA,suhu' },
@@ -289,7 +288,7 @@ router.get('/import/template', async (req, res) => {
         image: '', points: 3, correct: 'A,C,E', question_type: 'CHECKBOX',
         A: 'Keyboard', B: 'Monitor', C: 'Mouse', D: 'Speaker', E: 'Touchpad',
         difficulty: 'MEDIUM', subject: firstSubject, chapter: 'Bab 2', tags: 'hardware,input' },
-      // Contoh 5: MULTI_TF — kunci per pernyataan format A:B,B:S,...
+      // Contoh 5: MULTI_TF -- kunci per pernyataan format A:B,B:S,...
       { question_text: 'Contoh MULTI_TF: Perhatikan pernyataan tentang proses fotosintesis.',
         image: '', points: 4, correct: 'A:B,B:S,C:B,D:B', question_type: 'MULTI_TF',
         A: 'Fotosintesis membutuhkan cahaya matahari', B: 'CO2 dihasilkan pada fotosintesis',
