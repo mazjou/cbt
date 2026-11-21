@@ -4221,7 +4221,8 @@ router.get('/attempts/:id/detail', async (req, res) => {
     // Ambil jawaban + opsi
     const ansResult = await pool.query(
       `SELECT aa.question_id, aa.option_id AS chosen_option_id, aa.is_correct,
-              q.question_text, q.question_image, q.points
+              aa.selected_option_ids, aa.partial_points,
+              q.question_text, q.question_image, q.points, q.question_type
        FROM attempt_answers aa
        JOIN questions q ON q.id=aa.question_id
        WHERE aa.attempt_id=$1 ORDER BY aa.id ASC`,

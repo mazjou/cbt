@@ -35,6 +35,8 @@
         <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">☑ Tipe: Checkbox (multi-jawaban)</span>
       <% } else if (qtBadge === 'TRUE_FALSE') { %>
         <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">✓✗ Tipe: Benar/Salah</span>
+      <% } else if (qtBadge === 'MULTI_TF') { %>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-semibold">✓✗ Tipe: Multi Benar/Salah</span>
       <% } else { %>
         <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">◉ Tipe: Pilihan Ganda (MCQ)</span>
       <% } %>
@@ -99,6 +101,30 @@
         <span class="text-sm font-semibold text-rose-800">❌ Salah (B)</span>
       </label>
     </div>
+  </div>
+
+  <!-- MULTI_TF: per-statement key panel -->
+  <div id="correct_multitf_wrap" class="hidden rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50 to-cyan-50 p-4 shadow-sm">
+    <label class="text-sm font-semibold text-teal-700 mb-2 block">Kunci jawaban per pernyataan:</label>
+    <div class="space-y-2">
+      <% ['A','B','C','D','E'].forEach(function(lbl) {
+         const isBenar = typeof correct_map !== 'undefined' && correct_map && correct_map[lbl] === true;
+         const isSalah = typeof correct_map !== 'undefined' && correct_map && correct_map[lbl] === false;
+      %>
+      <div class="flex items-center gap-3">
+        <span class="w-6 h-6 rounded-full bg-teal-500 text-white text-xs flex items-center justify-center font-bold"><%= lbl %></span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="correct_<%= lbl %>" value="B" class="accent-teal-600 w-4 h-4" <%= isBenar ? 'checked' : '' %> />
+          <span class="text-sm font-semibold text-teal-700">Benar</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="correct_<%= lbl %>" value="S" class="accent-rose-600 w-4 h-4" <%= isSalah ? 'checked' : '' %> />
+          <span class="text-sm font-semibold text-rose-700">Salah</span>
+        </label>
+      </div>
+      <% }); %>
+    </div>
+    <p class="text-xs text-teal-500 mt-1">Poin parsial per pernyataan</p>
   </div>
 
   <!-- Hidden question_type to preserve through edit -->
@@ -358,6 +384,7 @@ $sn(document).ready(function () {
     var singleWrap  = document.getElementById('correct_single_wrap');
     var complexWrap = document.getElementById('correct_complex_wrap');
     var tfWrap      = document.getElementById('correct_trufalse_wrap');
+    var multitfWrap = document.getElementById('correct_multitf_wrap');
     var optC = document.getElementById('opt_wrap_c');
     var optD = document.getElementById('opt_wrap_d');
     var optE = document.getElementById('opt_wrap_e');
@@ -381,6 +408,14 @@ $sn(document).ready(function () {
       if (optC) optC.classList.add('hidden');
       if (optD) optD.classList.add('hidden');
       if (optE) optE.classList.add('hidden');
+    } else if (qtype === 'MULTI_TF') {
+      if (singleWrap) singleWrap.classList.add('hidden');
+      if (complexWrap) complexWrap.classList.add('hidden');
+      if (multitfWrap) multitfWrap.classList.remove('hidden');
+      var sel = singleWrap ? singleWrap.querySelector('select') : null;
+      if (sel) { sel.disabled = true; sel.removeAttribute('required'); }
+      if (complexWrap) complexWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });
+      if (tfWrap) tfWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });
     } else {
       // MCQ: disable semua radio TRUE_FALSE dan checkbox COMPLEX
       if (tfWrap) tfWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });

@@ -822,8 +822,9 @@ router.get('/attempts/:id', async (req, res) => {
       question_type: r.question_type || 'MCQ',
       chosen_option_id: r.chosen_option_id,
       chosen_option_ids: (() => {
-        try { return r.selected_option_ids ? JSON.parse(r.selected_option_ids) : []; }
-        catch(_) { return []; }
+        if (r.selected_option_ids === null || r.selected_option_ids === undefined) return null;
+        try { return JSON.parse(r.selected_option_ids); }
+        catch(_) { return null; }
       })(),
       options: optionsMap[r.question_id] || []
     };
@@ -856,7 +857,7 @@ router.post('/attempts/:id/answer', async (req, res) => {
   try {
     const qtype = attemptQ.question_type || 'MCQ';
 
-    if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+    if (qtype === 'COMPLEX' || qtype === 'CHECKBOX' || qtype === 'MULTI_TF') {
       const selectedIds = Array.isArray(option_ids) ? option_ids.map(Number).filter(Boolean)
         : (option_ids ? [Number(option_ids)].filter(Boolean) : []);
 
@@ -1212,7 +1213,8 @@ router.get('/attempts/:id/result', async (req, res) => {
   if (attempt.show_review_to_student) {
     const [reviewData] = await pool.query(
       `SELECT q.id AS question_id, q.question_text, q.question_image, q.points,
-              aa.is_correct, aa.option_id,
+              q.question_type,
+              aa.is_correct, aa.option_id, aa.selected_option_ids, aa.partial_points,
               o1.option_label || '. ' || o1.option_text AS chosen_text,
               o2.option_label || '. ' || o2.option_text AS correct_text
        FROM attempt_answers aa
@@ -1226,7 +1228,30 @@ router.get('/attempts/:id/result', async (req, res) => {
     review = reviewData;
   }
 
-  res.render('student/attempt_result', { title: 'Hasil Ujian', attempt, review });
+  // Supplementary query: detail per-statement for MULTI_TF questions
+  let multiTfDetails = {};
+  try {
+    const multiTfQids = review
+      .filter(r => r.question_type === 'MULTI_TF')
+      .map(r => r.question_id);
+    if (multiTfQids.length > 0) {
+      const ph = multiTfQids.map((_, i) => `$${i + 1}`).join(',');
+      const [optRows] = await pool.query(
+        `SELECT question_id, id AS option_id, option_label, option_text, is_correct
+         FROM options WHERE question_id IN (${ph}) ORDER BY question_id, option_label`,
+        multiTfQids
+      );
+      for (const o of optRows) {
+        if (!multiTfDetails[o.question_id]) multiTfDetails[o.question_id] = [];
+        multiTfDetails[o.question_id].push(o);
+      }
+    }
+  } catch (e) {
+    console.error('multiTfDetails query failed:', e.message);
+    // graceful degradation: multiTfDetails stays {}
+  }
+
+  res.render('student/attempt_result', { title: 'Hasil Ujian', attempt, review, multiTfDetails });
 });
 
 router.get('/history', async (req, res) => {

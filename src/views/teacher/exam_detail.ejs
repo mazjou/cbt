@@ -408,6 +408,13 @@
             <div class="text-xs text-slate-500">Pernyataan B/S</div>
           </div>
         </label>
+        <label class="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-teal-200 bg-white cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50 transition-all">
+          <input type="radio" name="question_type" value="MULTI_TF" class="accent-teal-600" onchange="updateQuestionForm(this.value)" />
+          <div>
+            <div class="text-sm font-semibold text-teal-800">Multi Benar/Salah</div>
+            <div class="text-xs text-slate-500">Pernyataan B/S per item</div>
+          </div>
+        </label>
       </div>
 
       <div>
@@ -451,6 +458,15 @@
           <% }) %>
         </div>
         <p class="text-xs text-purple-500 mt-1">Poin parsial: dihitung proporsional dari jumlah jawaban benar yang dipilih siswa</p>
+      </div>
+
+      <!-- MULTI_TF: per-statement key panel (disembunyikan default) -->
+      <div id="correct_multitf_wrap" class="hidden">
+        <label class="text-sm text-teal-700 font-semibold mb-2 block">Tentukan kunci jawaban per pernyataan:</label>
+        <div class="space-y-2" id="multitf_key_rows">
+          <!-- Rendered by renderMultiTfKeys() -->
+        </div>
+        <p class="text-xs text-teal-500 mt-1">Poin parsial: setiap pernyataan benar yang dijawab benar menambah poin</p>
       </div>
 
       <!-- Opsi jawaban -->
@@ -583,6 +599,7 @@ $sn(document).ready(function () {
 // Update form berdasarkan tipe soal
 function updateQuestionForm(qtype) {
   var complexWrap  = document.getElementById('correct_complex_wrap');
+  var multitfWrap  = document.getElementById('correct_multitf_wrap');
   var mcqWrap      = document.getElementById('correct_mcq_wrap');
   var optE         = document.getElementById('opt_row_E');
   var optC         = document.getElementById('opt_row_C');
@@ -591,6 +608,7 @@ function updateQuestionForm(qtype) {
 
   if (qtype === 'COMPLEX') {
     complexWrap.classList.remove('hidden');
+    if (multitfWrap) multitfWrap.classList.add('hidden');
     mcqWrap.classList.add('hidden');
     // Disable MCQ select agar tidak terkirim duplikat
     mcqSelect.disabled = true;
@@ -599,6 +617,7 @@ function updateQuestionForm(qtype) {
     optD.classList.remove('hidden');
   } else if (qtype === 'TRUE_FALSE') {
     complexWrap.classList.add('hidden');
+    if (multitfWrap) multitfWrap.classList.add('hidden');
     mcqWrap.classList.remove('hidden');
     mcqSelect.disabled = false;
     // TRUE_FALSE hanya A dan B
@@ -607,9 +626,19 @@ function updateQuestionForm(qtype) {
     optE.classList.add('hidden');
     // Set select hanya A atau B
     mcqSelect.innerHTML = '<option value="A">A (Benar)</option><option value="B">B (Salah)</option>';
+  } else if (qtype === 'MULTI_TF') {
+    complexWrap.classList.add('hidden');
+    if (multitfWrap) multitfWrap.classList.remove('hidden');
+    mcqWrap.classList.add('hidden');
+    mcqSelect.disabled = true;
+    optC.classList.remove('hidden');
+    optD.classList.remove('hidden');
+    optE.classList.remove('hidden');
+    renderMultiTfKeys();
   } else {
     // MCQ default
     complexWrap.classList.add('hidden');
+    if (multitfWrap) multitfWrap.classList.add('hidden');
     mcqWrap.classList.remove('hidden');
     mcqSelect.disabled = false;
     optC.classList.remove('hidden');
@@ -617,6 +646,28 @@ function updateQuestionForm(qtype) {
     optE.classList.remove('hidden');
     mcqSelect.innerHTML = '<option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>';
   }
+}
+
+function renderMultiTfKeys() {
+  var container = document.getElementById('multitf_key_rows');
+  if (!container) return;
+  container.innerHTML = '';
+  var lbls = ['A','B','C','D','E'];
+  lbls.forEach(function(lbl) {
+    var row = document.createElement('div');
+    row.className = 'flex items-center gap-3';
+    row.innerHTML =
+      '<span class="w-6 h-6 rounded-full bg-teal-500 text-white text-xs flex items-center justify-center font-bold">' + lbl + '</span>' +
+      '<label class="flex items-center gap-2 cursor-pointer">' +
+        '<input type="radio" name="correct_' + lbl + '" value="B" class="accent-teal-600 w-4 h-4" /> ' +
+        '<span class="text-sm font-semibold text-teal-700">Benar</span>' +
+      '</label>' +
+      '<label class="flex items-center gap-2 cursor-pointer">' +
+        '<input type="radio" name="correct_' + lbl + '" value="S" class="accent-rose-600 w-4 h-4" /> ' +
+        '<span class="text-sm font-semibold text-rose-700">Salah</span>' +
+      '</label>';
+    container.appendChild(row);
+  });
 }
 </script>
 

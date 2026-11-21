@@ -84,20 +84,20 @@ async function finalizeAttemptWithBackup(attemptId, studentId, examId) {
 
       // Ambil semua opsi yang benar per soal (untuk kalkulasi COMPLEX)
       const qids = [...new Set(answers.map(a => a.question_id))];
-      let correctOptionsMap = {}; // { question_id: [option_id, ...] }
+      let correctOptionsMap = {}; // { question_id: [{ option_id, is_correct }, ...] }
       if (qids.length > 0) {
         const ph = qids.map((_, i) => `$${i + 1}`).join(',');
         const [correctOpts] = await connection.query(
-          `SELECT question_id, id AS option_id FROM options WHERE question_id IN (${ph}) AND is_correct = true`,
+          `SELECT question_id, id AS option_id, is_correct FROM options WHERE question_id IN (${ph})`,
           qids
         );
         for (const o of correctOpts) {
           if (!correctOptionsMap[o.question_id]) correctOptionsMap[o.question_id] = [];
-          correctOptionsMap[o.question_id].push(Number(o.option_id));
+          correctOptionsMap[o.question_id].push({ option_id: Number(o.option_id), is_correct: !!o.is_correct });
         }
       }
 
-      // Step 4: Hitung skor dengan poin parsial untuk COMPLEX
+      // Step 4: Hitung skor dengan poin parsial untuk COMPLEX / MULTI_TF
       let total_points  = 0;
       let score_points  = 0;
       let correct_count = 0;
@@ -107,9 +107,13 @@ async function finalizeAttemptWithBackup(attemptId, studentId, examId) {
         const qpoints = Number(aa.points || 0);
         total_points += qpoints;
         const qtype = aa.question_type || 'MCQ';
-        const correctIds = correctOptionsMap[aa.question_id] || [];
+        // allOpts: [{ option_id, is_correct }, ...]
+        const allOpts = correctOptionsMap[aa.question_id] || [];
 
         if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+          // Derive correctIds from new object shape
+          const correctIds = allOpts.filter(o => o.is_correct).map(o => o.option_id);
+
           // Poin parsial proporsional tanpa penalti: floor(benar_dipilih / total_benar * poin)
           let selectedIds = [];
           try {
@@ -145,8 +149,44 @@ async function finalizeAttemptWithBackup(attemptId, studentId, examId) {
             wrong_count++;
           }
 
+        } else if (qtype === 'MULTI_TF') {
+          const N = allOpts.length;
+
+          let selectedIds = [];
+          try {
+            selectedIds = aa.selected_option_ids
+              ? JSON.parse(aa.selected_option_ids).map(Number)
+              : [];
+          } catch(_) { selectedIds = []; }
+
+          if (N > 0) {
+            // Benar jika: student bilang Benar (id ada di selectedIds) DAN is_correct === true
+            //          ATAU student tidak bilang Benar (id tidak ada) DAN is_correct === false
+            let correctAnswered = 0;
+            for (const opt of allOpts) {
+              const studentSaidBenar = selectedIds.includes(opt.option_id);
+              if (studentSaidBenar === opt.is_correct) correctAnswered++;
+            }
+            const partial = Math.floor((correctAnswered / N) * qpoints);
+            score_points += partial;
+            await connection.query(
+              `UPDATE attempt_answers SET partial_points = :pp, is_correct = :isc
+               WHERE attempt_id = :aid AND question_id = :qid`,
+              {
+                pp: partial,
+                isc: correctAnswered === N ? 1 : 0,
+                aid: attemptId,
+                qid: aa.question_id
+              }
+            );
+            if (correctAnswered === N) correct_count++;
+            else if (selectedIds.length > 0) wrong_count++;
+            // Tidak tambah wrong_count saat belum menjawab (no penalty, AC-6)
+          }
+
         } else {
           // MCQ / TRUE_FALSE: all-or-nothing
+          // Gunakan aa.is_correct langsung — tidak terpengaruh perubahan query
           const isCorrect = Number(aa.is_correct || 0) === 1;
           if (isCorrect) {
             score_points += qpoints;

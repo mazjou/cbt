@@ -146,6 +146,31 @@
               </div>
             <% }) %>
           </div>
+          <% if (a.question_type === 'MULTI_TF') {
+               let selectedIds = [];
+               try { if (a.selected_option_ids) selectedIds = JSON.parse(a.selected_option_ids).map(Number); }
+               catch(_) {}
+          %>
+          <div class="mt-2 space-y-1">
+            <% (a.options || []).forEach(function(opt) {
+                 const studentSaidBenar = selectedIds.includes(Number(opt.id));
+                 const isStmtCorrect = (studentSaidBenar === !!opt.is_correct);
+            %>
+            <div class="flex items-center gap-2 text-xs p-2 rounded-lg
+              <%= isStmtCorrect ? 'bg-emerald-50 border border-emerald-200' : 'bg-rose-50 border border-rose-200' %>">
+              <span class="font-bold text-slate-600"><%= opt.option_label %></span>
+              <span class="flex-1 text-slate-600"><%- opt.option_text %></span>
+              <span class="font-semibold <%= isStmtCorrect ? 'text-emerald-600' : 'text-rose-600' %>">
+                Jawab: <%= studentSaidBenar ? 'B' : 'S' %> / Kunci: <%= opt.is_correct ? 'B' : 'S' %>
+              </span>
+            </div>
+            <% }); %>
+            <div class="text-xs text-slate-500 pt-1">
+              Poin parsial: <strong><%= a.partial_points || 0 %> / <%= a.points %></strong>
+              (<%= a.is_correct ? 'Semua benar' : 'Sebagian benar' %>)
+            </div>
+          </div>
+          <% } %>
         </div>
       <% }) %>
     </div>
