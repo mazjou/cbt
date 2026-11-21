@@ -136,7 +136,15 @@ router.get('/export', async (req, res) => {
       const opts = optMap[q.id] || {};
       const qtype = q.question_type || 'MCQ';
       const correctEntries = Object.entries(opts).filter(([, v]) => v.correct);
-      const correctStr = correctEntries.map(([lbl]) => lbl).join(',');
+      let correctStr;
+      if (qtype === 'MULTI_TF') {
+        correctStr = correctEntries.map(([lbl, v]) => lbl + ':' + (v.correct ? 'B' : 'S')).join(',');
+        // Also add non-correct entries that have text (they are statements with is_correct=false → S)
+        const allLabels = Object.keys(opts).sort();
+        correctStr = allLabels.filter(lbl => opts[lbl]).map(lbl => lbl + ':' + (opts[lbl].correct ? 'B' : 'S')).join(',');
+      } else {
+        correctStr = correctEntries.map(([lbl]) => lbl).join(',');
+      }
 
       // Kumpulkan gambar
       if (q.question_image) addImg(q.question_image, `Soal no.${idx+1}`);
@@ -186,8 +194,8 @@ router.get('/export', async (req, res) => {
       ['question_text','Teks soal (wajib)'],
       ['image','Nama file gambar soal (opsional)'],
       ['points','Poin soal (default: 1)'],
-      ['correct','Kunci jawaban: A/B/C/D/E (wajib)'],
-      ['question_type','MCQ / CHECKBOX / TRUE_FALSE (default MCQ)'],
+      ['correct','Kunci jawaban: MCQ=A/B/C/D/E; CHECKBOX=A,C; MULTI_TF=A:B,B:S,C:B (wajib)'],
+      ['question_type','MCQ / CHECKBOX / TRUE_FALSE / MULTI_TF (default MCQ)'],
       ['A - E','Teks opsi. Boleh kosong jika ada gambar di image_a-image_e'],
       ['image_a - image_e','Nama file gambar per opsi (opsional)'],
       ['difficulty','EASY / MEDIUM / HARD'],
@@ -197,6 +205,7 @@ router.get('/export', async (req, res) => {
       [''],['Catatan:'],
       ['- Lihat sheet "Daftar Gambar" untuk download gambar'],
       ['- Upload gambar via menu "Upload Gambar Bank Soal" setelah import'],
+      ['- MULTI_TF: kunci format A:B,B:S,C:B — B=Benar S=Salah'],
     ];
     const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
     wsPanduan['!cols'] = [{wch:15},{wch:70}];
@@ -280,6 +289,12 @@ router.get('/import/template', async (req, res) => {
         image: '', points: 3, correct: 'A,C,E', question_type: 'CHECKBOX',
         A: 'Keyboard', B: 'Monitor', C: 'Mouse', D: 'Speaker', E: 'Touchpad',
         difficulty: 'MEDIUM', subject: firstSubject, chapter: 'Bab 2', tags: 'hardware,input' },
+      // Contoh 5: MULTI_TF — kunci per pernyataan format A:B,B:S,...
+      { question_text: 'Contoh MULTI_TF: Perhatikan pernyataan tentang proses fotosintesis.',
+        image: '', points: 4, correct: 'A:B,B:S,C:B,D:B', question_type: 'MULTI_TF',
+        A: 'Fotosintesis membutuhkan cahaya matahari', B: 'CO2 dihasilkan pada fotosintesis',
+        C: 'Klorofil berperan sebagai pigmen', D: 'O2 dilepaskan sebagai produk samping', E: '',
+        difficulty: 'MEDIUM', subject: firstSubject, chapter: 'Bab 3', tags: 'biologi,fotosintesis' },
     ];
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(contoh, {
@@ -308,9 +323,13 @@ router.get('/import/template', async (req, res) => {
       ['MCQ','Pilihan ganda biasa. correct = 1 huruf (A/B/C/D/E)','','correct: A'],
       ['CHECKBOX','Multi-jawaban. Tiap jawaban benar = poin proporsional tanpa penalti. correct = huruf dipisah koma','','correct: A,C,D'],
       ['TRUE_FALSE','Pernyataan benar/salah. Opsi A=Benar, B=Salah. correct = A atau B','','correct: A'],
+      ['MULTI_TF','Benar/Salah per pernyataan. correct = pasangan LABEL:B/S dipisah koma','','correct: A:B,B:S,C:B'],
       ['--- POIN PARSIAL COMPLEX/CHECKBOX ---','','',''],
-      ['','Rumus: floor(benar_dipilih / total_benar × poin). Tanpa penalti untuk pilihan salah.','',''],
-      ['','Contoh: poin=4, benar ada 3 (A,C,D), siswa pilih A,C → dapat 2/3 × 4 = 2 poin','',''],
+      ['','Rumus: floor(benar_dipilih / total_benar x poin). Tanpa penalti untuk pilihan salah.','',''],
+      ['','Contoh: poin=4, benar ada 3 (A,C,D), siswa pilih A,C -> dapat 2/3 x 4 = 2 poin','',''],
+      ['--- POIN PARSIAL MULTI_TF ---','','',''],
+      ['','Rumus: floor(pernyataan_benar / jumlah_pernyataan x poin)','',''],
+      ['','Contoh: poin=4, ada 4 pernyataan, siswa benar 3 -> dapat 3/4 x 4 = 3 poin','',''],
     ];
     const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
     wsPanduan['!cols'] = [{wch:22},{wch:65},{wch:8},{wch:20}];
@@ -498,7 +517,7 @@ router.post('/import/preview',
         const classLevelRaw = String(pickVal(row, ['class_level','kelas','tingkat']) || '').trim().toUpperCase();
         const validClassLevel = ['X','XI','XII'].includes(classLevelRaw) ? classLevelRaw : null;
         // Normalise: COMPLEX → CHECKBOX agar konsisten
-        const rawQtype = ['MCQ','COMPLEX','TRUE_FALSE','CHECKBOX'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
+        const rawQtype = ['MCQ','COMPLEX','TRUE_FALSE','CHECKBOX','MULTI_TF'].includes(qtypeRaw) ? qtypeRaw : 'MCQ';
         // Treat COMPLEX sama seperti CHECKBOX (multi-jawaban)
         const validQtype = rawQtype === 'COMPLEX' ? 'COMPLEX' : rawQtype;
         const isMulti = validQtype === 'COMPLEX' || validQtype === 'CHECKBOX';
@@ -509,6 +528,9 @@ router.post('/import/preview',
         if (validQtype === 'TRUE_FALSE') {
           if (!A && !image_a) reasons.push('TRUE_FALSE: opsi A wajib diisi');
           if (!B && !image_b) reasons.push('TRUE_FALSE: opsi B wajib diisi');
+        } else if (validQtype === 'MULTI_TF') {
+          if (!A && !image_a) reasons.push('MULTI_TF: pernyataan A wajib diisi');
+          if (!B && !image_b) reasons.push('MULTI_TF: pernyataan B wajib diisi');
         } else {
           // MCQ / COMPLEX / CHECKBOX wajib punya A, B — C dan D boleh kosong jika ada 2 opsi cukup
           if (!A && !image_a) reasons.push('Opsi A wajib terisi (teks atau gambar)');
@@ -517,11 +539,28 @@ router.post('/import/preview',
 
         // Validasi kunci jawaban sesuai tipe
         const correctRaw = String(correct).trim();
-        const correctLabels = isMulti
-          ? correctRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean)
-          : [correctRaw.toUpperCase()];
-        if (correctLabels.length === 0 || !correctLabels.every(l => ['A','B','C','D','E'].includes(l))) {
-          reasons.push('Kunci jawaban tidak valid (gunakan A/B/C/D/E, untuk COMPLEX/CHECKBOX pisahkan dengan koma)');
+        let correctLabels = [];
+        let correctMap = null;
+        if (validQtype === 'MULTI_TF') {
+          correctMap = {};
+          const parts = correctRaw.split(',').map(s => s.trim()).filter(Boolean);
+          for (const p of parts) {
+            const m = p.match(/^([A-E]):([BS])$/i);
+            if (m) correctMap[m[1].toUpperCase()] = m[2].toUpperCase() === 'B';
+          }
+          if (Object.keys(correctMap).length < 2) {
+            reasons.push('MULTI_TF: minimal 2 pernyataan wajib diisi (format kunci: A:B,B:S,C:B)');
+          }
+        } else if (isMulti) {
+          correctLabels = correctRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
+          if (correctLabels.length === 0 || !correctLabels.every(l => ['A','B','C','D','E'].includes(l))) {
+            reasons.push('Kunci jawaban tidak valid (gunakan A/B/C/D/E, untuk COMPLEX/CHECKBOX pisahkan dengan koma)');
+          }
+        } else {
+          correctLabels = [correctRaw.toUpperCase()];
+          if (!['A','B','C','D','E'].includes(correctLabels[0])) {
+            reasons.push('Kunci jawaban tidak valid (gunakan A/B/C/D/E, untuk COMPLEX/CHECKBOX pisahkan dengan koma)');
+          }
         }
         let subject_id = null;
         if (subjectRaw) {
@@ -530,8 +569,9 @@ router.post('/import/preview',
         }
         const validDiff = ['EASY','MEDIUM','HARD'].includes(difficulty) ? difficulty : 'MEDIUM';
         const item = { rowNo, question_text, question_image, points,
-          correct: isMulti ? correctLabels.join(',') : (correctLabels[0] || ''),
+          correct: validQtype === 'MULTI_TF' ? Object.entries(correctMap || {}).map(([k,v]) => k + ':' + (v ? 'B' : 'S')).join(',') : (isMulti ? correctLabels.join(',') : (correctLabels[0] || '')),
           correctLabels,
+          correctMap,
           question_type: validQtype,
           subject_id, subjectRaw,
           difficulty: validDiff, chapter, tags,
@@ -579,15 +619,35 @@ router.post('/import/commit', async (req, res) => {
         [user.id, sid, r.chapter || null, r.question_text, r.question_image || null, r.points || 1, r.difficulty || 'MEDIUM', r.tags || null, qtype, r.class_level || null]
       );
       const bankId = res2.insertId;
-      // Tentukan correctLabels
-      const correctLabels = r.correctLabels || (r.correct ? String(r.correct).split(',').map(s => s.trim().toUpperCase()) : ['A']);
+      // Tentukan correctLabels / correctMap sesuai tipe
+      let correctLabels = [];
+      let correctMap = null;
+      if (qtype === 'MULTI_TF') {
+        correctMap = r.correctMap || {};
+        // Fallback: parse dari r.correct string "A:B,B:S"
+        if (!Object.keys(correctMap).length && r.correct) {
+          correctMap = {};
+          String(r.correct).split(',').forEach(p => {
+            const m = p.trim().match(/^([A-E]):([BS])$/i);
+            if (m) correctMap[m[1].toUpperCase()] = m[2].toUpperCase() === 'B';
+          });
+        }
+      } else {
+        correctLabels = r.correctLabels || (r.correct ? String(r.correct).split(',').map(s => s.trim().toUpperCase()) : ['A']);
+      }
       for (const lbl of ['A','B','C','D','E']) {
         const optText = r.options?.[lbl] || '';
         const optImg = r.option_images?.[lbl] || null;
         if (!optText && !optImg) continue;
+        let isc;
+        if (qtype === 'MULTI_TF') {
+          isc = (correctMap !== null && correctMap[lbl] !== undefined) ? correctMap[lbl] : false;
+        } else {
+          isc = correctLabels.includes(lbl);
+        }
         await conn.query(
           'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, option_image, is_correct) VALUES ($1,$2,$3,$4,$5)',
-          [bankId, lbl, optText, optImg, correctLabels.includes(lbl) ? true : false]
+          [bankId, lbl, optText, optImg, isc]
         );
       }
       inserted++;
@@ -616,18 +676,34 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', m
     req.flash('error', 'Mata pelajaran dan pertanyaan wajib diisi');
     return res.redirect('/teacher/question-bank/new');
   }
-  if (qtype !== 'TRUE_FALSE' && (!a || !b || !c || !d)) {
-    req.flash('error', 'Minimal opsi A-D wajib diisi');
-    return res.redirect('/teacher/question-bank/new');
-  }
   if (qtype === 'TRUE_FALSE' && (!a || !b)) {
     req.flash('error', 'Opsi A (Benar) dan B (Salah) wajib diisi');
+    return res.redirect('/teacher/question-bank/new');
+  }
+  if (qtype === 'MULTI_TF' && (!a || !b)) {
+    req.flash('error', 'MULTI_TF: minimal pernyataan A dan B harus diisi');
+    return res.redirect('/teacher/question-bank/new');
+  }
+  if (qtype !== 'TRUE_FALSE' && qtype !== 'MULTI_TF' && (!a || !b || !c || !d)) {
+    req.flash('error', 'Minimal opsi A-D wajib diisi');
     return res.redirect('/teacher/question-bank/new');
   }
 
   // Kunci jawaban
   let correctLabels = [];
-  if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+  let correctMap = null;
+  if (qtype === 'MULTI_TF') {
+    correctMap = {};
+    for (const lbl of ['A','B','C','D','E']) {
+      const val = req.body['correct_' + lbl];
+      if (val === 'B') correctMap[lbl] = true;
+      else if (val === 'S') correctMap[lbl] = false;
+    }
+    if (Object.keys(correctMap).length < 2) {
+      req.flash('error', 'MULTI_TF: minimal 2 pernyataan wajib memiliki kunci jawaban (B/S)');
+      return res.redirect('/teacher/question-bank/new');
+    }
+  } else if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
     const rawCorrect = req.body.correct;
     if (Array.isArray(rawCorrect)) correctLabels = rawCorrect.map(s => s.toUpperCase());
     else if (rawCorrect) correctLabels = String(rawCorrect).split(',').map(s => s.trim().toUpperCase());
@@ -656,13 +732,19 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', m
 
     const optsToInsert = qtype === 'TRUE_FALSE'
       ? [['A', a || 'Benar'], ['B', b || 'Salah']]
-      : [['A',a],['B',b],['C',c],['D',d],['E',e||'']];
+      : [['A',a],['B',b],['C',c||''],['D',d||''],['E',e||'']];
 
     for (const [lbl, txt] of optsToInsert) {
       if (!txt) continue;
+      let isc;
+      if (qtype === 'MULTI_TF') {
+        isc = (correctMap !== null && correctMap[lbl] !== undefined) ? correctMap[lbl] : false;
+      } else {
+        isc = correctLabels.includes(lbl);
+      }
       await conn.query(
         'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
-        [bankId, lbl, txt, correctLabels.includes(lbl)]
+        [bankId, lbl, txt, isc]
       );
     }
     await conn.commit();
@@ -718,9 +800,14 @@ router.get('/:id/edit', async (req, res) => {
     const byLabel = {};
     let correct = 'A';
     const correctLabels = [];
-    for (const o of options) { byLabel[o.option_label] = o.option_text; if (o.is_correct) { correct = o.option_label; correctLabels.push(o.option_label); } }
+    const correctMap = {};
+    for (const o of options) {
+      byLabel[o.option_label] = o.option_text;
+      correctMap[o.option_label] = !!o.is_correct;
+      if (o.is_correct) { correct = o.option_label; correctLabels.push(o.option_label); }
+    }
     const [subjects] = await pool.query('SELECT * FROM subjects ORDER BY name ASC');
-    res.render('teacher/question_bank_edit', { title: 'Edit Bank Soal', question, options: byLabel, correct_label: correct, correct_labels: correctLabels, subjects });
+    res.render('teacher/question_bank_edit', { title: 'Edit Bank Soal', question, options: byLabel, correct_label: correct, correct_labels: correctLabels, correct_map: correctMap, subjects });
   } catch (error) {
     console.error('Error:', error);
     req.flash('error', 'Gagal memuat form edit');
@@ -733,13 +820,23 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, remove_image, remove_pdf, question_type, class_level } = req.body;
-  if (!subject_id || !question_text || !a || !b || !c || !d) {
-    req.flash('error', 'Semua field wajib diisi');
+  if (!subject_id || !question_text) {
+    req.flash('error', 'Mata pelajaran dan pertanyaan wajib diisi');
     return res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
   }
   const existing = firstRow(await pool.query('SELECT * FROM question_bank WHERE id = $1 AND teacher_id = $2 LIMIT 1', [req.params.id, user.id]));
   if (!existing) { req.flash('error', 'Akses ditolak'); return res.redirect('/teacher/question-bank'); }
   const qtype = question_type || existing.question_type || 'MCQ';
+
+  if (qtype === 'MULTI_TF' && (!a || !b)) {
+    req.flash('error', 'MULTI_TF: minimal pernyataan A dan B harus diisi');
+    return res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
+  }
+  if (qtype !== 'TRUE_FALSE' && qtype !== 'MULTI_TF' && (!a || !b || !c || !d)) {
+    req.flash('error', 'Semua field wajib diisi');
+    return res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
+  }
+
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
@@ -755,9 +852,24 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
       'UPDATE question_bank SET subject_id=$1, chapter=$2, question_text=$3, question_image=$4, question_pdf=$5, points=$6, difficulty=$7, tags=$8, class_level=$9, updated_at=NOW() WHERE id=$10',
       [subject_id, chapter || null, question_text, imageToSave, pdfToSave, Number(points || 1), difficulty || 'MEDIUM', tags || null, class_level || null, req.params.id]
     );
-    // Tentukan correctLabels untuk COMPLEX/CHECKBOX (multi) atau MCQ/TRUE_FALSE (single)
+
+    // Parse correct key
     let corrLabels = [];
-    if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
+    let correctMap = null;
+    if (qtype === 'MULTI_TF') {
+      correctMap = {};
+      for (const lbl of ['A','B','C','D','E']) {
+        const val = req.body['correct_' + lbl];
+        if (val === 'B') correctMap[lbl] = true;
+        else if (val === 'S') correctMap[lbl] = false;
+      }
+      if (Object.keys(correctMap).length < 2) {
+        await conn.rollback();
+        conn.release();
+        req.flash('error', 'MULTI_TF: minimal 2 pernyataan wajib memiliki kunci jawaban (B/S)');
+        return res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
+      }
+    } else if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
       const rawCorrect = req.body.correct;
       if (Array.isArray(rawCorrect)) corrLabels = rawCorrect.map(s => s.toUpperCase());
       else if (rawCorrect) corrLabels = String(rawCorrect).split(',').map(s => s.trim().toUpperCase());
@@ -770,11 +882,22 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
       req.flash('error', 'Soal ' + qtype + ' harus memiliki minimal 1 jawaban benar');
       return res.redirect('/teacher/question-bank/' + req.params.id + '/edit');
     }
-    for (const [lbl, txt] of [['A',a],['B',b],['C',c],['D',d],['E',e||'']]) {
+
+    const optsToUpsert = qtype === 'TRUE_FALSE'
+      ? [['A', a || 'Benar'], ['B', b || 'Salah']]
+      : [['A',a],['B',b],['C',c||''],['D',d||''],['E',e||'']];
+
+    for (const [lbl, txt] of optsToUpsert) {
       if (!txt) continue;
+      let isc;
+      if (qtype === 'MULTI_TF') {
+        isc = (correctMap !== null && correctMap[lbl] !== undefined) ? correctMap[lbl] : false;
+      } else {
+        isc = corrLabels.includes(lbl);
+      }
       await conn.query(
         'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4) ON CONFLICT (question_bank_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, is_correct=EXCLUDED.is_correct',
-        [req.params.id, lbl, txt, corrLabels.includes(lbl)]
+        [req.params.id, lbl, txt, isc]
       );
     }
     await conn.commit();

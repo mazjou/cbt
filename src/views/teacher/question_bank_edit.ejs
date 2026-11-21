@@ -30,11 +30,13 @@
     <div class="mt-2">
       <% const qtBadge = question.question_type || 'MCQ'; %>
       <% if (qtBadge === 'CHECKBOX' || qtBadge === 'COMPLEX') { %>
-        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">☑ Tipe: Checkbox (multi-jawaban)</span>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold">Tipe: Checkbox (multi-jawaban)</span>
       <% } else if (qtBadge === 'TRUE_FALSE') { %>
-        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">✓✗ Tipe: Benar/Salah</span>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold">Tipe: Benar/Salah</span>
+      <% } else if (qtBadge === 'MULTI_TF') { %>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-teal-100 text-teal-700 text-xs font-semibold">Tipe: Multi Benar/Salah</span>
       <% } else { %>
-        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">◉ Tipe: Pilihan Ganda (MCQ)</span>
+        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">Tipe: Pilihan Ganda (MCQ)</span>
       <% } %>
     </div>
   </div>
@@ -172,13 +174,37 @@
     <div class="flex gap-3">
       <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-emerald-200 bg-white cursor-pointer hover:bg-emerald-50 transition-all">
         <input type="radio" name="correct" value="A" class="accent-emerald-600 w-4 h-4" <%= correct_label === 'A' ? 'checked' : '' %> />
-        <span class="text-sm font-semibold text-emerald-800">✅ Benar (A)</span>
+        <span class="text-sm font-semibold text-emerald-800">Benar (A)</span>
       </label>
       <label class="flex items-center gap-2 px-4 py-2 rounded-xl border-2 border-rose-200 bg-white cursor-pointer hover:bg-rose-50 transition-all">
         <input type="radio" name="correct" value="B" class="accent-rose-600 w-4 h-4" <%= correct_label === 'B' ? 'checked' : '' %> />
-        <span class="text-sm font-semibold text-rose-800">❌ Salah (B)</span>
+        <span class="text-sm font-semibold text-rose-800">Salah (B)</span>
       </label>
     </div>
+  </div>
+
+  <!-- MULTI_TF panel -->
+  <div id="edit_correct_multitf_wrap" class="hidden">
+    <label class="text-sm font-semibold text-teal-700 mb-2 block">Kunci jawaban per pernyataan:</label>
+    <div class="space-y-2">
+      <% ['A','B','C','D','E'].forEach(function(lbl) {
+         const isBenar = typeof correct_map !== 'undefined' && correct_map && correct_map[lbl] === true;
+         const isSalah = typeof correct_map !== 'undefined' && correct_map && correct_map[lbl] === false && correct_map.hasOwnProperty(lbl);
+      %>
+      <div class="flex items-center gap-3">
+        <span class="w-6 h-6 rounded-full bg-teal-500 text-white text-xs flex items-center justify-center font-bold"><%= lbl %></span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="correct_<%= lbl %>" value="B" class="accent-teal-600 w-4 h-4" <%= isBenar ? 'checked' : '' %> />
+          <span class="text-sm font-semibold text-teal-700">Benar</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="correct_<%= lbl %>" value="S" class="accent-rose-600 w-4 h-4" <%= isSalah ? 'checked' : '' %> />
+          <span class="text-sm font-semibold text-rose-700">Salah</span>
+        </label>
+      </div>
+      <% }); %>
+    </div>
+    <p class="text-xs text-teal-500 mt-1">Poin parsial per pernyataan — benar semua = poin penuh</p>
   </div>
 
   <!-- Tags -->
@@ -293,8 +319,8 @@ $sn(document).ready(function () {
       { id: 'editor_option_b', name: 'Opsi B' }
     ];
 
-    // Tambah C/D/E kecuali TRUE_FALSE
-    if (qtype !== 'TRUE_FALSE') {
+    // Tambah C/D kecuali TRUE_FALSE dan MULTI_TF
+    if (qtype !== 'TRUE_FALSE' && qtype !== 'MULTI_TF') {
       fields.push({ id: 'editor_option_c', name: 'Opsi C' });
       fields.push({ id: 'editor_option_d', name: 'Opsi D' });
     }
@@ -320,6 +346,18 @@ $sn(document).ready(function () {
         return false;
       }
     }
+
+    if (qtype === 'MULTI_TF') {
+      var keyCount = 0;
+      ['A','B','C','D','E'].forEach(function(lbl) {
+        if (document.querySelector('input[name=correct_' + lbl + ']:checked')) keyCount++;
+      });
+      if (keyCount < 2) {
+        e.preventDefault();
+        alert('MULTI_TF: pilih Benar/Salah minimal untuk 2 pernyataan!');
+        return false;
+      }
+    }
   });
 
 });
@@ -331,6 +369,7 @@ $sn(document).ready(function () {
     var singleWrap  = document.getElementById('edit_correct_single_wrap');
     var complexWrap = document.getElementById('edit_correct_complex_wrap');
     var tfWrap      = document.getElementById('edit_correct_trufalse_wrap');
+    var multitfWrap = document.getElementById('edit_correct_multitf_wrap');
     var optC = document.getElementById('bank_edit_opt_c');
     var optD = document.getElementById('bank_edit_opt_d');
     var optE = document.getElementById('bank_edit_opt_e');
@@ -348,6 +387,17 @@ $sn(document).ready(function () {
       if (optC) optC.classList.add('hidden');
       if (optD) optD.classList.add('hidden');
       if (optE) optE.classList.add('hidden');
+    } else if (qtype === 'MULTI_TF') {
+      if (singleWrap) singleWrap.classList.add('hidden');
+      if (multitfWrap) multitfWrap.classList.remove('hidden');
+      var sel = singleWrap ? singleWrap.querySelector('select') : null;
+      if (sel) { sel.disabled = true; sel.removeAttribute('required'); }
+      if (complexWrap) complexWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });
+      if (tfWrap) tfWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });
+    } else {
+      // MCQ: disable inputs dari panel lain
+      if (complexWrap) complexWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });
+      if (tfWrap) tfWrap.querySelectorAll('input[name=correct]').forEach(function(r){ r.disabled = true; });
     }
   })();
 </script>

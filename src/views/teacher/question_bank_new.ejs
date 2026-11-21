@@ -55,6 +55,10 @@
         <input type="radio" name="question_type" value="TRUE_FALSE" class="accent-emerald-600" onchange="updateBankForm(this.value)" />
         <div><div class="text-sm font-semibold text-emerald-800">Benar/Salah</div><div class="text-xs text-slate-500">Pernyataan B/S</div></div>
       </label>
+      <label class="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-teal-200 bg-white cursor-pointer has-[:checked]:border-teal-500 has-[:checked]:bg-teal-50 transition-all">
+        <input type="radio" name="question_type" value="MULTI_TF" class="accent-teal-600" onchange="updateBankForm(this.value)" />
+        <div><div class="text-sm font-semibold text-teal-800">Multi Benar/Salah</div><div class="text-xs text-slate-500">B/S per pernyataan</div></div>
+      </label>
     </div>
   </div>
 
@@ -137,6 +141,27 @@
       <% }) %>
     </div>
     <p class="text-xs text-purple-500 mt-1">Poin parsial berdasarkan jumlah jawaban benar yang dipilih siswa</p>
+  </div>
+
+  <!-- MULTI_TF: per-statement key panel -->
+  <div id="bank_correct_multitf_wrap" class="hidden">
+    <label class="text-sm font-semibold text-teal-700 mb-2 block">Kunci jawaban per pernyataan:</label>
+    <div class="space-y-2">
+      <% ['A','B','C','D','E'].forEach(function(lbl) { %>
+      <div id="bank_multitf_key_<%= lbl %>" class="flex items-center gap-3">
+        <span class="w-6 h-6 rounded-full bg-teal-500 text-white text-xs flex items-center justify-center font-bold"><%= lbl %></span>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="correct_<%= lbl %>" value="B" class="accent-teal-600 w-4 h-4" />
+          <span class="text-sm font-semibold text-teal-700">Benar</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="radio" name="correct_<%= lbl %>" value="S" class="accent-rose-600 w-4 h-4" />
+          <span class="text-sm font-semibold text-rose-700">Salah</span>
+        </label>
+      </div>
+      <% }); %>
+    </div>
+    <p class="text-xs text-teal-500 mt-1">Poin parsial per pernyataan — benar semua = poin penuh</p>
   </div>
 
   <div>
@@ -229,14 +254,23 @@ $sn(document).ready(function () {
 
   // Validasi & submit
   $('#bankQuestionForm').on('submit', function (e) {
-    var fields = [
-      { id: 'editor_question', name: 'Pertanyaan' },
-      { id: 'editor_option_a', name: 'Opsi A' },
-      { id: 'editor_option_b', name: 'Opsi B' },
-      { id: 'editor_option_c', name: 'Opsi C' },
-      { id: 'editor_option_d', name: 'Opsi D' },
-      { id: 'editor_option_e', name: 'Opsi E' }
-    ];
+    var qtype = document.querySelector('input[name=question_type]:checked')?.value || 'MCQ';
+
+    var fields = [{ id: 'editor_question', name: 'Pertanyaan' }];
+
+    if (qtype === 'TRUE_FALSE') {
+      fields.push({ id: 'editor_option_a', name: 'Opsi A' });
+      fields.push({ id: 'editor_option_b', name: 'Opsi B' });
+    } else if (qtype === 'MULTI_TF') {
+      fields.push({ id: 'editor_option_a', name: 'Pernyataan A' });
+      fields.push({ id: 'editor_option_b', name: 'Pernyataan B' });
+    } else {
+      fields.push({ id: 'editor_option_a', name: 'Opsi A' });
+      fields.push({ id: 'editor_option_b', name: 'Opsi B' });
+      fields.push({ id: 'editor_option_c', name: 'Opsi C' });
+      fields.push({ id: 'editor_option_d', name: 'Opsi D' });
+      fields.push({ id: 'editor_option_e', name: 'Opsi E' });
+    }
 
     for (var i = 0; i < fields.length; i++) {
       var f = fields[i];
@@ -251,7 +285,6 @@ $sn(document).ready(function () {
       }
     }
     // Validasi COMPLEX/CHECKBOX harus pilih minimal 1 jawaban benar
-    var qtype = document.querySelector('input[name=question_type]:checked')?.value || 'MCQ';
     if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
       var checkedCount = document.querySelectorAll('input[name=correct]:checked').length;
       if (checkedCount < 1) {
@@ -260,47 +293,59 @@ $sn(document).ready(function () {
         return false;
       }
     }
+    // Validasi MULTI_TF harus ada minimal 2 kunci
+    if (qtype === 'MULTI_TF') {
+      var keyCount = 0;
+      ['A','B','C','D','E'].forEach(function(lbl) {
+        var checked = document.querySelector('input[name=correct_' + lbl + ']:checked');
+        if (checked) keyCount++;
+      });
+      if (keyCount < 2) {
+        e.preventDefault();
+        alert('MULTI_TF: pilih Benar/Salah minimal untuk 2 pernyataan!');
+        return false;
+      }
+    }
   });
 
 });
 
 function updateBankForm(qtype) {
-  var mcqWrap     = document.getElementById('bank_correct_mcq_wrap');
-  var complexWrap = document.getElementById('bank_correct_complex_wrap');
-  var mcqSelect   = document.getElementById('bank_correct_mcq');
-  var optE        = document.getElementById('bank_opt_E');
-  var optC        = document.getElementById('bank_opt_C');
-  var optD        = document.getElementById('bank_opt_D');
+  var mcqWrap      = document.getElementById('bank_correct_mcq_wrap');
+  var complexWrap  = document.getElementById('bank_correct_complex_wrap');
+  var multitfWrap  = document.getElementById('bank_correct_multitf_wrap');
+  var mcqSelect    = document.getElementById('bank_correct_mcq');
+  var optE         = document.getElementById('bank_opt_E');
+  var optC         = document.getElementById('bank_opt_C');
+  var optD         = document.getElementById('bank_opt_D');
 
-  if (qtype === 'COMPLEX') {
+  // Reset semua panel
+  mcqWrap.classList.remove('hidden');
+  complexWrap.classList.add('hidden');
+  multitfWrap.classList.add('hidden');
+  mcqSelect.disabled = false;
+  if (optC) optC.classList.remove('hidden');
+  if (optD) optD.classList.remove('hidden');
+  if (optE) optE.classList.remove('hidden');
+
+  if (qtype === 'COMPLEX' || qtype === 'CHECKBOX') {
     mcqWrap.classList.add('hidden');
     complexWrap.classList.remove('hidden');
     mcqSelect.disabled = true;
-    optC.classList.remove('hidden');
-    optD.classList.remove('hidden');
-    optE.classList.remove('hidden');
-  } else if (qtype === 'CHECKBOX') {
-    mcqWrap.classList.add('hidden');
-    complexWrap.classList.remove('hidden');
-    mcqSelect.disabled = true;
-    optC.classList.remove('hidden');
-    optD.classList.remove('hidden');
-    optE.classList.remove('hidden');
   } else if (qtype === 'TRUE_FALSE') {
-    mcqWrap.classList.remove('hidden');
-    complexWrap.classList.add('hidden');
-    mcqSelect.disabled = false;
-    optC.classList.add('hidden');
-    optD.classList.add('hidden');
-    optE.classList.add('hidden');
     mcqSelect.innerHTML = '<option value="A">A (Benar)</option><option value="B">B (Salah)</option>';
+    if (optC) optC.classList.add('hidden');
+    if (optD) optD.classList.add('hidden');
+    if (optE) optE.classList.add('hidden');
+  } else if (qtype === 'MULTI_TF') {
+    mcqWrap.classList.add('hidden');
+    multitfWrap.classList.remove('hidden');
+    mcqSelect.disabled = true;
+    if (optE) optE.classList.remove('hidden');
+    // Sembunyikan C,D,E dari opsi — MULTI_TF pakai pernyataan A-E secara opsional
+    // (C/D/E tetap tampil karena pernyataan bisa sampai 5)
   } else {
-    mcqWrap.classList.remove('hidden');
-    complexWrap.classList.add('hidden');
-    mcqSelect.disabled = false;
-    optC.classList.remove('hidden');
-    optD.classList.remove('hidden');
-    optE.classList.remove('hidden');
+    // MCQ
     mcqSelect.innerHTML = '<option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>';
   }
 }
