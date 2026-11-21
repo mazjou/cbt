@@ -328,9 +328,13 @@
             <!-- Opsi Jawaban -->
             <div class="space-y-3">
               <div class="text-sm font-bold <%= color.text %> mb-2">Opsi Jawaban:</div>
+              <%
+                const svgCheck = '<svg class="w-4 h-4 text-emerald-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
+                const svgCross = '<svg class="w-4 h-4 text-rose-500 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>';
+                const svgCheckBadge = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 flex-shrink-0"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></span>';
+              %>
               <% if (q.options && q.options.length > 0) { %>
                 <% if (q.question_type === 'MULTI_TF') { %>
-                  <!-- MULTI_TF: tampilkan sebagai tabel Benar/Salah seperti di siswa -->
                   <table class="w-full border-collapse rounded-xl overflow-hidden text-sm">
                     <thead><tr class="bg-slate-100">
                       <th class="text-left p-3 border border-slate-200">Pernyataan</th>
@@ -341,25 +345,23 @@
                       <% q.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
                         <tr class="<%= opt.is_correct ? 'bg-emerald-50' : 'bg-white' %>">
                           <td class="p-3 border border-slate-200 text-slate-700"><%- opt.option_text %></td>
-                          <td class="text-center p-3 border border-slate-200"><%= opt.is_correct ? '<span class="text-emerald-600 font-bold">v</span>' : '' %></td>
-                          <td class="text-center p-3 border border-slate-200"><%= !opt.is_correct ? '<span class="text-rose-500 font-bold">x</span>' : '' %></td>
+                          <td class="text-center p-3 border border-slate-200"><%- opt.is_correct ? svgCheck : '' %></td>
+                          <td class="text-center p-3 border border-slate-200"><%- !opt.is_correct ? svgCross : '' %></td>
                         </tr>
                       <% }) %>
                     </tbody>
                   </table>
                 <% } else if (q.question_type === 'TRUE_FALSE') { %>
-                  <!-- TRUE_FALSE: tampilkan Benar/Salah saja -->
                   <% q.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
                     <div class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 <%= opt.is_correct ? color.border + ' bg-white shadow-sm' : 'border-slate-200 bg-white/80' %>">
-                      <% if (opt.is_correct) { %><span class="text-emerald-600 font-bold text-sm">Kunci</span><% } %>
+                      <%- opt.is_correct ? svgCheckBadge : '<span class="w-6 flex-shrink-0"></span>' %>
                       <span class="font-semibold text-slate-700"><%- opt.option_text %></span>
                     </div>
                   <% }) %>
                 <% } else if (q.question_type === 'CHECKBOX' || q.question_type === 'COMPLEX') { %>
-                  <!-- CHECKBOX: tanpa label huruf -->
                   <% q.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
                     <div class="flex items-center gap-3 rounded-xl border-2 <%= opt.is_correct ? color.border + ' bg-white shadow-md' : 'border-slate-200 bg-white/80' %> px-4 py-3">
-                      <% if (opt.is_correct) { %><span class="text-emerald-500 font-bold text-sm flex-shrink-0">v</span><% } else { %><span class="w-4 flex-shrink-0"></span><% } %>
+                      <%- opt.is_correct ? svgCheckBadge : '<span class="w-6 flex-shrink-0"></span>' %>
                       <div class="flex-1 text-slate-700 prose prose-sm max-w-none">
                         <%- opt.option_text %>
                         <% if (opt.option_image) { %><img src="<%= opt.option_image %>" class="mt-2 max-h-40 rounded-xl border border-slate-200" loading="lazy" /><% } %>
@@ -367,14 +369,18 @@
                     </div>
                   <% }) %>
                 <% } else { %>
-                  <!-- MCQ: dengan label huruf -->
                   <% q.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
                     <div class="block rounded-xl border-2 <%= opt.is_correct ? color.border + ' bg-white shadow-md' : 'border-slate-200 bg-white/80' %> px-5 py-4">
-                      <div class="flex gap-4">
-                        <div class="flex-shrink-0">
-                          <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg <%= color.badge %> font-bold text-sm <%= opt.is_correct ? 'ring-2 ring-emerald-400' : '' %>">
-                            <%= opt.option_label %><%= opt.is_correct ? ' v' : '' %>
+                      <div class="flex gap-4 items-center">
+                        <div class="flex-shrink-0 relative">
+                          <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg <%= color.badge %> font-bold text-sm">
+                            <%= opt.option_label %>
                           </div>
+                          <% if (opt.is_correct) { %>
+                            <span class="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 shadow">
+                              <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                            </span>
+                          <% } %>
                         </div>
                         <div class="flex-1 text-slate-700 prose prose-sm max-w-none">
                           <%- opt.option_text %>

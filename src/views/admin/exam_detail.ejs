@@ -395,6 +395,11 @@
                 <% } %>
 
                 <!-- Opsi Jawaban -->
+                <%
+                  const svgCheck2 = '<svg class="w-4 h-4 text-emerald-600 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>';
+                  const svgCross2 = '<svg class="w-4 h-4 text-rose-500 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M6 18L18 6M6 6l12 12"/></svg>';
+                  const svgBadge2 = '<span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 flex-shrink-0"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></span>';
+                %>
                 <% if (question.options && question.options.length > 0) { %>
                   <% if (question.question_type === 'MULTI_TF') { %>
                     <table class="w-full border-collapse rounded-xl overflow-hidden text-xs mt-2">
@@ -407,8 +412,8 @@
                         <% question.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
                           <tr class="<%= opt.is_correct ? 'bg-emerald-50' : 'bg-white' %>">
                             <td class="p-2 border border-slate-200 text-slate-700"><%- opt.option_text %></td>
-                            <td class="text-center p-2 border border-slate-200"><%= opt.is_correct ? 'v' : '' %></td>
-                            <td class="text-center p-2 border border-slate-200"><%= !opt.is_correct ? 'x' : '' %></td>
+                            <td class="text-center p-2 border border-slate-200"><%- opt.is_correct ? svgCheck2 : '' %></td>
+                            <td class="text-center p-2 border border-slate-200"><%- !opt.is_correct ? svgCross2 : '' %></td>
                           </tr>
                         <% }) %>
                       </tbody>
@@ -417,8 +422,17 @@
                     <div class="mt-3 grid grid-cols-1 gap-1.5">
                       <% question.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
                         <div class="flex items-start gap-3 px-3 py-2 rounded-lg border <%= opt.is_correct ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 bg-white' %>">
-                          <% if (opt.is_correct) { %><span class="text-emerald-600 font-bold text-xs flex-shrink-0">v</span><% } else { %><span class="w-3 flex-shrink-0"></span><% } %>
+                          <%- opt.is_correct ? svgBadge2 : '<span class="w-6 flex-shrink-0"></span>' %>
                           <div class="flex-1 text-sm text-slate-700 prose prose-sm max-w-none leading-snug"><%- opt.option_text %><% if (opt.option_image) { %><img src="<%= opt.option_image %>" class="mt-2 max-h-40 rounded-xl border border-slate-200" loading="lazy" /><% } %></div>
+                        </div>
+                      <% }) %>
+                    </div>
+                  <% } else if (question.question_type === 'TRUE_FALSE') { %>
+                    <div class="mt-3 grid grid-cols-1 gap-1.5">
+                      <% question.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
+                        <div class="flex items-center gap-3 px-3 py-2 rounded-lg border <%= opt.is_correct ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 bg-white' %>">
+                          <%- opt.is_correct ? svgBadge2 : '<span class="w-6 flex-shrink-0"></span>' %>
+                          <span class="text-sm font-semibold text-slate-700"><%- opt.option_text %></span>
                         </div>
                       <% }) %>
                     </div>
@@ -426,9 +440,16 @@
                     <div class="mt-3 grid grid-cols-1 gap-1.5">
                       <% question.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
                         <div class="flex items-start gap-3 px-3 py-2 rounded-lg border <%= opt.is_correct ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 bg-white' %>">
-                          <span class="flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold shadow-sm <%= opt.is_correct ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-700' %>">
-                            <%= opt.option_label %><%= opt.is_correct ? ' v' : '' %>
-                          </span>
+                          <div class="flex-shrink-0 relative">
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold shadow-sm <%= opt.is_correct ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700' %>">
+                              <%= opt.option_label %>
+                            </span>
+                            <% if (opt.is_correct) { %>
+                              <span class="absolute -top-1.5 -right-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500 shadow">
+                                <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                              </span>
+                            <% } %>
+                          </div>
                           <div class="flex-1 text-sm <%= opt.is_correct ? 'text-emerald-800 font-semibold' : 'text-slate-700' %> prose prose-sm max-w-none leading-snug">
                             <%- opt.option_text %>
                             <% if (opt.option_image) { %><img src="<%= opt.option_image %>" alt="opsi <%= opt.option_label %>" class="mt-2 max-h-40 rounded-xl border border-slate-200 shadow-sm" loading="lazy" /><% } %>
