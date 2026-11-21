@@ -329,24 +329,64 @@
             <div class="space-y-3">
               <div class="text-sm font-bold <%= color.text %> mb-2">Opsi Jawaban:</div>
               <% if (q.options && q.options.length > 0) { %>
-                <% q.options.forEach((opt) => { %>
-                  <div class="block rounded-xl border-2 <%= opt.is_correct ? color.border + ' bg-white shadow-md' : 'border-slate-200 bg-white/80' %> px-5 py-4">
-                    <div class="flex gap-4">
-                      <div class="flex-shrink-0">
-                        <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg <%= color.badge %> font-bold text-sm <%= opt.is_correct ? 'ring-2 ring-emerald-400' : '' %>">
-                          <%= opt.option_label %> <%= opt.is_correct ? '✓' : '' %>
-                        </div>
-                      </div>
+                <% if (q.question_type === 'MULTI_TF') { %>
+                  <!-- MULTI_TF: tampilkan sebagai tabel Benar/Salah seperti di siswa -->
+                  <table class="w-full border-collapse rounded-xl overflow-hidden text-sm">
+                    <thead><tr class="bg-slate-100">
+                      <th class="text-left p-3 border border-slate-200">Pernyataan</th>
+                      <th class="text-center p-3 border border-slate-200 w-20">Benar</th>
+                      <th class="text-center p-3 border border-slate-200 w-20">Salah</th>
+                    </tr></thead>
+                    <tbody>
+                      <% q.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
+                        <tr class="<%= opt.is_correct ? 'bg-emerald-50' : 'bg-white' %>">
+                          <td class="p-3 border border-slate-200 text-slate-700"><%- opt.option_text %></td>
+                          <td class="text-center p-3 border border-slate-200"><%= opt.is_correct ? '<span class="text-emerald-600 font-bold">v</span>' : '' %></td>
+                          <td class="text-center p-3 border border-slate-200"><%= !opt.is_correct ? '<span class="text-rose-500 font-bold">x</span>' : '' %></td>
+                        </tr>
+                      <% }) %>
+                    </tbody>
+                  </table>
+                <% } else if (q.question_type === 'TRUE_FALSE') { %>
+                  <!-- TRUE_FALSE: tampilkan Benar/Salah saja -->
+                  <% q.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
+                    <div class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 <%= opt.is_correct ? color.border + ' bg-white shadow-sm' : 'border-slate-200 bg-white/80' %>">
+                      <% if (opt.is_correct) { %><span class="text-emerald-600 font-bold text-sm">Kunci</span><% } %>
+                      <span class="font-semibold text-slate-700"><%- opt.option_text %></span>
+                    </div>
+                  <% }) %>
+                <% } else if (q.question_type === 'CHECKBOX' || q.question_type === 'COMPLEX') { %>
+                  <!-- CHECKBOX: tanpa label huruf -->
+                  <% q.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
+                    <div class="flex items-center gap-3 rounded-xl border-2 <%= opt.is_correct ? color.border + ' bg-white shadow-md' : 'border-slate-200 bg-white/80' %> px-4 py-3">
+                      <% if (opt.is_correct) { %><span class="text-emerald-500 font-bold text-sm flex-shrink-0">v</span><% } else { %><span class="w-4 flex-shrink-0"></span><% } %>
                       <div class="flex-1 text-slate-700 prose prose-sm max-w-none">
                         <%- opt.option_text %>
-                        <% if (opt.option_image) { %>
-                          <img src="<%= opt.option_image %>" alt="opsi <%= opt.option_label %>"
-                            class="mt-2 max-h-40 rounded-xl border border-slate-200 shadow-sm" loading="lazy" />
-                        <% } %>
+                        <% if (opt.option_image) { %><img src="<%= opt.option_image %>" class="mt-2 max-h-40 rounded-xl border border-slate-200" loading="lazy" /><% } %>
                       </div>
                     </div>
-                  </div>
-                <% }) %>
+                  <% }) %>
+                <% } else { %>
+                  <!-- MCQ: dengan label huruf -->
+                  <% q.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
+                    <div class="block rounded-xl border-2 <%= opt.is_correct ? color.border + ' bg-white shadow-md' : 'border-slate-200 bg-white/80' %> px-5 py-4">
+                      <div class="flex gap-4">
+                        <div class="flex-shrink-0">
+                          <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg <%= color.badge %> font-bold text-sm <%= opt.is_correct ? 'ring-2 ring-emerald-400' : '' %>">
+                            <%= opt.option_label %><%= opt.is_correct ? ' v' : '' %>
+                          </div>
+                        </div>
+                        <div class="flex-1 text-slate-700 prose prose-sm max-w-none">
+                          <%- opt.option_text %>
+                          <% if (opt.option_image) { %>
+                            <img src="<%= opt.option_image %>" alt="opsi <%= opt.option_label %>"
+                              class="mt-2 max-h-40 rounded-xl border border-slate-200 shadow-sm" loading="lazy" />
+                          <% } %>
+                        </div>
+                      </div>
+                    </div>
+                  <% }) %>
+                <% } %>
               <% } else { %>
                 <div class="text-center py-4 text-slate-500 text-sm">
                   Belum ada opsi jawaban
