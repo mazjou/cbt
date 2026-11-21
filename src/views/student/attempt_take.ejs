@@ -1009,7 +1009,7 @@ function jumpAndClose(no) {
       }
     });
   }
-  updateAnswered();
+  // updateAnswered() dipindah ke bawah restore loop MULTI_TF agar count akurat
 
   // ===== MULTI_TF: toggle Benar/Salah per statement =====
   function toggleMultiTf(btn) {
@@ -1082,6 +1082,10 @@ function jumpAndClose(no) {
     }
     // Statements NOT in ids remain neutral
   });
+
+  // updateAnswered() setelah restore loop agar MULTI_TF yang sudah dijawab ikut dihitung
+  updateAnswered();
+  syncDrawerButtons();
 
   // Autosave jawaban MCQ / TRUE_FALSE (radio biasa)
   document.querySelectorAll('input[type=radio]:not(.tf-radio)').forEach(r => {
@@ -1800,7 +1804,8 @@ function jumpAndClose(no) {
       var tfAnswered  = hasTF && hasTF.value;
       var hasComplex  = section.querySelector('input.complex-checkbox:checked');
       var hasCheckbox = section.querySelector('input.checkbox-answer:checked');
-      var done = !!(hasRadio || tfAnswered || hasComplex || hasCheckbox);
+      var hasMultiTf  = section.querySelector('.multitf-btn.multitf-active');
+      var done = !!(hasRadio || tfAnswered || hasComplex || hasCheckbox || hasMultiTf);
       var isActive = ONE_PER_PAGE && Number(no) === currentQ;
       btn.className = 'drawerBtn h-12 rounded-xl border-2 font-bold text-sm transition-all ' +
         (done
