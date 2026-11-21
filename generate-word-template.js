@@ -83,19 +83,21 @@ async function generate() {
         new Paragraph({ children: [new TextRun({ text: 'NILAI: 2', size: 22, color: '555555' })] }),
         new Paragraph({ children: [new TextRun('')] }),
 
-        // Soal 6 MULTI_TF (Multiple True-False)
+        // Soal 6 MULTI_TF (Multiple True-False) — 5 pernyataan
         new Paragraph({ children: [new TextRun({ text: '6. Perhatikan pernyataan-pernyataan berikut tentang fotosintesis!', bold: true, size: 22 })] }),
         new Paragraph({ children: [new TextRun({ text: 'A. Fotosintesis membutuhkan cahaya matahari', size: 22 })], indent: { left: 400 } }),
         new Paragraph({ children: [new TextRun({ text: 'B. CO2 dihasilkan sebagai produk fotosintesis', size: 22 })], indent: { left: 400 } }),
         new Paragraph({ children: [new TextRun({ text: 'C. Klorofil berperan sebagai pigmen penangkap cahaya', size: 22 })], indent: { left: 400 } }),
         new Paragraph({ children: [new TextRun({ text: 'D. O2 dilepaskan sebagai produk samping fotosintesis', size: 22 })], indent: { left: 400 } }),
+        new Paragraph({ children: [new TextRun({ text: 'E. Reaksi fotosintesis terjadi di dalam mitokondria', size: 22 })], indent: { left: 400 } }),
         new Paragraph({ children: [new TextRun({ text: 'KUNCI_A: B', bold: true, color: '007700', size: 22 })] }),
         new Paragraph({ children: [new TextRun({ text: 'KUNCI_B: S', bold: true, color: 'CC0000', size: 22 })] }),
         new Paragraph({ children: [new TextRun({ text: 'KUNCI_C: B', bold: true, color: '007700', size: 22 })] }),
         new Paragraph({ children: [new TextRun({ text: 'KUNCI_D: B', bold: true, color: '007700', size: 22 })] }),
+        new Paragraph({ children: [new TextRun({ text: 'KUNCI_E: S', bold: true, color: 'CC0000', size: 22 })] }),
         new Paragraph({ children: [new TextRun({ text: 'TIPE: MULTI_TF', bold: true, color: '0055AA', size: 22 })] }),
-        new Paragraph({ children: [new TextRun({ text: 'NILAI: 4', size: 22, color: '555555' })] }),
-        new Paragraph({ children: [new TextRun({ text: '(Keterangan: B = Benar, S = Salah. Poin proporsional: benar 3 dari 4 = 3 poin)', italics: true, color: '555555', size: 18 })] }),
+        new Paragraph({ children: [new TextRun({ text: 'NILAI: 5', size: 22, color: '555555' })] }),
+        new Paragraph({ children: [new TextRun({ text: '(B = Benar, S = Salah. Bisa 2-5 pernyataan. Poin proporsional: benar 4 dari 5 = 4 poin)', italics: true, color: '555555', size: 18 })] }),
         new Paragraph({ children: [new TextRun('')] }),
 
         new Paragraph({ children: [new TextRun({ text: '================================================================', color: '888888', size: 18 })] }),
