@@ -1,0 +1,22 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "id": "F1",
+      "file": "src/views/student/attempt_take.ejs",
+      "lines": "~1793-1811",
+      "summary": "syncDrawerButtons() omits MULTI_TF — drawer buttons never turn green after answering",
+      "consequence": "After a student answers a MULTI_TF question, the named syncDrawerButtons() function (called by updateAnswered() and showQuestion()) does not check for .multitf-btn.multitf-active, so the drawer navigation button never turns green. The toggleSoalDrawer() inline code at lines ~156-164 correctly includes hasMultiTf but only fires when the drawer is opened.",
+      "correction": "Add `var hasMultiTf = section.querySelector('.multitf-btn.multitf-active');` inside syncDrawerButtons() and include `|| hasMultiTf` in the `done` expression, matching the existing correct code in toggleSoalDrawer()."
+    },
+    {
+      "id": "F2",
+      "file": "src/views/student/attempt_take.ejs",
+      "lines": "1012 vs ~1063-1083",
+      "summary": "updateAnswered() runs before MULTI_TF state restore on page load — initial answered count too low and drawer buttons grey",
+      "consequence": "On page load for a resumed attempt with pre-existing MULTI_TF answers, updateAnswered() (line 1012) executes before the MULTI_TF restore loop adds multitf-active classes (~line 1063). The initial answered count excludes those questions and all MULTI_TF drawer buttons start grey.",
+      "correction": "Move the updateAnswered() call from line 1012 to after the MULTI_TF restore loop (after line ~1083), so multitf-active classes are set before the count and button state are computed."
+    }
+  ],
+  "reviewDoc": "d:\\WEBSITE\\cbt\\.agents\\tasks\\multi-tf-impl\\review.md"
+}

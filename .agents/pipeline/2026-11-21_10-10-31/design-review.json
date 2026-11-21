@@ -1,0 +1,75 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "id": 1,
+      "severity": "HIGH",
+      "title": "Outer `correctIds` variable not removed — shadows updated COMPLEX/CHECKBOX branch and risks MCQ/TRUE_FALSE regression",
+      "location": "Design section A — submission-utils.js",
+      "summary": "The design adds an inner `const correctIds` inside the COMPLEX/CHECKBOX if-block but never removes the outer `const correctIds = correctOptionsMap[aa.question_id] || []` line (line 111 in the actual file). The outer binding now holds objects ({option_id, is_correct}) instead of plain IDs, which the MCQ/TRUE_FALSE else-branch may access. The design must explicitly show the outer line removed and each branch working from `allOpts`."
+    },
+    {
+      "id": 2,
+      "severity": "HIGH",
+      "title": "`markedSalah` logic in attempt_take.ejs renders unanswered statements as Salah on resume",
+      "location": "Design section H1 — attempt_take.ejs",
+      "summary": "The formula `markedSalah = q.chosen_option_ids !== null && !markedBenar` marks every statement that was not in the Benar list as Salah, even if the student never touched that specific statement. For example, if a student only answered statement A as Benar, statements B–E will show Salah-highlighted on resume even though the student never chose Salah for them. The design must either store explicit per-statement answer state or document that Salah is only rendered client-side after interaction."
+    },
+    {
+      "id": 3,
+      "severity": "HIGH",
+      "title": "Word import first handler never shown adding `correctMap` to the session item object",
+      "location": "Design section D5 — teacher.js Word import",
+      "summary": "Section D5 says 'Include correctMap in the item object so the commit step uses it' but never shows the updated item assignment. The commit loop (D4) reads `r.correctMap` from the session item — if that field is absent because the item assignment was never updated, every MULTI_TF question from Word import stores all is_correct = false. The design must show the explicit item assignment including `correctMap: q.correctMap || null`."
+    },
+    {
+      "id": 4,
+      "severity": "MEDIUM",
+      "title": "question_bank.js PUT guard references `qtype` before it is derived from DB",
+      "location": "Design section C2 — question_bank.js PUT /:id",
+      "summary": "The existing validation guard fires before `qtype = question_type || existing.question_type || 'MCQ'` is set (since `existing` is fetched later). The design shows the new MULTI_TF guard using `qtype` but doesn't move `qtype` derivation ahead of the guard. The fix must derive `qtype` from `req.body.question_type` before the validation guard, with DB fallback applied only after the fetch."
+    },
+    {
+      "id": 5,
+      "severity": "MEDIUM",
+      "title": "question_bank.js import preview: existing `correctLabels` validation rejects `A:B,B:S` format before MULTI_TF block runs",
+      "location": "Design section C3 — question_bank.js import preview",
+      "summary": "In question_bank.js around line 523, the existing code rejects rows where `correctLabels` contains non-A/B/C/D/E characters. For MULTI_TF, `correctRaw = 'A:B,B:S'` produces `correctLabels = ['A:B','B:S']`, failing the filter, and the row is rejected with 'Kunci jawaban tidak valid' before the new MULTI_TF correctMap block runs. The design must guard this validation: `if (rawQtype !== 'MULTI_TF') { /* existing correctLabels check */ }`."
+    },
+    {
+      "id": 6,
+      "severity": "MEDIUM",
+      "title": "buildImportPreview in teacher.js has the same `correctLabels` rejection problem for MULTI_TF",
+      "location": "Design section D3 — teacher.js buildImportPreview",
+      "summary": "In buildImportPreview (line ~346), `if (correctLabels.length === 0) reasons.push(...)` runs for every type including MULTI_TF. For MULTI_TF, `correctRaw = 'A:B,B:S'` falls into the non-COMPLEX branch and produces `correctLabels = []`, immediately rejecting the row. The fix must guard: `if (validQtype !== 'MULTI_TF' && correctLabels.length === 0) { reasons.push(...) }`."
+    },
+    {
+      "id": 7,
+      "severity": "MEDIUM",
+      "title": "B2 null change impact on existing COMPLEX/CHECKBOX restore code in attempt_take.ejs not verified",
+      "location": "Design section B2 — student.js, with ripple into attempt_take.ejs",
+      "summary": "The design asserts no COMPLEX/CHECKBOX regression from changing chosen_option_ids to null for DB-NULL rows, citing EJS `&&` short-circuit. The actual attempt_take.ejs was not audited. If any existing code does `q.chosen_option_ids.forEach(...)` or similar without null guard, it throws on page load. The design must audit the existing EJS and show that all usages of chosen_option_ids are null-safe."
+    },
+    {
+      "id": 8,
+      "severity": "MEDIUM",
+      "title": "Admin attempt detail route confirmed missing question_type/selected_option_ids/partial_points — fix not shown",
+      "location": "Design section J and D7 note about admin — src/routes/admin.js line ~4222",
+      "summary": "The admin route GET /attempts/:id/detail runs a SELECT that is missing q.question_type, aa.selected_option_ids, aa.partial_points (verified in code). The design says 'verify and apply if the same pattern' — the pattern is confirmed identical. The design must show the exact admin.js query update rather than delegating discovery to the implementer. Without this fix, admin/attempt_detail.ejs cannot render MULTI_TF answers per FR-6.2."
+    },
+    {
+      "id": 9,
+      "severity": "NIT",
+      "title": "Dual initialisation of button state (EJS server-render + JS init block) is redundant",
+      "location": "Design sections H1 and H7 — attempt_take.ejs",
+      "summary": "EJS renders button classes from server state; H7 also adds a JS init block reading from a data attribute. Both set the same visual state. The design should explicitly state which is authoritative and whether the other should be removed to avoid maintenance confusion."
+    },
+    {
+      "id": 10,
+      "severity": "NIT",
+      "title": "Export correctStr filter does not exclude empty-text option rows for MULTI_TF",
+      "location": "Design section C6 — question_bank.js export",
+      "summary": "The design's `.filter(lbl => opts[lbl])` will include MULTI_TF option rows with empty text (if any were stored). The filter should be `.filter(lbl => opts[lbl] && opts[lbl].text)` to avoid emitting e.g. `E:S` for an unused fifth statement."
+    }
+  ]
+}

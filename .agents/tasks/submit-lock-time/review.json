@@ -1,0 +1,21 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": "F1",
+      "severity": "bug",
+      "summary": "Elapsed salah saat exam_end_at lebih kecil dari durasi — di tick(), elapsed = durationMinutes * 60 * 1000 - remain, tapi remain dihitung dari endAt yang bisa berupa exam_end_at. Perbaiki: const elapsed = now - startedAt;"
+    },
+    {
+      "id": "F2",
+      "severity": "minor",
+      "summary": "Double query elapsed di POST submit — query EXTRACT(EPOCH FROM (NOW() - a.started_at)) dijalankan dua kali terpisah dalam blok validasi yang sama. Gunakan nilai timeCheck.elapsed_minutes untuk lock check juga."
+    },
+    {
+      "id": "F3",
+      "severity": "ux",
+      "summary": "Countdown granularity hanya menit — Math.ceil(msLeft / 60000) menampilkan '1 menit lagi' bahkan saat 1 detik sebelum unlock. Pertimbangkan mm:ss di bawah 60 detik."
+    }
+  ],
+  "reviewDoc": "d:\\WEBSITE\\cbt\\.agents\\tasks\\submit-lock-time\\review.md"
+}
