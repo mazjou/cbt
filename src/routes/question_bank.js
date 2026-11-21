@@ -1046,4 +1046,261 @@ router.post('/api/add-to-exam/:examId', async (req, res) => {
   }
 });
 
+// ===== TEMPLATE WORD BANK SOAL =====
+router.get('/import/template-word', (req, res) => {
+  const staticFile = path.join(__dirname, '../public/templates/import_template_word.docx');
+  if (fs.existsSync(staticFile)) {
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', 'attachment; filename="template_import_soal_bank.docx"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    return res.sendFile(staticFile);
+  }
+  res.download(path.join(__dirname, '../public/templates/import_template_word.txt'), 'template_import_soal_bank.txt');
+});
+
+// ===== IMPORT WORD BANK SOAL =====
+router.post('/import/preview-word', uploadImport.single('file'), async (req, res) => {
+  const user = req.session.user;
+  const file = req.file;
+  if (!file) {
+    req.flash('error', 'File Word (.docx) belum dipilih.');
+    return res.redirect('/teacher/question-bank/import');
+  }
+
+  try {
+    const mammoth = require('mammoth');
+    const cheerio = require('cheerio');
+
+    const imageMap = {};
+    let imgCounter = 0;
+
+    const result = await mammoth.convertToHtml(
+      { path: file.path },
+      {
+        convertImage: mammoth.images.imgElement(async (image) => {
+          try {
+            const ct = String(image.contentType || 'image/png');
+            const ext = (ct.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '').toLowerCase() || 'png';
+            const fname = `${Date.now()}_${nanoid(10)}.${ext}`;
+            const buf = await image.read('base64').then(b64 => Buffer.from(b64, 'base64'));
+            fs.writeFileSync(path.join(uploadDir, fname), buf);
+            const src = `/public/uploads/questions/${fname}`;
+            imageMap[imgCounter++] = src;
+            return { src, 'data-img-idx': String(imgCounter - 1) };
+          } catch(imgErr) {
+            return { src: '' };
+          }
+        })
+      }
+    );
+
+    const html = result.value || '';
+    const $ = cheerio.load(html);
+    const blocks = [];
+    $('body').children().each((_, el) => {
+      const $el = $(el);
+      const text = $el.text().replace(/\u00a0/g, ' ').trim();
+      const imgs = [];
+      $el.find('img').each((__, img) => { const src = $(img).attr('src'); if (src) imgs.push(src); });
+      if ($el.is('img')) { const src = $el.attr('src'); if (src) imgs.push(src); }
+      if (text || imgs.length) blocks.push({ text, imgs });
+    });
+
+    // Parser sama seperti teacher.js import Word
+    const parsed = [];
+    let cur = null;
+    let lastLabel = null;
+
+    const startNew = (qText, imgs = []) => {
+      if (cur) parsed.push(cur);
+      cur = {
+        question_text: qText.trim(),
+        question_image: imgs[0] || null,
+        points: 1, correct: null, correctLabels: [], correctMap: null,
+        question_type: 'MCQ',
+        options: { A: '', B: '', C: '', D: '', E: '' },
+        option_images: { A: null, B: null, C: null, D: null, E: null }
+      };
+      lastLabel = null;
+    };
+
+    for (const b of blocks) {
+      const t = String(b.text || '').trim();
+      const imgs = b.imgs || [];
+      if (!t && imgs.length) {
+        if (cur) {
+          if (lastLabel && !cur.option_images[lastLabel]) cur.option_images[lastLabel] = imgs[0];
+          else if (!cur.question_image) cur.question_image = imgs[0];
+        }
+        continue;
+      }
+      if (!t) continue;
+      const mQ = t.match(/^\s*(\d+)\s*[.)]\s*(.*)$/);
+      if (mQ) { startNew(mQ[2], imgs); continue; }
+      if (!cur) continue;
+      const mOpt = t.match(/^\s*([A-E])\s*[.)]\s*(.*)$/i);
+      if (mOpt) {
+        const lbl = mOpt[1].toUpperCase();
+        cur.options[lbl] = mOpt[2].trim();
+        lastLabel = lbl;
+        if (imgs.length && !cur.option_images[lbl]) cur.option_images[lbl] = imgs[0];
+        continue;
+      }
+      const mStmtKey = t.match(/^\s*KUNCI_([A-E])\s*[:=]\s*([BS])\s*$/i);
+      if (mStmtKey) {
+        if (!cur.correctMap) cur.correctMap = {};
+        cur.correctMap[mStmtKey[1].toUpperCase()] = mStmtKey[2].toUpperCase() === 'B';
+        lastLabel = null; continue;
+      }
+      const mKey = t.match(/^\s*KUNCI\s*[:=]\s*([A-E,\s]+)\s*$/i);
+      if (mKey) {
+        const correctStr = mKey[1].replace(/\s/g, '').toUpperCase();
+        cur.correct = correctStr;
+        cur.correctLabels = correctStr.split(',').filter(Boolean);
+        lastLabel = null; continue;
+      }
+      const mType = t.match(/^\s*TIPE\s*[:=]\s*(MCQ|COMPLEX|TRUE_FALSE|CHECKBOX|MULTI_TF)\s*$/i);
+      if (mType) { cur.question_type = mType[1].toUpperCase(); lastLabel = null; continue; }
+      const mPts = t.match(/^\s*(NILAI|POIN)\s*[:=]\s*(\d+(?:\.\d+)?)\s*$/i);
+      if (mPts) { cur.points = Number(mPts[2]) || 1; lastLabel = null; continue; }
+      if (imgs.length && !cur.question_image) cur.question_image = imgs[0];
+      if (!lastLabel) cur.question_text = (cur.question_text ? cur.question_text + '\n' : '') + t;
+      else cur.options[lastLabel] = (cur.options[lastLabel] ? cur.options[lastLabel] + ' ' : '') + t;
+    }
+    if (cur) parsed.push(cur);
+
+    const preview = [], errors = [];
+    parsed.forEach((q, idx) => {
+      const reasons = [];
+      const qt = String(q.question_text || '').trim();
+      const qtype = String(q.question_type || 'MCQ').toUpperCase();
+      const A = String(q.options.A || '').trim();
+      const B = String(q.options.B || '').trim();
+      const imgO = q.option_images || {};
+      if (!qt && !q.question_image) reasons.push('Teks soal kosong');
+      if (qtype === 'MULTI_TF') {
+        const cm = q.correctMap || {};
+        const hasA = A || imgO.A; const hasB = B || imgO.B;
+        if (!hasA || !hasB) reasons.push('MULTI_TF: minimal pernyataan A dan B wajib');
+        if (Object.keys(cm).length < 2) reasons.push('MULTI_TF: minimal 2 kunci (KUNCI_A: B, KUNCI_B: S, ...)');
+      } else if (qtype === 'TRUE_FALSE') {
+        if (!A || !B) reasons.push('Opsi A dan B wajib untuk TRUE_FALSE');
+        const cl = q.correctLabels || [];
+        if (!cl.length || !['A','B'].includes(cl[0])) reasons.push('KUNCI harus A atau B untuk TRUE_FALSE');
+      } else {
+        const hasA = A || imgO.A; const hasB = B || imgO.B;
+        const hasC = String(q.options.C||'').trim() || imgO.C;
+        const hasD = String(q.options.D||'').trim() || imgO.D;
+        const hasE = String(q.options.E||'').trim() || imgO.E;
+        if (!hasA || !hasB || !hasC || !hasD || !hasE) reasons.push('Opsi A-E wajib terisi untuk MCQ/CHECKBOX');
+        const cl = q.correctLabels || [];
+        if (!cl.length) reasons.push('KUNCI harus diisi');
+      }
+      const item = {
+        rowNo: idx + 1, question_text: qt || '(gambar)',
+        question_image: q.question_image, points: q.points,
+        correct: q.correctMap
+          ? Object.entries(q.correctMap).map(([l,v]) => l+':'+(v?'B':'S')).join(',')
+          : (q.correctLabels||[]).join(',') || q.correct || '',
+        correctLabels: q.correctLabels || [],
+        correctMap: q.correctMap || null,
+        question_type: qtype,
+        options: { A: String(q.options.A||''), B: String(q.options.B||''), C: String(q.options.C||''), D: String(q.options.D||''), E: String(q.options.E||'') },
+        option_images: q.option_images
+      };
+      if (reasons.length) errors.push({ rowNo: idx + 1, reasons, snapshot: item });
+      else preview.push(item);
+    });
+
+    const importId = nanoid(12);
+    req.session.bankWordImportPreview = { importId, preview, errors, createdAt: Date.now() };
+    try { fs.unlinkSync(file.path); } catch(_) {}
+
+    const [subjects] = await pool.query('SELECT id, code, name FROM subjects ORDER BY name ASC');
+    return res.render('teacher/question_bank_import_preview', {
+      title: 'Preview Import Word - Bank Soal',
+      importId, preview, errors,
+      subjects, source: 'word',
+      commitUrl: '/teacher/question-bank/import/commit-word'
+    });
+  } catch(e) {
+    console.error(e);
+    try { fs.unlinkSync(file.path); } catch(_) {}
+    req.flash('error', 'Gagal import Word: ' + e.message);
+    return res.redirect('/teacher/question-bank/import');
+  }
+});
+
+// ===== COMMIT IMPORT WORD BANK SOAL =====
+router.post('/import/commit-word', async (req, res) => {
+  const user = req.session.user;
+  const { importId, default_subject_id } = req.body;
+  const sess = req.session.bankWordImportPreview;
+  if (!sess || sess.importId !== importId) {
+    req.flash('error', 'Sesi preview tidak valid. Upload ulang.');
+    return res.redirect('/teacher/question-bank/import');
+  }
+  const items = sess.preview || [];
+  if (!items.length) {
+    req.flash('error', 'Tidak ada soal valid untuk disimpan.');
+    return res.redirect('/teacher/question-bank/import');
+  }
+
+  const conn = await pool.getConnection();
+  let inserted = 0;
+  try {
+    await conn.beginTransaction();
+    for (const r of items) {
+      const qtype = r.question_type || 'MCQ';
+      const subjectId = default_subject_id ? parseInt(default_subject_id) : null;
+      const [qRes] = await conn.query(
+        `INSERT INTO question_bank (teacher_id, subject_id, question_text, question_image, points, difficulty, question_type)
+         VALUES ($1,$2,$3,$4,$5,'MEDIUM',$6) RETURNING id`,
+        [user.id, subjectId, r.question_text, r.question_image || null, r.points || 1, qtype]
+      );
+      const qid = qRes[0]?.id;
+      if (!qid) continue;
+
+      if (qtype === 'MULTI_TF') {
+        const cm = r.correctMap || {};
+        const labels = ['A','B','C','D','E'].filter(l => r.options[l] || (r.option_images && r.option_images[l]));
+        for (let i = 0; i < labels.length; i++) {
+          const lbl = labels[i];
+          const isCorrect = cm[lbl] === true;
+          await conn.query(
+            `INSERT INTO question_bank_options (question_bank_id, option_label, option_text, option_image, is_correct)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [qid, lbl, r.options[lbl] || '', r.option_images?.[lbl] || null, isCorrect]
+          );
+        }
+      } else {
+        const labelsToInsert = qtype === 'TRUE_FALSE' ? ['A','B'] : ['A','B','C','D','E'];
+        for (const lbl of labelsToInsert) {
+          const txt = r.options[lbl] || '';
+          const img = r.option_images?.[lbl] || null;
+          if (!txt && !img) continue;
+          const isCorrect = (r.correctLabels || []).includes(lbl);
+          await conn.query(
+            `INSERT INTO question_bank_options (question_bank_id, option_label, option_text, option_image, is_correct)
+             VALUES ($1,$2,$3,$4,$5)`,
+            [qid, lbl, txt, img, isCorrect]
+          );
+        }
+      }
+      inserted++;
+    }
+    await conn.commit();
+    req.session.bankWordImportPreview = null;
+    req.flash('success', `${inserted} soal berhasil diimport dari Word ke bank soal.`);
+    res.redirect('/teacher/question-bank');
+  } catch(e) {
+    await conn.rollback();
+    console.error(e);
+    req.flash('error', 'Gagal simpan: ' + e.message);
+    res.redirect('/teacher/question-bank/import');
+  } finally {
+    conn.release();
+  }
+});
+
 module.exports = router;
