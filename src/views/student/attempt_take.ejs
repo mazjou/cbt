@@ -1923,7 +1923,7 @@ function jumpAndClose(no) {
 <script>
 // Fungsi buka modal konfirmasi submit
 function showSubmitConfirmModal(onConfirm) {
-  // Hitung jumlah terjawab & belum
+  // Hitung jumlah terjawab & belum — sama persis dengan updateAnswered()
   let answered = 0;
   document.querySelectorAll('input[type=radio]:not(.tf-radio):checked').forEach(() => answered++);
   document.querySelectorAll('select.tf-select').forEach(sel => { if (sel.value) answered++; });
@@ -1931,6 +1931,9 @@ function showSubmitConfirmModal(onConfirm) {
   complexQids.forEach(qid => { if (document.querySelector(`input.complex-checkbox[data-question="${qid}"]:checked`)) answered++; });
   const checkboxQids = new Set(Array.from(document.querySelectorAll('input.checkbox-answer')).map(cb => cb.getAttribute('data-question')));
   checkboxQids.forEach(qid => { if (document.querySelector(`input.checkbox-answer[data-question="${qid}"]:checked`)) answered++; });
+  // MULTI_TF: soal dianggap dijawab jika minimal 1 pernyataan sudah dipilih
+  const multiTfQids = new Set(Array.from(document.querySelectorAll('.multitf-btn.multitf-active')).map(btn => btn.getAttribute('data-multitf-qid')));
+  multiTfQids.forEach(() => answered++);
 
   const total = <%= totalQ %>;
   const unanswered = total - answered;
