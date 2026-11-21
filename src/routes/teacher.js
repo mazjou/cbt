@@ -1191,7 +1191,7 @@ router.get('/exams/:id', async (req, res) => {
   if (!exam) return res.status(404).render('error', { title: 'Tidak ditemukan', message: 'Ujian tidak ditemukan.', user });
 
   const [questions] = await pool.query(
-    `SELECT q.id, q.question_text, q.question_image, q.question_pdf, q.points,
+    `SELECT q.id, q.question_text, q.question_image, q.question_pdf, q.points, q.question_type,
             (SELECT COUNT(*) FROM options o WHERE o.question_id=q.id) AS option_count
      FROM questions q WHERE q.exam_id=:id ORDER BY q.id ASC;`,
     { id: exam.id }
