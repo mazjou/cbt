@@ -477,36 +477,36 @@ function jumpAndClose(no) {
             <span id="multitf_data_<%= q.id %>"
               data-ids="<%= q.chosen_option_ids !== null ? JSON.stringify(q.chosen_option_ids) : 'null' %>"
               class="hidden"></span>
-            <div class="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+            <div class="overflow-hidden rounded-xl border-2 border-slate-300 shadow-sm">
               <table class="w-full border-collapse text-sm">
                 <thead>
-                  <tr class="bg-slate-50 border-b border-slate-200">
-                    <th class="text-left px-4 py-2.5 text-slate-600 font-semibold w-full">Pernyataan</th>
-                    <th class="px-4 py-2.5 text-teal-600 font-semibold text-center whitespace-nowrap w-24">Benar</th>
-                    <th class="px-4 py-2.5 text-rose-500 font-semibold text-center whitespace-nowrap w-24">Salah</th>
+                  <tr class="bg-slate-100 border-b-2 border-slate-300">
+                    <th class="text-left px-4 py-2.5 text-slate-600 font-semibold">Pernyataan</th>
+                    <th class="px-4 py-2.5 text-teal-600 font-semibold text-center whitespace-nowrap w-24 border-l-2 border-slate-300">Benar</th>
+                    <th class="px-4 py-2.5 text-rose-500 font-semibold text-center whitespace-nowrap w-24 border-l-2 border-slate-300">Salah</th>
                   </tr>
                 </thead>
                 <tbody>
                   <% q.options.forEach((o, oIdx) => { %>
                   <% if (!o.option_text && !o.option_image) return; %>
-                  <tr class="border-b border-slate-100 last:border-0 <%= oIdx % 2 === 1 ? 'bg-slate-50/50' : 'bg-white' %>" id="multitf_row_<%= q.id %>_<%= o.id %>">
+                  <tr class="border-t-2 border-slate-200 <%= oIdx % 2 === 1 ? 'bg-slate-50' : 'bg-white' %>" id="multitf_row_<%= q.id %>_<%= o.id %>">
                     <td class="px-4 py-3 text-slate-700 prose prose-sm max-w-none"><%- o.option_text %></td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-4 py-3 text-center border-l-2 border-slate-200">
                       <button type="button"
                         data-multitf-qid="<%= q.id %>"
                         data-multitf-oid="<%= o.id %>"
                         data-multitf-val="benar"
-                        class="multitf-btn w-8 h-8 rounded-full border-2 border-slate-200 bg-white text-slate-300 flex items-center justify-center mx-auto transition-all hover:border-teal-400"
+                        class="multitf-btn w-9 h-9 rounded-full border-2 border-slate-300 bg-slate-100 text-slate-400 flex items-center justify-center mx-auto transition-all hover:border-teal-400 hover:bg-teal-50"
                         onclick="toggleMultiTf(this)">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                       </button>
                     </td>
-                    <td class="px-4 py-3 text-center">
+                    <td class="px-4 py-3 text-center border-l-2 border-slate-200">
                       <button type="button"
                         data-multitf-qid="<%= q.id %>"
                         data-multitf-oid="<%= o.id %>"
                         data-multitf-val="salah"
-                        class="multitf-btn w-8 h-8 rounded-full border-2 border-slate-200 bg-white text-slate-300 flex items-center justify-center mx-auto transition-all hover:border-rose-400"
+                        class="multitf-btn w-9 h-9 rounded-full border-2 border-slate-300 bg-slate-100 text-slate-400 flex items-center justify-center mx-auto transition-all hover:border-rose-400 hover:bg-rose-50"
                         onclick="toggleMultiTf(this)">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
                       </button>
@@ -1040,13 +1040,15 @@ function jumpAndClose(no) {
     [benarBtn, salahBtn].forEach(function(b) {
       b.classList.remove('multitf-active',
         'border-teal-500','bg-teal-500','text-white','shadow-md',
-        'border-rose-500','bg-rose-500');
-      b.classList.add('border-slate-200','bg-white','text-slate-300');
+        'border-rose-500','bg-rose-500',
+        'hover:border-teal-400','hover:bg-teal-50',
+        'hover:border-rose-400','hover:bg-rose-50');
+      b.classList.add('border-slate-300','bg-slate-100','text-slate-400');
     });
 
     if (!isAlreadyActive) {
       btn.classList.add('multitf-active');
-      btn.classList.remove('border-slate-200','bg-white','text-slate-300');
+      btn.classList.remove('border-slate-300','bg-slate-100','text-slate-400');
       if (val === 'benar') {
         btn.classList.add('border-teal-500','bg-teal-500','text-white','shadow-md');
       } else {
@@ -1090,7 +1092,7 @@ function jumpAndClose(no) {
     if (ids.includes(oid)) {
       // Student marked this statement Benar
       benarBtn.classList.add('multitf-active','border-teal-500','bg-teal-500','text-white','shadow-md');
-      benarBtn.classList.remove('border-slate-200','bg-white','text-slate-300');
+      benarBtn.classList.remove('border-slate-300','bg-slate-100','text-slate-400');
     }
     // Statements NOT in ids remain neutral
   });
