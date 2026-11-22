@@ -337,39 +337,39 @@
               %>
               <% if (q.options && q.options.length > 0) { %>
                 <% if (q.question_type === 'MULTI_TF') { %>
-                  <div class="overflow-hidden rounded-xl border-2 border-slate-300 shadow-sm">
-                    <table class="w-full border-collapse text-sm">
+                  <div class="overflow-hidden rounded-xl shadow-sm" style="border:2px solid #cbd5e1;">
+                    <table class="w-full text-sm" style="border-collapse:collapse;">
                       <thead>
-                        <tr class="bg-slate-100 border-b-2 border-slate-300">
+                        <tr style="background:#f1f5f9; border-bottom:2px solid #cbd5e1;">
                           <th class="text-left px-4 py-2.5 text-slate-600 font-semibold">Pernyataan</th>
-                          <th class="px-4 py-2.5 text-teal-600 font-semibold text-center w-20 border-l-2 border-slate-300">Benar</th>
-                          <th class="px-4 py-2.5 text-rose-500 font-semibold text-center w-20 border-l-2 border-slate-300">Salah</th>
+                          <th class="px-4 py-2.5 font-semibold text-center w-20" style="color:#0d9488; border-left:2px solid #cbd5e1;">Benar</th>
+                          <th class="px-4 py-2.5 font-semibold text-center w-20" style="color:#f43f5e; border-left:2px solid #cbd5e1;">Salah</th>
                         </tr>
                       </thead>
                       <tbody>
                         <% q.options.forEach((opt, oIdx) => { if (!opt.option_text && !opt.option_image) return;
                            const isCorrect = opt.is_correct === true || opt.is_correct === 1 || opt.is_correct === 't' || opt.is_correct === 'true'; %>
-                          <tr class="border-t-2 border-slate-200 <%= oIdx % 2 === 1 ? 'bg-slate-50' : 'bg-white' %>">
+                          <tr style="border-top:2px solid #e2e8f0; background:<%= oIdx % 2 === 1 ? '#f8fafc' : '#ffffff' %>;">
                             <td class="px-4 py-3 text-slate-700 prose prose-sm max-w-none"><%- opt.option_text %></td>
-                            <td class="px-4 py-3 text-center border-l-2 border-slate-200">
+                            <td class="px-4 py-3 text-center" style="border-left:2px solid #e2e8f0;">
                               <% if (isCorrect) { %>
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-teal-500 shadow-sm">
-                                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full" style="background:#10b981; box-shadow:0 1px 3px rgba(0,0,0,0.2);">
+                                  <svg class="w-4 h-4" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                                 </span>
                               <% } else { %>
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full border-2 border-slate-300 bg-slate-50">
-                                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full" style="border:2px solid #cbd5e1; background:#f8fafc;">
+                                  <svg class="w-4 h-4" fill="none" stroke="#cbd5e1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                                 </span>
                               <% } %>
                             </td>
-                            <td class="px-4 py-3 text-center border-l-2 border-slate-200">
+                            <td class="px-4 py-3 text-center" style="border-left:2px solid #e2e8f0;">
                               <% if (!isCorrect) { %>
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-rose-500 shadow-sm">
-                                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full" style="background:#f43f5e; box-shadow:0 1px 3px rgba(0,0,0,0.2);">
+                                  <svg class="w-4 h-4" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </span>
                               <% } else { %>
-                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full border-2 border-slate-300 bg-slate-50">
-                                  <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full" style="border:2px solid #cbd5e1; background:#f8fafc;">
+                                  <svg class="w-4 h-4" fill="none" stroke="#cbd5e1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </span>
                               <% } %>
                             </td>
