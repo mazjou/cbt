@@ -4831,13 +4831,16 @@ router.get('/question-bank/:id/edit', async (req, res) => {
     const byLabel = {};
     let correct_label = 'A';
     const correct_labels = [];
+    const correct_map = {};
     for (const o of options) {
       byLabel[o.option_label] = o.option_text;
+      byLabel[o.option_label + '_image'] = o.option_image || null;
+      correct_map[o.option_label] = !!o.is_correct;
       if (o.is_correct) { correct_label = o.option_label; correct_labels.push(o.option_label); }
     }
     res.render('teacher/question_bank_edit', {
       title: 'Edit Bank Soal',
-      question, options: byLabel, correct_label, correct_labels, subjects,
+      question, options: byLabel, correct_label, correct_labels, correct_map, subjects,
       backUrl: '/admin/question-bank'
     });
   } catch (e) {
@@ -4848,7 +4851,16 @@ router.get('/question-bank/:id/edit', async (req, res) => {
 });
 
 // PUT Admin Update Bank Soal
-router.post('/question-bank/:id/update', async (req, res) => {
+const uploadBankAdmin = require('multer')({ storage: require('multer').diskStorage({
+  destination: (req, file, cb) => { const p = require('path').join(__dirname, '../public/uploads/questions'); require('fs').mkdirSync(p, { recursive: true }); cb(null, p); },
+  filename: (req, file, cb) => { cb(null, Date.now() + '_' + file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')); }
+}), limits: { fileSize: 10 * 1024 * 1024 } });
+router.post('/question-bank/:id/update', uploadBankAdmin.fields([
+  { name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 },
+  { name: 'option_image_a', maxCount: 1 }, { name: 'option_image_b', maxCount: 1 },
+  { name: 'option_image_c', maxCount: 1 }, { name: 'option_image_d', maxCount: 1 },
+  { name: 'option_image_e', maxCount: 1 }
+]), async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/admin/question-bank');
   const id = req.params.id;
   const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, question_type } = req.body;
@@ -4884,13 +4896,26 @@ router.post('/question-bank/:id/update', async (req, res) => {
     const optsToUpsert = qtype === 'TRUE_FALSE'
       ? [['A', a || 'Benar'], ['B', b || 'Salah']]
       : [['A',a],['B',b],['C',c],['D',d],['E',e||'']];
+
+    // Ambil gambar opsi yang sudah ada
+    const [existingAdminOpts] = await conn.query(
+      'SELECT option_label, option_image FROM question_bank_options WHERE question_bank_id = $1', [id]
+    );
+    const existingAdminOptImages = {};
+    for (const o of existingAdminOpts) existingAdminOptImages[o.option_label] = o.option_image || null;
+
     for (const [lbl, txt] of optsToUpsert) {
       if (!txt) continue;
+      const removeOptImg = req.body['remove_option_image_' + lbl.toLowerCase()];
+      const optImgFile   = req.files?.['option_image_' + lbl.toLowerCase()]?.[0];
+      let optImgPath = existingAdminOptImages[lbl] || null;
+      if (removeOptImg) optImgPath = null;
+      if (optImgFile)   optImgPath = '/public/uploads/questions/' + require('path').basename(optImgFile.filename);
       await conn.query(
-        `INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct)
-         VALUES ($1,$2,$3,$4)
-         ON CONFLICT (question_bank_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, is_correct=EXCLUDED.is_correct`,
-        [id, lbl, txt, correctLabels.includes(lbl)]
+        `INSERT INTO question_bank_options (question_bank_id, option_label, option_text, option_image, is_correct)
+         VALUES ($1,$2,$3,$4,$5)
+         ON CONFLICT (question_bank_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, option_image=EXCLUDED.option_image, is_correct=EXCLUDED.is_correct`,
+        [id, lbl, txt, optImgPath, correctLabels.includes(lbl)]
       );
     }
     await conn.commit();

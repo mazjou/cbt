@@ -666,7 +666,12 @@ router.post('/import/commit', async (req, res) => {
 });
 
 // ===== SAVE NEW =====
-router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
+router.post('/', upload.fields([
+  { name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 },
+  { name: 'option_image_a', maxCount: 1 }, { name: 'option_image_b', maxCount: 1 },
+  { name: 'option_image_c', maxCount: 1 }, { name: 'option_image_d', maxCount: 1 },
+  { name: 'option_image_e', maxCount: 1 }
+]), async (req, res) => {
   const user = req.session.user;
   const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, question_type, class_level } = req.body;
   const qtype = question_type || 'MCQ';
@@ -741,9 +746,11 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', m
       } else {
         isc = correctLabels.includes(lbl);
       }
+      const optImgFile = req.files?.['option_image_' + lbl.toLowerCase()]?.[0];
+      const optImgPath = optImgFile ? '/public/uploads/questions/' + path.basename(optImgFile.filename) : null;
       await conn.query(
-        'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4)',
-        [bankId, lbl, txt, isc]
+        'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, option_image, is_correct) VALUES ($1,$2,$3,$4,$5)',
+        [bankId, lbl, txt, optImgPath, isc]
       );
     }
     await conn.commit();
@@ -802,6 +809,7 @@ router.get('/:id/edit', async (req, res) => {
     const correctMap = {};
     for (const o of options) {
       byLabel[o.option_label] = o.option_text;
+      byLabel[o.option_label + '_image'] = o.option_image || null;
       correctMap[o.option_label] = !!o.is_correct;
       if (o.is_correct) { correct = o.option_label; correctLabels.push(o.option_label); }
     }
@@ -815,7 +823,12 @@ router.get('/:id/edit', async (req, res) => {
 });
 
 // ===== UPDATE =====
-router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 }]), async (req, res) => {
+router.put('/:id', upload.fields([
+  { name: 'image', maxCount: 1 }, { name: 'pdf', maxCount: 1 },
+  { name: 'option_image_a', maxCount: 1 }, { name: 'option_image_b', maxCount: 1 },
+  { name: 'option_image_c', maxCount: 1 }, { name: 'option_image_d', maxCount: 1 },
+  { name: 'option_image_e', maxCount: 1 }
+]), async (req, res) => {
   if (!/^\d+$/.test(req.params.id)) return res.redirect('/teacher/question-bank');
   const user = req.session.user;
   const { subject_id, chapter, question_text, points, difficulty, tags, a, b, c, d, e, correct, remove_image, remove_pdf, question_type, class_level } = req.body;
@@ -886,6 +899,14 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
       ? [['A', a || 'Benar'], ['B', b || 'Salah']]
       : [['A',a],['B',b],['C',c||''],['D',d||''],['E',e||'']];
 
+    // Ambil gambar opsi yang sudah ada
+    const [existingOpts] = await conn.query(
+      'SELECT option_label, option_image FROM question_bank_options WHERE question_bank_id = $1',
+      [req.params.id]
+    );
+    const existingOptImages = {};
+    for (const o of existingOpts) existingOptImages[o.option_label] = o.option_image || null;
+
     for (const [lbl, txt] of optsToUpsert) {
       if (!txt) continue;
       let isc;
@@ -894,9 +915,15 @@ router.put('/:id', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'pdf',
       } else {
         isc = corrLabels.includes(lbl);
       }
+      // Tentukan gambar opsi: hapus jika checkbox remove dicentang, ganti jika ada file baru
+      const removeOptImg = req.body['remove_option_image_' + lbl.toLowerCase()];
+      const optImgFile   = req.files?.['option_image_' + lbl.toLowerCase()]?.[0];
+      let optImgPath = existingOptImages[lbl] || null;
+      if (removeOptImg) optImgPath = null;
+      if (optImgFile)   optImgPath = '/public/uploads/questions/' + path.basename(optImgFile.filename);
       await conn.query(
-        'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, is_correct) VALUES ($1,$2,$3,$4) ON CONFLICT (question_bank_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, is_correct=EXCLUDED.is_correct',
-        [req.params.id, lbl, txt, isc]
+        'INSERT INTO question_bank_options (question_bank_id, option_label, option_text, option_image, is_correct) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (question_bank_id, option_label) DO UPDATE SET option_text=EXCLUDED.option_text, option_image=EXCLUDED.option_image, is_correct=EXCLUDED.is_correct',
+        [req.params.id, lbl, txt, optImgPath, isc]
       );
     }
     await conn.commit();

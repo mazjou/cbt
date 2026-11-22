@@ -223,22 +223,87 @@
     <div>
       <label class="text-sm text-indigo-700 font-medium">Opsi A *</label>
       <textarea id="editor_option_a" name="a" class="summernote-option"><%- options.A || '' %></textarea>
+      <div class="mt-2">
+        <% if (options.A_image) { %>
+          <div class="mb-1 flex items-center gap-2">
+            <img src="<%= options.A_image %>" class="h-10 rounded-lg border border-slate-200" />
+            <label class="flex items-center gap-1 text-xs text-rose-600 cursor-pointer">
+              <input type="checkbox" name="remove_option_image_a" value="1" class="rounded" /> Hapus gambar
+            </label>
+          </div>
+        <% } %>
+        <input type="file" name="option_image_a" accept="image/*"
+          class="w-full rounded-lg bg-white border border-indigo-200 px-3 py-1.5 text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 transition-all" />
+        <div class="text-xs text-slate-400 mt-0.5">Gambar opsi (opsional) · Max 5MB</div>
+      </div>
     </div>
     <div>
       <label class="text-sm text-indigo-700 font-medium">Opsi B *</label>
       <textarea id="editor_option_b" name="b" class="summernote-option"><%- options.B || '' %></textarea>
+      <div class="mt-2">
+        <% if (options.B_image) { %>
+          <div class="mb-1 flex items-center gap-2">
+            <img src="<%= options.B_image %>" class="h-10 rounded-lg border border-slate-200" />
+            <label class="flex items-center gap-1 text-xs text-rose-600 cursor-pointer">
+              <input type="checkbox" name="remove_option_image_b" value="1" class="rounded" /> Hapus gambar
+            </label>
+          </div>
+        <% } %>
+        <input type="file" name="option_image_b" accept="image/*"
+          class="w-full rounded-lg bg-white border border-indigo-200 px-3 py-1.5 text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 transition-all" />
+        <div class="text-xs text-slate-400 mt-0.5">Gambar opsi (opsional) · Max 5MB</div>
+      </div>
     </div>
     <div id="bank_edit_opt_c">
       <label class="text-sm text-indigo-700 font-medium">Opsi C *</label>
       <textarea id="editor_option_c" name="c" class="summernote-option"><%- options.C || '' %></textarea>
+      <div class="mt-2">
+        <% if (options.C_image) { %>
+          <div class="mb-1 flex items-center gap-2">
+            <img src="<%= options.C_image %>" class="h-10 rounded-lg border border-slate-200" />
+            <label class="flex items-center gap-1 text-xs text-rose-600 cursor-pointer">
+              <input type="checkbox" name="remove_option_image_c" value="1" class="rounded" /> Hapus gambar
+            </label>
+          </div>
+        <% } %>
+        <input type="file" name="option_image_c" accept="image/*"
+          class="w-full rounded-lg bg-white border border-indigo-200 px-3 py-1.5 text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 transition-all" />
+        <div class="text-xs text-slate-400 mt-0.5">Gambar opsi (opsional) · Max 5MB</div>
+      </div>
     </div>
     <div id="bank_edit_opt_d">
       <label class="text-sm text-indigo-700 font-medium">Opsi D *</label>
       <textarea id="editor_option_d" name="d" class="summernote-option"><%- options.D || '' %></textarea>
+      <div class="mt-2">
+        <% if (options.D_image) { %>
+          <div class="mb-1 flex items-center gap-2">
+            <img src="<%= options.D_image %>" class="h-10 rounded-lg border border-slate-200" />
+            <label class="flex items-center gap-1 text-xs text-rose-600 cursor-pointer">
+              <input type="checkbox" name="remove_option_image_d" value="1" class="rounded" /> Hapus gambar
+            </label>
+          </div>
+        <% } %>
+        <input type="file" name="option_image_d" accept="image/*"
+          class="w-full rounded-lg bg-white border border-indigo-200 px-3 py-1.5 text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 transition-all" />
+        <div class="text-xs text-slate-400 mt-0.5">Gambar opsi (opsional) · Max 5MB</div>
+      </div>
     </div>
     <div id="bank_edit_opt_e">
       <label class="text-sm text-indigo-700 font-medium">Opsi E (opsional)</label>
       <textarea id="editor_option_e" name="e" class="summernote-option"><%- options.E || '' %></textarea>
+      <div class="mt-2">
+        <% if (options.E_image) { %>
+          <div class="mb-1 flex items-center gap-2">
+            <img src="<%= options.E_image %>" class="h-10 rounded-lg border border-slate-200" />
+            <label class="flex items-center gap-1 text-xs text-rose-600 cursor-pointer">
+              <input type="checkbox" name="remove_option_image_e" value="1" class="rounded" /> Hapus gambar
+            </label>
+          </div>
+        <% } %>
+        <input type="file" name="option_image_e" accept="image/*"
+          class="w-full rounded-lg bg-white border border-indigo-200 px-3 py-1.5 text-xs text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 transition-all" />
+        <div class="text-xs text-slate-400 mt-0.5">Gambar opsi (opsional) · Max 5MB</div>
+      </div>
     </div>
   </div>
 
