@@ -2,6 +2,14 @@
 <% const totalQ = questions.length; %>
 <% const onePerPage = attempt.one_question_per_page === true; %>
 
+<style>
+/* Kurangi padding atas main layout agar tidak ada celah besar di bawah floatingBar */
+main { padding-top: 0 !important; padding-bottom: 1.5rem !important; }
+/* floatingBar tingginya dinamis — JS akan set padding-top body wrapper */
+#examContentWrap { padding-top: 60px; }
+@media (max-width: 640px) { #examContentWrap { padding-top: 56px; } }
+</style>
+
 <!-- Overlay Fullscreen — muncul saat halaman dimuat, siswa harus tap untuk masuk fullscreen -->
 <div id="fsOverlay" style="
   position:fixed;top:0;left:0;width:100%;height:100%;
@@ -365,7 +373,7 @@ function jumpAndClose(no) {
   </div>
 </div>
 
-<div class="<%= onePerPage ? '' : 'space-y-6' %>">
+<div id="examContentWrap" class="<%= onePerPage ? '' : 'space-y-6' %>">
     <% questions.forEach((q, idx) => { 
       const colors = [
         { border: 'border-blue-200', bg: 'from-blue-50 to-cyan-50', text: 'text-blue-900', badge: 'bg-blue-100 text-blue-700' },
@@ -2114,4 +2122,19 @@ function showLeaveConfirmModal(destination) {
       });
     } catch(e) {}
   });
+</script>
+
+<script>
+// Set padding-top examContentWrap sesuai tinggi floatingBar yang sebenarnya
+(function() {
+  function adjustPadding() {
+    var bar = document.getElementById('floatingBar');
+    var wrap = document.getElementById('examContentWrap');
+    if (bar && wrap) {
+      wrap.style.paddingTop = (bar.offsetHeight + 8) + 'px';
+    }
+  }
+  adjustPadding();
+  window.addEventListener('resize', adjustPadding);
+})();
 </script>
