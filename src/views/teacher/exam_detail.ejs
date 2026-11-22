@@ -337,22 +337,46 @@
               %>
               <% if (q.options && q.options.length > 0) { %>
                 <% if (q.question_type === 'MULTI_TF') { %>
-                  <table class="w-full border-collapse rounded-xl overflow-hidden text-sm">
-                    <thead><tr class="bg-slate-100">
-                      <th class="text-left p-3 border border-slate-200">Pernyataan</th>
-                      <th class="text-center p-3 border border-slate-200 w-20">Benar</th>
-                      <th class="text-center p-3 border border-slate-200 w-20">Salah</th>
-                    </tr></thead>
-                    <tbody>
-                      <% q.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
-                        <tr class="<%= opt.is_correct ? 'bg-emerald-50' : 'bg-white' %>">
-                          <td class="p-3 border border-slate-200 text-slate-700"><%- opt.option_text %></td>
-                          <td class="text-center p-3 border border-slate-200"><%- opt.is_correct ? circleFilled : circleEmpty %></td>
-                          <td class="text-center p-3 border border-slate-200"><%- !opt.is_correct ? circleFilled : circleEmpty %></td>
+                  <div class="overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+                    <table class="w-full border-collapse text-sm">
+                      <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200">
+                          <th class="text-left px-4 py-2.5 text-slate-600 font-semibold">Pernyataan</th>
+                          <th class="px-4 py-2.5 text-teal-600 font-semibold text-center w-20">Benar</th>
+                          <th class="px-4 py-2.5 text-rose-500 font-semibold text-center w-20">Salah</th>
                         </tr>
-                      <% }) %>
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        <% q.options.forEach((opt, oIdx) => { if (!opt.option_text && !opt.option_image) return; %>
+                          <tr class="border-b border-slate-100 last:border-0 <%= oIdx % 2 === 1 ? 'bg-slate-50/50' : 'bg-white' %>">
+                            <td class="px-4 py-3 text-slate-700 prose prose-sm max-w-none"><%- opt.option_text %></td>
+                            <td class="px-4 py-3 text-center">
+                              <% if (opt.is_correct) { %>
+                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-teal-500 shadow-sm">
+                                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                </span>
+                              <% } else { %>
+                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full border-2 border-slate-200 bg-white">
+                                  <svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                </span>
+                              <% } %>
+                            </td>
+                            <td class="px-4 py-3 text-center">
+                              <% if (!opt.is_correct) { %>
+                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-rose-500 shadow-sm">
+                                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </span>
+                              <% } else { %>
+                                <span class="inline-flex items-center justify-center w-7 h-7 rounded-full border-2 border-slate-200 bg-white">
+                                  <svg class="w-3.5 h-3.5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </span>
+                              <% } %>
+                            </td>
+                          </tr>
+                        <% }) %>
+                      </tbody>
+                    </table>
+                  </div>
                 <% } else if (q.question_type === 'TRUE_FALSE') { %>
                   <% q.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
                     <div class="flex items-center gap-3 px-4 py-3 rounded-xl border-2 <%= opt.is_correct ? color.border + ' bg-white shadow-sm' : 'border-slate-200 bg-white/80' %>">
