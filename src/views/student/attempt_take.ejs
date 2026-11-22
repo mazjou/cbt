@@ -3,8 +3,9 @@
 <% const onePerPage = attempt.one_question_per_page === true; %>
 
 <style>
-/* Kurangi padding atas main layout agar tidak ada celah besar di bawah floatingBar */
-main { padding-top: 0 !important; padding-bottom: 1.5rem !important; }
+/* Sembunyikan navbar dan footer di halaman ujian agar tidak ada ruang ekstra */
+nav, header, footer { display: none !important; }
+main { padding-top: 0 !important; padding-bottom: 1rem !important; }
 #examContentWrap { padding-top: 4px; }
 </style>
 
