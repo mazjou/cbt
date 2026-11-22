@@ -5,9 +5,7 @@
 <style>
 /* Kurangi padding atas main layout agar tidak ada celah besar di bawah floatingBar */
 main { padding-top: 0 !important; padding-bottom: 1.5rem !important; }
-/* floatingBar tingginya dinamis — JS akan set padding-top body wrapper */
-#examContentWrap { padding-top: 60px; }
-@media (max-width: 640px) { #examContentWrap { padding-top: 56px; } }
+#examContentWrap { padding-top: 4px; }
 </style>
 
 <!-- Overlay Fullscreen — muncul saat halaman dimuat, siswa harus tap untuk masuk fullscreen -->
@@ -600,10 +598,19 @@ function jumpAndClose(no) {
           </button>
         <% } else { %>
           <!-- Soal terakhir: tombol kumpulkan -->
-          <button type="button" onclick="document.getElementById('submitForm').dispatchEvent(new Event('submit',{cancelable:true}))"
-            class="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold transition-all shadow-md">
-            ✅ Kumpulkan
-          </button>
+          <% if (attempt.submit_unlock_before > 0) { %>
+            <button type="button" disabled
+              class="flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all shadow-md cursor-not-allowed opacity-60"
+              style="background:linear-gradient(to right,#94a3b8,#64748b);color:white;"
+              id="submitBtnLast">
+              <span id="submitBtnLastText">Belum Aktif</span>
+            </button>
+          <% } else { %>
+            <button type="button" onclick="document.getElementById('submitForm').dispatchEvent(new Event('submit',{cancelable:true}))"
+              class="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold transition-all shadow-md">
+              Kumpulkan
+            </button>
+          <% } %>
         <% } %>
       </div>
       <% } %>
@@ -798,6 +805,18 @@ function jumpAndClose(no) {
           btn.style.opacity = '';
           btn.textContent = 'Kumpulkan Jawaban';
         }
+        // Aktifkan juga tombol kumpulkan di soal terakhir
+        const btnLast = document.getElementById('submitBtnLast');
+        if (btnLast) {
+          btnLast.disabled = false;
+          btnLast.style.background = '';
+          btnLast.style.cursor = '';
+          btnLast.style.opacity = '';
+          btnLast.setAttribute('onclick', "document.getElementById('submitForm').dispatchEvent(new Event('submit',{cancelable:true}))");
+          btnLast.style.background = 'linear-gradient(to right,#10b981,#0d9488)';
+          const txtLast = document.getElementById('submitBtnLastText');
+          if (txtLast) txtLast.textContent = 'Kumpulkan';
+        }
         if (!submitUnlockToastShown) {
           submitUnlockToastShown = true;
           toast('Tombol Kirim ujian sudah aktif!');
@@ -806,13 +825,17 @@ function jumpAndClose(no) {
         // F3 fix: tampilkan menit DAN detik agar lebih informatif
         const msLeft = unlockAfterMs - elapsed;
         const btn = document.getElementById('submitBtn');
+        const btnLast = document.getElementById('submitBtnLast');
+        const txtLast = document.getElementById('submitBtnLastText');
         if (btn && !submitUnlocked) {
           if (msLeft >= 60000) {
             const minsLeft = Math.ceil(msLeft / 60000);
             btn.textContent = 'Kirim aktif ' + minsLeft + ' menit lagi';
+            if (txtLast) txtLast.textContent = 'Aktif ' + minsLeft + ' mnt lagi';
           } else {
             const secsLeft = Math.ceil(msLeft / 1000);
             btn.textContent = 'Kirim aktif ' + secsLeft + ' detik lagi';
+            if (txtLast) txtLast.textContent = 'Aktif ' + secsLeft + ' dtk lagi';
           }
         }
       }
@@ -2131,7 +2154,7 @@ function showLeaveConfirmModal(destination) {
     var bar = document.getElementById('floatingBar');
     var wrap = document.getElementById('examContentWrap');
     if (bar && wrap) {
-      wrap.style.paddingTop = (bar.offsetHeight + 8) + 'px';
+      wrap.style.paddingTop = (bar.offsetHeight + 4) + 'px';
     }
   }
   adjustPadding();
