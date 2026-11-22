@@ -565,11 +565,6 @@ function jumpAndClose(no) {
                       <%= isChosen ? 'checked' : '' %> />
                   <% } %>
                   <div class="flex-1">
-                    <% if (q.question_type !== 'CHECKBOX' && q.question_type !== 'COMPLEX') { %>
-                    <div class="inline-flex items-center justify-center w-8 h-8 rounded-lg <%= color.badge %> font-bold text-sm mb-2">
-                      <%= o.option_label %>
-                    </div>
-                    <% } %>
                     <div class="text-slate-700 prose prose-sm max-w-none"><%- o.option_text %></div>
                     <% if (o.option_image) { %>
                       <img src="<%= o.option_image %>" alt="Opsi <%= o.option_label %>"

@@ -467,18 +467,13 @@
                     <div class="mt-3 grid grid-cols-1 gap-1.5">
                       <% question.options.forEach((opt) => { if (!opt.option_text && !opt.option_image) return; %>
                         <div class="flex items-start gap-3 px-3 py-2 rounded-lg border <%= opt.is_correct ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 bg-white' %>">
-                          <div class="flex-shrink-0 flex items-center gap-1.5">
-                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold shadow-sm <%= opt.is_correct ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700' %>">
-                              <%= opt.option_label %>
+                          <% if (opt.is_correct) { %>
+                            <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-500 flex-shrink-0 mt-0.5">
+                              <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                             </span>
-                            <% if (opt.is_correct) { %>
-                              <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-emerald-500 flex-shrink-0">
-                                <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
-                              </span>
-                            <% } else { %>
-                              <span class="w-4 flex-shrink-0"></span>
-                            <% } %>
-                          </div>
+                          <% } else { %>
+                            <span class="w-6 flex-shrink-0"></span>
+                          <% } %>
                           <div class="flex-1 text-sm <%= opt.is_correct ? 'text-emerald-800 font-semibold' : 'text-slate-700' %> prose prose-sm max-w-none leading-snug">
                             <%- opt.option_text %>
                             <% if (opt.option_image) { %><img src="<%= opt.option_image %>" alt="opsi <%= opt.option_label %>" class="mt-2 max-h-40 rounded-xl border border-slate-200 shadow-sm" loading="lazy" /><% } %>
