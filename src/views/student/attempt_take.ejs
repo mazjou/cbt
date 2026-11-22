@@ -5,7 +5,8 @@
 <style>
 /* Sembunyikan navbar dan footer di halaman ujian agar tidak ada ruang ekstra */
 nav, header, footer { display: none !important; }
-main { padding-top: 0 !important; padding-bottom: 1rem !important; margin-top: 0 !important; }
+main { padding-top: 0 !important; padding-bottom: 0.5rem !important; margin-top: 0 !important; }
+div.min-h-full { min-height: unset !important; }
 #examContentWrap { padding-top: 0; }
 /* Hilangkan 300ms tap delay di HP untuk semua tombol */
 button, a, label, input[type=radio], input[type=checkbox] { touch-action: manipulation; }
@@ -2159,7 +2160,7 @@ function showLeaveConfirmModal(destination) {
     var bar = document.getElementById('floatingBar');
     var wrap = document.getElementById('examContentWrap');
     if (bar && wrap) {
-      wrap.style.paddingTop = bar.offsetHeight + 'px';
+      wrap.style.paddingTop = (bar.offsetHeight - 8) + 'px';
     }
   }
   adjustPadding();
