@@ -2729,6 +2729,52 @@ router.delete('/questions/:id', async (req, res) => {
   res.redirect(`${deleteRedirectBase}/${row.exam_id}`);
 });
 
+// ── Bulk Delete Soal ─────────────────────────────────────────────────────────
+router.post('/exams/:examId/questions/bulk-delete', async (req, res) => {
+  const user = req.session.user;
+  const examId = req.params.examId;
+  let ids = req.body['ids[]'] || req.body.ids || [];
+  if (typeof ids === 'string') ids = [ids];
+  const validIds = ids.map(Number).filter(n => Number.isInteger(n) && n > 0);
+  if (!validIds.length) {
+    req.flash('error', 'Pilih minimal 1 soal untuk dihapus.');
+    return res.redirect(`/teacher/exams/${examId}`);
+  }
+  // Verifikasi semua soal milik ujian ini dan guru ini
+  const ph = validIds.map((_, i) => `:id${i}`).join(',');
+  const params = { examId, tid: user.id, isAdmin: user.role === 'ADMIN' ? 1 : 0 };
+  validIds.forEach((id, i) => { params[`id${i}`] = id; });
+  const [rows] = await pool.query(
+    `SELECT q.id, q.question_image, q.question_pdf FROM questions q
+     JOIN exams e ON e.id=q.exam_id
+     WHERE q.id IN (${ph}) AND q.exam_id=:examId AND (:isAdmin=1 OR e.teacher_id=:tid)`,
+    params
+  );
+  if (!rows.length) {
+    req.flash('error', 'Soal tidak ditemukan atau akses ditolak.');
+    return res.redirect(`/teacher/exams/${examId}`);
+  }
+  // Hapus gambar opsi
+  const qIds = rows.map(r => r.id);
+  const phQ = qIds.map((_, i) => `:qid${i}`).join(',');
+  const paramsQ = {};
+  qIds.forEach((id, i) => { paramsQ[`qid${i}`] = id; });
+  const [oImages] = await pool.query(
+    `SELECT option_image FROM options WHERE question_id IN (${phQ})`, paramsQ
+  );
+  oImages.forEach(o => { if (o.option_image) deleteFile(o.option_image); });
+  rows.forEach(r => {
+    if (r.question_image) deleteFile(r.question_image);
+    if (r.question_pdf)   deleteFile(r.question_pdf);
+  });
+  const phDel = qIds.map((_, i) => `:did${i}`).join(',');
+  const paramsDel = {};
+  qIds.forEach((id, i) => { paramsDel[`did${i}`] = id; });
+  await pool.query(`DELETE FROM questions WHERE id IN (${phDel})`, paramsDel);
+  req.flash('success', `${rows.length} soal berhasil dihapus.`);
+  res.redirect(`/teacher/exams/${examId}`);
+});
+
 router.post('/exams/:id/regenerate-code', async (req, res) => {
   const user = req.session.user;
   try {

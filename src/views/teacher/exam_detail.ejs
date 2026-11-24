@@ -260,9 +260,38 @@
           <span class="text-2xl">📝</span>
           <h2 class="text-xl font-semibold text-cyan-900">Daftar Soal</h2>
         </div>
-        <div class="px-4 py-2 rounded-full bg-cyan-600 text-white text-sm font-semibold"><%= questions.length %> soal</div>
+        <div class="flex items-center gap-2">
+          <div class="px-4 py-2 rounded-full bg-cyan-600 text-white text-sm font-semibold"><%= questions.length %> soal</div>
+          <% if (questions.length > 0) { %>
+            <button type="button" id="toggleBulkBtn"
+              onclick="toggleBulkMode()"
+              class="px-3 py-2 rounded-xl border border-rose-300 bg-white hover:bg-rose-50 text-rose-700 font-medium text-sm transition-all">
+              Pilih Soal
+            </button>
+          <% } %>
+        </div>
+      </div>
+      <!-- Toolbar bulk delete — tersembunyi sampai bulk mode aktif -->
+      <div id="bulkToolbar" class="hidden mt-3 flex items-center gap-3 p-3 rounded-xl bg-rose-50 border border-rose-200">
+        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium text-rose-700">
+          <input type="checkbox" id="selectAllCb" onchange="toggleSelectAll(this)" class="w-4 h-4 accent-rose-600 rounded" />
+          Pilih Semua
+        </label>
+        <span class="text-sm text-slate-500">|</span>
+        <span id="selectedCount" class="text-sm font-semibold text-rose-700">0 dipilih</span>
+        <div class="flex-1"></div>
+        <button type="button" onclick="bulkDelete()"
+          class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-sm transition-all shadow-sm">
+          Hapus yang Dipilih
+        </button>
+        <button type="button" onclick="toggleBulkMode()"
+          class="px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-600 font-medium text-sm transition-all">
+          Batal
+        </button>
       </div>
     </div>
+    <!-- Form hidden untuk bulk delete -->
+    <form id="bulkDeleteForm" action="/teacher/exams/<%= exam.id %>/questions/bulk-delete" method="POST" class="hidden"></form>
 
     <% if (!questions.length) { %>
       <div class="text-center py-12 rounded-2xl border-2 border-dashed border-cyan-300 bg-cyan-50">
@@ -298,10 +327,13 @@
                 </div>
               </div>
               <div class="flex items-center gap-2">
+                <!-- Checkbox bulk delete — tersembunyi di mode normal -->
+                <input type="checkbox" class="bulk-cb hidden w-5 h-5 accent-rose-600 rounded flex-shrink-0"
+                  data-qid="<%= q.id %>" onchange="updateBulkCount()" />
                 <a href="/teacher/questions/<%= q.id %>/edit" class="px-3 py-2 rounded-xl border <%= color.btnBorder %> bg-gradient-to-br <%= color.btnBg %> <%= color.btnHover %> <%= color.btnText %> font-medium text-xs transition-all">
                   ✏️ Edit
                 </a>
-                <form action="/teacher/questions/<%= q.id %>?_method=DELETE" method="POST" onsubmit="return confirm('Hapus soal ini?')" class="inline">
+                <form action="/teacher/questions/<%= q.id %>?_method=DELETE" method="POST" onsubmit="return confirm('Hapus soal ini?')" class="inline bulk-single-form">
                   <button class="px-3 py-2 rounded-xl border border-rose-300 bg-gradient-to-br from-rose-50 to-rose-100 hover:from-rose-100 hover:to-rose-200 text-rose-800 font-medium text-xs transition-all">
                     🗑️
                   </button>
@@ -1174,5 +1206,65 @@ async function toggleScoreVisibility(examId, currentShow) {
   } finally {
     if (btn) btn.disabled = false;
   }
+}
+</script>
+
+<script>
+// ── Bulk Delete Soal ──────────────────────────────────────────────────────────
+var bulkModeActive = false;
+
+function toggleBulkMode() {
+  bulkModeActive = !bulkModeActive;
+  var cbs      = document.querySelectorAll('.bulk-cb');
+  var toolbar  = document.getElementById('bulkToolbar');
+  var toggleBtn = document.getElementById('toggleBulkBtn');
+  var singleForms = document.querySelectorAll('.bulk-single-form');
+
+  if (bulkModeActive) {
+    cbs.forEach(function(cb) { cb.classList.remove('hidden'); cb.checked = false; });
+    toolbar.classList.remove('hidden');
+    singleForms.forEach(function(f) { f.classList.add('hidden'); });
+    if (toggleBtn) toggleBtn.classList.add('hidden');
+    updateBulkCount();
+  } else {
+    cbs.forEach(function(cb) { cb.classList.add('hidden'); cb.checked = false; });
+    toolbar.classList.add('hidden');
+    singleForms.forEach(function(f) { f.classList.remove('hidden'); });
+    if (toggleBtn) toggleBtn.classList.remove('hidden');
+    document.getElementById('selectAllCb').checked = false;
+    updateBulkCount();
+  }
+}
+
+function toggleSelectAll(cb) {
+  document.querySelectorAll('.bulk-cb').forEach(function(el) { el.checked = cb.checked; });
+  updateBulkCount();
+}
+
+function updateBulkCount() {
+  var count = document.querySelectorAll('.bulk-cb:checked').length;
+  var el = document.getElementById('selectedCount');
+  if (el) el.textContent = count + ' dipilih';
+  // Sync selectAll checkbox state
+  var all = document.querySelectorAll('.bulk-cb');
+  var allCb = document.getElementById('selectAllCb');
+  if (allCb) allCb.checked = all.length > 0 && count === all.length;
+}
+
+function bulkDelete() {
+  var checked = document.querySelectorAll('.bulk-cb:checked');
+  if (!checked.length) { alert('Pilih minimal 1 soal terlebih dahulu.'); return; }
+  if (!confirm('Hapus ' + checked.length + ' soal yang dipilih? Tindakan ini tidak bisa dibatalkan.')) return;
+  var form = document.getElementById('bulkDeleteForm');
+  // Hapus input lama jika ada
+  form.querySelectorAll('input[name="ids[]"]').forEach(function(el) { el.remove(); });
+  checked.forEach(function(cb) {
+    var inp = document.createElement('input');
+    inp.type = 'hidden';
+    inp.name = 'ids[]';
+    inp.value = cb.getAttribute('data-qid');
+    form.appendChild(inp);
+  });
+  form.submit();
 }
 </script>
