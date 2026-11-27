@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title><%= title %></title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:Arial,sans-serif;background:#e5e7eb;}
+    .no-print{background:white;padding:12px 20px;display:flex;align-items:center;
+      justify-content:space-between;flex-wrap:wrap;gap:10px;
+      box-shadow:0 2px 8px rgba(0,0,0,.12);margin-bottom:14px;position:sticky;top:0;z-index:99;}
+    .no-print h2{font-size:15px;font-weight:700;color:#1e293b;margin:0;}
+    .no-print small{font-size:11px;color:#64748b;}
+    .ctrl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+    .btn{padding:8px 18px;border-radius:8px;font-weight:700;font-size:13px;
+      cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+    .btn-print{background:#4f46e5;color:white;}
+    .btn-back{background:#f1f5f9;color:#475569;text-decoration:none;}
+
+    /* Grid bangku: A4, 3 kolom x baris */
+    .page-wrap{max-width:210mm;margin:0 auto;padding:8mm;}
+    .cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm;}
+
+    /* Kartu bangku */
+    .bangku-card{
+      border:2.5px solid #1e293b;
+      border-radius:4px;
+      padding:5mm 4mm;
+      background:white;
+      page-break-inside:avoid;
+      min-height:38mm;
+    }
+    .school-header{
+      text-align:center;
+      border-bottom:1.5px solid #1e293b;
+      padding-bottom:2mm;
+      margin-bottom:2mm;
+    }
+    .school-name{
+      font-size:7.5pt;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:0.3px;
+      line-height:1.3;
+    }
+    .school-sub{
+      font-size:6pt;
+      color:#475569;
+    }
+    .label-bangku{
+      text-align:center;
+      font-size:6pt;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:1px;
+      color:#475569;
+      margin-bottom:1mm;
+    }
+    .nomor-ujian{
+      text-align:center;
+      font-size:11pt;
+      font-weight:700;
+      color:#1e293b;
+      letter-spacing:1px;
+      margin-bottom:1.5mm;
+      border-bottom:1px dashed #cbd5e1;
+      padding-bottom:1.5mm;
+    }
+    .student-name{
+      text-align:center;
+      font-size:10pt;
+      font-weight:900;
+      text-transform:uppercase;
+      color:#0f172a;
+      line-height:1.2;
+      margin-bottom:2mm;
+      letter-spacing:0.5px;
+    }
+    .info-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-top:1.5mm;
+    }
+    .kelas-badge{
+      font-size:7.5pt;
+      font-weight:700;
+      background:#eff6ff;
+      color:#1d4ed8;
+      border:1px solid #bfdbfe;
+      border-radius:3px;
+      padding:1px 4px;
+    }
+    .sesi-badge{
+      font-size:7.5pt;
+      font-weight:700;
+      background:#f0fdf4;
+      color:#15803d;
+      border:1px solid #bbf7d0;
+      border-radius:3px;
+      padding:1px 4px;
+    }
+    .no-sesi{
+      font-size:7pt;
+      color:#94a3b8;
+    }
+
+    @media print{
+      body{background:white;}
+      .no-print{display:none !important;}
+      .page-wrap{padding:6mm;max-width:100%;}
+      .cards-grid{gap:3mm;}
+      .bangku-card{border:2px solid #000;}
+      @page{size:A4 portrait;margin:6mm;}
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print">
+    <div>
+      <h2>Cetak Nomor Bangku</h2>
+      <small><%= users.length %> siswa</small>
+    </div>
+    <div class="ctrl">
+      <a href="/admin/users" class="btn btn-back">Kembali</a>
+      <button onclick="window.print()" class="btn btn-print">Cetak</button>
+    </div>
+  </div>
+  <div class="page-wrap">
+    <div class="cards-grid">
+      <% users.forEach(function(u) { %>
+      <div class="bangku-card">
+        <div class="school-header">
+          <div class="school-name"><%= schoolInfo.name %></div>
+          <div class="school-sub">NOMOR BANGKU UJIAN</div>
+        </div>
+        <div class="nomor-ujian"><%= u.nomor_peserta || u.username %></div>
+        <div class="student-name"><%= u.full_name.toUpperCase() %></div>
+        <div class="info-row">
+          <span class="kelas-badge"><%= u.class_name || '-' %></span>
+          <% if (u.sesi) { %>
+            <span class="sesi-badge">Sesi <%= u.sesi %></span>
+          <% } else { %>
+            <span class="no-sesi">-</span>
+          <% } %>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+</body>
+</html>

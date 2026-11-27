@@ -27,6 +27,26 @@
       </div>
     </div>
 
+    <!-- Cetak Nomor Bangku dengan dropdown -->
+    <div class="relative">
+      <button type="button" onclick="toggleDropdown('dropdownBangku')"
+        class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-blue-400 to-indigo-500 hover:from-blue-500 hover:to-indigo-600 text-white font-semibold transition-all shadow-md flex items-center justify-center gap-1 text-sm">
+        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+        Cetak Bangku &#9660;
+      </button>
+      <div id="dropdownBangku" class="absolute left-0 top-full mt-1 w-56 bg-white rounded-xl shadow-xl border border-blue-100 z-50" style="display:none">
+        <a href="/admin/users/print-bangku" target="_blank" class="block px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 rounded-t-xl font-medium">Cetak Semua Nomor Bangku</a>
+        <div class="border-t border-slate-100 px-3 py-1 text-xs text-slate-400 font-semibold uppercase tracking-wider">Per Kelas</div>
+        <div class="max-h-48 overflow-y-auto">
+          <% classes.forEach(c => { %>
+            <a href="/admin/users/print-bangku?class_id=<%= c.id %>" target="_blank" class="block px-4 py-2 text-sm text-slate-700 hover:bg-blue-50 truncate"><%= c.name %></a>
+          <% }) %>
+        </div>
+      </div>
+    </div>
+
     <!-- Download Excel dengan dropdown -->
     <div class="relative">
       <button type="button" onclick="toggleDropdown('dropdownExcel')"
@@ -55,12 +75,12 @@
     function toggleDropdown(id) {
       const el = document.getElementById(id);
       const isOpen = el.style.display === 'block';
-      document.querySelectorAll('#dropdownCetak, #dropdownExcel').forEach(d => d.style.display = 'none');
+      document.querySelectorAll('#dropdownCetak, #dropdownBangku, #dropdownExcel').forEach(d => d.style.display = 'none');
       el.style.display = isOpen ? 'none' : 'block';
     }
     document.addEventListener('click', function(e) {
       if (!e.target.closest('.relative')) {
-        document.querySelectorAll('#dropdownCetak, #dropdownExcel').forEach(d => d.style.display = 'none');
+        document.querySelectorAll('#dropdownCetak, #dropdownBangku, #dropdownExcel').forEach(d => d.style.display = 'none');
       }
     });
     </script>
@@ -279,6 +299,7 @@
             <th class="text-left py-2">Nama</th>
             <th class="text-left py-2 w-24">Role</th>
             <th class="text-left py-2 w-20">Kelas</th>
+            <th class="text-left py-2 w-12">Sesi</th>
             <th class="text-left py-2 w-16">Status</th>
             <th class="text-right py-2">Aksi</th>
           </tr>
@@ -286,7 +307,7 @@
         <tbody>
           <% if (users.length === 0) { %>
             <tr>
-              <td colspan="7" class="py-8 text-center text-teal-600">Tidak ada data pengguna.</td>
+              <td colspan="8" class="py-8 text-center text-teal-600">Tidak ada data pengguna.</td>
             </tr>
           <% } %>
           <% users.forEach(u => { %>
@@ -298,6 +319,7 @@
               <td class="py-2 user-fullname text-teal-900"><%= u.full_name %></td>
               <td class="py-2 user-role"><span class="px-2 py-1 rounded-lg border border-teal-300 bg-white text-teal-800 font-medium"><%= ({TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',PRINCIPAL:'Kepala Sekolah'})[u.role]||u.role %></span></td>
               <td class="py-2 text-teal-700 user-class"><%= u.class_name || '-' %></td>
+              <td class="py-2 text-teal-700 text-center"><%= u.sesi || '-' %></td>
               <td class="py-2 user-active text-teal-800">
                 <%= u.is_active ? 'Aktif' : 'Nonaktif' %>
                 <% if (u.sdms_status === 'missing') { %>

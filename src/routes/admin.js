@@ -132,6 +132,8 @@ function buildStudentImportPreview(rows, classesMap, existingUsernamesSet) {
     const passwordRaw = pickRowValue(row, ['password', 'pwd', 'pass']);
     const password = String(passwordRaw || '').trim();
     const nomor_peserta = String(pickRowValue(row, ['nomor_peserta', 'no_peserta', 'nomor', 'no_ujian']) || '').trim() || null;
+    const sesiRaw = pickRowValue(row, ['sesi', 'session', 'sesi_ujian']);
+    const sesi = sesiRaw !== '' && sesiRaw !== null && sesiRaw !== undefined ? parseInt(String(sesiRaw).trim(), 10) || null : null;
 
     if (!username) reasons.push('Kolom username/nis wajib diisi');
     if (!full_name) reasons.push('Kolom full_name/nama wajib diisi');
@@ -153,6 +155,7 @@ function buildStudentImportPreview(rows, classesMap, existingUsernamesSet) {
       classText: classText || '-',
       class_id,
       nomor_peserta,
+      sesi,
       passwordProvided: Boolean(password),
       action
     };
@@ -1579,7 +1582,7 @@ router.get('/users', async (req, res) => {
   
   // Get paginated users — sertakan sdms_status untuk indikator
   const usersResult = await pool.query(
-    `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.class_id, c.name AS class_name,
+    `SELECT u.id, u.username, u.full_name, u.role, u.is_active, u.class_id, u.sesi, c.name AS class_name,
             -- Deteksi status SDMS untuk siswa NISN plain
             CASE
               WHEN u.role != 'STUDENT' OR u.username LIKE '%@%' THEN NULL
@@ -1761,7 +1764,7 @@ router.get('/users/download', async (req, res) => {
     const params = [];
 
     let query = `SELECT u.id, u.username, u.full_name, u.plain_password AS password,
-                        u.role, c.name AS class_name, u.nomor_peserta, u.is_active
+                        u.role, c.name AS class_name, u.nomor_peserta, u.sesi, u.is_active
                  FROM users u
                  LEFT JOIN classes c ON c.id = u.class_id
                  WHERE 1=1`;
@@ -1802,12 +1805,13 @@ router.get('/users/download', async (req, res) => {
       'role':           u.role,
       'class':          u.class_name || '',
       'nomor_peserta':  u.nomor_peserta || '',
+      'sesi':           u.sesi !== null && u.sesi !== undefined ? u.sesi : '',
       'status':         u.is_active ? 'Aktif' : 'Nonaktif'
     }));
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.json_to_sheet(data, {
-      header: ['username','full_name','password','role','class','nomor_peserta','status']
+      header: ['username','full_name','password','role','class','nomor_peserta','sesi','status']
     });
     ws['!cols'] = [
       { wch: 30 }, // username
@@ -1816,6 +1820,7 @@ router.get('/users/download', async (req, res) => {
       { wch: 12 }, // role
       { wch: 20 }, // class
       { wch: 20 }, // nomor_peserta
+      { wch: 10 }, // sesi
       { wch: 10 }  // status
     ];
     XLSX.utils.book_append_sheet(wb, ws, 'Pengguna');
@@ -1931,6 +1936,88 @@ router.get('/users/print-cards', async (req, res) => {
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal memuat halaman cetak kartu.');
+    res.redirect('/admin/users');
+  }
+});
+
+// GET Print Nomor Bangku
+router.get('/users/print-bangku', async (req, res) => {
+  try {
+    const { ids, class_id, sesi } = req.query;
+    
+    let query = `SELECT u.id, u.username, u.full_name, u.role, u.nomor_peserta, u.sesi, c.name AS class_name
+                 FROM users u LEFT JOIN classes c ON c.id = u.class_id
+                 WHERE u.role = 'STUDENT'`;
+    const params = [];
+    
+    if (ids) {
+      const idArray = [...new Set(ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)))];
+      if (idArray.length > 0) {
+        query += ` AND u.id IN (${idArray.join(',')})` ;
+      }
+    }
+    
+    if (class_id) {
+      params.push(class_id);
+      query += ` AND u.class_id = $${params.length}`;
+    }
+    
+    if (sesi) {
+      const sesiNum = parseInt(sesi, 10);
+      if (!isNaN(sesiNum)) {
+        params.push(sesiNum);
+        query += ` AND u.sesi = $${params.length}`;
+      }
+    }
+    
+    query += ` ORDER BY
+      CASE
+        WHEN c.name ~* '^XII' THEN 3
+        WHEN c.name ~* '^XI'  THEN 2
+        WHEN c.name ~* '^X'   THEN 1
+        ELSE 4
+      END,
+      regexp_replace(upper(COALESCE(c.name,'')), '^(XII|XI|X)\\\\s+', '') ASC,
+      (regexp_match(c.name, '(\\\\d+)\\\\s*$'))[1]::int NULLS LAST,
+      u.full_name ASC`;
+    
+    const printResult = await pool.query(query, params);
+    const users = printResult[0];
+    
+    if (users.length === 0) {
+      req.flash('error', 'Tidak ada siswa yang ditemukan.');
+      return res.redirect('/admin/users');
+    }
+    
+    const [classes] = await pq(`SELECT id, name FROM classes ORDER BY ${CLASS_ORDER_SQL};`);
+    
+    // Ambil daftar sesi yang ada di DB
+    const [sesiList] = await pq(`SELECT DISTINCT sesi FROM users WHERE role='STUDENT' AND sesi IS NOT NULL ORDER BY sesi ASC;`);
+    
+    const schoolInfo = {
+      name: process.env.SCHOOL_NAME || 'SMK Negeri 1 Kras',
+      address: process.env.SCHOOL_ADDRESS || 'Kediri, Jawa Timur'
+    };
+    
+    res.app.render('admin/print_bangku', {
+      title: 'Cetak Nomor Bangku',
+      users,
+      classes,
+      sesiList,
+      schoolInfo,
+      class_id: class_id || '',
+      sesi: sesi || '',
+      settings: { 'view options': { layout: false } }
+    }, (err, html) => {
+      if (err) {
+        console.error('Render error:', err);
+        return res.status(500).send('Gagal render halaman cetak.');
+      }
+      res.send(html);
+    });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat halaman cetak nomor bangku.');
     res.redirect('/admin/users');
   }
 });
@@ -2194,12 +2281,13 @@ router.post('/users/import/commit', async (req, res) => {
     const hashes     = prepared.map(it => it.password_hash);
     const nomorList  = prepared.map(it => it.nomor_peserta || null);
     const plainPwds  = prepared.map(it => it.plainPwd);
+    const sesiList   = prepared.map(it => it.sesi !== undefined && it.sesi !== null ? String(it.sesi) : null);
 
     await pool.query(
-      `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active, nomor_peserta, plain_password)
-       SELECT u, fn, 'STUDENT', ci::int, ph, true, np, pp
-       FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[])
-         AS t(u, fn, ci, ph, np, pp)
+      `INSERT INTO users (username, full_name, role, class_id, password_hash, is_active, nomor_peserta, plain_password, sesi)
+       SELECT u, fn, 'STUDENT', ci::int, ph, true, np, pp, CASE WHEN ss IS NOT NULL THEN ss::int ELSE NULL END
+       FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[], $6::text[], $7::text[])
+         AS t(u, fn, ci, ph, np, pp, ss)
        ON CONFLICT (username) DO UPDATE SET
          full_name      = EXCLUDED.full_name,
          role           = 'STUDENT',
@@ -2207,8 +2295,9 @@ router.post('/users/import/commit', async (req, res) => {
          is_active      = true,
          nomor_peserta  = COALESCE(EXCLUDED.nomor_peserta, users.nomor_peserta),
          plain_password = EXCLUDED.plain_password,
-         password_hash  = EXCLUDED.password_hash`,
-      [usernames, fullNames, classIds, hashes, nomorList, plainPwds]
+         password_hash  = EXCLUDED.password_hash,
+         sesi           = COALESCE(EXCLUDED.sesi, users.sesi)`,
+      [usernames, fullNames, classIds, hashes, nomorList, plainPwds, sesiList]
     );
 
     for (const it of prepared) {
