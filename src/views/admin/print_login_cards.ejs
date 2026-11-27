@@ -187,52 +187,6 @@
 </div>
 <% } %>
 
-<% if (allSchedules && allSchedules.length > 0) { %>
-<%
-  var totalKartuPages = Math.ceil(users.length / 10);
-  var schedLevels = Object.keys(schedByLevel).sort();
-%>
-<% for (var jp = 0; jp < totalKartuPages; jp++) { %>
-<!-- Halaman jadwal ke-<%=jp+1%> — ukuran & grid sama dengan halaman kartu -->
-<div class="page">
-  <% for (var slot = 0; slot < 10; slot++) { %>
-  <div class="kartu" style="border:1px solid #444;">
-    <!-- Header slot jadwal — sama tinggi dengan header kartu (16mm) -->
-    <div class="k-head">
-      <div class="k-logo">
-        <img src="/images/logo.png" alt="Logo" onerror="this.style.display='none'" />
-      </div>
-      <div class="k-title">
-        <div class="t1"><%=schoolInfo.name%></div>
-        <div style="font-size:7.5pt;font-weight:800;color:#b45309;letter-spacing:.5px;text-transform:uppercase;">JADWAL UJIAN</div>
-        <div class="t3">TP <%=ta%></div>
-      </div>
-    </div>
-    <!-- Body slot jadwal — semua tingkat & sesi -->
-    <div style="flex:1;padding:1.5mm 2.5mm;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:1mm;">
-      <% schedLevels.forEach(function(level) { %>
-      <div style="margin-bottom:0.5mm;">
-        <div style="font-size:6.5pt;font-weight:800;background:#1e3a5f;color:white;padding:0.5mm 2mm;border-radius:2px;margin-bottom:0.5mm;">
-          KELAS <%=level%>
-        </div>
-        <table style="width:100%;border-collapse:collapse;font-size:6pt;">
-          <% schedByLevel[level].forEach(function(s,i){ %>
-          <tr style="background:<%=i%2===1?'#f8fafc':'#fff'%>;">
-            <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:700;width:7mm;text-align:center;white-space:nowrap;">S<%=s.sesi%></td>
-            <% if(s.hari){ %><td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;white-space:nowrap;width:12mm;"><%=s.hari%></td><% } %>
-            <% if(s.tanggalFmt){ %><td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;white-space:nowrap;width:12mm;"><%=s.tanggalFmt%></td><% } %>
-            <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:600;white-space:nowrap;width:20mm;"><%=s.jamMulai%>-<%=s.jamSelesai%></td>
-            <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:600;"><%=s.mapel%></td>
-          </tr>
-          <% }); %>
-        </table>
-      </div>
-      <% }); %>
-    </div>
-</div>
-<% } %>
-<% } %>
-
 <script>
 function doPrint() {
   window.print();

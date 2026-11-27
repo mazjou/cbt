@@ -1,0 +1,104 @@
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Jadwal Ujian</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:Arial,sans-serif;background:#e5e7eb;}
+    .no-print{background:white;padding:12px 20px;display:flex;align-items:center;
+      justify-content:space-between;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.12);
+      margin-bottom:14px;position:sticky;top:0;z-index:99;}
+    .btn{padding:8px 18px;border-radius:8px;font-weight:700;font-size:13px;
+      cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+    .btn-print{background:#4f46e5;color:white;}
+    .btn-back{background:#f1f5f9;color:#475569;text-decoration:none;}
+    .page{
+      width:210mm;height:297mm;
+      margin:0 auto 16px;background:white;padding:4mm;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      grid-template-rows:repeat(5,56mm);
+      gap:2mm 3mm;overflow:hidden;
+    }
+    .slot{
+      height:56mm;border:1px solid #444;background:white;
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .slot-head{
+      height:16mm;min-height:16mm;max-height:16mm;flex-shrink:0;
+      display:flex;align-items:center;border-bottom:1px solid #444;padding:1mm 2mm;gap:1.5mm;
+    }
+    .s-logo{flex-shrink:0;width:13mm;display:flex;align-items:center;justify-content:center;}
+    .s-logo img{width:12mm;height:12mm;object-fit:contain;}
+    .s-title{flex:1;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+    .s-title .t1{font-size:9.5pt;font-weight:900;text-transform:uppercase;color:#111;letter-spacing:.5px;}
+    .s-title .t2{font-size:7.5pt;font-weight:800;color:#b45309;letter-spacing:.5px;text-transform:uppercase;margin-top:.5mm;}
+    .s-title .t3{font-size:8.5pt;color:#374151;margin-top:.3mm;}
+    .slot-body{flex:1;padding:1.5mm 2.5mm;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;gap:0.8mm;}
+    .lv-head{font-size:6.5pt;font-weight:800;background:#1e3a5f;color:white;padding:0.5mm 2mm;border-radius:2px;margin-bottom:0.3mm;}
+    .sched-table{width:100%;border-collapse:collapse;font-size:6pt;}
+    .sched-table td{border:1px solid #e2e8f0;padding:0.3mm 1mm;}
+    @media print{
+      body{background:white;}
+      .no-print{display:none!important;}
+      .page{margin:0;page-break-after:always;}
+      .page:last-child{page-break-after:auto;}
+      @page{size:A4 portrait;margin:0;}
+    }
+  </style>
+</head>
+<body>
+<div class="no-print">
+  <div>
+    <strong>Jadwal Ujian</strong> &nbsp;·&nbsp; Cetak 1 lembar, gunakan sebagai balik kartu ujian
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button onclick="window.print()" class="btn btn-print">Cetak</button>
+    <a href="/admin/users" class="btn btn-back">Kembali</a>
+  </div>
+</div>
+
+<%
+  var y = new Date().getFullYear();
+  var ta = new Date().getMonth() >= 6 ? (y+'/'+(y+1)) : ((y-1)+'/'+y);
+  var levels = Object.keys(schedByLevel).sort();
+%>
+
+<!-- 1 halaman = 10 slot, semua isi jadwal yang sama -->
+<div class="page">
+  <% for (var slot = 0; slot < 10; slot++) { %>
+  <div class="slot">
+    <div class="slot-head">
+      <div class="s-logo">
+        <img src="/public/images/logo.png" alt="" onerror="this.style.display='none'" />
+      </div>
+      <div class="s-title">
+        <div class="t1"><%=schoolInfo.name%></div>
+        <div class="t2">JADWAL UJIAN</div>
+        <div class="t3">TP <%=ta%></div>
+      </div>
+    </div>
+    <div class="slot-body">
+      <% levels.forEach(function(lv) { %>
+      <div>
+        <div class="lv-head">KELAS <%=lv%></div>
+        <table class="sched-table">
+          <% schedByLevel[lv].forEach(function(s, i) { %>
+          <tr style="background:<%=i%2===1?'#f8fafc':'#fff'%>;">
+            <td style="font-weight:700;width:7mm;text-align:center;white-space:nowrap;">S<%=s.sesi%></td>
+            <% if(s.hari){ %><td style="white-space:nowrap;width:11mm;"><%=s.hari%></td><% } %>
+            <% if(s.tanggalFmt){ %><td style="white-space:nowrap;width:11mm;"><%=s.tanggalFmt%></td><% } %>
+            <td style="font-weight:600;white-space:nowrap;width:20mm;"><%=s.jamMulai%>-<%=s.jamSelesai%></td>
+            <td style="font-weight:600;"><%=s.mapel%></td>
+          </tr>
+          <% }); %>
+        </table>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+  <% } %>
+</div>
+
+</body>
+</html>
