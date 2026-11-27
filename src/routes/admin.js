@@ -1861,7 +1861,7 @@ router.get('/users/print-cards', async (req, res) => {
   try {
     const { ids, role, class_id } = req.query;
     
-    let query = 'SELECT u.id, u.username, u.full_name, u.role, u.nomor_peserta, u.profile_photo, u.plain_password, c.name AS class_name FROM users u LEFT JOIN classes c ON c.id = u.class_id WHERE 1=1';
+    let query = 'SELECT u.id, u.username, u.full_name, u.role, u.nomor_peserta, u.profile_photo, u.plain_password, u.sesi, c.name AS class_name FROM users u LEFT JOIN classes c ON c.id = u.class_id WHERE 1=1';
     const params = [];
     
     if (ids) {
