@@ -25,16 +25,13 @@
       display:flex;flex-direction:column;overflow:hidden;
     }
     .slot-head{
-      height:16mm;min-height:16mm;max-height:16mm;flex-shrink:0;
-      display:flex;align-items:center;border-bottom:1px solid #444;padding:1mm 2mm;gap:1.5mm;
+      height:10mm;min-height:10mm;max-height:10mm;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      border-bottom:2px solid #1e3a5f;padding:1mm 2mm;
+      background:#1e3a5f;
     }
-    .s-logo{flex-shrink:0;width:13mm;display:flex;align-items:center;justify-content:center;}
-    .s-logo img{width:12mm;height:12mm;object-fit:contain;}
-    .s-title{flex:1;text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-    .s-title .t1{font-size:9.5pt;font-weight:900;text-transform:uppercase;color:#111;letter-spacing:.5px;}
-    .s-title .t2{font-size:7.5pt;font-weight:800;color:#b45309;letter-spacing:.5px;text-transform:uppercase;margin-top:.5mm;}
-    .s-title .t3{font-size:8.5pt;color:#374151;margin-top:.3mm;}
-    .slot-body{flex:1;padding:1.5mm 2.5mm;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;gap:0.8mm;}
+    .s-title-simple{font-size:10pt;font-weight:900;color:white;letter-spacing:1px;text-transform:uppercase;}
+    .slot-body{flex:1;padding:1mm 2mm;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;gap:0.5mm;}
     .lv-head{font-size:6.5pt;font-weight:800;background:#1e3a5f;color:white;padding:0.5mm 2mm;border-radius:2px;margin-bottom:0.3mm;}
     .sched-table{width:100%;border-collapse:collapse;font-size:6pt;}
     .sched-table td{border:1px solid #e2e8f0;padding:0.3mm 1mm;}
@@ -69,14 +66,7 @@
   <% for (var slot = 0; slot < 10; slot++) { %>
   <div class="slot">
     <div class="slot-head">
-      <div class="s-logo">
-        <img src="/public/images/logo.png" alt="" onerror="this.style.display='none'" />
-      </div>
-      <div class="s-title">
-        <div class="t1"><%=schoolInfo.name%></div>
-        <div class="t2">JADWAL UJIAN</div>
-        <div class="t3">TP <%=ta%></div>
-      </div>
+      <span class="s-title-simple">Jadwal Ujian</span>
     </div>
     <div class="slot-body">
       <% levels.forEach(function(lv) { %>
