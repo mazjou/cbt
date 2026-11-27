@@ -1920,6 +1920,31 @@ router.get('/users/print-cards', async (req, res) => {
     for (const s of examSchedules) {
       scheduleMap[s.level + '_' + s.sesi] = s;
     }
+
+    // Pre-process allSchedules: format waktu dan tanggal, grouping per level, sudah sorted
+    function fmtTimeSrv(v) {
+      if (!v) return '';
+      if (v instanceof Date) return ('0'+v.getHours()).slice(-2)+':'+('0'+v.getMinutes()).slice(-2);
+      return String(v).substring(0,5);
+    }
+    function fmtDateSrv(v) {
+      if (!v) return '';
+      const d = new Date(v);
+      return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);
+    }
+    const schedByLevel = {};
+    for (const s of examSchedules) {
+      if (!schedByLevel[s.level]) schedByLevel[s.level] = [];
+      schedByLevel[s.level].push({
+        sesi: s.sesi,
+        hari: s.hari || '',
+        tanggalFmt: fmtDateSrv(s.tanggal),
+        jamMulai: fmtTimeSrv(s.jam_mulai),
+        jamSelesai: fmtTimeSrv(s.jam_selesai),
+        mapel: s.mata_pelajaran
+      });
+    }
+    // schedByLevel sudah sorted dari query ORDER BY
     // Generate QR code server-side sebagai data URL (tidak perlu CDN)
     const QRCode = require('qrcode');
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
@@ -1950,6 +1975,7 @@ router.get('/users/print-cards', async (req, res) => {
       schoolInfo,
       scheduleMap,
       allSchedules: examSchedules || [],
+      schedByLevel: schedByLevel || {},
       ta,
       role: role || '',
       class_id: class_id || '',

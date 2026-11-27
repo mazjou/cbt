@@ -189,31 +189,8 @@
 
 <% if (allSchedules && allSchedules.length > 0) { %>
 <%
-  var fmtTime = function(v) {
-    if (!v) return '';
-    if (v instanceof Date) return ('0'+v.getHours()).slice(-2)+':'+('0'+v.getMinutes()).slice(-2);
-    return String(v).substring(0,5);
-  };
-  var fmtDate = function(v) {
-    if (!v) return '';
-    var d = new Date(v);
-    return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);
-  };
-  var dateTs = function(v) { return v ? new Date(v).getTime() : 0; };
-
-  var schedByLevel2 = {};
-  allSchedules.forEach(function(s) {
-    if (!schedByLevel2[s.level]) schedByLevel2[s.level] = [];
-    schedByLevel2[s.level].push(s);
-  });
-  Object.keys(schedByLevel2).forEach(function(lv) {
-    schedByLevel2[lv].sort(function(a,b) {
-      var dt = dateTs(a.tanggal) - dateTs(b.tanggal);
-      if (dt !== 0) return dt;
-      return fmtTime(a.jam_mulai).localeCompare(fmtTime(b.jam_mulai));
-    });
-  });
   var totalKartuPages = Math.ceil(users.length / 10);
+  var schedLevels = Object.keys(schedByLevel).sort();
 %>
 <% for (var jp = 0; jp < totalKartuPages; jp++) { %>
 <!-- Halaman jadwal ke-<%=jp+1%> — ukuran & grid sama dengan halaman kartu -->
@@ -233,19 +210,19 @@
     </div>
     <!-- Body slot jadwal — semua tingkat & sesi -->
     <div style="flex:1;padding:1.5mm 2.5mm;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:1mm;">
-      <% Object.keys(schedByLevel2).sort().forEach(function(level) { %>
+      <% schedLevels.forEach(function(level) { %>
       <div style="margin-bottom:0.5mm;">
         <div style="font-size:6.5pt;font-weight:800;background:#1e3a5f;color:white;padding:0.5mm 2mm;border-radius:2px;margin-bottom:0.5mm;">
           KELAS <%=level%>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:6pt;">
-          <% schedByLevel2[level].forEach(function(s,i){ %>
+          <% schedByLevel[level].forEach(function(s,i){ %>
           <tr style="background:<%=i%2===1?'#f8fafc':'#fff'%>;">
             <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:700;width:7mm;text-align:center;white-space:nowrap;">S<%=s.sesi%></td>
             <% if(s.hari){ %><td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;white-space:nowrap;width:12mm;"><%=s.hari%></td><% } %>
-            <% if(s.tanggal){ %><td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;white-space:nowrap;width:12mm;"><%=fmtDate(s.tanggal)%></td><% } %>
-            <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:600;white-space:nowrap;width:20mm;"><%=fmtTime(s.jam_mulai)%>-<%=fmtTime(s.jam_selesai)%></td>
-            <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:600;"><%=s.mata_pelajaran%></td>
+            <% if(s.tanggalFmt){ %><td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;white-space:nowrap;width:12mm;"><%=s.tanggalFmt%></td><% } %>
+            <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:600;white-space:nowrap;width:20mm;"><%=s.jamMulai%>-<%=s.jamSelesai%></td>
+            <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:600;"><%=s.mapel%></td>
           </tr>
           <% }); %>
         </table>
