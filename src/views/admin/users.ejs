@@ -608,6 +608,20 @@
           </select>
         </div>
         <div>
+          <label class="text-sm text-slate-600">Sesi Ujian <span class="text-slate-400 font-normal">(opsional)</span></label>
+          <select name="sesi" id="um_sesi" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2">
+            <option value="">- Tanpa Sesi -</option>
+            <option value="1">Sesi 1</option>
+            <option value="2">Sesi 2</option>
+            <option value="3">Sesi 3</option>
+            <option value="4">Sesi 4</option>
+            <option value="5">Sesi 5</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
           <label class="text-sm text-slate-600">Password baru (opsional)</label>
           <input name="new_password" id="um_new_password" placeholder="(kosong = tidak berubah)" class="mt-1 w-full rounded-xl bg-white border border-slate-200 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
         </div>
@@ -874,6 +888,7 @@
     const elActive = document.getElementById('um_is_active');
     const elNamaAyah = document.getElementById('um_nama_ayah');
     const elNewPwd   = document.getElementById('um_new_password');
+    const elSesi     = document.getElementById('um_sesi');
 
     function showModal() {
       modal.classList.remove('hidden');
@@ -921,6 +936,7 @@
         elClassId.value = (j.user.class_id === null || j.user.class_id === undefined) ? '' : String(j.user.class_id);
         elActive.value = String(j.user.is_active ? 1 : 0);
         if (elNamaAyah) elNamaAyah.value = j.user.nama_ayah || '';
+        if (elSesi) elSesi.value = j.user.sesi !== null && j.user.sesi !== undefined ? String(j.user.sesi) : '';
         showModal();
       } catch (e) {
         alert(e.message || 'Gagal memuat data pengguna.');
@@ -952,6 +968,7 @@
           class_id: elClassId.value,
           is_active: elActive.value,
           nama_ayah: elNamaAyah ? elNamaAyah.value : '',
+          sesi: elSesi ? elSesi.value : '',
           new_password: elNewPwd.value
         };
         const r = await fetch(`/admin/users/${id}/ajax-update`, {
