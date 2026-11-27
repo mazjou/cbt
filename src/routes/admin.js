@@ -1914,7 +1914,7 @@ router.get('/users/print-cards', async (req, res) => {
       : `${now.getFullYear() - 1}/${now.getFullYear()}`;
     
     // Fetch exam schedules for jadwal on card
-    const [examSchedules] = await pq(`SELECT * FROM exam_schedules ORDER BY level ASC, sesi ASC, jam_mulai ASC`);
+    const [examSchedules] = await pq(`SELECT * FROM exam_schedules ORDER BY level ASC, tanggal ASC NULLS LAST, jam_mulai ASC`);
     // Build a lookup map: key = level + '_' + sesi -> schedule row
     const scheduleMap = {};
     for (const s of examSchedules) {
@@ -7825,7 +7825,7 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
 // ===== EXAM SCHEDULES =====
 router.get('/exam-schedules', async (req, res) => {
   try {
-    const [rows] = await pq(`SELECT * FROM exam_schedules ORDER BY level ASC, sesi ASC, jam_mulai ASC`);
+    const [rows] = await pq(`SELECT * FROM exam_schedules ORDER BY level ASC, tanggal ASC NULLS LAST, jam_mulai ASC`);
     // Group by level
     const byLevel = { X: [], XI: [], XII: [] };
     for (const r of rows) {

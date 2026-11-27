@@ -222,11 +222,18 @@
           KELAS <%=level%>
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:6pt;">
-          <% schedByLevel2[level].sort(function(a,b){return a.sesi-b.sesi;}).forEach(function(s,i){ %>
+          <% schedByLevel2[level].sort(function(a,b){
+               var da = a.tanggal ? new Date(a.tanggal).getTime() : 0;
+               var db = b.tanggal ? new Date(b.tanggal).getTime() : 0;
+               if (da !== db) return da - db;
+               var ja = a.jam_mulai ? String(a.jam_mulai).substring(0,5) : '';
+               var jb = b.jam_mulai ? String(b.jam_mulai).substring(0,5) : '';
+               return ja.localeCompare(jb);
+             }).forEach(function(s,i){ %>
           <tr style="background:<%=i%2===1?'#f8fafc':'#fff'%>;">
             <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:700;width:7mm;text-align:center;white-space:nowrap;">S<%=s.sesi%></td>
             <% if(s.hari){ %><td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;white-space:nowrap;width:12mm;"><%=s.hari%></td><% } %>
-            <% if(s.tanggal){ %><td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;white-space:nowrap;width:12mm;"><%=String(s.tanggal).substring(5,10).replace('-','/')%></td><% } %>
+            <% if(s.tanggal){ %><td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;white-space:nowrap;width:12mm;"><% var tgl=new Date(s.tanggal); %><%= (tgl.getDate()<10?'0':'')+tgl.getDate()+'/'+(tgl.getMonth()<9?'0':'')+(tgl.getMonth()+1) %></td><% } %>
             <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:600;white-space:nowrap;width:20mm;"><%=String(s.jam_mulai).substring(0,5)%>-<%=String(s.jam_selesai).substring(0,5)%></td>
             <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:600;"><%=s.mata_pelajaran%></td>
           </tr>

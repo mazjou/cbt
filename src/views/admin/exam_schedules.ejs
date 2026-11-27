@@ -105,7 +105,7 @@
               <tr class="hover:bg-slate-50">
                 <td class="px-3 py-3 font-medium">Sesi <%= row.sesi %></td>
                 <td class="px-3 py-3"><%= row.hari || '-' %></td>
-                <td class="px-3 py-3"><%= row.tanggal ? String(row.tanggal).substring(0,10) : '-' %></td>
+                <td class="px-3 py-3"><%= row.tanggal ? (function(){ var d=new Date(row.tanggal); return (d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'/'+d.getFullYear(); })() : '-' %></td>
                 <td class="px-3 py-3"><%= row.jam_mulai ? String(row.jam_mulai).substring(0,5) : '' %></td>
                 <td class="px-3 py-3"><%= row.jam_selesai ? String(row.jam_selesai).substring(0,5) : '' %></td>
                 <td class="px-3 py-3 font-medium"><%= row.mata_pelajaran %></td>
