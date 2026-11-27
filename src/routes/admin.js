@@ -1907,6 +1907,11 @@ router.get('/users/print-cards', async (req, res) => {
       address: process.env.SCHOOL_ADDRESS || 'Kediri, Jawa Timur',
       logo: '/images/logo.png'
     };
+
+    const now = new Date();
+    const ta = now.getMonth() >= 6
+      ? `${now.getFullYear()}/${now.getFullYear() + 1}`
+      : `${now.getFullYear() - 1}/${now.getFullYear()}`;
     
     // Fetch exam schedules for jadwal on card
     const [examSchedules] = await pq(`SELECT * FROM exam_schedules ORDER BY level ASC, sesi ASC, jam_mulai ASC`);
@@ -1944,6 +1949,8 @@ router.get('/users/print-cards', async (req, res) => {
       classes,
       schoolInfo,
       scheduleMap,
+      allSchedules: examSchedules || [],
+      ta,
       role: role || '',
       class_id: class_id || '',
       settings: { 'view options': { layout: false } }
