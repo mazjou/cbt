@@ -2153,6 +2153,55 @@ router.get('/users/import', async (req, res) => {
   res.render('admin/users_import', { title: 'Import Masal Siswa', classes });
 });
 
+// ── Download Template Import Siswa (selalu sinkron dengan format export) ──────
+router.get('/users/import/template', async (req, res) => {
+  try {
+    const XLSX = require('xlsx');
+    const [classes] = await pq(`SELECT code, name FROM classes ORDER BY ${CLASS_ORDER_SQL} LIMIT 3;`);
+    const contoh = [
+      { username: '0123456789', full_name: 'BUDI SANTOSO', password: '123456', role: 'STUDENT',
+        class: classes[0]?.name || 'XII RPL 1', nomor_peserta: '001', sesi: 1, status: 'Aktif' },
+      { username: '0123456790', full_name: 'SINTA AYU LESTARI', password: 'sinta2026', role: 'STUDENT',
+        class: classes[1]?.name || 'XII TKJ 2', nomor_peserta: '002', sesi: 2, status: 'Aktif' },
+      { username: '0123456791', full_name: 'ANDI PRATAMA', password: '', role: 'STUDENT',
+        class: classes[2]?.name || 'XII RPL 2', nomor_peserta: '', sesi: '', status: 'Aktif' },
+    ];
+    const panduan = [
+      ['Kolom', 'Keterangan', 'Wajib', 'Contoh'],
+      ['username', 'NIS / username login siswa', 'Ya', '0123456789'],
+      ['full_name', 'Nama lengkap siswa (huruf kapital dianjurkan)', 'Ya', 'BUDI SANTOSO'],
+      ['password', 'Password login. Kosongkan jika tidak ingin ubah password', 'Tidak', '123456'],
+      ['role', 'Role akun: STUDENT / TEACHER / ADMIN (default: STUDENT)', 'Tidak', 'STUDENT'],
+      ['class', 'Nama kelas sesuai menu Kelas di sistem', 'Ya*', 'XII RPL 1'],
+      ['nomor_peserta', 'Nomor peserta ujian (tampil di kartu & bangku)', 'Tidak', '001'],
+      ['sesi', 'Sesi ujian: 1 / 2 / 3 / dst. Kosongkan jika tidak ada sesi', 'Tidak', '1'],
+      ['status', 'Aktif / Nonaktif (default: Aktif)', 'Tidak', 'Aktif'],
+      ['', ''],
+      ['Catatan:'],
+      ['- Kolom yang ada di file export dapat langsung diimport kembali'],
+      ['- Jika username sudah ada, data akan diperbarui (UPDATE)'],
+      ['- Jika username belum ada, akun baru dibuat (INSERT)'],
+      ['- Kolom status diabaikan saat import (semua aktif)'],
+    ];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(contoh, {
+      header: ['username','full_name','password','role','class','nomor_peserta','sesi','status']
+    });
+    ws['!cols'] = [{wch:20},{wch:35},{wch:15},{wch:10},{wch:20},{wch:15},{wch:8},{wch:10}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Template Import');
+    const wsPanduan = XLSX.utils.aoa_to_sheet(panduan);
+    wsPanduan['!cols'] = [{wch:18},{wch:55},{wch:8},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, wsPanduan, 'Panduan');
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', 'attachment; filename="template_import_siswa.xlsx"');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buf);
+  } catch (e) {
+    req.flash('error', 'Gagal membuat template: ' + e.message);
+    res.redirect('/admin/users/import');
+  }
+});
+
 router.post('/users/import/preview', uploadImport.single('file'), async (req, res) => {
   const file = req.file;
   if (!file) {

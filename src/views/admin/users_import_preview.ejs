@@ -49,6 +49,8 @@
             <th class="text-left py-2">Username</th>
             <th class="text-left py-2">Nama</th>
             <th class="text-left py-2">Kelas</th>
+            <th class="text-left py-2">No. Peserta</th>
+            <th class="text-left py-2">Sesi</th>
             <th class="text-left py-2">Aksi</th>
             <th class="text-left py-2">Password</th>
           </tr>
@@ -60,6 +62,8 @@
               <td class="py-2 font-mono"><%= it.username %></td>
               <td class="py-2"><%= it.full_name %></td>
               <td class="py-2 text-slate-600"><%= it.classText %></td>
+              <td class="py-2 text-slate-600"><%= it.nomor_peserta || '-' %></td>
+              <td class="py-2 text-slate-600"><%= it.sesi || '-' %></td>
               <td class="py-2">
                 <% if (it.action === 'UPDATE') { %>
                   <span class="px-2 py-1 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-200">UPDATE</span>
