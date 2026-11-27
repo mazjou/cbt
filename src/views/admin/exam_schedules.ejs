@@ -111,13 +111,20 @@
                 <td class="px-3 py-3 font-medium"><%= row.mata_pelajaran %></td>
                 <td class="px-3 py-3 text-slate-500"><%= row.keterangan || '-' %></td>
                 <td class="px-3 py-3">
-                  <form action="/admin/exam-schedules/<%= row.id %>/delete" method="POST"
-                    onsubmit="return confirm('Hapus jadwal ini?');">
-                    <button type="submit"
-                      class="px-3 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-medium text-xs border border-red-200 transition-all">
-                      Hapus
+                  <div class="flex gap-2">
+                    <button type="button"
+                      onclick="openEdit(<%= row.id %>,'<%= row.level %>',<%= row.sesi %>,'<%= row.hari||'' %>','<%= row.tanggal?String(row.tanggal).substring(0,10):'' %>','<%= row.jam_mulai?String(row.jam_mulai).substring(0,5):'' %>','<%= row.jam_selesai?String(row.jam_selesai).substring(0,5):'' %>','<%= row.mata_pelajaran.replace(/'/g,"\\'") %>','<%= (row.keterangan||'').replace(/'/g,"\\'") %>')"
+                      class="px-3 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium text-xs border border-blue-200 transition-all">
+                      Edit
                     </button>
-                  </form>
+                    <form action="/admin/exam-schedules/<%= row.id %>/delete" method="POST"
+                      onsubmit="return confirm('Hapus jadwal ini?');">
+                      <button type="submit"
+                        class="px-3 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-medium text-xs border border-red-200 transition-all">
+                        Hapus
+                      </button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             <% }); %>
@@ -127,3 +134,91 @@
     <% } %>
   </div>
 <% }); %>
+
+<!-- Modal Edit Jadwal -->
+<div id="editModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 bg-black/40" onclick="closeEdit()"></div>
+  <div class="relative mx-auto mt-20 w-[92%] max-w-2xl rounded-2xl bg-white shadow-xl">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <h3 class="text-lg font-semibold text-orange-900">Edit Jadwal Ujian</h3>
+      <button type="button" onclick="closeEdit()" class="rounded-xl bg-gradient-to-r from-red-400 to-pink-400 text-white font-bold px-3 py-1.5">X</button>
+    </div>
+    <form id="editForm" method="POST" class="p-5">
+      <input type="hidden" name="_method" value="PUT" />
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div>
+          <label class="text-sm text-orange-700 font-medium block mb-1">Tingkat *</label>
+          <select name="level" id="e_level" required class="w-full rounded-xl bg-white border border-orange-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+            <option value="X">X</option>
+            <option value="XI">XI</option>
+            <option value="XII">XII</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-orange-700 font-medium block mb-1">Sesi *</label>
+          <input type="number" name="sesi" id="e_sesi" min="1" max="10" required
+            class="w-full rounded-xl bg-white border border-orange-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+        </div>
+        <div>
+          <label class="text-sm text-orange-700 font-medium block mb-1">Hari</label>
+          <select name="hari" id="e_hari" class="w-full rounded-xl bg-white border border-orange-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400">
+            <option value="">- Pilih Hari -</option>
+            <option value="Senin">Senin</option>
+            <option value="Selasa">Selasa</option>
+            <option value="Rabu">Rabu</option>
+            <option value="Kamis">Kamis</option>
+            <option value="Jumat">Jumat</option>
+            <option value="Sabtu">Sabtu</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm text-orange-700 font-medium block mb-1">Tanggal</label>
+          <input type="date" name="tanggal" id="e_tanggal"
+            class="w-full rounded-xl bg-white border border-orange-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+        </div>
+        <div>
+          <label class="text-sm text-orange-700 font-medium block mb-1">Jam Mulai *</label>
+          <input type="time" name="jam_mulai" id="e_jam_mulai" required
+            class="w-full rounded-xl bg-white border border-orange-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+        </div>
+        <div>
+          <label class="text-sm text-orange-700 font-medium block mb-1">Jam Selesai *</label>
+          <input type="time" name="jam_selesai" id="e_jam_selesai" required
+            class="w-full rounded-xl bg-white border border-orange-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+        </div>
+        <div>
+          <label class="text-sm text-orange-700 font-medium block mb-1">Mata Pelajaran *</label>
+          <input type="text" name="mata_pelajaran" id="e_mapel" required
+            class="w-full rounded-xl bg-white border border-orange-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+        </div>
+        <div>
+          <label class="text-sm text-orange-700 font-medium block mb-1">Keterangan</label>
+          <input type="text" name="keterangan" id="e_ket"
+            class="w-full rounded-xl bg-white border border-orange-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+        </div>
+      </div>
+      <div class="mt-4 flex justify-end gap-2">
+        <button type="button" onclick="closeEdit()" class="px-4 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-medium text-sm">Batal</button>
+        <button type="submit" class="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-amber-400 hover:from-orange-500 hover:to-amber-500 text-white font-semibold text-sm shadow-md">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function openEdit(id, level, sesi, hari, tanggal, jamMulai, jamSelesai, mapel, ket) {
+  document.getElementById('editForm').action = '/admin/exam-schedules/' + id + '/update';
+  document.getElementById('e_level').value = level;
+  document.getElementById('e_sesi').value = sesi;
+  document.getElementById('e_hari').value = hari;
+  document.getElementById('e_tanggal').value = tanggal;
+  document.getElementById('e_jam_mulai').value = jamMulai;
+  document.getElementById('e_jam_selesai').value = jamSelesai;
+  document.getElementById('e_mapel').value = mapel;
+  document.getElementById('e_ket').value = ket;
+  document.getElementById('editModal').classList.remove('hidden');
+}
+function closeEdit() {
+  document.getElementById('editModal').classList.add('hidden');
+}
+</script>

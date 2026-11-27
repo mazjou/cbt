@@ -7880,5 +7880,24 @@ router.post('/exam-schedules/:id/delete', async (req, res) => {
   res.redirect('/admin/exam-schedules');
 });
 
+router.post('/exam-schedules/:id/update', async (req, res) => {
+  const { level, sesi, hari, tanggal, jam_mulai, jam_selesai, mata_pelajaran, keterangan } = req.body;
+  try {
+    if (!level || !sesi || !jam_mulai || !jam_selesai || !mata_pelajaran) {
+      req.flash('error', 'Field wajib tidak boleh kosong.');
+      return res.redirect('/admin/exam-schedules');
+    }
+    await pool.query(
+      `UPDATE exam_schedules SET level=$1, sesi=$2, hari=$3, tanggal=$4, jam_mulai=$5, jam_selesai=$6, mata_pelajaran=$7, keterangan=$8 WHERE id=$9`,
+      [level, parseInt(sesi,10), hari||null, tanggal||null, jam_mulai, jam_selesai, mata_pelajaran, keterangan||null, req.params.id]
+    );
+    req.flash('success', 'Jadwal berhasil diperbarui.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memperbarui jadwal: ' + e.message);
+  }
+  res.redirect('/admin/exam-schedules');
+});
+
 module.exports = router;
 
