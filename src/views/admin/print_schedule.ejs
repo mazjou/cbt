@@ -47,18 +47,28 @@
 <body>
 <div class="no-print">
   <div>
-    <strong>Jadwal Ujian</strong> &nbsp;·&nbsp; Cetak 1 lembar, gunakan sebagai balik kartu ujian
+    <strong>Jadwal Ujian</strong>
+    <% if (filterLevel) { %> &nbsp;·&nbsp; <strong>Kelas <%=filterLevel%></strong><% } %>
+    &nbsp;·&nbsp; Cetak 1 lembar, balik kartu ujian
   </div>
-  <div style="display:flex;gap:8px;">
+  <div style="display:flex;gap:8px;align-items:center;">
+    <form method="GET" action="/admin/users/print-schedule" style="display:flex;gap:6px;align-items:center;">
+      <select name="level" onchange="this.form.submit()"
+        style="padding:6px 10px;border-radius:7px;border:2px solid #e2e8f0;font-size:13px;color:#475569;background:white;">
+        <option value="">Semua Tingkat</option>
+        <option value="X"   <%=filterLevel==='X'  ?'selected':''%>>Kelas X</option>
+        <option value="XI"  <%=filterLevel==='XI' ?'selected':''%>>Kelas XI</option>
+        <option value="XII" <%=filterLevel==='XII'?'selected':''%>>Kelas XII</option>
+      </select>
+    </form>
     <button onclick="window.print()" class="btn btn-print">Cetak</button>
     <a href="/admin/users" class="btn btn-back">Kembali</a>
   </div>
 </div>
 
 <%
-  var y = new Date().getFullYear();
-  var ta = new Date().getMonth() >= 6 ? (y+'/'+(y+1)) : ((y-1)+'/'+y);
   var levels = Object.keys(schedByLevel).sort();
+  var filteredLevels = filterLevel ? levels.filter(function(l){ return l === filterLevel; }) : levels;
 %>
 
 <!-- 1 halaman = 10 slot, semua isi jadwal yang sama -->
@@ -66,10 +76,10 @@
   <% for (var slot = 0; slot < 10; slot++) { %>
   <div class="slot">
     <div class="slot-head">
-      <span class="s-title-simple">Jadwal Ujian</span>
+      <span class="s-title-simple">Jadwal Ujian<% if(filterLevel){ %> &mdash; Kelas <%=filterLevel%><% } %></span>
     </div>
     <div class="slot-body">
-      <% levels.forEach(function(lv) { %>
+      <% filteredLevels.forEach(function(lv) { %>
       <div>
         <div class="lv-head">KELAS <%=lv%></div>
         <table class="sched-table">

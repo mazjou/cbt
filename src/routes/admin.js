@@ -2210,6 +2210,7 @@ router.get('/users/import', async (req, res) => {
 // ── Cetak Jadwal Ujian (1 lembar, 10 slot sama) ──────────────────────────────
 router.get('/users/print-schedule', async (req, res) => {
   try {
+    const filterLevel = req.query.level || '';
     const [examSchedules] = await pq(`SELECT * FROM exam_schedules ORDER BY level ASC, tanggal ASC NULLS LAST, jam_mulai ASC`);
     function fmtT(v){ if(!v)return''; if(v instanceof Date)return('0'+v.getHours()).slice(-2)+':'+('0'+v.getMinutes()).slice(-2); return String(v).substring(0,5); }
     function fmtD(v){ if(!v)return''; var d=new Date(v); return('0'+d.getDate()).slice(-2)+'/'+ ('0'+(d.getMonth()+1)).slice(-2); }
@@ -2219,7 +2220,7 @@ router.get('/users/print-schedule', async (req, res) => {
       schedByLevel[s.level].push({ sesi:s.sesi, hari:s.hari||'', tanggalFmt:fmtD(s.tanggal), jamMulai:fmtT(s.jam_mulai), jamSelesai:fmtT(s.jam_selesai), mapel:s.mata_pelajaran });
     }
     const schoolInfo = { name: process.env.SCHOOL_NAME || 'SMK Negeri 1 Kras' };
-    res.app.render('admin/print_schedule', { title:'Jadwal Ujian', schedByLevel, schoolInfo, settings:{'view options':{layout:false}} }, (err,html) => {
+    res.app.render('admin/print_schedule', { title:'Jadwal Ujian', schedByLevel, schoolInfo, filterLevel, settings:{'view options':{layout:false}} }, (err,html) => {
       if (err) { console.error('Render error:', err.message); return res.status(500).send('Gagal render jadwal.'); }
       res.send(html);
     });
