@@ -188,60 +188,57 @@
 <% } %>
 
 <% if (allSchedules && allSchedules.length > 0) { %>
-<!-- Halaman Jadwal Ujian — cetak di balik kartu (duplex) -->
-<div class="page" style="display:block!important;padding:8mm;">
-  <div style="width:100%;">
-    <!-- Header -->
-    <div style="text-align:center;border-bottom:2px solid #000;padding-bottom:3mm;margin-bottom:5mm;">
-      <div style="font-size:13pt;font-weight:900;letter-spacing:1px;"><%=schoolInfo.name%></div>
-      <div style="font-size:10pt;font-weight:700;margin-top:1mm;">JADWAL PELAKSANAAN UJIAN</div>
-      <div style="font-size:9pt;color:#555;margin-top:1mm;">Tahun Pelajaran <%=ta%></div>
-    </div>
-
-    <%
-      const schedByLevel = {};
-      allSchedules.forEach(function(s) {
-        if (!schedByLevel[s.level]) schedByLevel[s.level] = [];
-        schedByLevel[s.level].push(s);
-      });
-      const levels = Object.keys(schedByLevel).sort();
-    %>
-
-    <% levels.forEach(function(level) { %>
-    <div style="margin-bottom:6mm;">
-      <div style="font-size:10pt;font-weight:800;background:#1e3a5f;color:white;padding:2.5mm 5mm;border-radius:3px;margin-bottom:2mm;letter-spacing:0.5px;">
-        KELAS <%=level%>
+<%
+  // Kelompokkan jadwal per level untuk tampilan di slot jadwal
+  const schedByLevel2 = {};
+  allSchedules.forEach(function(s) {
+    if (!schedByLevel2[s.level]) schedByLevel2[s.level] = [];
+    schedByLevel2[s.level].push(s);
+  });
+  // Hitung berapa halaman kartu yang dicetak → buat halaman jadwal sebanyak itu
+  const totalKartuPages = Math.ceil(users.length / 10);
+%>
+<% for (var jp = 0; jp < totalKartuPages; jp++) { %>
+<!-- Halaman jadwal ke-<%=jp+1%> — ukuran & grid sama dengan halaman kartu -->
+<div class="page">
+  <% for (var slot = 0; slot < 10; slot++) { %>
+  <div class="kartu" style="border:1px solid #444;">
+    <!-- Header slot jadwal — sama tinggi dengan header kartu (16mm) -->
+    <div class="k-head">
+      <div class="k-logo">
+        <img src="/images/logo.png" alt="Logo" onerror="this.style.display='none'" />
       </div>
-      <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
-        <thead>
-          <tr style="background:#f1f5f9;">
-            <th style="border:1px solid #94a3b8;padding:2.5mm 4mm;text-align:center;width:20mm;">Sesi</th>
-            <th style="border:1px solid #94a3b8;padding:2.5mm 4mm;text-align:center;width:40mm;">Waktu</th>
-            <th style="border:1px solid #94a3b8;padding:2.5mm 4mm;text-align:left;">Mata Pelajaran</th>
-            <th style="border:1px solid #94a3b8;padding:2.5mm 4mm;text-align:left;width:50mm;">Keterangan</th>
-          </tr>
-        </thead>
-        <tbody>
-          <% schedByLevel[level].sort(function(a,b){return a.sesi-b.sesi;}).forEach(function(s,i){ %>
-          <tr style="background:<%=i%2===1?'#f8fafc':'#ffffff'%>;">
-            <td style="border:1px solid #cbd5e1;padding:3mm 4mm;text-align:center;font-weight:700;">Sesi <%=s.sesi%></td>
-            <td style="border:1px solid #cbd5e1;padding:3mm 4mm;text-align:center;font-weight:600;">
-              <%=String(s.jam_mulai).substring(0,5)%> &ndash; <%=String(s.jam_selesai).substring(0,5)%>
-            </td>
-            <td style="border:1px solid #cbd5e1;padding:3mm 4mm;font-weight:600;"><%=s.mata_pelajaran%></td>
-            <td style="border:1px solid #cbd5e1;padding:3mm 4mm;color:#475569;"><%=s.keterangan||''%></td>
+      <div class="k-title">
+        <div class="t1"><%=schoolInfo.name%></div>
+        <div style="font-size:7.5pt;font-weight:800;color:#b45309;letter-spacing:.5px;text-transform:uppercase;">JADWAL UJIAN</div>
+        <div class="t3">TP <%=ta%></div>
+      </div>
+    </div>
+    <!-- Body slot jadwal — semua tingkat & sesi -->
+    <div style="flex:1;padding:1.5mm 2.5mm;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:1mm;">
+      <% Object.keys(schedByLevel2).sort().forEach(function(level) { %>
+      <div style="margin-bottom:0.5mm;">
+        <div style="font-size:6.5pt;font-weight:800;background:#1e3a5f;color:white;padding:0.5mm 2mm;border-radius:2px;margin-bottom:0.5mm;">
+          KELAS <%=level%>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:6.5pt;">
+          <% schedByLevel2[level].sort(function(a,b){return a.sesi-b.sesi;}).forEach(function(s,i){ %>
+          <tr style="background:<%=i%2===1?'#f8fafc':'#fff'%>;">
+            <td style="border:1px solid #e2e8f0;padding:0.4mm 1.5mm;font-weight:700;width:10mm;text-align:center;white-space:nowrap;">S<%=s.sesi%></td>
+            <td style="border:1px solid #e2e8f0;padding:0.4mm 1.5mm;font-weight:600;white-space:nowrap;width:22mm;"><%=String(s.jam_mulai).substring(0,5)%>-<%=String(s.jam_selesai).substring(0,5)%></td>
+            <td style="border:1px solid #e2e8f0;padding:0.4mm 1.5mm;font-weight:600;"><%=s.mata_pelajaran%></td>
           </tr>
           <% }); %>
-        </tbody>
-      </table>
+        </table>
+      </div>
+      <% }); %>
     </div>
-    <% }); %>
-
-    <div style="margin-top:8mm;border-top:1px solid #cbd5e1;padding-top:3mm;text-align:center;font-size:8.5pt;color:#94a3b8;">
-      Harap hadir 15 menit sebelum ujian dimulai &bull; Bawa kartu peserta ini &bull; Tidak diperkenankan membawa alat komunikasi
-    </div>
+    <!-- Footer sama dengan kartu -->
+    <div class="k-foot">Hadir 15 menit sebelum ujian &bull; Simpan kartu ini</div>
   </div>
+  <% } %>
 </div>
+<% } %>
 <% } %>
 
 <script>
