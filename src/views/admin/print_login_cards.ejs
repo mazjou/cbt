@@ -178,6 +178,10 @@
         <% } %>
         <tr><td class="lb">Username</td><td class="sp">:</td><td class="vl mono"><%=u.username%></td></tr>
         <tr><td class="lb">Password</td><td class="sp">:</td><td class="vl mono"><%=u.plain_password||u.username%></td></tr>
+        <% var sched = u.scheduleKey ? scheduleMap[u.scheduleKey] : null; %>
+        <% if (sched) { %>
+        <tr><td class="lb">Jadwal</td><td class="sp">:</td><td class="vl"><%= sched.jam_mulai ? String(sched.jam_mulai).substring(0,5) : '' %> - <%= sched.jam_selesai ? String(sched.jam_selesai).substring(0,5) : '' %> | <%= sched.mata_pelajaran %></td></tr>
+        <% } %>
       </table>
     </div>
 

@@ -81,6 +81,15 @@ function toISODate(date) {
   return y + '-' + m + '-' + day;
 }
 
+// Extract tingkat kelas (X/XI/XII) from class_name string
+function getLevelFromClassName(className) {
+  if (!className) return null;
+  const s = String(className).trim();
+  if (/^XII/i.test(s)) return 'XII';
+  if (/^XI/i.test(s)) return 'XI';
+  if (/^X/i.test(s)) return 'X';
+  return null;
+}
 // Upload config for admin imports
 const importDir = path.join(__dirname, '..', 'public', 'uploads', 'imports');
 fs.mkdirSync(importDir, { recursive: true });
@@ -1899,6 +1908,13 @@ router.get('/users/print-cards', async (req, res) => {
       logo: '/images/logo.png'
     };
     
+    // Fetch exam schedules for jadwal on card
+    const [examSchedules] = await pq(`SELECT * FROM exam_schedules ORDER BY level ASC, sesi ASC, jam_mulai ASC`);
+    // Build a lookup map: key = level + '_' + sesi -> schedule row
+    const scheduleMap = {};
+    for (const s of examSchedules) {
+      scheduleMap[s.level + '_' + s.sesi] = s;
+    }
     // Generate QR code server-side sebagai data URL (tidak perlu CDN)
     const QRCode = require('qrcode');
     const appUrl = process.env.APP_URL || 'http://localhost:3000';
@@ -1911,9 +1927,13 @@ router.get('/users/print-cards', async (req, res) => {
           color: { dark: '#000000', light: '#ffffff' },
           errorCorrectionLevel: 'M'
         });
-        return { ...u, qr_data_url: qrDataUrl };
+        const level = getLevelFromClassName(u.class_name);
+        const scheduleKey = level && u.sesi ? (level + '_' + u.sesi) : null;
+        return { ...u, qr_data_url: qrDataUrl, scheduleKey };
       } catch(e) {
-        return { ...u, qr_data_url: null };
+        const level = getLevelFromClassName(u.class_name);
+        const scheduleKey = level && u.sesi ? (level + '_' + u.sesi) : null;
+        return { ...u, qr_data_url: null, scheduleKey };
       }
     }));
 
@@ -1923,6 +1943,7 @@ router.get('/users/print-cards', async (req, res) => {
       users: usersWithQR,
       classes,
       schoolInfo,
+      scheduleMap,
       role: role || '',
       class_id: class_id || '',
       settings: { 'view options': { layout: false } }
@@ -7792,6 +7813,64 @@ router.get('/raport/:period_id/print-all', async (req, res) => {
     console.error(e);
     res.status(500).send('Gagal memuat data cetak raport.');
   }
+});
+
+// ===== EXAM SCHEDULES =====
+router.get('/exam-schedules', async (req, res) => {
+  try {
+    const [rows] = await pq(`SELECT * FROM exam_schedules ORDER BY level ASC, sesi ASC, jam_mulai ASC`);
+    // Group by level
+    const byLevel = { X: [], XI: [], XII: [] };
+    for (const r of rows) {
+      if (byLevel[r.level]) byLevel[r.level].push(r);
+      else byLevel[r.level] = [r];
+    }
+    res.render('admin/exam_schedules', { title: 'Jadwal Ujian', byLevel, messages: req.flash() });
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal memuat jadwal ujian.');
+    res.redirect('/admin');
+  }
+});
+
+router.post('/exam-schedules', async (req, res) => {
+  const { level, sesi, jam_mulai, jam_selesai, mata_pelajaran, keterangan } = req.body;
+  try {
+    if (!level || !sesi || !jam_mulai || !jam_selesai || !mata_pelajaran) {
+      req.flash('error', 'Semua field wajib kecuali keterangan harus diisi.');
+      return res.redirect('/admin/exam-schedules');
+    }
+    await pool.query(
+      `INSERT INTO exam_schedules (level, sesi, jam_mulai, jam_selesai, mata_pelajaran, keterangan) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [level, parseInt(sesi, 10), jam_mulai, jam_selesai, mata_pelajaran, keterangan || null]
+    );
+    req.flash('success', 'Jadwal berhasil ditambahkan.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menambahkan jadwal: ' + e.message);
+  }
+  res.redirect('/admin/exam-schedules');
+});
+
+router.delete('/exam-schedules/:id', async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM exam_schedules WHERE id=$1`, [req.params.id]);
+    req.flash('success', 'Jadwal dihapus.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menghapus jadwal.');
+  }
+  res.redirect('/admin/exam-schedules');
+});
+router.post('/exam-schedules/:id/delete', async (req, res) => {
+  try {
+    await pool.query(`DELETE FROM exam_schedules WHERE id=$1`, [req.params.id]);
+    req.flash('success', 'Jadwal dihapus.');
+  } catch (e) {
+    console.error(e);
+    req.flash('error', 'Gagal menghapus jadwal.');
+  }
+  res.redirect('/admin/exam-schedules');
 });
 
 module.exports = router;
