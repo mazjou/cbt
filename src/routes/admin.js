@@ -7841,15 +7841,15 @@ router.get('/exam-schedules', async (req, res) => {
 });
 
 router.post('/exam-schedules', async (req, res) => {
-  const { level, sesi, jam_mulai, jam_selesai, mata_pelajaran, keterangan } = req.body;
+  const { level, sesi, hari, tanggal, jam_mulai, jam_selesai, mata_pelajaran, keterangan } = req.body;
   try {
     if (!level || !sesi || !jam_mulai || !jam_selesai || !mata_pelajaran) {
       req.flash('error', 'Semua field wajib kecuali keterangan harus diisi.');
       return res.redirect('/admin/exam-schedules');
     }
     await pool.query(
-      `INSERT INTO exam_schedules (level, sesi, jam_mulai, jam_selesai, mata_pelajaran, keterangan) VALUES ($1,$2,$3,$4,$5,$6)`,
-      [level, parseInt(sesi, 10), jam_mulai, jam_selesai, mata_pelajaran, keterangan || null]
+      `INSERT INTO exam_schedules (level, sesi, hari, tanggal, jam_mulai, jam_selesai, mata_pelajaran, keterangan) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [level, parseInt(sesi, 10), hari || null, tanggal || null, jam_mulai, jam_selesai, mata_pelajaran, keterangan || null]
     );
     req.flash('success', 'Jadwal berhasil ditambahkan.');
   } catch (e) {

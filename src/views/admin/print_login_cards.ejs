@@ -221,22 +221,20 @@
         <div style="font-size:6.5pt;font-weight:800;background:#1e3a5f;color:white;padding:0.5mm 2mm;border-radius:2px;margin-bottom:0.5mm;">
           KELAS <%=level%>
         </div>
-        <table style="width:100%;border-collapse:collapse;font-size:6.5pt;">
+        <table style="width:100%;border-collapse:collapse;font-size:6pt;">
           <% schedByLevel2[level].sort(function(a,b){return a.sesi-b.sesi;}).forEach(function(s,i){ %>
           <tr style="background:<%=i%2===1?'#f8fafc':'#fff'%>;">
-            <td style="border:1px solid #e2e8f0;padding:0.4mm 1.5mm;font-weight:700;width:10mm;text-align:center;white-space:nowrap;">S<%=s.sesi%></td>
-            <td style="border:1px solid #e2e8f0;padding:0.4mm 1.5mm;font-weight:600;white-space:nowrap;width:22mm;"><%=String(s.jam_mulai).substring(0,5)%>-<%=String(s.jam_selesai).substring(0,5)%></td>
-            <td style="border:1px solid #e2e8f0;padding:0.4mm 1.5mm;font-weight:600;"><%=s.mata_pelajaran%></td>
+            <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:700;width:7mm;text-align:center;white-space:nowrap;">S<%=s.sesi%></td>
+            <% if(s.hari){ %><td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;white-space:nowrap;width:12mm;"><%=s.hari%></td><% } %>
+            <% if(s.tanggal){ %><td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;white-space:nowrap;width:12mm;"><%=String(s.tanggal).substring(5,10).replace('-','/')%></td><% } %>
+            <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:600;white-space:nowrap;width:20mm;"><%=String(s.jam_mulai).substring(0,5)%>-<%=String(s.jam_selesai).substring(0,5)%></td>
+            <td style="border:1px solid #e2e8f0;padding:0.3mm 1mm;font-weight:600;"><%=s.mata_pelajaran%></td>
           </tr>
           <% }); %>
         </table>
       </div>
       <% }); %>
     </div>
-    <!-- Footer sama dengan kartu -->
-    <div class="k-foot">Hadir 15 menit sebelum ujian &bull; Simpan kartu ini</div>
-  </div>
-  <% } %>
 </div>
 <% } %>
 <% } %>
