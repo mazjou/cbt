@@ -70,7 +70,7 @@
     </div>
     <div class="col-span-2 md:col-span-4 flex justify-end">
       <button type="submit"
-        class="px-5 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-amber-400 hover:from-orange-500 hover:to-amber-500 text-white font-semibold text-sm shadow-md transition-all">
+        class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-400 to-amber-500 hover:from-orange-500 hover:to-amber-600 text-white font-bold text-sm shadow-md transition-all transform hover:scale-105">
         Tambah Jadwal
       </button>
     </div>
@@ -105,9 +105,9 @@
               <tr class="hover:bg-slate-50">
                 <td class="px-3 py-3 font-medium">Sesi <%= row.sesi %></td>
                 <td class="px-3 py-3"><%= row.hari || '-' %></td>
-                <td class="px-3 py-3"><%= row.tanggal ? (function(){ var d=new Date(row.tanggal); return (d.getDate()<10?'0':'')+d.getDate()+'/'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'/'+d.getFullYear(); })() : '-' %></td>
-                <td class="px-3 py-3"><%= row.jam_mulai ? String(row.jam_mulai).substring(0,5) : '' %></td>
-                <td class="px-3 py-3"><%= row.jam_selesai ? String(row.jam_selesai).substring(0,5) : '' %></td>
+                <td class="px-3 py-3"><%= row.tanggal ? (function(){ var d=new Date(row.tanggal); return ('0'+d.getDate()).slice(-2)+'/'+ ('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); })() : '-' %></td>
+                <td class="px-3 py-3 font-mono"><%= row.jam_mulai ? String(row.jam_mulai).substring(0,5) : '' %></td>
+                <td class="px-3 py-3 font-mono"><%= row.jam_selesai ? String(row.jam_selesai).substring(0,5) : '' %></td>
                 <td class="px-3 py-3 font-medium"><%= row.mata_pelajaran %></td>
                 <td class="px-3 py-3 text-slate-500"><%= row.keterangan || '-' %></td>
                 <td class="px-3 py-3">

@@ -2213,7 +2213,7 @@ router.get('/users/print-schedule', async (req, res) => {
     const filterLevel = req.query.level || '';
     const [examSchedules] = await pq(`SELECT * FROM exam_schedules ORDER BY level ASC, tanggal ASC NULLS LAST, jam_mulai ASC`);
     function fmtT(v){ if(!v)return''; if(v instanceof Date)return('0'+v.getHours()).slice(-2)+':'+('0'+v.getMinutes()).slice(-2); return String(v).substring(0,5); }
-    function fmtD(v){ if(!v)return''; var d=new Date(v); return('0'+d.getDate()).slice(-2)+'/'+ ('0'+(d.getMonth()+1)).slice(-2); }
+    function fmtD(v){ if(!v)return''; var d=new Date(v); return('0'+d.getDate()).slice(-2)+'/'+ ('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
     const schedByLevel = {};
     for (const s of examSchedules) {
       if (!schedByLevel[s.level]) schedByLevel[s.level] = [];
