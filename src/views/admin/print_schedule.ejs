@@ -80,9 +80,21 @@
     </div>
     <div class="slot-body">
       <% filteredLevels.forEach(function(lv) { %>
-      <div>
-        <div class="lv-head">KELAS <%=lv%></div>
+      <div style="margin-bottom:0.3mm;">
         <table class="sched-table">
+          <thead>
+            <tr style="background:#1e3a5f;">
+              <th colspan="5" style="border:1px solid #cbd5e1;padding:0.4mm 0.8mm;text-align:left;color:white;font-size:6pt;letter-spacing:0.5px;">KELAS <%=lv%></th>
+            </tr>
+            <tr style="background:#f1f5f9;">
+              <th style="border:1px solid #cbd5e1;padding:0.3mm 0.8mm;text-align:center;width:7mm;">Sesi</th>
+              <% if(schedByLevel[lv][0] && schedByLevel[lv][0].hari){ %><th style="border:1px solid #cbd5e1;padding:0.3mm 0.8mm;width:11mm;">Hari</th><% } %>
+              <% if(schedByLevel[lv][0] && schedByLevel[lv][0].tanggalFmt){ %><th style="border:1px solid #cbd5e1;padding:0.3mm 0.8mm;width:18mm;">Tanggal</th><% } %>
+              <th style="border:1px solid #cbd5e1;padding:0.3mm 0.8mm;width:20mm;">Jam</th>
+              <th style="border:1px solid #cbd5e1;padding:0.3mm 0.8mm;text-align:left;">Mapel</th>
+            </tr>
+          </thead>
+          <tbody>
           <% schedByLevel[lv].forEach(function(s, i) { %>
           <tr style="background:<%=i%2===1?'#f8fafc':'#fff'%>;">
             <td style="font-weight:700;width:7mm;text-align:center;white-space:nowrap;">S<%=s.sesi%></td>
@@ -91,7 +103,7 @@
             <td style="font-weight:600;white-space:nowrap;width:20mm;"><%=s.jamMulai%>-<%=s.jamSelesai%></td>
             <td style="font-weight:600;"><%=s.mapel%></td>
           </tr>
-          <% }); %>
+          </tbody>
         </table>
       </div>
       <% }); %>
