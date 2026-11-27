@@ -189,28 +189,23 @@
 
 <% if (allSchedules && allSchedules.length > 0) { %>
 <%
-  // Helper: format waktu dari Time/Date/string → "HH:MM"
-  function fmtTime(v) {
+  var fmtTime = function(v) {
     if (!v) return '';
     if (v instanceof Date) return ('0'+v.getHours()).slice(-2)+':'+('0'+v.getMinutes()).slice(-2);
     return String(v).substring(0,5);
-  }
-  // Helper: format tanggal → "DD/MM"
-  function fmtDate(v) {
+  };
+  var fmtDate = function(v) {
     if (!v) return '';
     var d = new Date(v);
     return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2);
-  }
-  // Helper: timestamp tanggal untuk sort
-  function dateTs(v) { return v ? new Date(v).getTime() : 0; }
+  };
+  var dateTs = function(v) { return v ? new Date(v).getTime() : 0; };
 
-  // Kelompokkan jadwal per level
   var schedByLevel2 = {};
   allSchedules.forEach(function(s) {
     if (!schedByLevel2[s.level]) schedByLevel2[s.level] = [];
     schedByLevel2[s.level].push(s);
   });
-  // Sort tiap level: tanggal ASC, lalu jam_mulai ASC
   Object.keys(schedByLevel2).forEach(function(lv) {
     schedByLevel2[lv].sort(function(a,b) {
       var dt = dateTs(a.tanggal) - dateTs(b.tanggal);
