@@ -95,14 +95,15 @@
             </tr>
           </thead>
           <tbody>
-          <% schedByLevel[lv].forEach(function(s, i) { %>
-          <tr style="background:<%=i%2===1?'#f8fafc':'#fff'%>;">
-            <td style="font-weight:700;width:7mm;text-align:center;white-space:nowrap;">S<%=s.sesi%></td>
-            <% if(s.hari){ %><td style="white-space:nowrap;width:11mm;"><%=s.hari%></td><% } %>
-            <% if(s.tanggalFmt){ %><td style="white-space:nowrap;width:11mm;"><%=s.tanggalFmt%></td><% } %>
-            <td style="font-weight:600;white-space:nowrap;width:20mm;"><%=s.jamMulai%>-<%=s.jamSelesai%></td>
-            <td style="font-weight:600;"><%=s.mapel%></td>
-          </tr>
+            <% schedByLevel[lv].forEach(function(s, i) { %>
+            <tr style="background:<%=i%2===1?'#f8fafc':'#fff'%>;">
+              <td style="font-weight:700;width:7mm;text-align:center;white-space:nowrap;">S<%=s.sesi%></td>
+              <% if(s.hari){ %><td style="white-space:nowrap;width:11mm;"><%=s.hari%></td><% } %>
+              <% if(s.tanggalFmt){ %><td style="white-space:nowrap;width:18mm;"><%=s.tanggalFmt%></td><% } %>
+              <td style="font-weight:600;white-space:nowrap;width:20mm;"><%=s.jamMulai%>-<%=s.jamSelesai%></td>
+              <td style="font-weight:600;"><%=s.mapel%></td>
+            </tr>
+            <% }); %>
           </tbody>
         </table>
       </div>
