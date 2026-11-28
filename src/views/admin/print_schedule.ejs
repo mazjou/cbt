@@ -92,25 +92,25 @@
           </colgroup>
           <thead>
             <tr style="background:#fff;color:#000;border-bottom:1.5px solid #000;">
-              <th style="border:1px solid #000;padding:0.3mm 0.5mm;text-align:center;">No</th>
-              <th style="border:1px solid #000;padding:0.3mm 0.8mm;text-align:center;">Sesi</th>
-              <% if(schedWithSpan[lv] && schedWithSpan[lv][0] && schedWithSpan[lv][0].hari){ %><th style="border:1px solid #000;padding:0.3mm 0.8mm;">Hari</th><% } %>
-              <% if(schedWithSpan[lv] && schedWithSpan[lv][0] && schedWithSpan[lv][0].tanggalFmt){ %><th style="border:1px solid #000;padding:0.3mm 0.8mm;">Tanggal</th><% } %>
-              <th style="border:1px solid #000;padding:0.3mm 0.8mm;">Jam</th>
-              <th style="border:1px solid #000;padding:0.3mm 0.8mm;text-align:left;">Mapel</th>
+              <th style="border:1px solid #000;padding:1.5mm 0.5mm;text-align:center;">No</th>
+              <th style="border:1px solid #000;padding:1.5mm 0.8mm;text-align:center;">Sesi</th>
+              <% if(schedWithSpan[lv] && schedWithSpan[lv][0] && schedWithSpan[lv][0].hari){ %><th style="border:1px solid #000;padding:1.5mm 0.8mm;">Hari</th><% } %>
+              <% if(schedWithSpan[lv] && schedWithSpan[lv][0] && schedWithSpan[lv][0].tanggalFmt){ %><th style="border:1px solid #000;padding:1.5mm 0.8mm;">Tanggal</th><% } %>
+              <th style="border:1px solid #000;padding:1.5mm 0.8mm;">Jam</th>
+              <th style="border:1px solid #000;padding:1.5mm 0.8mm;text-align:left;">Mapel</th>
             </tr>
           </thead>
           <tbody>
             <% (schedWithSpan[lv]||[]).forEach(function(s, i) { %>
             <tr style="background:#fff;color:#000;">
               <% if(s.rowspan > 0) { %>
-                <td style="border:1px solid #000;padding:0.2mm 0.5mm;text-align:center;font-weight:700;" rowspan="<%=s.rowspan%>"><%=s.no%></td>
-                <td style="border:1px solid #000;padding:0.2mm 0.8mm;font-weight:800;text-align:center;" rowspan="<%=s.rowspan%>">S<%=s.sesi%></td>
-                <% if(s.hari){ %><td style="border:1px solid #000;padding:0.2mm 0.8mm;" rowspan="<%=s.rowspan%>"><%=s.hari%></td><% } %>
-                <% if(s.tanggalFmt){ %><td style="border:1px solid #000;padding:0.2mm 0.8mm;white-space:nowrap;" rowspan="<%=s.rowspan%>"><%=s.tanggalFmt%></td><% } %>
+                <td style="border:1px solid #000;padding:1.5mm 0.5mm;text-align:center;font-weight:700;" rowspan="<%=s.rowspan%>"><%=s.no%></td>
+                <td style="border:1px solid #000;padding:1.5mm 0.8mm;font-weight:800;text-align:center;" rowspan="<%=s.rowspan%>">S<%=s.sesi%></td>
+                <% if(s.hari){ %><td style="border:1px solid #000;padding:1.5mm 0.8mm;" rowspan="<%=s.rowspan%>"><%=s.hari%></td><% } %>
+                <% if(s.tanggalFmt){ %><td style="border:1px solid #000;padding:1.5mm 0.8mm;white-space:nowrap;" rowspan="<%=s.rowspan%>"><%=s.tanggalFmt%></td><% } %>
               <% } %>
-              <td style="border:1px solid #000;padding:0.2mm 0.8mm;font-weight:600;white-space:nowrap;"><%=s.jamMulai%>-<%=s.jamSelesai%></td>
-              <td style="border:1px solid #000;padding:0.2mm 0.8mm;"><%=s.mapel%></td>
+              <td style="border:1px solid #000;padding:1.5mm 0.8mm;font-weight:600;white-space:nowrap;"><%=s.jamMulai%>-<%=s.jamSelesai%></td>
+              <td style="border:1px solid #000;padding:1.5mm 0.8mm;"><%=s.mapel%></td>
             </tr>
             <% }); %>
           </tbody>
