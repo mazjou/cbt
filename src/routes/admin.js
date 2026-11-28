@@ -2099,6 +2099,9 @@ router.get('/users/:id/json', async (req, res) => {
 // Update via AJAX untuk modal edit
 router.post('/users/:id/ajax-update', async (req, res) => {
   const { username, full_name, role, class_id, is_active, new_password, nomor_peserta, tempat_lahir, tanggal_lahir, nama_ayah, sesi } = req.body || {};
+  if (String(role) === 'SUPERADMIN' && req.session.user.role !== 'SUPERADMIN') {
+    return res.status(403).json({ ok: false, message: 'Forbidden: hanya SUPERADMIN yang dapat menetapkan role SUPERADMIN.' });
+  }
   try {
     const plainPwd = new_password && String(new_password).trim().length > 0 ? String(new_password).trim() : null;
     const noPeserta = String(nomor_peserta || '').trim() || null;
@@ -2167,6 +2170,9 @@ router.get('/users/:id/edit', async (req, res) => {
 
 router.post('/users/:id/edit', async (req, res) => {
   const { username, full_name, role, class_id, is_active, new_password, nomor_peserta } = req.body;
+  if (String(role) === 'SUPERADMIN' && req.session.user.role !== 'SUPERADMIN') {
+    return res.status(403).send('Forbidden: hanya SUPERADMIN yang dapat menetapkan role SUPERADMIN.');
+  }
   try {
     const plainPwd = new_password && String(new_password).trim().length > 0 ? String(new_password).trim() : null;
     const noPeserta = String(nomor_peserta || '').trim() || null;
@@ -2452,6 +2458,10 @@ router.post('/users/import/commit', async (req, res) => {
 
 router.post('/users', async (req, res) => {
   const { username, full_name, role, class_id, password, nomor_peserta } = req.body;
+  if (String(role) === 'SUPERADMIN' && req.session.user.role !== 'SUPERADMIN') {
+    req.flash('error', 'Forbidden: hanya SUPERADMIN yang dapat menetapkan role SUPERADMIN.');
+    return res.redirect('/admin/users');
+  }
   try {
     const plain = String(password || username).trim();
     const password_hash = await bcrypt.hash(plain, 10);
