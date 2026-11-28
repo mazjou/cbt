@@ -555,10 +555,10 @@
 </div>
 
 <!-- Modal Edit Pengguna (tanpa pindah halaman) -->
-<div id="userModal" class="fixed inset-0 z-50 hidden" aria-hidden="true">
+<div id="userModal" class="fixed inset-0 z-50 hidden items-center justify-center" aria-hidden="true">
   <div class="absolute inset-0 bg-black/40" data-close-user-modal></div>
-  <div class="relative mx-auto mt-16 w-[92%] max-w-xl rounded-2xl bg-white shadow-xl">
-    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+  <div class="relative mx-auto w-[92%] max-w-xl rounded-2xl bg-white shadow-xl flex flex-col" style="max-height:90vh;margin-top:max(1rem,env(safe-area-inset-top));">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
       <div>
         <h3 class="text-lg font-semibold">Edit Pengguna</h3>
         <p class="text-sm text-slate-500">Perubahan disimpan tanpa pindah halaman.</p>
@@ -568,7 +568,7 @@
       </button>
     </div>
 
-    <form id="userModalForm" class="p-5 space-y-3">
+    <form id="userModalForm" class="p-5 space-y-3 overflow-y-auto flex-1">
       <input type="hidden" name="id" id="um_id" />
 
       <div>
@@ -920,10 +920,12 @@
 
     function showModal() {
       modal.classList.remove('hidden');
+      modal.classList.add('flex');
       modal.setAttribute('aria-hidden', 'false');
     }
     function hideModal() {
       modal.classList.add('hidden');
+      modal.classList.remove('flex');
       modal.setAttribute('aria-hidden', 'true');
       elErr.classList.add('hidden');
       elOk.classList.add('hidden');
