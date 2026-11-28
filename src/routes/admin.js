@@ -10,7 +10,7 @@ const { requireRole } = require('../middleware/auth');
 const { finalizeAttemptWithBackup } = require('../utils/submission-utils');
 
 const router = express.Router();
-router.use(requireRole('ADMIN'));
+router.use(requireRole('ADMIN', 'SUPERADMIN'));
 
 // ── Helper: baca/simpan setting sekolah dari DB (persistent) ─────────────────
 async function getSetting(key, fallback = null) {
@@ -2157,7 +2157,7 @@ router.get('/users/:id/edit', async (req, res) => {
       req.flash('error', 'Pengguna tidak ditemukan.');
       return res.redirect('/admin/users');
     }
-    return res.render('admin/users_edit', { title: 'Edit Pengguna', user, classes });
+    return res.render('admin/users_edit', { title: 'Edit Pengguna', user, classes, currentUser: req.session.user });
   } catch (e) {
     console.error(e);
     req.flash('error', 'Gagal membuka halaman edit pengguna.');

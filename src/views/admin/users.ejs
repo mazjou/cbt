@@ -262,6 +262,7 @@
         <option value="TEACHER" <%= filters.role === 'TEACHER' ? 'selected' : '' %>>Guru</option>
         <option value="PRINCIPAL" <%= filters.role === 'PRINCIPAL' ? 'selected' : '' %>>Kepala Sekolah</option>
         <option value="ADMIN" <%= filters.role === 'ADMIN' ? 'selected' : '' %>>Admin</option>
+        <option value="SUPERADMIN" <%= filters.role === 'SUPERADMIN' ? 'selected' : '' %>>Super Admin</option>
         <option value="TATA_USAHA" <%= filters.role === 'TATA_USAHA' ? 'selected' : '' %>>Tata Usaha</option>
       </select>
       
@@ -338,7 +339,7 @@
               </td>
               <td class="py-2 font-mono user-username text-teal-900"><%= u.username %></td>
               <td class="py-2 user-fullname text-teal-900"><%= u.full_name %></td>
-              <td class="py-2 user-role"><span class="px-2 py-1 rounded-lg border border-teal-300 bg-white text-teal-800 font-medium"><%= ({TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',PRINCIPAL:'Kepala Sekolah'})[u.role]||u.role %></span></td>
+              <td class="py-2 user-role"><span class="px-2 py-1 rounded-lg border <%= u.role === 'SUPERADMIN' ? 'border-purple-400 bg-purple-100 text-purple-900 font-semibold' : 'border-teal-300 bg-white text-teal-800 font-medium' %>"><%= ({TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',SUPERADMIN:'Super Admin',PRINCIPAL:'Kepala Sekolah'})[u.role]||u.role %></span></td>
               <td class="py-2 text-teal-700 user-class"><%= u.class_name || '-' %></td>
               <td class="py-2 text-teal-700 text-center"><%= u.sesi || '-' %></td>
               <td class="py-2 user-active text-teal-800">
@@ -383,7 +384,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-semibold text-teal-900 user-fullname"><%= u.full_name %></span>
-                <span class="px-2 py-0.5 rounded-lg border border-teal-300 bg-teal-50 text-teal-700 text-xs font-medium user-role"><%= ({TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',PRINCIPAL:'Kepala Sekolah'})[u.role]||u.role %></span>
+                <span class="px-2 py-0.5 rounded-lg border <%= u.role === 'SUPERADMIN' ? 'border-purple-400 bg-purple-100 text-purple-800 font-semibold' : 'border-teal-300 bg-teal-50 text-teal-700 font-medium' %> text-xs user-role"><%= ({TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',SUPERADMIN:'Super Admin',PRINCIPAL:'Kepala Sekolah'})[u.role]||u.role %></span>
                 <span class="px-2 py-0.5 rounded-lg text-xs font-medium user-active <%= u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700' %>"><%= u.is_active ? 'Aktif' : 'Nonaktif' %></span>
                 <% if (u.sdms_status === 'missing') { %>
                   <span class="px-1.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-300">⚠️ Tdk ada di SDMS</span>
@@ -475,6 +476,9 @@
           <option value="TEACHER">Guru</option>
           <option value="PRINCIPAL">Kepala Sekolah</option>
           <option value="ADMIN">Admin</option>
+          <% if (user.role === 'SUPERADMIN') { %>
+          <option value="SUPERADMIN">Super Admin</option>
+          <% } %>
           <option value="TATA_USAHA">Tata Usaha</option>
         </select>
       </div>
@@ -606,6 +610,9 @@
             <option value="TEACHER">Guru</option>
             <option value="PRINCIPAL">Kepala Sekolah</option>
             <option value="ADMIN">Admin</option>
+            <% if (user.role === 'SUPERADMIN') { %>
+            <option value="SUPERADMIN">Super Admin</option>
+            <% } %>
             <option value="TATA_USAHA">Tata Usaha</option>
           </select>
         </div>
@@ -1003,11 +1010,14 @@
         // Update row in table without reload
         const row = document.getElementById(`user-row-${id}`);
         if (row && j.user) {
-          const roleLabels = {TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',PRINCIPAL:'Kepala Sekolah'};
+          const roleLabels = {TEACHER:'Guru',STUDENT:'Siswa',ADMIN:'Admin',SUPERADMIN:'Super Admin',PRINCIPAL:'Kepala Sekolah'};
           const roleLabel = roleLabels[j.user.role] || j.user.role || '';
           row.querySelector('.user-username').textContent = j.user.username || '';
           row.querySelector('.user-fullname').textContent = j.user.full_name || '';
-          row.querySelector('.user-role').innerHTML = `<span class="px-2 py-1 rounded-lg border border-teal-300 bg-white text-teal-800 font-medium">${roleLabel}</span>`;
+          const badgeClass = j.user.role === 'SUPERADMIN'
+            ? 'px-2 py-1 rounded-lg border border-purple-400 bg-purple-100 text-purple-900 font-semibold'
+            : 'px-2 py-1 rounded-lg border border-teal-300 bg-white text-teal-800 font-medium';
+          row.querySelector('.user-role').innerHTML = `<span class="${badgeClass}">${roleLabel}</span>`;
           row.querySelector('.user-class').textContent = j.user.class_name || '-';
           row.querySelector('.user-active').textContent = j.user.is_active ? 'Aktif' : 'Nonaktif';
         }

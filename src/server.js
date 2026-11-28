@@ -333,11 +333,11 @@ function registerRoutes() {
   app.use('/teacher',      teacherRoutes);
   app.use('/teacher/question-bank', questionBankRoutes);
 
-  // API bank soal - bisa diakses TEACHER dan ADMIN (untuk modal di halaman ujian)
+  // API bank soal - bisa diakses TEACHER, ADMIN, dan SUPERADMIN (untuk modal di halaman ujian)
   app.get('/api/question-bank', async (req, res) => {
     if (!req.session?.user) return res.status(401).json({ error: 'Unauthorized' });
     const user = req.session.user;
-    if (!['TEACHER','ADMIN'].includes(user.role)) return res.status(403).json({ error: 'Forbidden' });
+    if (!['TEACHER','ADMIN','SUPERADMIN'].includes(user.role)) return res.status(403).json({ error: 'Forbidden' });
     const { subject_id, difficulty, search, chapter } = req.query;
     try {
       const params = [];
@@ -348,8 +348,7 @@ function registerRoutes() {
         FROM question_bank qb JOIN subjects s ON s.id = qb.subject_id
         WHERE 1=1`;
       if (user.role === 'TEACHER') { params.push(user.id); query += ` AND qb.teacher_id = $${params.length}`; }
-      if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }
-      if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
+      if (subject_id) { params.push(subject_id); query += ` AND qb.subject_id = $${params.length}`; }      if (difficulty) { params.push(difficulty); query += ` AND qb.difficulty = $${params.length}`; }
       if (chapter) { params.push(chapter); query += ` AND qb.chapter = $${params.length}`; }
       const class_level = req.query.class_level;
       if (class_level) { params.push(class_level); query += ` AND qb.class_level = $${params.length}`; }
@@ -368,7 +367,7 @@ function registerRoutes() {
   app.post('/api/question-bank/add-to-exam/:examId', async (req, res) => {
     if (!req.session?.user) return res.status(401).json({ error: 'Unauthorized' });
     const user = req.session.user;
-    if (!['TEACHER','ADMIN'].includes(user.role)) return res.status(403).json({ error: 'Forbidden' });
+    if (!['TEACHER','ADMIN','SUPERADMIN'].includes(user.role)) return res.status(403).json({ error: 'Forbidden' });
     const examId = req.params.examId;
     const { questionIds } = req.body;
     if (!questionIds || !Array.isArray(questionIds) || !questionIds.length)
@@ -378,8 +377,8 @@ function registerRoutes() {
     try {
       await conn.beginTransaction();
       // Cek akses ujian
-      const examWhere = user.role === 'ADMIN' ? 'id = $1' : 'id = $1 AND teacher_id = $2';
-      const examParams = user.role === 'ADMIN' ? [examId] : [examId, user.id];
+      const examWhere = (user.role === 'ADMIN' || user.role === 'SUPERADMIN') ? 'id = $1' : 'id = $1 AND teacher_id = $2';
+      const examParams = (user.role === 'ADMIN' || user.role === 'SUPERADMIN') ? [examId] : [examId, user.id];
       const [[exam]] = await conn.query(`SELECT id FROM exams WHERE ${examWhere} LIMIT 1`, examParams);
       if (!exam) { await conn.rollback(); return res.status(404).json({ error: 'Ujian tidak ditemukan' }); }
       let added = 0;
@@ -576,6 +575,9 @@ async function bootstrap() {
     } catch(_) {}
     try {
       await pool.query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'ADMIN'`);
+    } catch(_) {}
+    try {
+      await pool.query(`ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'SUPERADMIN'`);
     } catch(_) {}
 
     // ── Migration ringan: tambah kolom pushed_at dan push_count di notifications jika belum ada

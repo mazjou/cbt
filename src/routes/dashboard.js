@@ -23,6 +23,10 @@ router.get('/', requireAuth, async (req, res) => {
   if (user.role === 'ADMIN') {
     return res.redirect('/admin');
   }
+
+  if (user.role === 'SUPERADMIN') {
+    return res.redirect('/admin');
+  }
   
   if (user.role === 'STUDENT') {
     return res.redirect('/student');

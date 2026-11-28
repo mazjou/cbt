@@ -1,0 +1,24 @@
+{
+  "verdict": "APPROVED",
+  "findings": [
+    {
+      "id": "dead-code-export-correctstr",
+      "severity": "minor",
+      "confidence": "confirmed",
+      "summary": "Dead code in export route — line 141 of question_bank.js assigns correctStr for MULTI_TF then line 144 immediately overwrites it. Remove line 141."
+    },
+    {
+      "id": "key-panel-always-shows-c-d-e",
+      "severity": "minor",
+      "confidence": "confirmed",
+      "summary": "MULTI_TF key-panel rows C/D/E are always visible in both new.ejs and edit.ejs even when those statement textareas are empty. The JS submit validator counts all selected keys without checking if the matching option field has content, which can mislead users. Fix: skip key-row labels where the option textarea is empty in the validator."
+    },
+    {
+      "id": "non-ascii-in-string-literals",
+      "severity": "minor",
+      "confidence": "confirmed",
+      "summary": "Lines 207 and 283 of question_bank.js contain non-ASCII characters (em-dash, degree sign) inside JavaScript string literals used as XLSX cell data. XLSX handles UTF-8 correctly, but these violate the coder's ASCII-only convention for string literals. Replace with ASCII equivalents."
+    }
+  ],
+  "reviewDoc": "d:\\WEBSITE\\cbt\\.agents\\tasks\\multi-tf-bank\\review.md"
+}

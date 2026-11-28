@@ -1,0 +1,6 @@
+{
+  "taskDir": "d:/WEBSITE/cbt/.agents/tasks/cetak-bangku",
+  "sesiColumnExists": false,
+  "note": "DB not reachable from local machine (ECONNREFUSED on localhost:5432). Conclusion based on static code analysis: sql/schema_pg.sql defines users table without 'sesi' column; no migration adds it; no code references users.sesi.",
+  "checkedAt": "2025-07-25"
+}
