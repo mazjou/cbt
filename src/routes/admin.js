@@ -1798,7 +1798,9 @@ router.get('/users/download', async (req, res) => {
       query += ` AND u.class_id = $${params.length}`;
     }
 
-    query += ` ORDER BY u.role ASC, c.name ASC, u.full_name ASC`;
+    query += ` ORDER BY u.role ASC,
+      CASE WHEN c.name ILIKE 'XII%' THEN 3 WHEN c.name ILIKE 'XI%' THEN 2 WHEN c.name ILIKE 'X%' THEN 1 ELSE 4 END ASC,
+      c.name ASC, u.full_name ASC`;
 
     const [users] = await pq(query, params);
 
