@@ -1581,10 +1581,15 @@ router.get('/users', async (req, res) => {
   }
   
   const whereClause = whereConditions.length > 0 ? 'WHERE ' + whereConditions.join(' AND ') : '';
+
+  // ADMIN (bukan SUPERADMIN) tidak boleh melihat akun SUPERADMIN
+  const isSuperAdmin = req.session.user.role === 'SUPERADMIN';
+  const superAdminFilter = !isSuperAdmin ? (whereClause ? ` AND u.role != 'SUPERADMIN'` : ` WHERE u.role != 'SUPERADMIN'`) : '';
+  const whereClauseFinal = whereClause + superAdminFilter;
   
   // Get total count
   const userCountResult = await pool.query(
-    `SELECT COUNT(*) as total FROM users u ${whereClause}`,
+    `SELECT COUNT(*) as total FROM users u ${whereClauseFinal}`,
     queryParams
   );
   const total = userCountResult[0][0].total;
@@ -1610,7 +1615,7 @@ router.get('/users', async (req, res) => {
              LIMIT 1) AS sdms_status_text
      FROM users u
      LEFT JOIN classes c ON c.id=u.class_id
-     ${whereClause}
+     ${whereClauseFinal}
      ORDER BY
        CASE
          WHEN c.name ~* '^XII' THEN 3
@@ -2089,6 +2094,10 @@ router.get('/users/:id/json', async (req, res) => {
     );
     const user = result[0] && result[0][0];
     if (!user) return res.status(404).json({ ok: false, message: 'Pengguna tidak ditemukan.' });
+    // ADMIN tidak boleh melihat/mengubah akun SUPERADMIN
+    if (user.role === 'SUPERADMIN' && req.session.user.role !== 'SUPERADMIN') {
+      return res.status(403).json({ ok: false, message: 'Akses ditolak.' });
+    }
     return res.json({ ok: true, user });
   } catch (e) {
     console.error(e);
@@ -2099,6 +2108,13 @@ router.get('/users/:id/json', async (req, res) => {
 // Update via AJAX untuk modal edit
 router.post('/users/:id/ajax-update', async (req, res) => {
   const { username, full_name, role, class_id, is_active, new_password, nomor_peserta, tempat_lahir, tanggal_lahir, nama_ayah, sesi } = req.body || {};
+  // ADMIN tidak boleh melihat/mengubah akun SUPERADMIN
+  if (req.session.user.role !== 'SUPERADMIN') {
+    const [[targetUser]] = await pool.query('SELECT role FROM users WHERE id=$1 LIMIT 1', [req.params.id]);
+    if (targetUser && targetUser.role === 'SUPERADMIN') {
+      return res.status(403).json({ ok: false, message: 'Akses ditolak: tidak dapat mengubah akun Super Admin.' });
+    }
+  }
   if (String(role) === 'SUPERADMIN' && req.session.user.role !== 'SUPERADMIN') {
     return res.status(403).json({ ok: false, message: 'Forbidden: hanya SUPERADMIN yang dapat menetapkan role SUPERADMIN.' });
   }
@@ -2512,6 +2528,14 @@ router.post('/users/:id/toggle', async (req, res) => {
 router.post('/users/:id/delete', async (req, res) => {
   const id = req.params.id;
   try {
+    // ADMIN tidak boleh hapus akun SUPERADMIN
+    if (req.session.user.role !== 'SUPERADMIN') {
+      const [[targetUser]] = await pool.query('SELECT role FROM users WHERE id=$1 LIMIT 1', [id]);
+      if (targetUser && targetUser.role === 'SUPERADMIN') {
+        req.flash('error', 'Akses ditolak: tidak dapat menghapus akun Super Admin.');
+        return res.redirect('/admin/users');
+      }
+    }
     // NULL-kan FK yang allow NULL dulu (untuk guru yang punya ujian/materi)
     await pool.query(`UPDATE exams SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
     await pool.query(`UPDATE materials SET teacher_id = NULL WHERE teacher_id = $1`, [id]);
