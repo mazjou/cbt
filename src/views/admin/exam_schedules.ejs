@@ -113,7 +113,7 @@
                 <td class="px-3 py-3">
                   <div class="flex gap-2">
                     <button type="button"
-                      onclick="openEdit(<%= row.id %>,'<%= row.level %>',<%= row.sesi %>,'<%= row.hari||'' %>','<%= row.tanggal?String(row.tanggal).substring(0,10):'' %>','<%= row.jam_mulai?String(row.jam_mulai).substring(0,5):'' %>','<%= row.jam_selesai?String(row.jam_selesai).substring(0,5):'' %>','<%= row.mata_pelajaran.replace(/'/g,"\\'") %>','<%= (row.keterangan||'').replace(/'/g,"\\'") %>')"
+                      onclick="openEdit(<%= row.id %>,'<%= row.level %>',<%= row.sesi %>,'<%= row.hari||'' %>','<%= row.tanggal?(function(){var d=new Date(row.tanggal);return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);})():'' %>','<%= row.jam_mulai?(row.jam_mulai instanceof Date?('0'+row.jam_mulai.getHours()).slice(-2)+':'+('0'+row.jam_mulai.getMinutes()).slice(-2):String(row.jam_mulai).substring(0,5)):'' %>','<%= row.jam_selesai?(row.jam_selesai instanceof Date?('0'+row.jam_selesai.getHours()).slice(-2)+':'+('0'+row.jam_selesai.getMinutes()).slice(-2):String(row.jam_selesai).substring(0,5)):'' %>','<%= row.mata_pelajaran.replace(/'/g,"\\'") %>','<%= (row.keterangan||'').replace(/'/g,"\\'") %>')"
                       class="px-3 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium text-xs border border-blue-200 transition-all">
                       Edit
                     </button>
