@@ -2294,8 +2294,31 @@ router.get('/users/print-schedule', async (req, res) => {
       if (!schedByLevel[s.level]) schedByLevel[s.level] = [];
       schedByLevel[s.level].push({ sesi:s.sesi, hari:s.hari||'', tanggalFmt:fmtD(s.tanggal), jamMulai:fmtT(s.jam_mulai), jamSelesai:fmtT(s.jam_selesai), mapel:s.mata_pelajaran });
     }
+    // Hitung rowspan: kelompokkan baris berurutan dengan sesi+hari+tanggal sama
+    const schedWithSpan = {};
+    for (const lv of Object.keys(schedByLevel)) {
+      const rows = schedByLevel[lv];
+      const result = [];
+      let i = 0, no = 1;
+      while (i < rows.length) {
+        const cur = rows[i];
+        const key = cur.sesi + '|' + cur.hari + '|' + cur.tanggalFmt;
+        let span = 1;
+        while (i + span < rows.length) {
+          const next = rows[i + span];
+          if ((next.sesi + '|' + next.hari + '|' + next.tanggalFmt) === key) span++;
+          else break;
+        }
+        for (let j = 0; j < span; j++) {
+          result.push({ ...rows[i+j], rowspan: j === 0 ? span : 0, no: j === 0 ? no : null });
+        }
+        no++;
+        i += span;
+      }
+      schedWithSpan[lv] = result;
+    }
     const schoolInfo = { name: process.env.SCHOOL_NAME || 'SMK Negeri 1 Kras' };
-    res.app.render('admin/print_schedule', { title:'Jadwal Ujian', schedByLevel, schoolInfo, filterLevel, settings:{'view options':{layout:false}} }, (err,html) => {
+    res.app.render('admin/print_schedule', { title:'Jadwal Ujian', schedByLevel, schedWithSpan, schoolInfo, filterLevel, settings:{'view options':{layout:false}} }, (err,html) => {
       if (err) { console.error('Render error:', err.message); return res.status(500).send('Gagal render jadwal.'); }
       res.send(html);
     });
