@@ -109,21 +109,21 @@
     <a href="/admin/users/import" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-violet-400 to-purple-500 hover:from-violet-500 hover:to-purple-600 text-white font-semibold transition-all shadow-md text-sm text-center">
       Import Pengguna
     </a>
-    <a href="/admin/users/import-password" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-red-400 hover:from-orange-500 hover:to-red-500 text-white font-semibold transition-all shadow-md text-sm text-center">
-      🔑 Import Password
+    <a href="/admin/users/import-password" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-orange-400 to-red-400 hover:from-orange-500 hover:to-red-500 text-white font-semibold transition-all shadow-md text-sm text-center <% if(user.role !== 'SUPERADMIN'){ %>hidden<% } %>">
+      Import Password
     </a>
-    <button type="button" onclick="openDeleteByRoleModal()" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-semibold transition-all shadow-md text-sm flex items-center justify-center gap-1">
+    <button type="button" onclick="openDeleteByRoleModal()" class="w-full sm:w-auto px-3 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-semibold transition-all shadow-md text-sm flex items-center justify-center gap-1 <% if(user.role !== 'SUPERADMIN'){ %>hidden<% } %>">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
       Hapus Massal
     </button>
     <button type="button" onclick="document.getElementById('modalNonaktifDomain').classList.remove('hidden');document.getElementById('modalNonaktifDomain').style.display='flex';"
-      class="w-full sm:w-auto px-3 py-2 rounded-xl text-white font-semibold transition-all shadow-md text-sm flex items-center justify-center gap-1"
+      class="w-full sm:w-auto px-3 py-2 rounded-xl text-white font-semibold transition-all shadow-md text-sm flex items-center justify-center gap-1 <% if(user.role !== 'SUPERADMIN'){ %>hidden<% } %>"
       style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-      🚫 Nonaktifkan @domain
+      Nonaktifkan @domain
     </button>
     <button type="button" onclick="syncNamaAyah()"
-      class="w-full sm:w-auto px-3 py-2 rounded-xl text-white font-semibold transition-all shadow-md text-sm flex items-center justify-center gap-1"
+      class="w-full sm:w-auto px-3 py-2 rounded-xl text-white font-semibold transition-all shadow-md text-sm flex items-center justify-center gap-1 <% if(user.role !== 'SUPERADMIN'){ %>hidden<% } %>"
       style="background: linear-gradient(135deg, #0891b2, #0e7490);">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
       Sync Orang Tua
