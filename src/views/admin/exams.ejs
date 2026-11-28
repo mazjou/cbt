@@ -447,7 +447,7 @@
         <div class="p-4 hover:bg-indigo-50 transition-all">
           <!-- Baris atas: checkbox + judul + status -->
           <div class="flex items-start gap-3">
-            <input type="checkbox" class="item-checkbox mt-1 w-4 h-4 rounded border-indigo-300 text-indigo-600 flex-shrink-0" data-item-id="<%= exam.id %>" />
+            <input type="checkbox" class="item-checkbox-card mt-1 w-4 h-4 rounded border-indigo-300 text-indigo-600 flex-shrink-0" data-item-id="<%= exam.id %>" />
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-semibold text-slate-900"><%= exam.title %></span>
@@ -566,16 +566,18 @@
 // Bulk delete functionality
 (function () {
   const selectAllCheckbox = document.getElementById('selectAll');
-  const itemCheckboxes = document.querySelectorAll('.item-checkbox');
   const bulkActionBar = document.getElementById('bulkActionBar');
   const selectedCountSpan = document.getElementById('selectedCount');
   const bulkDeleteIdsInput = document.getElementById('bulkDeleteIds');
 
+  // Hitung ID unik yang tercentang dari TABEL (item-checkbox) saja sebagai sumber kebenaran
+  function getSelectedIds() {
+    const tableChecks = document.querySelectorAll('.item-checkbox');
+    return Array.from(tableChecks).filter(cb => cb.checked).map(cb => cb.getAttribute('data-item-id'));
+  }
+
   function updateBulkActionBar() {
-    const selectedIds = Array.from(itemCheckboxes)
-      .filter(cb => cb.checked)
-      .map(cb => cb.getAttribute('data-item-id'));
-    
+    const selectedIds = getSelectedIds();
     if (selectedIds.length > 0) {
       bulkActionBar.classList.remove('hidden');
       selectedCountSpan.textContent = selectedIds.length;
@@ -583,26 +585,39 @@
     } else {
       bulkActionBar.classList.add('hidden');
     }
-    
+    const itemCheckboxes = document.querySelectorAll('.item-checkbox');
     const allChecked = itemCheckboxes.length > 0 && Array.from(itemCheckboxes).every(cb => cb.checked);
     const someChecked = Array.from(itemCheckboxes).some(cb => cb.checked);
     if (selectAllCheckbox) {
       selectAllCheckbox.checked = allChecked;
       selectAllCheckbox.indeterminate = someChecked && !allChecked;
     }
+    // Sync card checkboxes
+    document.querySelectorAll('.item-checkbox-card').forEach(cb => {
+      const id = cb.getAttribute('data-item-id');
+      const tableCheck = document.querySelector(`.item-checkbox[data-item-id="${id}"]`);
+      if (tableCheck) cb.checked = tableCheck.checked;
+    });
   }
 
   if (selectAllCheckbox) {
     selectAllCheckbox.addEventListener('change', function() {
-      itemCheckboxes.forEach(cb => {
-        cb.checked = this.checked;
-      });
+      document.querySelectorAll('.item-checkbox').forEach(cb => { cb.checked = this.checked; });
       updateBulkActionBar();
     });
   }
 
-  itemCheckboxes.forEach(cb => {
+  document.querySelectorAll('.item-checkbox').forEach(cb => {
     cb.addEventListener('change', updateBulkActionBar);
+  });
+
+  // Card checkboxes sync ke tabel
+  document.querySelectorAll('.item-checkbox-card').forEach(cb => {
+    cb.addEventListener('change', function() {
+      const id = this.getAttribute('data-item-id');
+      const tableCheck = document.querySelector(`.item-checkbox[data-item-id="${id}"]`);
+      if (tableCheck) { tableCheck.checked = this.checked; updateBulkActionBar(); }
+    });
   });
 
   window.confirmBulkDelete = function() {
