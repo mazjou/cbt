@@ -25,13 +25,13 @@
       display:flex;flex-direction:column;overflow:hidden;
     }
     .slot-head{
-      height:10mm;min-height:10mm;max-height:10mm;flex-shrink:0;
+      height:8mm;min-height:8mm;max-height:8mm;flex-shrink:0;
       display:flex;align-items:center;justify-content:center;
-      border-bottom:none;padding:1mm 2mm;
+      border-bottom:none;padding:0.5mm 2mm;
       background:#ffffff;
     }
-    .s-title-simple{font-size:9pt;font-weight:900;color:#000;letter-spacing:1px;text-transform:uppercase;}
-    .slot-body{flex:1;padding:2mm 5mm;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;gap:0.3mm;}
+    .s-title-simple{font-size:8.5pt;font-weight:900;color:#000;letter-spacing:1px;text-transform:uppercase;}
+    .slot-body{flex:1;padding:0mm 5mm 1mm 5mm;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start;gap:0.3mm;}
     .lv-head{font-size:6pt;font-weight:800;background:#f1f5f9;color:#1e293b;border:1px solid #cbd5e1;padding:0.3mm 2mm;border-radius:2px;margin-bottom:0.3mm;}
     .sched-table{width:100%;border-collapse:collapse;font-size:5.5pt;}
     .sched-table td{border:1px solid #e2e8f0;padding:0.2mm 0.8mm;}
@@ -92,25 +92,25 @@
           </colgroup>
           <thead>
             <tr style="background:#fff;color:#000;border-bottom:1.5px solid #000;">
-              <th style="border:1px solid #000;padding:0.8mm 0.5mm;text-align:center;">No</th>
-              <th style="border:1px solid #000;padding:0.8mm 0.8mm;text-align:center;">Sesi</th>
-              <% if(schedWithSpan[lv] && schedWithSpan[lv][0] && schedWithSpan[lv][0].hari){ %><th style="border:1px solid #000;padding:0.8mm 0.8mm;">Hari</th><% } %>
-              <% if(schedWithSpan[lv] && schedWithSpan[lv][0] && schedWithSpan[lv][0].tanggalFmt){ %><th style="border:1px solid #000;padding:0.8mm 0.8mm;">Tanggal</th><% } %>
-              <th style="border:1px solid #000;padding:0.8mm 0.8mm;">Jam</th>
-              <th style="border:1px solid #000;padding:0.8mm 0.8mm;text-align:left;">Mapel</th>
+              <th style="border:1px solid #000;padding:0.5mm 0.5mm;text-align:center;">No</th>
+              <th style="border:1px solid #000;padding:0.5mm 0.8mm;text-align:center;">Sesi</th>
+              <% if(schedWithSpan[lv] && schedWithSpan[lv][0] && schedWithSpan[lv][0].hari){ %><th style="border:1px solid #000;padding:0.5mm 0.8mm;">Hari</th><% } %>
+              <% if(schedWithSpan[lv] && schedWithSpan[lv][0] && schedWithSpan[lv][0].tanggalFmt){ %><th style="border:1px solid #000;padding:0.5mm 0.8mm;">Tanggal</th><% } %>
+              <th style="border:1px solid #000;padding:0.5mm 0.8mm;">Jam</th>
+              <th style="border:1px solid #000;padding:0.5mm 0.8mm;text-align:left;">Mapel</th>
             </tr>
           </thead>
           <tbody>
             <% (schedWithSpan[lv]||[]).forEach(function(s, i) { %>
             <tr style="background:#fff;color:#000;">
               <% if(s.rowspan > 0) { %>
-                <td style="border:1px solid #000;padding:0.8mm 0.5mm;text-align:center;font-weight:700;" rowspan="<%=s.rowspan%>"><%=s.no%></td>
-                <td style="border:1px solid #000;padding:0.8mm 0.8mm;font-weight:800;text-align:center;" rowspan="<%=s.rowspan%>">S<%=s.sesi%></td>
-                <% if(s.hari){ %><td style="border:1px solid #000;padding:0.8mm 0.8mm;" rowspan="<%=s.rowspan%>"><%=s.hari%></td><% } %>
-                <% if(s.tanggalFmt){ %><td style="border:1px solid #000;padding:0.8mm 0.8mm;white-space:nowrap;" rowspan="<%=s.rowspan%>"><%=s.tanggalFmt%></td><% } %>
+                <td style="border:1px solid #000;padding:0.5mm 0.5mm;text-align:center;font-weight:700;" rowspan="<%=s.rowspan%>"><%=s.no%></td>
+                <td style="border:1px solid #000;padding:0.5mm 0.8mm;font-weight:800;text-align:center;" rowspan="<%=s.rowspan%>">S<%=s.sesi%></td>
+                <% if(s.hari){ %><td style="border:1px solid #000;padding:0.5mm 0.8mm;" rowspan="<%=s.rowspan%>"><%=s.hari%></td><% } %>
+                <% if(s.tanggalFmt){ %><td style="border:1px solid #000;padding:0.5mm 0.8mm;white-space:nowrap;" rowspan="<%=s.rowspan%>"><%=s.tanggalFmt%></td><% } %>
               <% } %>
-              <td style="border:1px solid #000;padding:0.8mm 0.8mm;font-weight:600;white-space:nowrap;"><%=s.jamMulai%>-<%=s.jamSelesai%></td>
-              <td style="border:1px solid #000;padding:0.8mm 0.8mm;"><%=s.mapel%></td>
+              <td style="border:1px solid #000;padding:0.5mm 0.8mm;font-weight:600;white-space:nowrap;"><%=s.jamMulai%>-<%=s.jamSelesai%></td>
+              <td style="border:1px solid #000;padding:0.5mm 0.8mm;"><%=s.mapel%></td>
             </tr>
             <% }); %>
           </tbody>
