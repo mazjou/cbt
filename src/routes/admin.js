@@ -2231,6 +2231,57 @@ router.get('/users/import', async (req, res) => {
   res.render('admin/users_import', { title: 'Import Masal Siswa', classes });
 });
 
+// ── Cetak Tabel Jadwal Full-Page ─────────────────────────────────────────────
+router.get('/exam-schedules/print', async (req, res) => {
+  try {
+    const filterLevel = req.query.level || '';
+    const [examSchedules] = await pq(`SELECT * FROM exam_schedules ORDER BY level ASC, tanggal ASC NULLS LAST, jam_mulai ASC`);
+    function fmtT(v){ if(!v)return''; if(v instanceof Date)return('0'+v.getHours()).slice(-2)+':'+('0'+v.getMinutes()).slice(-2); return String(v).substring(0,5); }
+    function fmtD(v){ if(!v)return''; var d=new Date(v); return('0'+d.getDate()).slice(-2)+'/'+ ('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear(); }
+    // Group by level, lalu merge baris sesi+hari+tanggal yang sama
+    const schedByLevel = {};
+    for (const s of examSchedules) {
+      if (!schedByLevel[s.level]) schedByLevel[s.level] = [];
+      schedByLevel[s.level].push({
+        sesi: s.sesi, hari: s.hari||'', tanggalFmt: fmtD(s.tanggal),
+        jamMulai: fmtT(s.jam_mulai), jamSelesai: fmtT(s.jam_selesai), mapel: s.mata_pelajaran
+      });
+    }
+    // Hitung rowspan: kelompokkan baris berurutan dengan sesi+hari+tanggal sama
+    const schedWithSpan = {};
+    for (const lv of Object.keys(schedByLevel)) {
+      const rows = schedByLevel[lv];
+      const result = [];
+      let i = 0, no = 1;
+      while (i < rows.length) {
+        const cur = rows[i];
+        const key = cur.sesi + '|' + cur.hari + '|' + cur.tanggalFmt;
+        let span = 1;
+        while (i + span < rows.length) {
+          const next = rows[i + span];
+          if ((next.sesi + '|' + next.hari + '|' + next.tanggalFmt) === key) span++;
+          else break;
+        }
+        for (let j = 0; j < span; j++) {
+          result.push({ ...rows[i+j], rowspan: j === 0 ? span : 0, no: j === 0 ? no : null });
+        }
+        no++;
+        i += span;
+      }
+      schedWithSpan[lv] = result;
+    }
+    const levels = Object.keys(schedWithSpan).sort();
+    const filteredLevels = filterLevel ? levels.filter(l => l === filterLevel) : levels;
+    const schoolInfo = { name: process.env.SCHOOL_NAME || 'SMK Negeri 1 Kras' };
+    const y = new Date().getFullYear();
+    const ta = new Date().getMonth() >= 6 ? `${y}/${y+1}` : `${y-1}/${y}`;
+    res.app.render('admin/print_schedule_table', { title:'Jadwal Ujian', schedWithSpan, filteredLevels, filterLevel, schoolInfo, ta, settings:{'view options':{layout:false}} }, (err,html) => {
+      if (err) { console.error('Render error:', err.message); return res.status(500).send('Gagal render: '+err.message); }
+      res.send(html);
+    });
+  } catch(e) { console.error(e); res.status(500).send('Gagal memuat jadwal.'); }
+});
+
 // ── Cetak Jadwal Ujian (1 lembar, 10 slot sama) ──────────────────────────────
 router.get('/users/print-schedule', async (req, res) => {
   try {

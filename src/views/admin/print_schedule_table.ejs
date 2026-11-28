@@ -1,0 +1,105 @@
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Jadwal Ujian</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:Arial,sans-serif;background:#f1f5f9;color:#1e293b;}
+    .no-print{background:white;padding:12px 20px;display:flex;align-items:center;
+      justify-content:space-between;gap:10px;box-shadow:0 2px 8px rgba(0,0,0,.12);
+      margin-bottom:20px;position:sticky;top:0;z-index:99;flex-wrap:wrap;}
+    .btn{padding:8px 18px;border-radius:8px;font-weight:700;font-size:13px;
+      cursor:pointer;border:none;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+    .btn-print{background:#4f46e5;color:white;}
+    .btn-back{background:#f1f5f9;color:#475569;text-decoration:none;border:1px solid #e2e8f0;}
+    select.fs{padding:6px 10px;border-radius:7px;border:2px solid #e2e8f0;font-size:13px;color:#475569;background:white;}
+
+    .wrap{max-width:900px;margin:0 auto 24px;background:white;border-radius:12px;
+      box-shadow:0 2px 12px rgba(0,0,0,.08);overflow:hidden;}
+    .tbl-header{padding:16px 20px;text-align:center;border-bottom:2px solid #e2e8f0;}
+    .tbl-header h2{font-size:16pt;font-weight:900;letter-spacing:1px;text-transform:uppercase;}
+    .tbl-header p{font-size:10pt;color:#64748b;margin-top:4px;}
+
+    table{width:100%;border-collapse:collapse;font-size:10pt;}
+    thead tr{background:#1e3a5f;color:white;}
+    thead th{padding:8px 10px;text-align:center;font-weight:700;border:1px solid #334155;}
+    thead th:last-child{text-align:left;}
+    tbody tr:nth-child(even){background:#f8fafc;}
+    tbody tr:hover{background:#e0f2fe;}
+    tbody td{padding:7px 10px;border:1px solid #e2e8f0;vertical-align:middle;}
+    .td-no{text-align:center;font-weight:700;color:#64748b;width:32px;}
+    .td-sesi{text-align:center;font-weight:800;width:50px;}
+    .td-hari{width:80px;}
+    .td-tgl{width:110px;font-family:monospace;}
+    .td-jam{font-family:monospace;font-weight:700;width:110px;white-space:nowrap;}
+    .td-mapel{font-weight:600;}
+    .span-cell{background:#f0f9ff;font-weight:800;}
+
+    @media print{
+      body{background:white;}
+      .no-print{display:none!important;}
+      .wrap{box-shadow:none;border-radius:0;margin:0;}
+      table{font-size:9pt;}
+      @page{size:A4 portrait;margin:12mm;}
+    }
+  </style>
+</head>
+<body>
+
+<div class="no-print">
+  <div>
+    <strong>Jadwal Ujian</strong>
+    <% if(filterLevel){ %> &nbsp;&mdash;&nbsp; <strong>Kelas <%=filterLevel%></strong><% } %>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+    <form method="GET" action="/admin/exam-schedules/print" style="display:flex;gap:6px;align-items:center;">
+      <select name="level" class="fs" onchange="this.form.submit()">
+        <option value="">Semua Tingkat</option>
+        <option value="X"   <%=filterLevel==='X'  ?'selected':''%>>Kelas X</option>
+        <option value="XI"  <%=filterLevel==='XI' ?'selected':''%>>Kelas XI</option>
+        <option value="XII" <%=filterLevel==='XII'?'selected':''%>>Kelas XII</option>
+      </select>
+    </form>
+    <button onclick="window.print()" class="btn btn-print">Cetak</button>
+    <a href="/admin/exam-schedules" class="btn btn-back">Kembali</a>
+  </div>
+</div>
+
+<% filteredLevels.forEach(function(lv) { %>
+<div class="wrap">
+  <div class="tbl-header">
+    <h2>Jadwal Ujian &mdash; Kelas <%=lv%></h2>
+    <p><%=schoolInfo.name%> &nbsp;&bull;&nbsp; Tahun Pelajaran <%=ta%></p>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:32px;">No</th>
+        <th style="width:50px;">Sesi</th>
+        <% if(schedWithSpan[lv] && schedWithSpan[lv][0] && schedWithSpan[lv][0].hari){ %><th style="width:80px;">Hari</th><% } %>
+        <% if(schedWithSpan[lv] && schedWithSpan[lv][0] && schedWithSpan[lv][0].tanggalFmt){ %><th style="width:110px;">Tanggal</th><% } %>
+        <th style="width:120px;">Jam</th>
+        <th>Mata Pelajaran</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% schedWithSpan[lv].forEach(function(s, i) { %>
+      <tr>
+        <% if(s.rowspan > 0) { %>
+          <td class="td-no span-cell" rowspan="<%=s.rowspan%>"><%=s.no%></td>
+          <td class="td-sesi span-cell" rowspan="<%=s.rowspan%>">S<%=s.sesi%></td>
+          <% if(s.hari){ %><td class="td-hari span-cell" rowspan="<%=s.rowspan%>"><%=s.hari%></td><% } %>
+          <% if(s.tanggalFmt){ %><td class="td-tgl span-cell" rowspan="<%=s.rowspan%>"><%=s.tanggalFmt%></td><% } %>
+        <% } %>
+        <td class="td-jam"><%=s.jamMulai%> &ndash; <%=s.jamSelesai%></td>
+        <td class="td-mapel"><%=s.mapel%></td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+</div>
+<% }); %>
+
+</body>
+</html>
